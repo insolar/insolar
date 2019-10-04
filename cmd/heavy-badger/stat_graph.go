@@ -17,9 +17,7 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"fmt"
 	"os"
 	"time"
 
@@ -60,8 +58,7 @@ func (g *ConsoleGraph) Draw() {
 		fatalf("%s\n", err)
 	}
 
-	fmt.Print("Press 'Enter' to show size graph...")
-	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
+	pressEnter("Press 'Enter' to show size graph...")
 
 	b := g.genImage()
 	if err := enc.Encode(bytes.NewReader(b)); err != nil {
@@ -127,4 +124,22 @@ func (g *ConsoleGraph) genImage() []byte {
 		fatalf("render failed: %v", err)
 	}
 	return b.Bytes()
+}
+
+func newGrapher(output string) Grapher {
+	var g Grapher
+	switch output {
+	case "": // do nothing
+		g = StubDrawer{}
+	case "console":
+		g = &ConsoleGraph{}
+	case "web":
+		g = &webGraph{
+			Title:       "Heavy Storage Consumption",
+			DataHeaders: []string{"pulse", "record's values Mb"},
+		}
+	default:
+		fatalf("unknown graph output type: %v", output)
+	}
+	return g
 }

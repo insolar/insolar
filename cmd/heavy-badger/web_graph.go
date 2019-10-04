@@ -17,8 +17,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -83,21 +85,27 @@ var graphTmpl = template.Must(template.New("graphHtml").Parse(`
 `))
 
 func makeWebDrawFile(tCtx webGraph) (*os.File, error) {
+	// to avoid creating and cleaning temporary files on template errors
+	var b bytes.Buffer
+	err := graphTmpl.ExecuteTemplate(&b, "graphHtml", tCtx)
+	if err != nil {
+		return nil, fmt.Errorf("template failed: %v", err)
+	}
+
 	f, err := ioutil.TempFile("", "heavy_badger_web_report_*.html")
 	if err != nil {
 		return nil, err
 	}
-	err = graphTmpl.ExecuteTemplate(f, "graphHtml", tCtx)
+	_, err = io.Copy(f, &b)
 	if err != nil {
-		return nil, fmt.Errorf("template failed: %v\n", err)
+		return nil, err
 	}
-
 	return f, nil
 }
 
 func (g *webGraph) Add(x insolar.Pulse, y float64) {
 	g.Data = append(g.Data, tmplData{
-		XValue:  fmt.Sprintf("%s", pulseTime(x)),
+		XValue:  pulseTime(x).String(),
 		YValues: []float64{y},
 	})
 }
@@ -113,7 +121,7 @@ func (g *webGraph) Draw() {
 
 	fin := &finalizersHolder{}
 	fin.add(func() error {
-		fmt.Println("remove", tmpFile.Name())
+		fmt.Println("\nremove", tmpFile.Name())
 		return os.Remove(tmpFile.Name())
 	})
 	done := fin.onSignals(syscall.SIGINT, syscall.SIGTERM)

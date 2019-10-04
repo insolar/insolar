@@ -19,9 +19,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/cheggaaa/pb/v3"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
@@ -38,16 +38,15 @@ type dbScanner struct {
 
 	nonStrict bool
 
-	showValuesHistogram bool
-	perPulseStat        bool
-	statGraph           string
+	perPulseStat bool
+	statGraph    string
 
 	disableProgressbar bool
 
 	enableRecordsTypesStat bool
 
-	// TODO: add fromPulse
 	limitPulses int
+	skipPulses  int
 
 	searchValuesPrint       bool
 	searchValuesGreaterThan int64
@@ -65,10 +64,6 @@ func (app *appCtx) scanCommand() *cobra.Command {
 		Use:   "scan",
 		Short: "scans database commands (check scan -h)",
 	}
-	showHistogramFlag := func(cmd *cobra.Command) {
-		cmd.Flags().BoolVar(&scan.showValuesHistogram, "histograms", false,
-			"show key/values histograms")
-	}
 	nonStrictFlag := func(cmd *cobra.Command) {
 		cmd.Flags().BoolVar(&scan.nonStrict, "non-strict", false,
 			"non strict mode (skip fail on some controversial error)")
@@ -81,32 +76,43 @@ func (app *appCtx) scanCommand() *cobra.Command {
 		cmd.Flags().StringVar(&scan.statGraph, "graph", "",
 			"show pulse size graph over time")
 	}
-	progressBarFlag := func(cmd *cobra.Command) {
+	limitPulsesFlag := func(cmd *cobra.Command) {
 		cmd.Flags().IntVarP(&scan.limitPulses, "limit", "l", 0,
 			"scan only provided count of pulses")
 	}
+	skipPulsesFlag := func(cmd *cobra.Command) {
+		cmd.Flags().IntVar(&scan.skipPulses, "skip", 0,
+			"skip provided count of pulses")
+	}
+	disableProgressBarFlag := func(cmd *cobra.Command) {
+		cmd.Flags().BoolVar(&scan.disableProgressbar, "no-progress-bar", false,
+			"don't show pulses progress bar")
+	}
 
 	commonFlags := func(cmd *cobra.Command) {
-		showHistogramFlag(cmd)
 		nonStrictFlag(cmd)
 		perPulseStatFlag(cmd)
 		graphSizesHistoryFlag(cmd)
-		progressBarFlag(cmd)
+		limitPulsesFlag(cmd)
+		skipPulsesFlag(cmd)
+		disableProgressBarFlag(cmd)
 	}
 
-	// TODO: add scan by scope id
 	var scopeName string
 	var scanScopeByNameCmd = &cobra.Command{
-		Use:   "pulse-scan",
+		Use:   "scope-pulses",
 		Short: "scan in scope by pules and generate report",
 		Run: func(_ *cobra.Command, _ []string) {
+			if scan.perPulseStat || scan.searchValuesGreaterThan > 0 {
+				scan.disableProgressbar = true
+			}
 			scan.openDB(app.dataDir)
 			scan.scanScopePulesByName(scopeName)
 		},
 	}
 	scanScopeByNameCmd.Flags().StringVarP(&scopeName, "scope-name", "s", "ScopeRecord",
-		"scan provided scope name")
-	scanScopeByNameCmd.Flags().Int64Var(&scan.searchValuesGreaterThan, "value-greater", 0,
+		"scope name")
+	scanScopeByNameCmd.Flags().Int64Var(&scan.searchValuesGreaterThan, "print-value-gt-size", 0,
 		"search values greater than provided bytes")
 	scanScopeByNameCmd.Flags().BoolVar(&scan.enableRecordsTypesStat, "record-types-stat", false,
 		"parse values in ScopeRecord and accumulate stat by records stat")
@@ -114,31 +120,38 @@ func (app *appCtx) scanCommand() *cobra.Command {
 
 	var fastScan bool
 	var names []string
-	var scanAllScopes = &cobra.Command{
-		Use:   "scope",
-		Short: "show histograms by scope",
+	var ids []int
+	var scopesStatCmd = &cobra.Command{
+		Use:   "scopes-stat",
+		Short: "show statistic by scope (by default scans all scopes)",
 		Run: func(_ *cobra.Command, _ []string) {
 			scan.openDB(app.dataDir)
-			scan.scopesReport(fastScan, names)
+			scan.scopesReport(fastScan, names, ids)
 		},
 	}
-	scanAllScopes.Flags().BoolVar(&fastScan, "fast", false, "scan and stat only keys")
-	scanAllScopes.Flags().StringSliceVarP(&names, "scope-name", "s", nil, "scope name (by default scans all scopes)")
+	scopesStatCmd.Flags().BoolVar(&fastScan, "fast", false, "scan and stat only keys")
+	scopesStatCmd.Flags().StringSliceVarP(&names, "scope-name", "s", nil,
+		"scope name")
+	scopesStatCmd.Flags().IntSliceVarP(&ids, "scope-id", "i", nil,
+		"scope id (check command 'scopes' output)")
+	graphSizesHistoryFlag(scopesStatCmd)
 
+	var printAll bool
 	var scanPulses = &cobra.Command{
 		Use:   "pulses",
-		Short: "collects stat per prefixes",
+		Short: "report on pulses",
 		Run: func(_ *cobra.Command, _ []string) {
 			scan.openDB(app.dataDir)
-			scan.pulsesReport()
+			scan.pulsesReport(printAll)
 		},
 	}
 	nonStrictFlag(scanPulses)
+	scanPulses.Flags().BoolVar(&printAll, "all", false, "print all pulses")
 
 	scanCmd.AddCommand(
 		scanPulses,
 		scanScopeByNameCmd,
-		scanAllScopes,
+		scopesStatCmd,
 	)
 	return scanCmd
 }
@@ -199,7 +212,14 @@ func pulseTime(p insolar.Pulse) time.Time {
 	return time.Unix(p.PulseTimestamp/1000000000, 0)
 }
 
-func (dbs *dbScanner) printPulsesInfo(pulses []insolar.Pulse) {
+func (dbs *dbScanner) printAllPulsesInfo(pulses []insolar.Pulse) {
+	for i := 0; i < len(pulses); i++ {
+		p := pulses[len(pulses)-i-1]
+		fmt.Printf("pulse=%v, timestamp=%v\n", p.PulseNumber, pulseTime(p))
+	}
+}
+
+func (dbs *dbScanner) printShortPulsesInfo(pulses []insolar.Pulse) {
 	fmt.Println("Pulses info:")
 	printLine("=")
 	if len(pulses) == 0 {
@@ -211,7 +231,7 @@ func (dbs *dbScanner) printPulsesInfo(pulses []insolar.Pulse) {
 	printPulse := func(prefix string, p insolar.Pulse) {
 		pv := pulseView{Pulse: p}
 		fmt.Printf(prefix+" (timestamp -> %v): ", pulseTime(p))
-		printJSON(pv, jsonPrefix(""))
+		printJSON(pv, jsonPrefix(""), setPretty(true))
 	}
 	if first.PulseNumber != insolar.GenesisPulse.PulseNumber {
 		dbs.failIfStrictf("first pulse %v is a not genesis pulse", first.PulseNumber)
@@ -230,17 +250,30 @@ func (dbs *dbScanner) printPulsesInfo(pulses []insolar.Pulse) {
 	printPulse("last pulse:", last)
 }
 
-func (dbs *dbScanner) pulsesReport() {
+func (dbs *dbScanner) pulsesReport(all bool) {
 	allPulses := dbs.getAllPulses()
-	dbs.printPulsesInfo(allPulses)
+	if all {
+		dbs.printAllPulsesInfo(allPulses)
+		return
+	}
+	dbs.printShortPulsesInfo(allPulses)
 }
 
-func (dbs *dbScanner) scopesReport(fast bool, names []string) {
+func (dbs *dbScanner) scopesReport(fast bool, names []string, ids []int) {
+	seen := map[store.Scope]struct{}{}
 	var toScan []store.Scope
 	for _, name := range names {
 		scope, err := scopeFromName(name)
 		if err != nil {
 			fatalf("scan failed: %v", err)
+		}
+		toScan = append(toScan, scope)
+		seen[scope] = struct{}{}
+	}
+	for id := range ids {
+		scope := store.Scope(id)
+		if _, ok := seen[scope]; ok {
+			continue
 		}
 		toScan = append(toScan, scope)
 	}
@@ -253,16 +286,18 @@ func (dbs *dbScanner) scopesReport(fast bool, names []string) {
 }
 
 func (dbs *dbScanner) scanWholeScope(scope store.Scope, fast bool) {
+	printLine("=")
+	fmt.Printf("Scan scope %s\n", scope)
+	printLine("=")
+
 	h := newHistogram("Summary Sizes")
+
 	var opts = &iterOptions{
 		counter:  true,
 		keysOnly: fast,
 	}
-
-	printLine("=")
-	fmt.Printf("Scan scope %s\n", scope)
-	printLine("=")
 	iterate(dbs.db, scopeKey{scope}, opts, h.iter)
+
 	h.PrintKeys()
 	if !fast {
 		printLine("-")
@@ -282,9 +317,18 @@ func (dbs *dbScanner) scanScopePulesByName(scopeName string) {
 
 func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 	pulses := dbs.getAllPulses()
-	dbs.printPulsesInfo(pulses)
+	dbs.printShortPulsesInfo(pulses)
 
 	fmt.Printf("scan %s ...\n", scope.String())
+	if dbs.skipPulses > 0 {
+		if dbs.skipPulses >= len(pulses) {
+			fmt.Printf("Limit %v exceeds pulses count %v. Nothing to scan.\n", dbs.skipPulses, len(pulses))
+			return
+		}
+		// note: we expect pulses are in reverse order here!
+		pulses = pulses[:len(pulses)-dbs.skipPulses]
+	}
+
 	limit := len(pulses)
 	if dbs.limitPulses > 0 && dbs.limitPulses < limit {
 		limit = dbs.limitPulses
@@ -295,10 +339,10 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 	var sumPrinters []printer
 
 	baseIters := make([]iteration, 0, 8)
+	if dbs.searchValuesGreaterThan > 0 {
+		baseIters = append(baseIters, valuesExceedSize(scope, dbs.searchValuesGreaterThan))
+	}
 	if scope == store.ScopeRecord {
-		if dbs.searchValuesGreaterThan > 0 {
-			baseIters = append(baseIters, valuesExceedSize(scope, dbs.searchValuesGreaterThan))
-		}
 		if dbs.enableRecordsTypesStat {
 			statByType := newRecordsStatByType()
 			baseIters = append(baseIters, statByType.iter)
@@ -306,68 +350,37 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 		}
 	}
 
-	if dbs.showValuesHistogram {
-		sumValuesHistogram := newHistogram("Summary Sizes")
-		sumPrinters = append(sumPrinters, sumValuesHistogram)
-		baseIters = append(baseIters, sumValuesHistogram.iter)
-	} else {
-		sumKVS := &KVStat{Desc: "KV Summary Stat:"}
-		sumPrinters = append(sumPrinters, sumKVS)
-		baseIters = append(baseIters, sumKVS.iter)
-	}
+	sumValuesHistogram := newHistogram("Summary Sizes")
+	sumPrinters = append(sumPrinters, sumValuesHistogram)
+	baseIters = append(baseIters, sumValuesHistogram.iter)
+	pulsePrinter := func() {}
 
-	var drawer Grapher
-	adder := func(x insolar.Pulse, v int64) {
-		if x.PulseNumber == insolar.GenesisPulse.PulseNumber {
-			return
-		}
-		drawer.Add(x, float64(v)/mb)
-	}
+	graphImpl := newGrapher(dbs.statGraph)
 
-	switch dbs.statGraph {
-	case "": // do nothing
-		adder = func(x insolar.Pulse, v int64) {}
-		drawer = StubDrawer{}
-	case "console":
-		drawer = &ConsoleGraph{}
-	case "web":
-		drawer = &webGraph{
-			Title:       "Heavy Storage Consumption",
-			DataHeaders: []string{"pulse", "record's values Mb"},
-		}
-	default:
-		fatalf("unknown graph output type: %v", dbs.statGraph)
-	}
-
-	bar := pb.StartNew(limit)
+	bar := createProgressBar(limit, dbs.disableProgressbar)
 
 	var i = 0
 	for ; i < limit; i++ {
-		pulse := pulses[len(pulses)-i-1]
+		bar.Increment()
 
-		if !dbs.disableProgressbar {
-			bar.Increment()
-		}
+		pulse := pulses[len(pulses)-i-1]
 		pn := pulse.PulseNumber
 
-		var pulsePrinter printer
-		iters := make([]iteration, 0, 8)
-		for _, it := range baseIters {
-			iters = append(iters, it)
-		}
+		iters := make([]iteration, 0, len(baseIters)+2)
+		iters = append(iters, baseIters...)
 
-		// we need per pulse stat for graph
-		add := func() {}
-		if dbs.showValuesHistogram {
-			valuesH := newHistogram("Per Pulse Sizes")
-			add = func() { adder(pulse, valuesH.values.sum) }
+		var valuesH *histogram
+		if dbs.statGraph != "" || dbs.perPulseStat {
+			valuesH = newHistogram("Per Pulse Sizes")
 			iters = append(iters, valuesH.iter)
-			pulsePrinter = valuesH
-		} else {
-			kvs := &KVStat{}
-			add = func() { adder(pulse, kvs.ValuesTotalBytes) }
-			iters = append(iters, kvs.iter)
-			pulsePrinter = kvs
+		}
+		if dbs.perPulseStat {
+			pulsePrinter = func() {
+				fmt.Printf("Pulse %v stats.\n", pn)
+				printLine("-")
+				valuesH.Print()
+				fmt.Println()
+			}
 		}
 
 		// actual iteration happens here
@@ -377,28 +390,21 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 			nil,
 			iters...,
 		)
-		add()
-
-		if dbs.perPulseStat {
-			fmt.Printf("Pulse %v stats.\n", pn)
-			pulsePrinter.Print()
-			fmt.Println()
-		}
+		graphImpl.Add(pulse, float64(valuesH.values.sum)/mb)
+		pulsePrinter()
 	}
+	bar.Finish()
+
 	if dbs.limitPulses > 0 && i == dbs.limitPulses {
 		fmt.Printf("LIMIT %v reached. STOP.\n", dbs.limitPulses)
 	}
 
-	if !dbs.disableProgressbar {
-		bar.Finish()
-	}
-
+	// reports
 	for _, p := range sumPrinters {
 		p.Print()
 	}
-	fmt.Println()
-
-	drawer.Draw()
+	fmt.Printf("\n%v keys in %v pulses scanned.\n\n", sumValuesHistogram.keys.totalCount, i)
+	graphImpl.Draw()
 }
 
 type printer interface {
@@ -415,7 +421,7 @@ func valuesExceedSize(scope store.Scope, size int64) iteration {
 			return nil
 		}
 
-		extra := ""
+		info := []string{fmt.Sprintf("key=%x - FOUND VALUE: size=%v", k, humanize.Bytes(uint64(valueSize)))}
 		if scope == store.ScopeRecord {
 			var matRec record.Material
 			err := matRec.Unmarshal(v)
@@ -423,41 +429,16 @@ func valuesExceedSize(scope store.Scope, size int64) iteration {
 				panic(err)
 			}
 			virtual := record.Unwrap(&matRec.Virtual)
-			extra = fmt.Sprintf(": Type=%T", virtual)
+			info = append(info, fmt.Sprintf("type=%T", virtual))
+		}
+		if scope == store.ScopeRecord {
+			id := insolar.NewIDFromBytes(k)
+			info = append(info, "id="+id.String(), "pulse="+id.Pulse().String())
 		}
 
-		fmt.Printf(">> big value: size=%v (%s > %v) ID=%s: %s\n",
-			valueSize, humanize.Bytes(uint64(valueSize)), size,
-			insolar.NewIDFromBytes(k).String(), extra,
-		)
+		fmt.Println(strings.Join(info, " "))
 		return nil
 	}
-}
-
-type KVStat struct {
-	Desc             string
-	Count            int64
-	KeysTotalBytes   int64
-	ValuesTotalBytes int64
-}
-
-func (kvs *KVStat) iter(k, v []byte) error {
-	keySize, valueSize := int64(len(k)), int64(len(v))
-	kvs.KeysTotalBytes += keySize
-	kvs.ValuesTotalBytes += valueSize
-	kvs.Count++
-	return nil
-}
-
-func (kvs *KVStat) Print() {
-	if kvs.Desc != "" {
-		fmt.Println(kvs.Desc)
-	}
-	fmt.Printf("found: %v, keys total size: %v, values total size: %v\n",
-		kvs.Count,
-		humanize.Bytes(uint64(kvs.KeysTotalBytes)),
-		humanize.Bytes(uint64(kvs.ValuesTotalBytes)),
-	)
 }
 
 type recordsStatByType struct {

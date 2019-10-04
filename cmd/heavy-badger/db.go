@@ -21,8 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/dgraph-io/badger"
 
@@ -109,29 +107,9 @@ func iterate(
 
 	i := 0
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		i++
 		if opts.counter {
-			i++
-			var numParts []int
-			left := i
-			for {
-				n := left % 1000
-				left = left / 1000
-				// parts = append(parts, fmt.Sprintf("%"+fill+"3s", strconv.Itoa(n)))
-				numParts = append(numParts, n)
-				if left == 0 {
-					break
-				}
-			}
-			reverseInts(numParts)
-			s := make([]string, len(numParts))
-			numFmt := "%3s"
-			for j, n := range numParts {
-				s[j] = fmt.Sprintf(numFmt, strconv.Itoa(n))
-				if j == 0 {
-					numFmt = "%03s"
-				}
-			}
-			_, _ = fmt.Printf("\r%20s scanned", strings.Join(s, " "))
+			_, _ = fmt.Printf("\r%20s scanned", formatInt(i, " "))
 		}
 		var err error
 		var b []byte
@@ -170,11 +148,4 @@ func (k scopeKey) Scope() store.Scope {
 
 func (k scopeKey) ID() []byte {
 	return nil
-}
-
-func reverseInts(a []int) {
-	for i := len(a)/2 - 1; i >= 0; i-- {
-		opp := len(a) - 1 - i
-		a[i], a[opp] = a[opp], a[i]
-	}
 }

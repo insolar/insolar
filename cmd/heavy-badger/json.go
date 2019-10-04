@@ -29,7 +29,7 @@ type jsonCfg struct {
 
 type jsonOpt func(*jsonCfg)
 
-func enablePretty(pretty bool) jsonOpt {
+func setPretty(pretty bool) jsonOpt {
 	return func(cfg *jsonCfg) { cfg.pretty = pretty }
 }
 
@@ -39,7 +39,6 @@ func jsonPrefix(prefix string) jsonOpt {
 
 func printJSON(v interface{}, opts ...jsonOpt) {
 	cfg := &jsonCfg{
-		pretty: true,
 		indent: "  ",
 		prefix: "",
 	}

@@ -43,9 +43,10 @@ func main() {
 	}
 
 	rootCmd.AddCommand(
-		app.fixCommand(),
-		app.scanCommand(),
 		scopesListCommand(),
+		app.fixCommand(),
+		app.valueHexDumpCommand(),
+		app.scanCommand(),
 	)
 
 	err := rootCmd.Execute()

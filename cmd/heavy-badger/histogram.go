@@ -53,6 +53,7 @@ func newKeyHistogram() *histogramData {
 	return &histogramData{
 		bins:        keyBins,
 		countPerBin: make([]int64, len(keyBins)+1),
+		sumPerBin:   make([]int64, len(keyBins)+1),
 		max:         math.MinInt64,
 		min:         math.MaxInt64,
 		sum:         0,
@@ -143,7 +144,8 @@ func (h histogramData) Print() {
 			lowerBound = int(h.bins[index-1])
 		}
 
-		fmt.Printf("[%10d, %10d) %9d %12d\n", lowerBound, upperBound, count, h.sumPerBin[index])
+		fmt.Printf("[%10d, %10d) %9d %12s\n",
+			lowerBound, upperBound, count, humanize.Bytes(uint64(h.sumPerBin[index])))
 	}
 	fmt.Println()
 }
@@ -151,7 +153,7 @@ func (h histogramData) Print() {
 func newHistogram(description string) *histogram {
 	return &histogram{
 		descr:  description,
-		keys:   newValueHistogram(),
+		keys:   newKeyHistogram(),
 		values: newValueHistogram(),
 	}
 }

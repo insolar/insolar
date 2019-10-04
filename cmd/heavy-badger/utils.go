@@ -17,9 +17,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+
+	"github.com/cheggaaa/pb/v3"
 )
 
 func (dbs *dbScanner) failIfStrictf(format string, args ...interface{}) {
@@ -41,4 +45,76 @@ func fatalf(format string, args ...interface{}) {
 
 func printLine(s string) {
 	fmt.Println(strings.Repeat(s, 50))
+}
+
+// type progressBar interface {
+// 	Increment()
+// 	Finish()
+// }
+
+type progressBarHolder struct {
+	disable bool
+	pb      *pb.ProgressBar
+}
+
+func (pbh progressBarHolder) Finish() {
+	if pbh.disable {
+		return
+	}
+	pbh.pb.Finish()
+}
+
+func (pbh progressBarHolder) Increment() {
+	// fmt.Printf("%#v\n", pbh)
+	if pbh.disable {
+		return
+	}
+	pbh.pb.Increment()
+}
+
+func createProgressBar(count int, disable bool) progressBarHolder {
+	pbh := progressBarHolder{
+		disable: disable,
+	}
+	if !disable {
+		pbh.pb = pb.StartNew(count)
+	}
+	return pbh
+}
+
+func formatInt(n int, sep string) string {
+	var numParts []int
+	// left := n
+	for {
+		order := n % 1000
+		n /= 1000
+		// parts = append(parts, fmt.Sprintf("%"+fill+"3s", strconv.Itoa(n)))
+		numParts = append(numParts, order)
+		if n == 0 {
+			break
+		}
+	}
+	reverseInts(numParts)
+	s := make([]string, len(numParts))
+	numFmt := "%3s"
+	for j, order := range numParts {
+		s[j] = fmt.Sprintf(numFmt, strconv.Itoa(order))
+		if j == 0 {
+			numFmt = "%03s"
+		}
+	}
+	return strings.Join(s, sep)
+}
+
+func reverseInts(a []int) {
+	for i := len(a)/2 - 1; i >= 0; i-- {
+		opp := len(a) - 1 - i
+		a[i], a[opp] = a[opp], a[i]
+	}
+}
+
+func pressEnter(s string) {
+	fmt.Print(s)
+	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
+
 }
