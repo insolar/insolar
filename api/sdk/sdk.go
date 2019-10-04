@@ -416,6 +416,9 @@ func (sdk *SDK) Migration(daemon Member, ethTxHash string, amount string, migrat
 
 // FullMigration method do  migration by all daemons
 func (sdk *SDK) FullMigration(daemons []Member, ethTxHash string, amount string, migrationAddress string) (string, error) {
+	if len(daemons) < 2 {
+		return "", errors.New("Length of daemons must be more than 2")
+	}
 	if traceID, err := sdk.Migration(daemons[0], ethTxHash, amount, migrationAddress); err != nil {
 		return traceID, err
 	}

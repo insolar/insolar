@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -58,6 +59,7 @@ func (s *depositTransferScenario) prepare(repetition int) {
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 
 	for _, m := range s.members {
 		mm, ok := m.(*sdk.MigrationMember)
@@ -67,10 +69,13 @@ func (s *depositTransferScenario) prepare(repetition int) {
 		}
 		for i := 0; i < repetition; i++ {
 			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
-			check("Error while migrating tokens: ", err)
+			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
+				check("Error while migrating tokens: ", err)
+			}
 		}
 	}
 
+	// wait for hold period end
 	time.Sleep(30 * time.Second)
 
 }
@@ -82,7 +87,7 @@ func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
