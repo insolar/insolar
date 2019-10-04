@@ -110,14 +110,14 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 	err = isDBEmpty(bdb)
 	if err == nil {
 		// will exit
-		err = errors.New("DB must not be empty")
+		err = errors.New("db must not be empty")
 		closeRawDB(bdb, err)
 	}
 	log.Info("DB is not empty")
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
-		err = errors.Wrap(err, "failed to open incremental backup file")
+		// will exit
 		closeRawDB(bdb, err)
 	}
 	log.Info("Backup file is opened")
@@ -125,20 +125,16 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
 		// will exit
-		err = errors.Wrap(err, "failed to load incremental backup file")
 		closeRawDB(bdb, err)
 	}
 
-	log.Info("Successfully loaded, running GC")
 	err = bdb.RunValueLogGC(0.7)
-	if err == nil {
-		log.Info("GC done, closing DB")
-	} else {
+	if err != nil {
 		log.Warn("Failed to run GC: " + err.Error())
 	}
 
+	log.Info("Successfully merged")
 	closeRawDB(bdb, nil)
-	log.Info("DB closed")
 }
 
 func parseMergeParams(ctx context.Context) *cobra.Command {
