@@ -29,12 +29,10 @@ import (
 	insPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -126,16 +124,6 @@ func (m *client) registerRequest(
 		return nil, errors.Wrap(err, "registerRequest: failed to calculate affinity reference")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.registerRequest")
-	instrumenter := instrument(ctx, "registerRequest").err(&err)
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
-
 	pl, err := m.sendToLight(ctx, sender, msgPayload, *affinityRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register request")
@@ -168,6 +156,10 @@ func (m *client) calculateAffinityReference(ctx context.Context, requestRecord r
 // RegisterIncomingRequest sends message for incoming request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*payload.RequestInfo, error) {
+	var err error
+	ctx, instrumenter := instrument(ctx, "RegisterIncomingRequest", &err)
+	defer instrumenter.end()
+
 	incomingRequest := &payload.SetIncomingRequest{Request: record.Wrap(request)}
 
 	// retriesNumber is zero, because we don't retry registering of incoming requests - the caller should
@@ -190,6 +182,10 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
+	var err error
+	ctx, instrumenter := instrument(ctx, "RegisterOutgoingRequest", &err)
+	defer instrumenter.end()
+
 	retrySender := bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1)
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
 
@@ -216,25 +212,14 @@ func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.Ou
 func (m *client) GetCode(
 	ctx context.Context, code insolar.Reference,
 ) (CodeDescriptor, error) {
-	var (
-		desc CodeDescriptor
-		err  error
-	)
+	var err error
+	ctx, instrumenter := instrument(ctx, "GetCode", &err)
+	defer instrumenter.end()
 
-	desc = m.localStorage.Code(code)
+	desc := m.localStorage.Code(code)
 	if desc != nil {
 		return desc, nil
 	}
-
-	instrumenter := instrument(ctx, "GetCode").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
 
 	getCodePl := &payload.GetCode{CodeID: *code.GetLocal()}
 
@@ -278,6 +263,9 @@ func (m *client) GetObject(
 	head insolar.Reference,
 	request *insolar.Reference,
 ) (ObjectDescriptor, error) {
+	var err error
+	ctx, instrumenter := instrument(ctx, "GetObject", &err)
+	defer instrumenter.end()
 
 	if desc := m.localStorage.Object(head); desc != nil {
 		return desc, nil
@@ -349,19 +337,6 @@ func (m *client) sendGetObject(
 		err error
 		res = &getObjectRes{}
 	)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
-	instrumenter := instrument(ctx, "GetObject").err(&err)
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		if err != nil && err == ErrObjectDeactivated {
-			err = nil // megahack: threat it 2xx
-		}
-		instrumenter.end()
-	}()
-
 	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
 
 	pl := payload.GetObject{
@@ -445,15 +420,8 @@ func (m *client) GetRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
 ) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifacts.GetRequest")
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
+	ctx, instrumenter := instrument(ctx, "GetRequest", &err)
+	defer instrumenter.end()
 
 	getRequestPl := &payload.GetRequest{
 		ObjectID:  *object.GetLocal(),
@@ -499,15 +467,8 @@ func (m *client) GetPendings(
 	[]insolar.Reference, error,
 ) {
 	var err error
-	instrumenter := instrument(ctx, "GetPendings").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
+	ctx, instrumenter := instrument(ctx, "GetPendings", &err)
+	defer instrumenter.end()
 
 	getPendingsPl := &payload.GetPendings{
 		ObjectID:        *object.GetLocal(),
@@ -544,15 +505,8 @@ func (m *client) HasPendings(
 	object insolar.Reference,
 ) (bool, error) {
 	var err error
-	instrumenter := instrument(ctx, "HasPendings").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendings")
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
+	ctx, instrumenter := instrument(ctx, "HasPendings", &err)
+	defer instrumenter.end()
 
 	hasPendingsPl := &payload.HasPendings{
 		ObjectID: *object.GetLocal(),
@@ -581,15 +535,8 @@ func (m *client) HasPendings(
 // CodeRef records are used to activate prototype or as migration code for an object.
 func (m *client) DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error) {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
-	instrumenter := instrument(ctx, "DeployCode").err(&err)
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
+	ctx, instrumenter := instrument(ctx, "DeployCode", &err)
+	defer instrumenter.end()
 
 	codeRec := record.Code{
 		Code:        code,
@@ -643,15 +590,9 @@ func (m *client) ActivatePrototype(
 	memory []byte,
 ) error {
 	var err error
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
-	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
+	ctx, instrumenter := instrument(ctx, "ActivatePrototype", &err)
+	defer instrumenter.end()
+
 	err = m.activateObject(ctx, object, code, true, parent, memory)
 	return err
 }
@@ -742,6 +683,9 @@ func (m *client) RegisterResult(
 	request insolar.Reference,
 	result RequestResult,
 ) error {
+	var err error
+	ctx, instrumenter := instrument(ctx, "RegisterResult", &err)
+	defer instrumenter.end()
 
 	sendResult := func(
 		payloadInput payload.Payload,
@@ -766,22 +710,6 @@ func (m *client) RegisterResult(
 		}
 	}
 
-	var (
-		pl  payload.Payload
-		err error
-	)
-
-	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterResult")
-	instrumenter := instrument(ctx, "RegisterResult").err(&err)
-	defer func() {
-		if err != nil {
-			instracer.AddError(span, err)
-		}
-		span.End()
-		instrumenter.end()
-	}()
-	span.AddAttributes(trace.StringAttribute("SideEffect", result.Type().String()))
-
 	objReference := result.ObjectReference()
 	resultRecord := record.Result{
 		Object:  *objReference.GetLocal(),
@@ -789,6 +717,7 @@ func (m *client) RegisterResult(
 		Payload: result.Result(),
 	}
 
+	var pl payload.Payload
 	switch result.Type() {
 	// ActivateObject creates activate object record in storage. Provided prototype reference will be used as objects prototype
 	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
