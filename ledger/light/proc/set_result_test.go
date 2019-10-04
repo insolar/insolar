@@ -382,7 +382,7 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestInvalid), insError.GetCode())
+	require.Equal(t, payload.CodeRequestInvalid, insError.GetCode())
 }
 
 func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
@@ -491,7 +491,7 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestInvalid), insError.GetCode())
+	require.Equal(t, payload.CodeRequestInvalid, insError.GetCode())
 }
 
 func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
@@ -609,7 +609,7 @@ func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
+	require.Equal(t, payload.CodeRequestNotFound, insError.GetCode())
 }
 
 func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
@@ -726,7 +726,7 @@ func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestNonClosedOutgoing), insError.GetCode())
+	require.Equal(t, payload.CodeRequestNonClosedOutgoing, insError.GetCode())
 }
 
 func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
@@ -841,7 +841,7 @@ func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestNonOldestMutable), insError.GetCode())
+	require.Equal(t, payload.CodeRequestNonOldestMutable, insError.GetCode())
 }
 
 func TestSetResult_Proceed_CloseImmutOutWhenOpenedMutableInFilaments(t *testing.T) {

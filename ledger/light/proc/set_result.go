@@ -199,6 +199,9 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate earliest pending")
 	}
 
+	// Result passed all checks.
+	stats.Record(ctx, statSetResultSuccess.M(1))
+
 	err = func() error {
 		// Start writing to db.
 		done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
@@ -293,7 +296,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	logger.Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
-	stats.Record(ctx, statSetResultSuccess.M(1))
 	return nil
 }
 
