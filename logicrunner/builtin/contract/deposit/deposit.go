@@ -18,12 +18,13 @@ package deposit
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 )
@@ -152,19 +153,49 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.Lockup)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
-		accountRef, err := ma.GetAccount(XNS)
+		walletRef, err := ma.GetWallet()
 		if err != nil {
-			return fmt.Errorf("get account ref failed: %s", err.Error())
+			return fmt.Errorf("failed to get wallet: %s", err.Error())
 		}
-		a := account.GetObject(*accountRef)
-		err = a.TransferToDeposit(amountStr, d.GetReference())
-		if err != nil {
-			return fmt.Errorf("failed to transfer from migration wallet to deposit: %s", err.Error())
+		if ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit("genesis_deposit"); ok {
+			_, err := deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference())
+			if err != nil {
+				return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
+			}
+			return nil
 		}
-		return nil
+		return fmt.Errorf("cannot find migtation deposit")
 	}
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
 	return nil
+}
+
+// TransferToDeposit transfers funds to deposit.
+func (d *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference) (interface{}, error) {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse input amount")
+	}
+	balance, ok := new(big.Int).SetString(d.Balance, 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse deposit balance")
+	}
+	if balance.Sign() <= 0 {
+		return nil, fmt.Errorf("not enough balance for transfer")
+	}
+	newBalance, err := safemath.Sub(balance, amount)
+	if err != nil {
+		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
+	}
+	d.Balance = newBalance.String()
+	destination := deposit.GetObject(toDeposit)
+	acceptDepositErr := destination.Accept(amountStr)
+	if acceptDepositErr == nil {
+		return nil, nil
+	}
+	d.Balance = balance.String()
+	return nil, fmt.Errorf("failed to transfer amount: %s", acceptDepositErr.Error())
+
 }
 
 // Check amount field in confirmation from migration daemons.

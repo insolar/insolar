@@ -343,6 +343,59 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Deposit)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 2)
+	var args0 string
+	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.TransferToDeposit(args0, args1)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -508,13 +561,14 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetTxHash":      INSMETHOD_GetTxHash,
-			"GetAmount":      INSMETHOD_GetAmount,
-			"GetPulseUnHold": INSMETHOD_GetPulseUnHold,
-			"Itself":         INSMETHOD_Itself,
-			"Confirm":        INSMETHOD_Confirm,
-			"Transfer":       INSMETHOD_Transfer,
-			"Accept":         INSMETHOD_Accept,
+			"GetTxHash":         INSMETHOD_GetTxHash,
+			"GetAmount":         INSMETHOD_GetAmount,
+			"GetPulseUnHold":    INSMETHOD_GetPulseUnHold,
+			"Itself":            INSMETHOD_Itself,
+			"Confirm":           INSMETHOD_Confirm,
+			"TransferToDeposit": INSMETHOD_TransferToDeposit,
+			"Transfer":          INSMETHOD_Transfer,
+			"Accept":            INSMETHOD_Accept,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

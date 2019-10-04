@@ -256,11 +256,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetWalletGenesisContractState(insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractFeeAccount),
 
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
-		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
+		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
 
 		contracts.GetDepositGenesisContractState(
-			"0",
+			g.ContractsConfig.MDBalance,
 			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
 			int64(pulse.OfUnixTime(MigrationDaemonVesting)),
 			MigrationDaemonVestingStep,

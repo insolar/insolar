@@ -574,6 +574,88 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonRef string, txHash string, a
 	return nil
 }
 
+// TransferToDeposit is proxy generated method
+func (r *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// TransferToDepositAsImmutable is proxy generated method
+func (r *Deposit) TransferToDepositAsImmutable(amountStr string, toDeposit insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
 // Transfer is proxy generated method
 func (r *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
