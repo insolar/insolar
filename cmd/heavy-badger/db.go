@@ -149,3 +149,16 @@ func (k scopeKey) Scope() store.Scope {
 func (k scopeKey) ID() []byte {
 	return nil
 }
+
+func readValueByKey(db *store.BadgerDB, key []byte) ([]byte, error) {
+	var value []byte
+	err := db.Backend().View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		value, err = item.ValueCopy(value)
+		return err
+	})
+	return value, err
+}
