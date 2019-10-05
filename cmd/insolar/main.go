@@ -123,7 +123,6 @@ func main() {
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
-	rootCmd.AddCommand(sendRequestCmd)
 	sendRequestCmd.Flags().BoolVarP(
 		&maAsCaller, "migration-admin-caller", "m", false, "use migration admin member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
