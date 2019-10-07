@@ -22,12 +22,14 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -91,7 +93,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetFilament(s.dep, meta)
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePassState:
 		h := NewPassState(s.dep, meta)
 		err = f.Handle(ctx, h.Present)
@@ -139,8 +141,28 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 	if err != nil {
 		bus.ReplyError(ctx, s.sender, meta, err)
+		s.errorMetrics(ctx, payloadType.String(), err)
 	}
 	return err
+}
+
+func (s *Init) errorMetrics(ctx context.Context, msgType string, err error) {
+	if err == nil {
+		return
+	}
+	errCode := payload.CodeUnknown
+	if err == flow.ErrCancelled {
+		errCode = payload.CodeFlowCanceled
+	}
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
+	}
+
+	ctx = insmetrics.InsertTag(ctx, KeyErrorCode, errCode.String())
+	ctx = insmetrics.InsertTag(ctx, KeyMsgType, msgType)
+	stats.Record(ctx, statHandlerError.M(1))
 }
 
 func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
@@ -217,6 +239,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	}
 	if err != nil {
 		bus.ReplyError(ctx, s.sender, originMeta, err)
+		s.errorMetrics(ctx, payloadType.String(), err)
 	}
 
 	return err

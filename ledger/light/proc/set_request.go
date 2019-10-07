@@ -232,6 +232,9 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "request check failed")
 	}
 
+	// Request passed all checks.
+	stats.Record(ctx, statSetRequestSuccess.M(1))
+
 	// Start writing to db.
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
@@ -300,6 +303,5 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		"latest_pending_filament_id": Filament.ID.DebugString(),
 		"reason_id":                  p.request.ReasonRef().GetLocal().DebugString(),
 	}).Debug("request saved")
-	stats.Record(ctx, statSetRequestSuccess.M(1))
 	return nil
 }

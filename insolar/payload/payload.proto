@@ -22,7 +22,7 @@ message Meta {
 message Error {
     uint32 Polymorph = 16;
 
-    uint32 Code = 20;
+    uint32 Code = 20 [(gogoproto.customtype) = "ErrorCode", (gogoproto.nullable) = false];
     string Text = 21;
 }
 

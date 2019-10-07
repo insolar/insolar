@@ -265,19 +265,20 @@ func (bi *badgerIterator) Close() {
 func (bi *badgerIterator) Next() bool {
 	scope := bi.pivot.Scope().Bytes()
 	bi.once.Do(func() {
-		bi.it.Seek(append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...))
+		prefix := append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...)
+		bi.it.Seek(prefix)
 	})
 	if !bi.it.ValidForPrefix(scope) {
 		return false
 	}
 
-	prev := bi.it.Item().KeyCopy(nil)
-	bi.prevKey = prev[len(scope):]
-	prev, err := bi.it.Item().ValueCopy(nil)
+	k := bi.it.Item().KeyCopy(nil)
+	bi.prevKey = k[len(scope):]
+	v, err := bi.it.Item().ValueCopy(nil)
 	if err != nil {
 		return false
 	}
-	bi.prevValue = prev
+	bi.prevValue = v
 
 	bi.it.Next()
 	return true

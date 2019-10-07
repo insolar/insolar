@@ -25,8 +25,15 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+type AddMaResponse struct {
+	Count int `json:"totalNumber"`
+}
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
+}
+type GetAddressCountResponse struct {
+	ShardIndex int `json:"shardIndex"`
+	FreeCount  int `json:"freeCount"`
 }
 type VestingParams struct {
 	Lockup      int64 `json:"lockupInPulses"`

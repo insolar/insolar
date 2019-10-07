@@ -83,7 +83,7 @@ func TestSendObject_Proceed(t *testing.T) {
 		assert.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		assert.True(t, ok)
-		assert.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
+		assert.Equal(t, payload.CodeDeactivated, insError.GetCode())
 	})
 
 	t.Run("Simple success", func(t *testing.T) {
@@ -180,7 +180,7 @@ func TestSendObject_Proceed(t *testing.T) {
 		assert.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		assert.True(t, ok)
-		assert.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
+		assert.Equal(t, payload.CodeDeactivated, insError.GetCode())
 	})
 
 	t.Run("Send PassState on light", func(t *testing.T) {

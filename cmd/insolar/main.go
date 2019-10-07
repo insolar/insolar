@@ -177,6 +177,54 @@ func main() {
 	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
 	rootCmd.AddCommand(generateDefaultConfigs)
 
+	var (
+		alertLevel         int
+		shardsCount        int
+		migrationAdminKeys string
+	)
+	var freeMigrationCountCmd = &cobra.Command{
+		Use: "free-migration-count",
+		Run: func(cmd *cobra.Command, args []string) {
+			getfreeMigrationCount([]string{adminURL}, []string{sendURL}, migrationAdminKeys, shardsCount, alertLevel)
+		},
+	}
+	freeMigrationCountCmd.Flags().StringVarP(
+		&migrationAdminKeys, "migration-admin-keys", "k", "",
+		"Config that contains public/private keys of root member",
+	)
+	freeMigrationCountCmd.Flags().IntVarP(
+		&alertLevel, "alert-level", "a", 0,
+		"If one of shard have less free addresses than this value, command will print alert message",
+	)
+	freeMigrationCountCmd.Flags().IntVarP(
+		&shardsCount, "shards-count", "s", 10,
+		"Count of shards at platform (must be a multiple of ten)",
+	)
+	rootCmd.AddCommand(freeMigrationCountCmd)
+
+	var (
+		addressesPath string
+	)
+	var addMigrationAddressesCmd = &cobra.Command{
+		Use: "add-migration-addresses",
+		Run: func(cmd *cobra.Command, args []string) {
+			addMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesPath, shardsCount)
+		},
+	}
+	addMigrationAddressesCmd.Flags().StringVarP(
+		&migrationAdminKeys, "migration-admin-keys", "k", "",
+		"Dir with config that contains public/private keys of admin member",
+	)
+	addMigrationAddressesCmd.Flags().StringVarP(
+		&addressesPath, "addresses", "a", "",
+		"Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
+	)
+	addMigrationAddressesCmd.Flags().IntVarP(
+		&shardsCount, "shards-count", "s", 10,
+		"Count of shards at platform (must be a multiple of ten)",
+	)
+	rootCmd.AddCommand(addMigrationAddressesCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -314,6 +362,17 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = rootKeysFile
+	}
+	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
+	check("[ sendRequest ]", err)
+
+	if !insolar.IsReferenceInBase58(userCfg.Caller) && insolar.IsReferenceInBase58(reqCfg.Reference) {
+		userCfg.Caller = reqCfg.Reference
+	}
+
 	if userCfg.Caller == "" {
 		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
@@ -322,15 +381,9 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 		}
 		if maAsCaller {
 			userCfg.Caller = info.MigrationAdminMember
+			reqCfg.PublicKey = userCfg.PublicKey
 		}
 	}
-
-	pPath := paramsPath
-	if len(pPath) == 0 {
-		pPath = rootKeysFile
-	}
-	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
-	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))

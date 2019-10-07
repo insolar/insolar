@@ -216,7 +216,6 @@ type LoggerOutput interface {
 	LogLevelWriter
 	LowLatencyWrite(LogLevel, []byte) (int, error)
 	IsLowLatencySupported() bool
-	GetBareOutput() io.Writer
 }
 
 type LogLevelGetter interface {

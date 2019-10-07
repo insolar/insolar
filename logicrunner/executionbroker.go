@@ -52,7 +52,6 @@ type ExecutionBrokerI interface {
 	HasMoreRequests(ctx context.Context)
 
 	AbandonedRequestsOnLedger(ctx context.Context)
-	NoMoreRequestsOnLedger(ctx context.Context)
 
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context) error
@@ -147,11 +146,14 @@ func (q *ExecutionBroker) AbandonedRequestsOnLedger(ctx context.Context) {
 	go q.startProcessor(ctx)
 }
 
-func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
+func (q *ExecutionBroker) noMoreRequestsOnLedger(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	q.ledgerHasMoreRequests = false
+	if len(q.probablyMoreSinceLastFetch) == 0 {
+		inslogger.FromContext(ctx).Debug("marking that there is no more requests on ledger")
+		q.ledgerHasMoreRequests = false
+	}
 }
 
 // startProcessors starts one processing goroutine
@@ -179,10 +181,10 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	q.processorActive = true
 
+	// Clear flag if there were more requests before fetching started
 	select {
 	case <-q.probablyMoreSinceLastFetch:
 	default:
-		logger.Warn("no record in probablyMoreSinceLastFetch channel during processor activation, impossible situation")
 	}
 
 	logger.Debug("starting requests processor")
@@ -211,7 +213,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 					}
 				}
 				if tr == nil {
-					q.NoMoreRequestsOnLedger(ctx)
+					q.noMoreRequestsOnLedger(ctx)
 					continue
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
@@ -279,7 +281,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		q.finishTranscript(ctx, transcript)
 
 		if sendReply {
-			go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
+			q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
 		}
 
 		// we're checking here that pulse was changed and we should send
@@ -416,7 +418,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		q.PendingConfirmed = true
 	}()
 
-	close(q.closed)
+	q.close()
 
 	sendExecResults := false
 
@@ -572,6 +574,12 @@ func (q *ExecutionBroker) isClosed() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (q *ExecutionBroker) close() {
+	if !q.isClosed() {
+		close(q.closed)
 	}
 }
 

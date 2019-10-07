@@ -108,9 +108,6 @@ func (e *requestsExecutor) Save(
 	return nil
 }
 
-// objRef := res.ObjectReference()
-// return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
-
 func (e *requestsExecutor) SendReply(
 	ctx context.Context,
 	reqRef insolar.Reference, req record.IncomingRequest,
@@ -142,11 +139,11 @@ func (e *requestsExecutor) SendReply(
 	}
 
 	if req.APINode.IsEmpty() {
-		e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
+		go e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
 		return
 	}
 
-	e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
+	go e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
 }
 
 func (e *requestsExecutor) sendToCaller(

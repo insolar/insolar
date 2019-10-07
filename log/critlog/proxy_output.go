@@ -18,7 +18,6 @@ package critlog
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"io"
 	"sync"
 )
 
@@ -75,8 +74,4 @@ func (p *ProxyLoggerOutput) LowLatencyWrite(level insolar.LogLevel, b []byte) (i
 
 func (p *ProxyLoggerOutput) IsLowLatencySupported() bool {
 	return p.GetTarget().IsLowLatencySupported()
-}
-
-func (p *ProxyLoggerOutput) GetBareOutput() io.Writer {
-	return p.GetTarget().GetBareOutput()
 }

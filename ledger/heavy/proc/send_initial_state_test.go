@@ -66,7 +66,7 @@ func TestSendInitialState_ProceedNoPulse(t *testing.T) {
 		require.NoError(t, err)
 		resErr, ok := result.(*payload.Error)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeNoStartPulse), resErr.Code)
+		require.Equal(t, payload.CodeNoStartPulse, resErr.Code)
 		require.Equal(t, "Couldn't get start pulse", resErr.Text)
 	})
 	is := NewSendInitialState(payload.Meta{})

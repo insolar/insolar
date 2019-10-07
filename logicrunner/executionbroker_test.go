@@ -19,11 +19,14 @@ package logicrunner
 import (
 	"context"
 	"math"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -84,6 +88,8 @@ func finishedCount(args ...interface{}) bool {
 }
 
 func TestExecutionBroker_AddFreshRequest(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	objectRef := gen.Reference()
 
 	reqRef := gen.RecordReference()
@@ -95,11 +101,13 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 
 	table := []struct {
 		name  string
-		mocks func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		mocks func(ctx context.Context, t minimock.Tester) (broker *ExecutionBroker, finishedCase *sync.WaitGroup)
 	}{
 		{
 			name: "happy path",
-			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *sync.WaitGroup) {
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
 				er := executionregistry.NewExecutionRegistryMock(t).
 					RegisterMock.Return(nil).
 					DoneMock.Return(true)
@@ -125,13 +133,14 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 					}, nil)
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
+					wg.Done()
 					require.NoError(t, err)
 				}).ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (artifacts.RequestResult, error) {
 					return &requestresult.RequestResult{}, nil
 				})
 				broker := NewExecutionBroker(objectRef,
 					nil, re, nil, am, er, nil, pa)
-				return broker
+				return broker, wg
 			},
 		},
 	}
@@ -142,8 +151,12 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			mc := minimock.NewController(t)
 
-			broker := test.mocks(ctx, mc)
+			broker, wg := test.mocks(ctx, mc)
 			broker.HasMoreRequests(ctx)
+
+			wg.Wait()
+			// we need to stop broker to stop fetcher
+			close(broker.closed)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
@@ -151,7 +164,33 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 	}
 }
 
+func senderOKMock(t minimock.Tester, callback func()) *bus.SenderMock {
+	innerReps := make(chan *message.Message)
+	sender := bus.NewSenderMock(t).SendRoleMock.Set(func(ctx context.Context, msg *wmMessage.Message, role insolar.DynamicRole, object insolar.Reference) (ch1 <-chan *wmMessage.Message, f1 func()) {
+		go sendOK(innerReps)
+		return innerReps, func() {
+			close(innerReps)
+			if callback != nil {
+				callback()
+			}
+		}
+	})
+	return sender
+}
+
+func sendOK(ch chan<- *message.Message) {
+	msg := bus.ReplyAsMessage(context.Background(), &reply.OK{})
+	meta := payload.Meta{
+		Payload: msg.Payload,
+	}
+	buf, _ := meta.Marshal()
+	msg.Payload = buf
+	ch <- msg
+}
+
 func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	mc := minimock.NewController(t)
 
 	tests := []struct {
@@ -251,6 +290,11 @@ func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 }
 
 func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -258,7 +302,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 
 	er := executionregistry.NewExecutionRegistryMock(mc).
 		RegisterMock.Return(nil).
-		DoneMock.Return(true)
+		DoneMock.Return(true).IsEmptyMock.Return(true)
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -267,13 +311,14 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 
 	am := artifacts.NewClientMock(t).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
 		return artifacts.NewObjectDescriptorMock(t), nil
+	}).HasPendingsMock.Set(func(ctx context.Context, object insolar.Reference) (b1 bool, err error) {
+		return false, nil
 	})
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
 	re := NewRequestsExecutorMock(mc)
-	broker := NewExecutionBroker(objectRef, nil, re, nil, am, er, nil, pa)
-	broker.pending = insolar.NotPending
+	broker := NewExecutionBroker(objectRef, nil, re, senderOKMock(t, nil), am, er, nil, pa)
 
 	immutableRequestRef1 := gen.RecordReference()
 	immutableRequest1 := record.IncomingRequest{
@@ -295,12 +340,20 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	}).GetRequestMock.Return(&immutableRequest1, nil)
 
 	re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
-	re.SendReplyMock.Return()
+	re.SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
+		t.Log("sendreply called")
+		wg.Done()
+	})
 
 	broker.HasMoreRequests(ctx)
+
+	wg.Wait()
+	broker.OnPulse(ctx)
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	randTranscript := func(ctx context.Context) *common.Transcript {
 		reqRef := gen.RecordReference()
 		return common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
@@ -399,17 +452,17 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			assert.Equal(t, test.pendingConfirmed, broker.PendingConfirmed)
 			assert.Equal(t, test.end, !broker.isActive())
 			assert.Equal(t, test.ledgerHasMore, broker.ledgerHasMoreRequests)
-			assert.Len(t, messages, test.numberOfMessages)
+			assert.Len(t, messages, test.numberOfMessages, "result %+v", messages)
 		})
 	}
 }
 
-func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
+func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	objectRef := gen.Reference()
 
-	// ctx := inslogger.TestContext(t)
 	reqRef := gen.RecordReference()
-	// transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{Object: &objectRef})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -472,8 +525,9 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 					Caller:       gen.Reference(),
 				}, nil)
 				re := NewRequestsExecutorMock(t).
-					SendReplyMock.Return()
-				sender := bus.NewSenderMock(t).SendRoleMock.Return(nil, func() { return })
+					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
+				})
+				sender := senderOKMock(t, nil)
 				pulseMock := insolarPulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 					return insolar.Pulse{
 						PulseNumber:     insolar.PulseNumber(pulse.MinTimePulse),
@@ -493,9 +547,8 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				require.Len(t, msgs, 1)
 
 				results, ok := msgs[0].(*payload.ExecutorResults)
-				require.True(t, ok)
-				require.False(t, results.LedgerHasMoreRequests)
-				require.Equal(t, insolar.InPending, results.Pending)
+				assert.True(t, ok)
+				assert.Equal(t, insolar.InPending, results.Pending)
 			},
 		},
 		// TODO: need more test cases, for example Pulse in GetPendings, Pulse in GetObject
@@ -513,12 +566,16 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
 
+			broker.close()
+
 			test.checks(ctx, t, *msgs)
 		})
 	}
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -534,7 +591,7 @@ func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
 	)
 
 	b.ledgerHasMoreRequests = true
-	b.NoMoreRequestsOnLedger(ctx)
+	b.noMoreRequestsOnLedger(ctx)
 
 	require.False(t, b.ledgerHasMoreRequests)
 }
@@ -558,6 +615,8 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 }
 
 func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	mc := minimock.NewController(t)
 
 	objectRef := gen.Reference()
@@ -624,6 +683,8 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 }
 
 func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	objectRef := gen.Reference()
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(

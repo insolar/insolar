@@ -22,30 +22,32 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type methodInstrumenter struct {
 	ctx     context.Context
+	span    *trace.Span
 	name    string
 	start   time.Time
 	errlink *error
 }
 
-func instrument(ctx context.Context, name string) *methodInstrumenter {
-	return &methodInstrumenter{
-		ctx:   ctx,
-		start: time.Now(),
-		name:  name,
+func instrument(ctx context.Context, name string, err *error) (context.Context, *methodInstrumenter) {
+	name = "artifacts."+name
+	ctx, span := instracer.StartSpan(ctx, name)
+	return ctx, &methodInstrumenter{
+		ctx:     ctx,
+		errlink: err,
+		span:    span,
+		start:   time.Now(),
+		name:    name,
 	}
-}
-
-func (mi *methodInstrumenter) err(err *error) *methodInstrumenter {
-	mi.errlink = err
-	return mi
 }
 
 func (mi *methodInstrumenter) end() {
@@ -55,7 +57,8 @@ func (mi *methodInstrumenter) end() {
 	code := "2xx"
 	if mi.errlink != nil && *mi.errlink != nil && *mi.errlink != flow.ErrCancelled {
 		code = "5xx"
-		inslog.Error(*mi.errlink)
+		inslog.Debug(mi.name, " method returned error: ", *mi.errlink)
+		instracer.AddError(mi.span, *mi.errlink)
 	}
 
 	ctx := insmetrics.InsertTag(mi.ctx, tagMethod, mi.name)
@@ -65,4 +68,5 @@ func (mi *methodInstrumenter) end() {
 		tag.Insert(tagResult, code),
 	)
 	stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
+	mi.span.End()
 }

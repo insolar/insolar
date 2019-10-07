@@ -65,6 +65,8 @@ type Key interface {
 	ID() []byte
 }
 
+//go:generate stringer -type=Scope
+
 // Scope separates DB clients.
 type Scope byte
 

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	message2 "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -428,6 +429,11 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	syncT := &testutils.SyncT{T: suite.T()}
+	defer leaktest.Check(syncT)()
+
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
 
 	pa := insolarPulse.NewAccessorMock(syncT).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -435,7 +441,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	)
 
 	er := executionregistry.NewExecutionRegistryMock(syncT).
-		RegisterMock.Return(nil)
+		RegisterMock.Return(nil).LengthMock.Return(3)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
@@ -519,17 +525,25 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	// 4) immutable 1 will ping on channel 1 and exit
 	// 5) mutable request will continue execution and exit
 
-	var mutableChan = make(chan interface{}, 1)
+	var mutableChan = make(chan struct{}, 1)
 	var immutableChan chan interface{} = nil
 	var immutableLock = sync.Mutex{}
+	var finalChan = make(chan struct{}, 1)
 
-	suite.re.SendReplyMock.Return()
+	suite.re.SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
+		select {
+		case <-finalChan:
+			wg.Done()
+		default:
+		}
+	})
 	suite.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
 		if transcript.RequestRef.Equal(mutableRequestRef) {
 			log.Debug("mutableChan 1")
 			select {
-			case _ = <-mutableChan:
+			case <-mutableChan:
 				log.Info("mutable got notifications")
+				finalChan <- struct{}{}
 				return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
 			case <-time.After(2 * time.Minute):
 				panic("timeout on waiting for immutable request 1 pinged us")
@@ -548,7 +562,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 			if newChan {
 				log.Debug("immutableChan 1")
 				select {
-				case _ = <-immutableChan:
+				case <-immutableChan:
 					mutableChan <- struct{}{}
 					log.Info("notify mutable chan and exit")
 					return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
@@ -568,5 +582,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	broker.HasMoreRequests(suite.ctx)
 
-	suite.True(wait(finishedCount, broker, 3))
+	wg.Wait()
+
+	broker.close()
 }

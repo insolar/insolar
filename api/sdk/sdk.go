@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -157,6 +158,18 @@ func (sdk *SDK) GetMigrationDaemonMembers() []Member {
 		}
 	}
 	return r
+}
+
+func (sdk *SDK) GetAndActivateMigrationDaemonMembers() ([]Member, error) {
+	md := sdk.GetMigrationDaemonMembers()
+	for _, md := range md {
+		_, err := sdk.ActivateDaemon(md.GetReference())
+		if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
+			return nil, errors.Wrap(err, "error while activating daemons: ")
+		}
+	}
+
+	return md, nil
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
@@ -315,6 +328,26 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 	return response.TraceID, nil
 }
 
+// GetAddressCount method gets burn addresses from shards
+func (sdk *SDK) GetAddressCount(startWithIndex int) (interface{}, string, error) {
+	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to create user config for request")
+	}
+
+	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
+		userConfig,
+		"migration.getAddressCount",
+		map[string]interface{}{"startWithIndex": startWithIndex},
+	)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.CallResult, response.TraceID, nil
+}
+
 // ActivateDaemon activate daemon from migration admin
 func (sdk *SDK) ActivateDaemon(daemonReference string) (string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
@@ -393,6 +426,37 @@ func (sdk *SDK) Migration(daemon Member, ethTxHash string, amount string, migrat
 		userConfig,
 		"deposit.migration",
 		map[string]interface{}{"ethTxHash": ethTxHash, "migrationAddress": migrationAddress, "amount": amount},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.TraceID, nil
+}
+
+// FullMigration method do  migration by all daemons
+func (sdk *SDK) FullMigration(daemons []Member, ethTxHash string, amount string, migrationAddress string) (string, error) {
+	if len(daemons) < 2 {
+		return "", errors.New("Length of daemons must be more than 2")
+	}
+	if traceID, err := sdk.Migration(daemons[0], ethTxHash, amount, migrationAddress); err != nil {
+		return traceID, err
+	}
+	return sdk.Migration(daemons[1], ethTxHash, amount, migrationAddress)
+
+}
+
+// DepositTransfer method send money from deposit to account
+func (sdk *SDK) DepositTransfer(amount string, member Member, ethTxHash string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(member.GetReference(), member.GetPrivateKey(), member.GetPublicKey())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
+		userConfig,
+		"deposit.transfer",
+		map[string]interface{}{"amount": amount, "ethTxHash": ethTxHash},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")

@@ -374,7 +374,7 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, &payload.Error{
 				Polymorph: uint32(payload.TypeError),
-				Code:      uint32(payload.CodeFlowCanceled),
+				Code:      payload.CodeFlowCanceled,
 				Text:      errors.Wrap(flow.ErrCancelled, "[ ReceiveResult ]").Error(),
 			}, payloadError)
 		})

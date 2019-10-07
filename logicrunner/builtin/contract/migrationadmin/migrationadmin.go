@@ -59,6 +59,9 @@ func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, name
 	case "addAddresses":
 		return mA.addMigrationAddressesCall(params, caller)
 
+	case "getAddressCount":
+		return mA.getAddressCount(params, caller)
+
 	case "activateDaemon":
 		return mA.activateDaemonCall(params, caller)
 
@@ -124,6 +127,10 @@ func (mA *MigrationAdmin) deactivateDaemonCall(params map[string]interface{}, me
 	return nil, err
 }
 
+type AddMaResponse struct {
+	Count int `json:"totalNumber"`
+}
+
 func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
 	migrationAddresses, ok := params["migrationAddresses"].([]interface{})
 	if !ok {
@@ -143,12 +150,46 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 		}
 		migrationAddressesStr[i] = migrationAddress
 	}
-	err := mA.addMigrationAddresses(migrationAddressesStr)
+	count, err := mA.addMigrationAddresses(migrationAddressesStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add migration address: %s", err.Error())
 	}
 
-	return nil, nil
+	return &AddMaResponse{Count: count}, nil
+}
+
+type GetAddressCountResponse struct {
+	ShardIndex int `json:"shardIndex"`
+	FreeCount  int `json:"freeCount"`
+}
+
+func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
+	startWithIndexFloat, ok := params["startWithIndex"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("incorect input: failed to get 'startWithIndex' param")
+	}
+	startWithIndex := int(startWithIndexFloat)
+
+	if memberRef != mA.MigrationAdminMember {
+		return nil, fmt.Errorf("only migration daemon admin can call this method")
+	}
+
+	if len(mA.MigrationAddressShards) < startWithIndex+10 {
+		return nil, fmt.Errorf("incorrect start shard index: too big")
+	}
+
+	var res []*GetAddressCountResponse
+
+	for i := startWithIndex; i < startWithIndex+10; i++ {
+		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
+		count, err := s.GetMigrationAddressesAmount()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get count of migration addresses in shard with index %d", i)
+		}
+		res = append(res, &GetAddressCountResponse{ShardIndex: i, FreeCount: count})
+	}
+
+	return &res, nil
 }
 
 func (mA *MigrationAdmin) checkDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
@@ -216,19 +257,21 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 
 // AddMigrationAddresses adds migration addresses to list.
 // ins:immutable
-func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) error {
+func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) (int, error) {
 	newMA := make([][]string, len(mA.MigrationAddressShards))
 	for _, ma := range migrationAddresses {
 		if foundation.IsEthereumAddress(ma) {
 			trimmedMigrationAddress := foundation.TrimAddress(ma)
 			i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 			if i >= len(newMA) {
-				return fmt.Errorf("incorect migration shard index")
+				return 0, fmt.Errorf("incorect migration shard index")
 			}
 			newMA[i] = append(newMA[i], trimmedMigrationAddress)
 		}
 	}
 
+	ind := 0
+	total := 0
 	for i, ma := range newMA {
 		if len(ma) == 0 {
 			continue
@@ -236,11 +279,16 @@ func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) err
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
 		err := s.AddFreeMigrationAddresses(ma)
 		if err != nil {
-			return errors.New("failed to add migration addresses to shard")
+			return total, errors.New("failed to add migration addresses to shard")
+		}
+		ind++
+		total += len(ma)
+		if ind > 10 {
+			break
 		}
 	}
 
-	return nil
+	return total, nil
 }
 
 // AddMigrationAddress adds migration address to list.

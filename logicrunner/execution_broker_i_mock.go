@@ -29,12 +29,6 @@ type ExecutionBrokerIMock struct {
 	beforeHasMoreRequestsCounter uint64
 	HasMoreRequestsMock          mExecutionBrokerIMockHasMoreRequests
 
-	funcNoMoreRequestsOnLedger          func(ctx context.Context)
-	inspectFuncNoMoreRequestsOnLedger   func(ctx context.Context)
-	afterNoMoreRequestsOnLedgerCounter  uint64
-	beforeNoMoreRequestsOnLedgerCounter uint64
-	NoMoreRequestsOnLedgerMock          mExecutionBrokerIMockNoMoreRequestsOnLedger
-
 	funcOnPulse          func(ctx context.Context) (pa1 []payload.Payload)
 	inspectFuncOnPulse   func(ctx context.Context)
 	afterOnPulseCounter  uint64
@@ -84,9 +78,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.HasMoreRequestsMock = mExecutionBrokerIMockHasMoreRequests{mock: m}
 	m.HasMoreRequestsMock.callArgs = []*ExecutionBrokerIMockHasMoreRequestsParams{}
-
-	m.NoMoreRequestsOnLedgerMock = mExecutionBrokerIMockNoMoreRequestsOnLedger{mock: m}
-	m.NoMoreRequestsOnLedgerMock.callArgs = []*ExecutionBrokerIMockNoMoreRequestsOnLedgerParams{}
 
 	m.OnPulseMock = mExecutionBrokerIMockOnPulse{mock: m}
 	m.OnPulseMock.callArgs = []*ExecutionBrokerIMockOnPulseParams{}
@@ -479,193 +470,6 @@ func (m *ExecutionBrokerIMock) MinimockHasMoreRequestsInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcHasMoreRequests != nil && mm_atomic.LoadUint64(&m.afterHasMoreRequestsCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.HasMoreRequests")
-	}
-}
-
-type mExecutionBrokerIMockNoMoreRequestsOnLedger struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation
-	expectations       []*ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation
-
-	callArgs []*ExecutionBrokerIMockNoMoreRequestsOnLedgerParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation specifies expectation struct of the ExecutionBrokerI.NoMoreRequestsOnLedger
-type ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation struct {
-	mock   *ExecutionBrokerIMock
-	params *ExecutionBrokerIMockNoMoreRequestsOnLedgerParams
-
-	Counter uint64
-}
-
-// ExecutionBrokerIMockNoMoreRequestsOnLedgerParams contains parameters of the ExecutionBrokerI.NoMoreRequestsOnLedger
-type ExecutionBrokerIMockNoMoreRequestsOnLedgerParams struct {
-	ctx context.Context
-}
-
-// Expect sets up expected params for ExecutionBrokerI.NoMoreRequestsOnLedger
-func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Expect(ctx context.Context) *mExecutionBrokerIMockNoMoreRequestsOnLedger {
-	if mmNoMoreRequestsOnLedger.mock.funcNoMoreRequestsOnLedger != nil {
-		mmNoMoreRequestsOnLedger.mock.t.Fatalf("ExecutionBrokerIMock.NoMoreRequestsOnLedger mock is already set by Set")
-	}
-
-	if mmNoMoreRequestsOnLedger.defaultExpectation == nil {
-		mmNoMoreRequestsOnLedger.defaultExpectation = &ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation{}
-	}
-
-	mmNoMoreRequestsOnLedger.defaultExpectation.params = &ExecutionBrokerIMockNoMoreRequestsOnLedgerParams{ctx}
-	for _, e := range mmNoMoreRequestsOnLedger.expectations {
-		if minimock.Equal(e.params, mmNoMoreRequestsOnLedger.defaultExpectation.params) {
-			mmNoMoreRequestsOnLedger.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmNoMoreRequestsOnLedger.defaultExpectation.params)
-		}
-	}
-
-	return mmNoMoreRequestsOnLedger
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.NoMoreRequestsOnLedger
-func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Inspect(f func(ctx context.Context)) *mExecutionBrokerIMockNoMoreRequestsOnLedger {
-	if mmNoMoreRequestsOnLedger.mock.inspectFuncNoMoreRequestsOnLedger != nil {
-		mmNoMoreRequestsOnLedger.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.NoMoreRequestsOnLedger")
-	}
-
-	mmNoMoreRequestsOnLedger.mock.inspectFuncNoMoreRequestsOnLedger = f
-
-	return mmNoMoreRequestsOnLedger
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.NoMoreRequestsOnLedger
-func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Return() *ExecutionBrokerIMock {
-	if mmNoMoreRequestsOnLedger.mock.funcNoMoreRequestsOnLedger != nil {
-		mmNoMoreRequestsOnLedger.mock.t.Fatalf("ExecutionBrokerIMock.NoMoreRequestsOnLedger mock is already set by Set")
-	}
-
-	if mmNoMoreRequestsOnLedger.defaultExpectation == nil {
-		mmNoMoreRequestsOnLedger.defaultExpectation = &ExecutionBrokerIMockNoMoreRequestsOnLedgerExpectation{mock: mmNoMoreRequestsOnLedger.mock}
-	}
-
-	return mmNoMoreRequestsOnLedger.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.NoMoreRequestsOnLedger method
-func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Set(f func(ctx context.Context)) *ExecutionBrokerIMock {
-	if mmNoMoreRequestsOnLedger.defaultExpectation != nil {
-		mmNoMoreRequestsOnLedger.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.NoMoreRequestsOnLedger method")
-	}
-
-	if len(mmNoMoreRequestsOnLedger.expectations) > 0 {
-		mmNoMoreRequestsOnLedger.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.NoMoreRequestsOnLedger method")
-	}
-
-	mmNoMoreRequestsOnLedger.mock.funcNoMoreRequestsOnLedger = f
-	return mmNoMoreRequestsOnLedger.mock
-}
-
-// NoMoreRequestsOnLedger implements ExecutionBrokerI
-func (mmNoMoreRequestsOnLedger *ExecutionBrokerIMock) NoMoreRequestsOnLedger(ctx context.Context) {
-	mm_atomic.AddUint64(&mmNoMoreRequestsOnLedger.beforeNoMoreRequestsOnLedgerCounter, 1)
-	defer mm_atomic.AddUint64(&mmNoMoreRequestsOnLedger.afterNoMoreRequestsOnLedgerCounter, 1)
-
-	if mmNoMoreRequestsOnLedger.inspectFuncNoMoreRequestsOnLedger != nil {
-		mmNoMoreRequestsOnLedger.inspectFuncNoMoreRequestsOnLedger(ctx)
-	}
-
-	params := &ExecutionBrokerIMockNoMoreRequestsOnLedgerParams{ctx}
-
-	// Record call args
-	mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.mutex.Lock()
-	mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.callArgs = append(mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.callArgs, params)
-	mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.mutex.Unlock()
-
-	for _, e := range mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.defaultExpectation.Counter, 1)
-		want := mmNoMoreRequestsOnLedger.NoMoreRequestsOnLedgerMock.defaultExpectation.params
-		got := ExecutionBrokerIMockNoMoreRequestsOnLedgerParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNoMoreRequestsOnLedger.t.Errorf("ExecutionBrokerIMock.NoMoreRequestsOnLedger got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmNoMoreRequestsOnLedger.funcNoMoreRequestsOnLedger != nil {
-		mmNoMoreRequestsOnLedger.funcNoMoreRequestsOnLedger(ctx)
-		return
-	}
-	mmNoMoreRequestsOnLedger.t.Fatalf("Unexpected call to ExecutionBrokerIMock.NoMoreRequestsOnLedger. %v", ctx)
-
-}
-
-// NoMoreRequestsOnLedgerAfterCounter returns a count of finished ExecutionBrokerIMock.NoMoreRequestsOnLedger invocations
-func (mmNoMoreRequestsOnLedger *ExecutionBrokerIMock) NoMoreRequestsOnLedgerAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmNoMoreRequestsOnLedger.afterNoMoreRequestsOnLedgerCounter)
-}
-
-// NoMoreRequestsOnLedgerBeforeCounter returns a count of ExecutionBrokerIMock.NoMoreRequestsOnLedger invocations
-func (mmNoMoreRequestsOnLedger *ExecutionBrokerIMock) NoMoreRequestsOnLedgerBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmNoMoreRequestsOnLedger.beforeNoMoreRequestsOnLedgerCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.NoMoreRequestsOnLedger.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Calls() []*ExecutionBrokerIMockNoMoreRequestsOnLedgerParams {
-	mmNoMoreRequestsOnLedger.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockNoMoreRequestsOnLedgerParams, len(mmNoMoreRequestsOnLedger.callArgs))
-	copy(argCopy, mmNoMoreRequestsOnLedger.callArgs)
-
-	mmNoMoreRequestsOnLedger.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockNoMoreRequestsOnLedgerDone returns true if the count of the NoMoreRequestsOnLedger invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockNoMoreRequestsOnLedgerDone() bool {
-	for _, e := range m.NoMoreRequestsOnLedgerMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.NoMoreRequestsOnLedgerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterNoMoreRequestsOnLedgerCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcNoMoreRequestsOnLedger != nil && mm_atomic.LoadUint64(&m.afterNoMoreRequestsOnLedgerCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockNoMoreRequestsOnLedgerInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockNoMoreRequestsOnLedgerInspect() {
-	for _, e := range m.NoMoreRequestsOnLedgerMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.NoMoreRequestsOnLedger with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.NoMoreRequestsOnLedgerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterNoMoreRequestsOnLedgerCounter) < 1 {
-		if m.NoMoreRequestsOnLedgerMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.NoMoreRequestsOnLedger")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.NoMoreRequestsOnLedger with params: %#v", *m.NoMoreRequestsOnLedgerMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcNoMoreRequestsOnLedger != nil && mm_atomic.LoadUint64(&m.afterNoMoreRequestsOnLedgerCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.NoMoreRequestsOnLedger")
 	}
 }
 
@@ -1839,8 +1643,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockHasMoreRequestsInspect()
 
-		m.MinimockNoMoreRequestsOnLedgerInspect()
-
 		m.MinimockOnPulseInspect()
 
 		m.MinimockPendingStateInspect()
@@ -1877,7 +1679,6 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 	return done &&
 		m.MinimockAbandonedRequestsOnLedgerDone() &&
 		m.MinimockHasMoreRequestsDone() &&
-		m.MinimockNoMoreRequestsOnLedgerDone() &&
 		m.MinimockOnPulseDone() &&
 		m.MinimockPendingStateDone() &&
 		m.MinimockPrevExecutorPendingResultDone() &&
