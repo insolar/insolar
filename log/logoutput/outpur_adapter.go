@@ -38,7 +38,7 @@ func NewAdapter(output io.Writer, protectedClose bool, flushFn, fatalFlushFn Log
 	return &Adapter{output: writerAdapter{output}, flushFn: flushFn, fatalFlushFn: fatalFlushFn, state: uint32(flags)}
 }
 
-var ClosedError = errors.New("closed")
+var errClosed = errors.New("closed")
 
 type Adapter struct {
 	output       insolar.LogLevelWriter
@@ -79,7 +79,7 @@ func (p *Adapter) applyState() (ok bool, err error) {
 		p.LockFatal()
 	}
 	if prev&adapterClosed != 0 {
-		return false, ClosedError
+		return false, errClosed
 	}
 	return prev&adapterFatal == 0, nil
 }
@@ -87,7 +87,7 @@ func (p *Adapter) applyState() (ok bool, err error) {
 func (p *Adapter) DirectFlushFatal() error {
 	prev := p.setState(adapterFatal | adapterClosed)
 	if prev&adapterClosed != 0 {
-		return ClosedError
+		return errClosed
 	}
 
 	err := p.output.Flush()
@@ -103,7 +103,7 @@ func (p *Adapter) DirectFlushFatal() error {
 
 func (p *Adapter) _directClose(prev adapterState) error {
 	if prev&adapterClosed != 0 {
-		return ClosedError
+		return errClosed
 	}
 	if prev&adapterProtectClose != 0 {
 		return nil

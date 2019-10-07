@@ -32,7 +32,7 @@ type testWriter struct {
 func (w *testWriter) Close() error {
 	w.closeCount++
 	if w.closeCount > 1 {
-		return ClosedError
+		return errClosed
 	}
 	return nil
 }
@@ -40,7 +40,7 @@ func (w *testWriter) Close() error {
 func (w *testWriter) Flush() error {
 	w.flushCount++
 	if w.closeCount > 1 {
-		return ClosedError
+		return errClosed
 	}
 	return nil
 }

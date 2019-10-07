@@ -317,7 +317,7 @@ func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byt
 		case p.output.IsClosed():
 			p.incMissCount()
 			p.bypassCond.L.Unlock()
-			return 0, logoutput.ClosedError
+			return 0, errors.New("closed")
 		}
 		p.bypassCond.Wait()
 	}
