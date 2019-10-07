@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+
+	"github.com/dgraph-io/badger"
 
 	"github.com/gorilla/mux"
 	"github.com/insolar/insolar/log"
@@ -17,11 +20,14 @@ import (
 
 type MergeJsonRequest struct {
 	BkpName string `json:"bkpName"`
+	RunGC   bool   `json:"rubGC"`
 }
 
 type MergeJsonResponse struct {
 	Message string `json:"message"`
 }
+
+var bdb *badger.DB
 
 func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJsonResponse) {
 	h := w.Header()
@@ -67,14 +73,60 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("Merging incremental backup, bkpName = %s", req.BkpName)
 
-	// AALEKSEEV TODO actually process req.BkpName
+	bkpFile, err := os.Open(req.BkpName)
+	if err != nil {
+		sendHttpResponse(w, 400, MergeJsonResponse{
+			Message: "Failed to open incremental backup file",
+		})
+		return
+	}
+	defer bkpFile.Close()
+
+	log.Info("Backup file is opened")
+
+	err = bdb.Load(bkpFile, 1)
+	if err != nil {
+		sendHttpResponse(w, 400, MergeJsonResponse{
+			Message: "Failed to load incremental backup file",
+		})
+		return
+	}
+
+	msg := "Merge done."
+	if req.RunGC {
+		err = bdb.RunValueLogGC(0.7)
+		if err == nil {
+			msg += " GC done."
+		} else {
+			msg += " GC failed: " + err.Error()
+		}
+	}
 
 	sendHttpResponse(w, 200, MergeJsonResponse{
-		Message: "Merge done",
+		Message: msg,
 	})
 }
 
 func daemon(listenAddr string, targetDBPath string) {
+	log.Info("Opening DB...")
+
+	ops := badger.DefaultOptions(targetDBPath)
+	ops.Logger = badgerLogger
+	bdb, err := badger.Open(ops)
+	if err != nil {
+		err = errors.Wrap(err, "failed to open DB")
+		exitWithError(err)
+	}
+	log.Info("DB is opened")
+
+	err = isDBEmpty(bdb)
+	if err == nil {
+		// will exit
+		err = errors.New("DB must not be empty")
+		closeRawDB(bdb, err)
+	}
+
+	log.Info("DB opened and it's not empty. Starting HTTP server...")
 	r := mux.NewRouter().
 		PathPrefix("/api/v1").
 		Path("/merge").
@@ -82,7 +134,7 @@ func daemon(listenAddr string, targetDBPath string) {
 	r.Methods("POST").
 		HandlerFunc(MergeHttpHandler)
 	http.Handle("/", r)
-	err := http.ListenAndServe(listenAddr, nil)
+	err = http.ListenAndServe(listenAddr, nil)
 	if err != nil {
 		log.Fatalf("http.ListenAndServe: %v", err)
 	}
@@ -119,8 +171,8 @@ func parseDaemonParams(ctx context.Context) *cobra.Command {
 	return daemonCmd
 }
 
-func daemonMerge(address string, backupFileName string) {
-	reqJson := MergeJsonRequest{BkpName: backupFileName}
+func daemonMerge(address string, backupFileName string, runGC bool) {
+	reqJson := MergeJsonRequest{BkpName: backupFileName, RunGC: runGC}
 	reqBytes, err := json.Marshal(reqJson)
 	if err != nil {
 		err = errors.Wrap(err, "daemonMerge - json.Marshal failed")
@@ -165,6 +217,7 @@ func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 	var (
 		address        string
 		backupFileName string
+		runGC          bool
 	)
 
 	var daemonMergeCmd = &cobra.Command{
@@ -172,7 +225,7 @@ func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 		Short: "merge incremental backup using merge daemon",
 		Run: func(cmd *cobra.Command, args []string) {
 			log.Infof("Starting daemon-merge, address = %s, bkp-name = %s", address, backupFileName)
-			daemonMerge(address, backupFileName)
+			daemonMerge(address, backupFileName, runGC)
 		},
 	}
 	mergeFlags := daemonMergeCmd.Flags()
@@ -181,6 +234,8 @@ func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
 	mergeFlags.StringVarP(
 		&address, "address", "a", "http://localhost:8080", "merge daemon listen address")
+	mergeFlags.BoolVarP(
+		&runGC, "run-gc", "g", false, "run GC")
 
 	err := cobra.MarkFlagRequired(mergeFlags, bkpFileName)
 	if err != nil {

@@ -102,7 +102,7 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 	ops.Logger = badgerLogger
 	bdb, err := badger.Open(ops)
 	if err != nil {
-		err = errors.Wrap(err, "failed to open badger")
+		err = errors.Wrap(err, "failed to open DB")
 		exitWithError(err)
 	}
 	log.Info("DB is opened")
@@ -120,6 +120,7 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 		err = errors.Wrap(err, "failed to open incremental backup file")
 		closeRawDB(bdb, err)
 	}
+	defer bkpFile.Close()
 	log.Info("Backup file is opened")
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
