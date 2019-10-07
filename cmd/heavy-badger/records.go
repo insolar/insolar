@@ -39,7 +39,7 @@ func prettyPrintVirtual(v *record.Virtual) string {
 	case *record.Virtual_Activate:
 		return pairsToString(20, "Type", "Activate")
 	case *record.Virtual_Amend:
-		return amendPrettyPrint(r)
+		return amendPretty(r)
 	case *record.Virtual_Deactivate:
 		return pairsToString(20, "Type", "Deactivate")
 	case *record.Virtual_PendingFilament:
@@ -51,7 +51,7 @@ func prettyPrintVirtual(v *record.Virtual) string {
 	}
 }
 
-func amendPrettyPrint(virtualRecord *record.Virtual_Amend) string {
+func amendPretty(virtualRecord *record.Virtual_Amend) string {
 	rec := virtualRecord.Amend
 	return pairsToString(20,
 		"Type", "*record.Amend",

@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -105,11 +104,6 @@ func reverseInts(a []int) {
 		opp := len(a) - 1 - i
 		a[i], a[opp] = a[opp], a[i]
 	}
-}
-
-func pressEnter(s string) {
-	fmt.Print(s)
-	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 func pairsToString(width int, pairs ...string) string {
