@@ -417,7 +417,7 @@ func parseInputParams(ctx context.Context) {
 	rootCmd.AddCommand(parseCreateParams(ctx))
 	rootCmd.AddCommand(parseMergeParams(ctx))
 	rootCmd.AddCommand(parseDaemonParams(ctx))
-	// rootCmd.AddCommand(parseDaemonMergeParams(ctx)) // AALEKSEEV TODO
+	rootCmd.AddCommand(parseDaemonMergeParams(ctx))
 	rootCmd.AddCommand(parsePrepareBackupParams(ctx))
 
 	exit(rootCmd.Execute())

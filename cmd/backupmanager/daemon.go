@@ -41,3 +41,36 @@ func parseDaemonParams(ctx context.Context) *cobra.Command {
 
 	return daemonCmd
 }
+
+func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
+	var (
+		daemonHost     string
+		daemonPort     int
+		backupFileName string
+	)
+
+	var daemonMergeCmd = &cobra.Command{
+		Use:   "daemon-merge",
+		Short: "merge incremental backup using merge daemon",
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Infof("Starting daemon-merge, host = %s, port = %d, bkp-name = %s", daemonHost, daemonPort, backupFileName)
+			// daemonMerge(daemonHost, daemonPort, backupFileName) // AALEKSEEV TODO
+		},
+	}
+	mergeFlags := daemonMergeCmd.Flags()
+	bkpFileName := "bkp-name"
+	mergeFlags.StringVarP(
+		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
+	mergeFlags.StringVarP(
+		&daemonHost, "address", "a", "localhost", "merge daemon listen address or host")
+	mergeFlags.IntVarP(
+		&daemonPort, "port", "p", 8080, "merge daemon listen port")
+
+	err := cobra.MarkFlagRequired(mergeFlags, bkpFileName)
+	if err != nil {
+		err := errors.Wrap(err, "failed to set required param: "+bkpFileName)
+		exitWithError(err)
+	}
+
+	return daemonMergeCmd
+}
