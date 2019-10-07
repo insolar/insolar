@@ -9,7 +9,7 @@ If given db does not exist, it creates new one.
 make backupmanager
 ```
 
-## Typical usage - without using a backup daemon
+## Typical usage
 
 Create an empty backup:
 
@@ -50,7 +50,7 @@ This command marks the last pulse in the backup as finalized. We have to do it b
 
 After executing the command replace `data` directory on Heavy with `heavy_backup` and start the network.
 
-## Typical usage - with using a backup daemon
+## Using a backup daemon
 
 `backupmanager merge` is executed much faster when a backup daemon is used.
 
@@ -67,3 +67,5 @@ Instead of `backupmanager merge` use:
 ```
 
 See `--help` output for more details.
+
+To restore from a backup kill the backup daemon and use `prepare_backup` as usual.
