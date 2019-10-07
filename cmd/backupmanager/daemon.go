@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -177,7 +176,7 @@ func daemon(listenAddr string, targetDBPath string) {
 	log.Info("HTTP server terminated\n")
 }
 
-func parseDaemonParams(ctx context.Context) *cobra.Command {
+func parseDaemonParams() *cobra.Command {
 	var (
 		listenAddr   string
 		targetDBPath string
@@ -249,7 +248,7 @@ func daemonMerge(address string, backupFileName string, runGC bool) {
 	log.Infof("HTTP response OK. Daemon: %s", resp.Message)
 }
 
-func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
+func parseDaemonMergeParams() *cobra.Command {
 	var (
 		address        string
 		backupFileName string
