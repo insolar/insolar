@@ -49,10 +49,10 @@ func sendHTTPResponse(w http.ResponseWriter, statusCode int, resp MergeJSONRespo
 	}
 }
 
-func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
+func MergeHTTPHandler(w http.ResponseWriter, r *http.Request) {
 	reqBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Errorf("MergeHttpHandler, ioutil.ReadAll: %v", err)
+		log.Errorf("MergeHTTPHandler, ioutil.ReadAll: %v", err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	var req MergeJSONRequest
 	err = json.Unmarshal(reqBytes, &req)
 	if err != nil {
-		log.Errorf("MergeHttpHandler, json.Unmarshal: %v", err)
+		log.Errorf("MergeHTTPHandler, json.Unmarshal: %v", err)
 		return
 	}
 
@@ -94,11 +94,11 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// only one globalBadgerHandler.Load() and GC can run at a time!
-		log.Info("MergeHttpHandler - about to Lock() globalBadgerLock")
+		log.Info("MergeHTTPHandler - about to Lock() globalBadgerLock")
 		globalBadgerLock.Lock()
-		log.Info("MergeHttpHandler - globalBadgerLock Locked(), executing  globalBadgerHandler.Load()")
+		log.Info("MergeHTTPHandler - globalBadgerLock Locked(), executing  globalBadgerHandler.Load()")
 		defer func() {
-			log.Info("MergeHttpHandler - calling globalBadgerLock.Unlock()")
+			log.Info("MergeHTTPHandler - calling globalBadgerLock.Unlock()")
 			globalBadgerLock.Unlock()
 		}()
 
@@ -167,7 +167,7 @@ func daemon(listenAddr string, targetDBPath string) {
 		Path("/merge").
 		Subrouter()
 	r.Methods("POST").
-		HandlerFunc(MergeHttpHandler)
+		HandlerFunc(MergeHTTPHandler)
 	http.Handle("/", r)
 	err = http.ListenAndServe(listenAddr, nil)
 	if err != nil {
