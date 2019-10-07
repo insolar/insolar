@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 
@@ -27,7 +28,8 @@ type MergeJsonResponse struct {
 	Message string `json:"message"`
 }
 
-var bdb *badger.DB
+var globalBadgerHandler *badger.DB
+var globalBadgerLock sync.Mutex // see comments below
 
 func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJsonResponse) {
 	h := w.Header()
@@ -83,22 +85,34 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	defer bkpFile.Close()
 
 	log.Info("Backup file is opened")
-
-	err = bdb.Load(bkpFile, 1)
-	if err != nil {
-		sendHttpResponse(w, 400, MergeJsonResponse{
-			Message: "Failed to load incremental backup file",
+	if globalBadgerHandler == nil {
+		sendHttpResponse(w, 500, MergeJsonResponse{
+			Message: "DB handler is nil",
 		})
 		return
 	}
 
 	msg := "Merge done."
-	if req.RunGC {
-		err = bdb.RunValueLogGC(0.7)
-		if err == nil {
-			msg += " GC done."
-		} else {
-			msg += " GC failed: " + err.Error()
+	{
+		// only one globalBadgerHandler.Load() and GC can run at a time!
+		globalBadgerLock.Lock()
+		defer globalBadgerLock.Unlock()
+
+		err = globalBadgerHandler.Load(bkpFile, 1)
+		if err != nil {
+			sendHttpResponse(w, 400, MergeJsonResponse{
+				Message: "Failed to load incremental backup file",
+			})
+			return
+		}
+
+		if req.RunGC {
+			err = globalBadgerHandler.RunValueLogGC(0.7)
+			if err == nil {
+				msg += " GC done."
+			} else {
+				msg += " GC failed: " + err.Error()
+			}
 		}
 	}
 
@@ -112,18 +126,25 @@ func daemon(listenAddr string, targetDBPath string) {
 
 	ops := badger.DefaultOptions(targetDBPath)
 	ops.Logger = badgerLogger
-	bdb, err := badger.Open(ops)
-	if err != nil {
-		err = errors.Wrap(err, "failed to open DB")
-		exitWithError(err)
-	}
-	log.Info("DB is opened")
+	var err error
+	{
+		globalBadgerLock.Lock() // it guarantees defined behavior if terms of `globalBadgerHandler` value
+		defer globalBadgerLock.Unlock()
 
-	err = isDBEmpty(bdb)
-	if err == nil {
-		// will exit
-		err = errors.New("DB must not be empty")
-		closeRawDB(bdb, err)
+		// Note: make sure `globalBadgerHandler` will be assigned (don't use := here)
+		globalBadgerHandler, err = badger.Open(ops)
+		if err != nil {
+			err = errors.Wrap(err, "failed to open DB")
+			exitWithError(err)
+		}
+		log.Info("DB is opened")
+
+		err = isDBEmpty(globalBadgerHandler)
+		if err == nil {
+			// will exit
+			err = errors.New("DB must not be empty")
+			closeRawDB(globalBadgerHandler, err)
+		}
 	}
 
 	log.Info("DB opened and it's not empty. Starting HTTP server...")
