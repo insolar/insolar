@@ -28,8 +28,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
-const sampleStructAsString = "f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,f7:stringerVal:string,f8:stringerRef:string,f9:nil,f10:{}:stubStruct,msg:message title"
-
 type stringerStruct struct {
 	s string
 }
@@ -52,6 +50,8 @@ func (p *stringerRefStruct) String() string {
 
 type stubStruct struct {
 }
+
+const sampleStructAsString = "f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,f7:stringerVal:string,f8:stringerRef:string,f9:nil,f10:{}:stubStruct,msg:message title"
 
 func createSampleStruct() interface{} {
 	s := "test2"
