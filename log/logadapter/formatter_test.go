@@ -181,14 +181,40 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 		f.testTryLogObject(SomeLogObjectWithTemplate{nil, 7}))
 }
 
+type SomeLogObjectWithMsg struct {
+	*insolar.LogObjectTemplate
+	IntVal int    `opt:""`
+	Msg    string `txt:"fixedObjectMessage"`
+}
+
 func TestTryLogObject_ConstMsg(t *testing.T) {
 	f := GetDefaultLogMsgFormatter()
 
 	require.Equal(t,
-		"msg:constantText",
+		"Data:0:int,msg:inlineConstantText",
 		f.testTryLogObject(struct {
-			msg string `txt:"constantText"`
+			Data int
+			Msg  string `txt:"inlineConstantText"`
 		}{}))
+
+	require.Equal(t,
+		"IntVal:78:int,msg:fixedObjectMessage",
+		f.testTryLogObject(SomeLogObjectWithMsg{IntVal: 78}))
+}
+
+func TestTryLogObject_Optionals(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t,
+		"msg:inlineConstantText",
+		f.testTryLogObject(struct {
+			Data int    `opt:""`
+			Msg  string `txt:"inlineConstantText"`
+		}{}))
+
+	require.Equal(t,
+		"msg:fixedObjectMessage",
+		f.testTryLogObject(SomeLogObjectWithMsg{}))
 }
 
 func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
