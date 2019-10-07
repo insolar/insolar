@@ -181,6 +181,16 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 		f.testTryLogObject(SomeLogObjectWithTemplate{nil, 7}))
 }
 
+func TestTryLogObject_ConstMsg(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t,
+		"msg:constantText",
+		f.testTryLogObject(struct {
+			msg string `txt:"constantText"`
+		}{}))
+}
+
 func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
 	m, s := v.FmtLogObject(a...)
 	if m == nil {

@@ -357,26 +357,22 @@ type typeMarshaller struct {
 	reportNeedsAddr bool
 }
 
+type fieldDesc struct {
+	reflect.StructField
+	getFn      fieldValueGetterFunc
+	reportFn   FieldReporterFunc
+	index      int
+	printField bool
+}
+
 func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getReporterFn func(reflect.Type) FieldReporterFunc) bool {
 	n := t.NumField()
-
-	type fieldDesc struct {
-		reflect.StructField
-		getFn    fieldValueGetterFunc
-		reportFn FieldReporterFunc
-		index    int
-	}
-
 	var msgGetter fieldDesc
 	valueGetters := make([]fieldDesc, 0, n)
 
 	for i := 0; i < n; i++ {
 		tf := t.Field(i)
 		fieldName := tf.Name
-
-		if tf.Anonymous || fieldName == "" || fieldName[0] == '_' || strings.HasPrefix(string(tf.Tag), `skip:"`) {
-			continue
-		}
 
 		k := tf.Type.Kind()
 		valueGetterFactory := fieldValueGetters[k]
@@ -385,19 +381,24 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		}
 		unexported := len(tf.PkgPath) != 0
 
-		fd := fieldDesc{StructField: tf, index: i}
 		needsAddr := false
-		needsAddr, fd.getFn = valueGetterFactory(unexported, tf.Type) // default handler
-		if fd.getFn == nil {
-			continue
-		}
+		fd := fieldDesc{StructField: tf, index: i}
 
-		switch fieldName {
-		case "msg", "Msg", "message", "Message":
-			msgGetter = fd
-		default:
-			fd.reportFn = getReporterFn(fd.Type)
-			valueGetters = append(valueGetters, fd)
+		needsAddr, fd.getFn = valueGetterFactory(unexported, tf.Type) // default handler
+		fd.reportFn = getReporterFn(fd.Type)
+
+		if tf.Anonymous || fieldName == "" || fieldName[0] == '_' || strings.HasPrefix(string(tf.Tag), `skip:"`) {
+			if fd.reportFn == nil {
+				continue
+			}
+		} else {
+			fd.printField = true
+			switch fieldName {
+			case "msg", "Msg", "message", "Message":
+				msgGetter = fd
+			default:
+				valueGetters = append(valueGetters, fd)
+			}
 		}
 
 		if needsAddr {
@@ -416,60 +417,25 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		return false
 	}
 
-	p.fields = make([]fieldMarshallerFunc, len(valueGetters))
+	p.fields = make([]fieldMarshallerFunc, 0, len(valueGetters))
 
-	for i, fd := range valueGetters {
+	for _, fd := range valueGetters {
 		fieldGetter := getFieldGetter(fd.index, fd.StructField, p.printNeedsAddr, baseOffset)
-		valueGetter := fd.getFn
-		fieldName := fd.Name
-		fieldReporter := fd.reportFn
 
-		switch tagType, fmtStr := singleTag(fd.Tag); tagType {
-		case "fmt":
-			p.fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-				f := fieldGetter(obj)
-				v := valueGetter(f)
-				if fieldReporter != nil && collector != nil {
-					fieldReporter(collector, fieldName, v)
-				}
-				s := fmt.Sprintf(fmtStr, v)
-				writer.AddField(fieldName, s)
-			}
-		case "raw":
-			p.fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-				f := fieldGetter(obj)
-				v := valueGetter(f)
-				if fieldReporter != nil && collector != nil {
-					fieldReporter(collector, fieldName, v)
-				}
-				s := fmt.Sprintf(fmtStr, v)
-				writer.AddRawJSON(fieldName, []byte(s))
-			}
-		default:
-			p.fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-				f := fieldGetter(obj)
-				v := valueGetter(f)
-				if fieldReporter != nil && collector != nil {
-					fieldReporter(collector, fieldName, v)
-				}
-				writer.AddField(fieldName, v)
-			}
+		if fd.printField {
+			printFn := p.printOfField(fd, fieldGetter)
+			p.fields = append(p.fields, printFn)
 		}
 
-		if fieldReporter != nil {
+		if fd.reportFn != nil {
 			reportFieldGetter := fieldGetter
 			if p.reportNeedsAddr != p.printNeedsAddr {
 				reportFieldGetter = getFieldGetter(fd.index, fd.StructField, p.reportNeedsAddr, baseOffset)
 			}
 
-			p.reporters = append(p.reporters, func(obj reflect.Value, collector insolar.LogObjectMetricCollector) {
-				if collector == nil {
-					return
-				}
-				f := reportFieldGetter(obj)
-				v := valueGetter(f)
-				fieldReporter(collector, fieldName, v)
-			})
+			reportFn := p.reportOfField(fd, reportFieldGetter)
+
+			p.reporters = append(p.reporters, reportFn)
 		}
 	}
 
@@ -489,6 +455,10 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 			s := fmt.Sprintf(fmtStr, v)
 			return s
 		}
+	case "txt":
+		p.msgField = func(_ reflect.Value) string {
+			return fmtStr
+		}
 	default:
 		p.msgField = func(obj reflect.Value) string {
 			f := fieldGetter(obj)
@@ -498,6 +468,63 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		}
 	}
 	return true
+}
+
+func (p *typeMarshaller) printOfField(fd fieldDesc, fieldGetter func(reflect.Value) reflect.Value) fieldMarshallerFunc {
+	fieldName := fd.Name
+	valueGetter := fd.getFn
+	fieldReporter := fd.reportFn
+
+	switch tagType, fmtStr := singleTag(fd.Tag); tagType {
+	case "fmt":
+		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
+			f := fieldGetter(obj)
+			v := valueGetter(f)
+			if fieldReporter != nil && collector != nil {
+				fieldReporter(collector, fieldName, v)
+			}
+			s := fmt.Sprintf(fmtStr, v)
+			writer.AddField(fieldName, s)
+		}
+	case "raw":
+		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
+			f := fieldGetter(obj)
+			v := valueGetter(f)
+			if fieldReporter != nil && collector != nil {
+				fieldReporter(collector, fieldName, v)
+			}
+			s := fmt.Sprintf(fmtStr, v)
+			writer.AddRawJSON(fieldName, []byte(s))
+		}
+	case "txt":
+		return func(_ reflect.Value, writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector) {
+			writer.AddField(fieldName, fmtStr)
+		}
+	default:
+		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
+			f := fieldGetter(obj)
+			v := valueGetter(f)
+			if fieldReporter != nil && collector != nil {
+				fieldReporter(collector, fieldName, v)
+			}
+			writer.AddField(fieldName, v)
+		}
+	}
+}
+
+func (p *typeMarshaller) reportOfField(fd fieldDesc, reportFieldGetter func(reflect.Value) reflect.Value) fieldReportFunc {
+	fieldName := fd.Name
+	valueGetter := fd.getFn
+	fieldReporter := fd.reportFn
+
+	return func(obj reflect.Value, collector insolar.LogObjectMetricCollector) {
+		if collector == nil {
+			return
+		}
+		f := reportFieldGetter(obj)
+		v := valueGetter(f)
+		fieldReporter(collector, fieldName, v)
+	}
 }
 
 func (p *typeMarshaller) prepareValue(value reflect.Value) reflect.Value {
