@@ -71,7 +71,7 @@ func TestBackpressureBuffer_stop(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
-	//t.SkipNow()
+	t.SkipNow()
 
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
@@ -85,7 +85,7 @@ func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_bypass(t *testing.T) {
-	//t.SkipNow()
+	t.SkipNow()
 
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
