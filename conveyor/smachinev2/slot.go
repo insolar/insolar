@@ -204,8 +204,12 @@ func (s *Slot) incStep() {
 	}
 }
 
+func (s *Slot) isInQueue() bool {
+	return s.queue != nil || s.nextInQueue != nil || s.prevInQueue != nil
+}
+
 func (s *Slot) ensureNotInQueue() {
-	if s.queue != nil || s.nextInQueue != nil || s.prevInQueue != nil {
+	if s.isInQueue() {
 		panic("illegal state")
 	}
 }
@@ -287,10 +291,15 @@ func (s *Slot) stopMigrate(prevStepNo uint32) {
 	s.stopWorking(prevStepNo)
 }
 
-func (s *Slot) startWorking(scanNo uint32) (prevStepNo uint32) {
-	isStarted := false
-	if _, isStarted, prevStepNo = s._tryStart(2); isStarted {
-		return
+func (s *Slot) tryStartWorking() (isStarted bool, prevStepNo uint32) {
+	_, isStarted, prevStepNo = s._tryStart(2)
+	return
+}
+
+func (s *Slot) startWorking(scanNo uint32) uint32 {
+	if isStarted, prevStepNo := s.tryStartWorking(); isStarted {
+		s.lastWorkScan = uint8(scanNo)
+		return prevStepNo
 	}
 	panic("illegal state")
 }

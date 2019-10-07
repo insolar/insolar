@@ -226,10 +226,10 @@ func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 
 	m.prepareNewSlot(newSlot, p.s, fn, nil)
 
-	if !p.w.NonDetachableCall(func(w SlotWorker) {
+	if !p.w.NonDetachableCall(func(w FixedSlotWorker) {
 		m.startNewSlot(p.s, w)
 	}) {
-		m.syncQueue.AddAsyncUpdate(link, m.startNewSlot)
+		m.syncQueue.AddAsyncUpdate(link, m.startNewSlotByLink)
 	}
 
 	return link

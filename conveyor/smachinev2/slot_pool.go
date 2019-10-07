@@ -108,12 +108,11 @@ func (p *SlotPool) RecycleSlot(slot *Slot) {
 	p.unusedSlots.AddFirst(slot)
 }
 
-type SlotPageScanFunc func([]Slot, SlotWorker) (isPageEmptyOrWeak, hasWeakSlots bool)
-type SlotDisposeFunc func(*Slot, SlotWorker)
+type SlotPageScanFunc func([]Slot, FixedSlotWorker) (isPageEmptyOrWeak, hasWeakSlots bool)
+type SlotDisposeFunc func(*Slot, FixedSlotWorker)
 
-func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w SlotWorker,
-	disposeFn SlotDisposeFunc,
-	scanPageFn SlotPageScanFunc,
+func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
+	disposeFn SlotDisposeFunc, scanPageFn SlotPageScanFunc,
 ) {
 	if len(p.slots) == 0 || len(p.slots) == 1 && p.slotPgPos == 0 {
 		return

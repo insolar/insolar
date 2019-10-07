@@ -21,41 +21,37 @@ import (
 	"sync"
 )
 
-func NewSlotMachineSync(locker sync.Locker, signalCallback func()) SlotMachineSync {
+func NewSlotMachineSync(signalCallback func()) SlotMachineSync {
 	return SlotMachineSync{
-		locker:        locker,
-		updateQueue:   tools.NewSignalFuncQueue(locker, signalCallback),
-		callbackQueue: tools.NewSignalFuncQueue(locker, signalCallback),
+		updateQueue:   tools.NewSignalFuncQueue(&sync.Mutex{}, signalCallback),
+		callbackQueue: tools.NewSignalFuncQueue(&sync.Mutex{}, signalCallback),
 	}
 }
 
 type SlotMachineSync struct {
-	locker sync.Locker
-
 	updateQueue   tools.SyncQueue // func(w SlotWorker) // for detached/async ops, queued functions MUST BE panic-safe
 	callbackQueue tools.SyncQueue // func(w DetachableSlotWorker) // for detached/async ops, queued functions MUST BE panic-safe
 
+	detachLock   sync.RWMutex
 	detachQueues map[SlotID]*tools.SyncQueue
 }
 
 func (m *SlotMachineSync) IsZero() bool {
-	return m.locker == nil
+	return m.updateQueue.Locker() == nil
 }
 
 /* This method MUST ONLY be used for own operations of SlotMachine, no StateMachine handlers are allowed  */
-func (m *SlotMachineSync) AddAsyncUpdate(link SlotLink, fn func(link SlotLink, worker SlotWorker)) {
+func (m *SlotMachineSync) AddAsyncUpdate(link SlotLink, fn func(link SlotLink, worker FixedSlotWorker)) {
 	if fn == nil {
 		panic("illegal value")
 	}
 
 	m.updateQueue.Add(func(w interface{}) {
-		fn(link, w.(SlotWorker))
+		fn(link, w.(FixedSlotWorker))
 	})
 }
 
-func (m *SlotMachineSync) ProcessUpdates(worker SlotWorker) bool {
-	worker.EnsureMode(NonDetachableContext)
-
+func (m *SlotMachineSync) ProcessUpdates(worker FixedSlotWorker) bool {
 	tasks := m.updateQueue.Flush()
 	if len(tasks) == 0 {
 		return false
@@ -67,17 +63,25 @@ func (m *SlotMachineSync) ProcessUpdates(worker SlotWorker) bool {
 	return true
 }
 
-func (m *SlotMachineSync) AddAsyncCallback(link SlotLink, fn func(link SlotLink, worker DetachableSlotWorker)) {
+type AsyncCallbackFunc func(link SlotLink, worker DetachableSlotWorker) bool
+
+func (m *SlotMachineSync) AddAsyncCallback(link SlotLink, fn AsyncCallbackFunc) {
 	if fn == nil {
 		panic("illegal value")
 	}
 
-	m.callbackQueue.Add(func(w interface{}) {
-		fn(link, w.(DetachableSlotWorker))
+	m._addAsyncCallback(&m.callbackQueue, link, fn, 0)
+}
+
+func (m *SlotMachineSync) _addAsyncCallback(q *tools.SyncQueue, link SlotLink, fn AsyncCallbackFunc, repeatCount int) {
+	q.Add(func(w interface{}) {
+		if !fn(link, w.(DetachableSlotWorker)) {
+			m.addDetachedCallback(link, fn, repeatCount+1)
+		}
 	})
 }
 
-func (m *SlotMachineSync) ProcessCallbacks(worker SlotWorker) (hasSignal, wasDetached bool) {
+func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasSignal, wasDetached bool) {
 
 	if worker.HasSignal() {
 		return true, false
@@ -88,30 +92,68 @@ func (m *SlotMachineSync) ProcessCallbacks(worker SlotWorker) (hasSignal, wasDet
 		return false, false
 	}
 
-	for i, fn := range tasks {
-		wasDetached = worker.DetachableCall(func(w DetachableSlotWorker) {
-			fn(w)
-		})
+	hasSignal = false
+	lastIndex := -1
 
-		if worker.HasSignal() {
-			m.callbackQueue.AddAll(tasks[i+1:])
-			return true, wasDetached
+	wasDetached = worker.DetachableCall(func(w DetachableSlotWorker) {
+		for i, fn := range tasks {
+			fn(w)
+			lastIndex = i
+			if worker.HasSignal() {
+				hasSignal = true
+				return
+			}
 		}
+	})
+
+	lastIndex++
+	if lastIndex < len(tasks) {
+		m.callbackQueue.AddAll(tasks[lastIndex:])
 	}
-	return false, false
+
+	return hasSignal, wasDetached
 }
 
-func (m *SlotMachineSync) flushDetachQueue(slotID SlotID) tools.SyncFuncList {
+func (m *SlotMachineSync) addDetachedCallback(link SlotLink, fn AsyncCallbackFunc, repeatCount int) {
+	if repeatCount > 100 {
+		fn(link, nil)
+		return
+	}
+
+	m.detachLock.RLock()
+	dq := m.detachQueues[link.SlotID()]
+	m.detachLock.RUnlock()
+
+	if dq == nil {
+		dqv := tools.NewSignalFuncQueue(&sync.Mutex{}, nil)
+
+		m.detachLock.Lock()
+		dq = m.detachQueues[link.SlotID()]
+		if dq == nil {
+			dq = &dqv
+			m.detachQueues[link.SlotID()] = dq
+		}
+		m.detachLock.Unlock()
+	}
+
+	m._addAsyncCallback(dq, link, fn, repeatCount+1)
+}
+
+func (m *SlotMachineSync) FlushDetachQueue(slotID SlotID) tools.SyncFuncList {
+	m.detachLock.RLock()
 	dq := m.detachQueues[slotID]
+	if dq != nil {
+		delete(m.detachQueues, slotID)
+	}
+	m.detachLock.RUnlock()
 	if dq == nil {
 		return nil
 	}
-	delete(m.detachQueues, slotID)
 	return dq.Flush()
 }
 
 func (m *SlotMachineSync) AppendSlotDetachQueue(id SlotID) {
-	detached := m.flushDetachQueue(id)
+	detached := m.FlushDetachQueue(id)
 	if len(detached) > 0 {
 		m.callbackQueue.AddAll(detached)
 	}

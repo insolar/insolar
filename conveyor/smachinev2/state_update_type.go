@@ -40,7 +40,7 @@ func newPanicStateUpdate(err error) StateUpdate {
 	return StateUpdateTemplate{t: &stateUpdateTypes[stateUpdPanic]}.newError(err)
 }
 
-type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error)
+type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error)
 type SlotUpdatePrepareFunc func(slot *Slot, stateUpdate *StateUpdate)
 type SlotUpdateShortLoopFunc func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool
 
@@ -53,7 +53,7 @@ type StateUpdateType struct {
 	prepare SlotUpdatePrepareFunc
 
 	/* Runs inside the Machine / non-detachable */
-	applyDetachable SlotUpdateFunc
+	apply SlotUpdateFunc
 
 	filter    updCtxMode
 	params    stateUpdParam
@@ -101,7 +101,7 @@ func (v *StateUpdateType) verify(ctxType updCtxMode) {
 	if v.updType == 0 {
 		panic("unknown type")
 	}
-	if v.applyDetachable == nil {
+	if v.apply == nil {
 		panic("not implemented")
 	}
 	if ctxType&v.filter != ctxType {
@@ -123,7 +123,7 @@ func (v *StateUpdateType) get() StateUpdateType {
 	if v.updType == 0 {
 		panic("unknown type")
 	}
-	if v.applyDetachable == nil {
+	if v.apply == nil {
 		panic("not implemented")
 	}
 	return *v
@@ -149,14 +149,11 @@ func (v *StateUpdateType) Prepare(slot *Slot, stateUpdate *StateUpdate) {
 	}
 }
 
-func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
-	if v.applyDetachable == nil {
+func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+	if v.apply == nil {
 		return false, errors.New("not implemented")
 	}
-	return v.applyDetachable(slot, stateUpdate, worker)
-}
-
-func (v *StateUpdateType) ApplyInline(slot *Slot, stateUpdate StateUpdate, worker SlotWorker) (isAvailable bool, err error) {
+	return v.apply(slot, stateUpdate, worker)
 }
 
 func (v StateUpdateTemplate) ensureTemplate(params stateUpdParam) {
