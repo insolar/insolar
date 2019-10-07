@@ -43,9 +43,9 @@ var (
 		"dropped results in pulse",
 		stats.UnitDimensionless,
 	)
-	ResultMatchSelfResults = stats.Int64(
-		"vm_results_matcher_self_results",
-		"unwanted results that should be sent to self",
+	ResultMatcherLoopDetected = stats.Int64(
+		"vm_results_matcher_loop_detected",
+		"unwanted results that loops between node/nodes",
 		stats.UnitDimensionless,
 	)
 )
@@ -77,9 +77,9 @@ func init() {
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        ResultMatchSelfResults.Name(),
-			Description: ResultMatchSelfResults.Description(),
-			Measure:     ResultMatchSelfResults,
+			Name:        ResultMatcherLoopDetected.Name(),
+			Description: ResultMatcherLoopDetected.Description(),
+			Measure:     ResultMatcherLoopDetected,
 			Aggregation: view.Sum(),
 		},
 	)

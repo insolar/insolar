@@ -109,7 +109,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 		lr.ShutdownFlag,
 	)
-	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor, lr.JetCoordinator)
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(
