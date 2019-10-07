@@ -75,13 +75,13 @@ func MergeHTTPHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Merging incremental backup, bkpName = %s", req.BkpName)
 
 	msg := "Merge done."
-	func() { // Note: defer works on function level, not scope level!
+	ok := func() bool { // Note: defer works on function level, not scope level!
 		bkpFile, err := os.Open(req.BkpName)
 		if err != nil {
 			sendHTTPResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to open incremental backup file",
 			})
-			return
+			return false
 		}
 		defer bkpFile.Close()
 
@@ -90,7 +90,7 @@ func MergeHTTPHandler(w http.ResponseWriter, r *http.Request) {
 			sendHTTPResponse(w, 500, MergeJSONResponse{
 				Message: "DB handler is nil",
 			})
-			return
+			return false
 		}
 
 		// only one globalBadgerHandler.Load() and GC can run at a time!
@@ -107,7 +107,7 @@ func MergeHTTPHandler(w http.ResponseWriter, r *http.Request) {
 			sendHTTPResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to load incremental backup file",
 			})
-			return
+			return false
 		}
 
 		if req.RunGC {
@@ -122,7 +122,13 @@ func MergeHTTPHandler(w http.ResponseWriter, r *http.Request) {
 			log.Info(m)
 			msg += m
 		}
+
+		return true
 	}()
+
+	if !ok {
+		return
+	}
 
 	sendHTTPResponse(w, 200, MergeJSONResponse{
 		Message: msg,
