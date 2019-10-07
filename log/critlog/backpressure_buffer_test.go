@@ -17,7 +17,6 @@
 package critlog
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -27,47 +26,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logoutput"
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
-func TestBackpressureBuffer_close(t *testing.T) {
-	for _, c := range constructors {
-		t.Run(c.name, func(t *testing.T) {
-
-			tw := testWriter{}
-			writer := c.fn(&tw)
-
-			assert.False(t, tw.closed)
-			require.NoError(t, writer.Close())
-			assert.True(t, tw.closed)
-			require.Error(t, writer.Close())
-			assert.True(t, tw.closed)
-		})
-	}
-}
-
-func TestBackpressureBuffer_no_close(t *testing.T) {
-	for _, c := range constructors {
-		t.Run(c.name, func(t *testing.T) {
-
-			tw := testWriter{}
-			writer := c.fn(&tw)
-			writer.SetNoClosePropagation()
-
-			assert.False(t, tw.closed)
-			require.NoError(t, writer.Close())
-			assert.False(t, tw.closed)
-			require.Error(t, writer.Close())
-			assert.False(t, tw.closed)
-		})
-	}
-}
-
 func TestBackpressureBuffer_stop(t *testing.T) {
-	t.SkipNow()
 
 	for _, c := range constructors {
 		t.Run(c.name, func(t *testing.T) {
@@ -75,7 +42,7 @@ func TestBackpressureBuffer_stop(t *testing.T) {
 			// BufferCloseOnStop
 			var internal *internalBackpressureBuffer
 			init := func() {
-				bb := c.fn(&bytes.Buffer{})
+				bb := c.fn(&testWriter{})
 				internal = bb.internalBackpressureBuffer
 				bb.StartWorker(context.Background())
 			}
@@ -143,9 +110,9 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 	allocatedBufSize := int(args.Prime(parWriters)) * 2
 	var bb *BackpressureBuffer
 	if hasBuffer {
-		bb = NewBackpressureBuffer(cw, allocatedBufSize, uint8(parWriters), 0, missedFn)
+		bb = NewBackpressureBuffer(wrapOutput(cw), allocatedBufSize, uint8(parWriters), 0, missedFn)
 	} else {
-		bb = NewBackpressureBufferWithBypass(cw, allocatedBufSize, uint8(parWriters), 0, missedFn)
+		bb = NewBackpressureBufferWithBypass(wrapOutput(cw), allocatedBufSize, uint8(parWriters), 0, missedFn)
 	}
 
 	producersCount := allocatedBufSize + parWriters*2 + 1
@@ -319,8 +286,6 @@ func TestBackpressureBuffer_mute_on_fatal(t *testing.T) {
 
 		t.Run(c.name, func(t *testing.T) {
 			// We don't want to lock the writer on fatal in tests.
-			writer.fatal.unlockPostFatal = true
-			tw.flushSupported = true
 
 			var err error
 
@@ -335,83 +300,50 @@ func TestBackpressureBuffer_mute_on_fatal(t *testing.T) {
 			assert.True(t, tw.flushed)
 
 			tw.flushed = false
-			_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-			require.NoError(t, err)
+			require.PanicsWithValue(t, "fatal", func() {
+				_, _ = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+			})
 			assert.True(t, tw.flushed)
 			assert.False(t, tw.closed)
 
-			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-			require.NoError(t, err)
-
+			// MUST hang. Tested by logoutput.Adapter
+			//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
+			//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
+			//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+			//
 			testLog := tw.String()
 			assert.Contains(t, testLog, "WARN must pass")
 			assert.Contains(t, testLog, "ERROR must pass")
 			assert.Contains(t, testLog, "FATAL must pass")
-			assert.NotContains(t, testLog, "must NOT pass")
+			//assert.NotContains(t, testLog, "must NOT pass")
 		})
 	}
 }
 
 var constructors = []struct {
 	name string
-	fn   func(output io.Writer) *BackpressureBuffer
+	fn   func(output io.WriteCloser) *BackpressureBuffer
 }{
-	{name: "unlimited_bypass", fn: func(output io.Writer) *BackpressureBuffer {
-		return NewBackpressureBufferWithBypass(output, 10, 0, 0, nil)
+	{name: "unlimited_bypass", fn: func(output io.WriteCloser) *BackpressureBuffer {
+		return NewBackpressureBufferWithBypass(wrapOutput(output), 10, 0, 0, nil)
 	}},
-	{name: "limited_bypass", fn: func(output io.Writer) *BackpressureBuffer {
-		return NewBackpressureBufferWithBypass(output, 10, 5, 0, nil)
+	{name: "limited_bypass", fn: func(output io.WriteCloser) *BackpressureBuffer {
+		return NewBackpressureBufferWithBypass(wrapOutput(output), 10, 5, 0, nil)
 	}},
-	{name: "limited_buffer", fn: func(output io.Writer) *BackpressureBuffer {
-		return NewBackpressureBuffer(output, 10, 5, 0, nil)
+	{name: "limited_buffer", fn: func(output io.WriteCloser) *BackpressureBuffer {
+		return NewBackpressureBuffer(wrapOutput(output), 10, 5, 0, nil)
 	}},
 }
 
-func TestBackpressureBuffer_close_on_no_flush(t *testing.T) {
-
-	for _, c := range constructors {
-		tw := testWriter{}
-		writer := c.fn(&tw)
-
-		t.Run(c.name, func(t *testing.T) {
-			// We don't want to lock the writer on fatal in tests.
-			writer.fatal.unlockPostFatal = true
-			tw.flushSupported = false
-
-			var err error
-
-			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
-			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
-			require.NoError(t, err)
-
-			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
-			require.NoError(t, err)
-			assert.False(t, tw.flushed)
-
-			_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-			require.NoError(t, err)
-			assert.False(t, tw.flushed)
-			assert.True(t, tw.closed)
-
-			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-			require.NoError(t, err)
-
-			testLog := tw.String()
-			assert.Contains(t, testLog, "WARN must pass")
-			assert.Contains(t, testLog, "ERROR must pass")
-			assert.Contains(t, testLog, "FATAL must pass")
-			assert.NotContains(t, testLog, "must NOT pass")
-		})
-	}
+func wrapOutput(output io.WriteCloser) *logoutput.Adapter {
+	return logoutput.NewAdapter(output, false, nil, func() error {
+		if tw, ok := output.(*testWriter); ok {
+			_ = tw.Flush()
+		} else {
+			_ = output.Close()
+		}
+		panic("fatal")
+	})
 }
 
 type chanWriter struct {
