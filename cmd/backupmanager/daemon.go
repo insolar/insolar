@@ -21,7 +21,7 @@ import (
 
 type MergeJsonRequest struct {
 	BkpName string `json:"bkpName"`
-	RunGC   bool   `json:"rubGC"`
+	RunGC   bool   `json:"runGC"`
 }
 
 type MergeJsonResponse struct {
