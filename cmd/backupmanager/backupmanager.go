@@ -414,8 +414,10 @@ func parseInputParams(ctx context.Context) {
 		Short: "backupmanager is the command line client for managing backups",
 	}
 
-	rootCmd.AddCommand(parseMergeParams(ctx))
 	rootCmd.AddCommand(parseCreateParams(ctx))
+	rootCmd.AddCommand(parseMergeParams(ctx))
+	rootCmd.AddCommand(parseDaemonParams(ctx))
+	// rootCmd.AddCommand(parseDaemonMergeParams(ctx)) // AALEKSEEV TODO
 	rootCmd.AddCommand(parsePrepareBackupParams(ctx))
 
 	exit(rootCmd.Execute())
