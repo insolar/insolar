@@ -9,7 +9,7 @@ If given db does not exist, it creates new one.
 make backupmanager
 ```
 
-## Typical usage
+## Typical usage - without using a backup daemon
 
 Create an empty backup:
 
@@ -49,3 +49,21 @@ To restore the database from a backup run:
 This command marks the last pulse in the backup as finalized. We have to do it because during the backup the last pulse is not finalized yet.
 
 After executing the command replace `data` directory on Heavy with `heavy_backup` and start the network.
+
+## Typical usage - with using a backup daemon
+
+`backupmanager merge` is executed much faster when a backup daemon is used.
+
+Start a backup daemon:
+
+```
+./bin/backupmanager daemon -t ./heavy_backup
+```
+
+Instead of `backupmanager merge` use:
+
+```
+./bin/backupmanager daemon-merge -a http://localhost:8099 -g -n $INSOLAR_CURRENT_BACKUP_DIR/incr.bkp
+```
+
+See `--help` output for more details.
