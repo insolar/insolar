@@ -13,7 +13,7 @@ import (
 
 type testWriter struct {
 	strings.Builder
-	closed, flushed bool
+	closed, flushed, noFlush bool
 }
 
 func (w *testWriter) Close() error {
@@ -24,6 +24,9 @@ func (w *testWriter) Close() error {
 func (w *testWriter) Flush() error {
 	if w.closed {
 		return errors.New("closed")
+	}
+	if w.noFlush {
+		return errors.New("unsupported")
 	}
 	w.flushed = true
 	return nil
@@ -62,6 +65,31 @@ func TestFatalDirectWriter_mute_on_fatal(t *testing.T) {
 	testLog := tw.String()
 	assert.Contains(t, testLog, "WARN must pass")
 	assert.Contains(t, testLog, "ERROR must pass")
+	assert.Contains(t, testLog, "FATAL must pass")
+	//assert.NotContains(t, testLog, "must NOT pass")
+}
+
+func TestFatalDirectWriter_close_on_fatal_without_flush(t *testing.T) {
+	tw := testWriter{}
+	tw.noFlush = true
+
+	writer := NewFatalDirectWriter(logoutput.NewAdapter(&tw, false, nil, nil))
+	var err error
+
+	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+	require.NoError(t, err)
+
+	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+	require.NoError(t, err)
+	assert.False(t, tw.flushed)
+	assert.True(t, tw.closed)
+
+	// MUST hang. Tested by logoutput.Adapter
+	//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+	testLog := tw.String()
+	assert.Contains(t, testLog, "WARN must pass")
 	assert.Contains(t, testLog, "FATAL must pass")
 	//assert.NotContains(t, testLog, "must NOT pass")
 }

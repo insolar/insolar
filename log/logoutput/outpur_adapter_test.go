@@ -17,6 +17,7 @@
 package logoutput
 
 import (
+	"errors"
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ import (
 type testWriter struct {
 	strings.Builder
 	closeCount, flushCount int
+	noFlush                bool
 }
 
 func (w *testWriter) Close() error {
@@ -41,6 +43,9 @@ func (w *testWriter) Flush() error {
 	w.flushCount++
 	if w.closeCount > 1 {
 		return errClosed
+	}
+	if w.noFlush {
+		return errors.New("unsupported")
 	}
 	return nil
 }
@@ -57,6 +62,28 @@ func (p *testLevelWriter) Write([]byte) (int, error) {
 
 func (p *testLevelWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
 	return p.testWriter.Write([]byte(level.String() + string(b)))
+}
+
+func TestAdapter_fatal_close_on_no_flush(t *testing.T) {
+	tw := testWriter{}
+	tw.noFlush = true
+
+	writer := NewAdapter(&tw, false, nil, nil)
+	writer.setState(adapterPanicOnFatal)
+
+	var err error
+
+	require.Equal(t, 0, tw.flushCount)
+	err = writer.DirectFlushFatal()
+	require.NoError(t, err)
+
+	require.Equal(t, 1, tw.flushCount)
+	require.Equal(t, 1, tw.closeCount)
+
+	require.PanicsWithValue(t, "fatal lock", func() {
+		_ = writer.Flush()
+	})
+	require.Equal(t, 1, tw.flushCount)
 }
 
 func TestAdapter_fatal(t *testing.T) {
