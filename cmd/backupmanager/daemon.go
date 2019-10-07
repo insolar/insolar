@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -117,10 +119,51 @@ func parseDaemonParams(ctx context.Context) *cobra.Command {
 	return daemonCmd
 }
 
+func daemonMerge(address string, backupFileName string) {
+	reqJson := MergeJsonRequest{BkpName: backupFileName}
+	reqBytes, err := json.Marshal(reqJson)
+	if err != nil {
+		err = errors.Wrap(err, "daemonMerge - json.Marshal failed")
+		exitWithError(err)
+	}
+
+	req, err := http.NewRequest("POST", address+"/api/v1/merge", bytes.NewBuffer(reqBytes))
+	if err != nil {
+		err = errors.Wrap(err, "daemonMerge - http.NewRequest failed")
+		exitWithError(err)
+	}
+
+	client := http.Client{}
+	httpResp, err := client.Do(req)
+	if err != nil {
+		err = errors.Wrap(err, "daemonMerge - client.Do failed")
+		exitWithError(err)
+	}
+	defer httpResp.Body.Close()
+
+	respBytes, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		err = errors.Wrap(err, "daemonMerge - ioutil.ReadAll failed")
+		exitWithError(err)
+	}
+	var resp MergeJsonResponse
+	err = json.Unmarshal(respBytes, &resp)
+	if err != nil {
+		err = errors.Wrap(err, "daemonMerge - json.Unmarshal failed")
+		exitWithError(err)
+	}
+
+	if httpResp.StatusCode != 200 {
+		err = errors.New(fmt.Sprintf("Merge failed: daemon returned code %d and body: %s\n", httpResp.StatusCode, respBytes))
+		exitWithError(err)
+	}
+
+	log.Infof("HTTP response OK. Daemon: %s", resp.Message)
+}
+
 func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 	var (
-		daemonHost     string
-		daemonPort     int
+		address        string
 		backupFileName string
 	)
 
@@ -128,8 +171,8 @@ func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 		Use:   "daemon-merge",
 		Short: "merge incremental backup using merge daemon",
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Infof("Starting daemon-merge, host = %s, port = %d, bkp-name = %s", daemonHost, daemonPort, backupFileName)
-			// daemonMerge(daemonHost, daemonPort, backupFileName) // AALEKSEEV TODO
+			log.Infof("Starting daemon-merge, address = %s, bkp-name = %s", address, backupFileName)
+			daemonMerge(address, backupFileName)
 		},
 	}
 	mergeFlags := daemonMergeCmd.Flags()
@@ -137,9 +180,7 @@ func parseDaemonMergeParams(ctx context.Context) *cobra.Command {
 	mergeFlags.StringVarP(
 		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
 	mergeFlags.StringVarP(
-		&daemonHost, "address", "a", "localhost", "merge daemon listen address or host")
-	mergeFlags.IntVarP(
-		&daemonPort, "port", "p", 8080, "merge daemon listen port")
+		&address, "address", "a", "http://localhost:8080", "merge daemon listen address")
 
 	err := cobra.MarkFlagRequired(mergeFlags, bkpFileName)
 	if err != nil {
