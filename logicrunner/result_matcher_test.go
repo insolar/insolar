@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -59,7 +60,7 @@ func TestResultsMatcher_AddStillExecution(t *testing.T) {
 		{
 			name: "empty matcher",
 			mocks: func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.StillExecuting) {
-				rm := newResultsMatcher(nil, nil)
+				rm := newResultsMatcher(nil, nil, nil)
 				msg := payload.StillExecuting{}
 				return rm, msg
 			},
@@ -78,7 +79,7 @@ func TestResultsMatcher_AddStillExecution(t *testing.T) {
 				})
 
 				rm := newResultsMatcher(
-					bus.NewSenderMock(t).SendTargetMock.Set(sendTargetHelper), pa,
+					bus.NewSenderMock(t).SendTargetMock.Set(sendTargetHelper), pa, jet.NewCoordinatorMock(t),
 				)
 
 				rm.AddUnwantedResponse(ctx, payload.ReturnResults{
@@ -116,7 +117,7 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 		{
 			name: "empty matcher",
 			mocks: func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.ReturnResults) {
-				rm := newResultsMatcher(nil, nil)
+				rm := newResultsMatcher(nil, nil, nil)
 				msg := payload.ReturnResults{}
 				return rm, msg
 			},
@@ -135,7 +136,31 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 				})
 
 				rm := newResultsMatcher(
-					bus.NewSenderMock(t).SendTargetMock.Set(sendTargetHelper), pa,
+					bus.NewSenderMock(t).SendTargetMock.Set(sendTargetHelper), pa, jet.NewCoordinatorMock(t).MeMock.Return(gen.Reference()),
+				)
+
+				rm.AddStillExecution(ctx, payload.StillExecuting{
+					Executor:    nodeRef,
+					RequestRefs: []insolar.Reference{reqRef},
+				})
+				msg := payload.ReturnResults{
+					Reason: reqRef,
+				}
+				return rm, msg
+			},
+		},
+		{
+			name: "match for self",
+			mocks: func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.ReturnResults) {
+				reqRef := gen.Reference()
+				nodeRef := gen.Reference()
+
+				pa := pulse.NewAccessorMock(t)
+
+				jc := jet.NewCoordinatorMock(t).MeMock.Return(nodeRef)
+
+				rm := newResultsMatcher(
+					bus.NewSenderMock(t), pa, jc,
 				)
 
 				rm.AddStillExecution(ctx, payload.StillExecuting{
@@ -175,7 +200,7 @@ func TestResultsMatcher_Clear(t *testing.T) {
 				reqRef1 := gen.Reference()
 				reqRef2 := gen.Reference()
 
-				rm := newResultsMatcher(nil, nil)
+				rm := newResultsMatcher(nil, nil, nil)
 
 				rm.AddStillExecution(ctx, payload.StillExecuting{
 					RequestRefs: []insolar.Reference{reqRef1},

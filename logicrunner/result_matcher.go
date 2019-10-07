@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -44,18 +45,20 @@ type resultWithContext struct {
 }
 
 type resultsMatcher struct {
-	sender        bus.Sender
-	pulseAccessor pulse.Accessor
+	sender         bus.Sender
+	pulseAccessor  pulse.Accessor
+	jetCoordinator jet.Coordinator
 
 	lock              sync.Mutex
 	executionNodes    map[insolar.Reference]insolar.Reference
 	unwantedResponses map[insolar.Reference]resultWithContext
 }
 
-func newResultsMatcher(sender bus.Sender, pa pulse.Accessor) *resultsMatcher {
+func newResultsMatcher(sender bus.Sender, pa pulse.Accessor, coordinator jet.Coordinator) *resultsMatcher {
 	return &resultsMatcher{
 		sender:            sender,
 		pulseAccessor:     pa,
+		jetCoordinator:    coordinator,
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]resultWithContext),
 	}
@@ -93,6 +96,11 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.R
 	}
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
+		if node == rm.jetCoordinator.Me() {
+			logger.Error("got unwanted response from this node")
+			return
+		}
+
 		go rm.send(ctx, msg, node)
 		return
 	}
