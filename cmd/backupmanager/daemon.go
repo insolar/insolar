@@ -18,19 +18,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type MergeJsonRequest struct {
+type MergeJSONRequest struct {
 	BkpName string `json:"bkpName"`
 	RunGC   bool   `json:"runGC"`
 }
 
-type MergeJsonResponse struct {
+type MergeJSONResponse struct {
 	Message string `json:"message"`
 }
 
 var globalBadgerHandler *badger.DB
 var globalBadgerLock sync.Mutex // see comments below
 
-func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJsonResponse) {
+func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJSONResponse) {
 	h := w.Header()
 	h.Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -58,7 +58,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("Processing request: %s", reqBytes)
 
-	var req MergeJsonRequest
+	var req MergeJSONRequest
 	err = json.Unmarshal(reqBytes, &req)
 	if err != nil {
 		log.Errorf("MergeHttpHandler, json.Unmarshal: %v", err)
@@ -66,7 +66,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.BkpName == "" {
-		sendHttpResponse(w, 400, MergeJsonResponse{
+		sendHttpResponse(w, 400, MergeJSONResponse{
 			Message: "Missing bkpName",
 		})
 		return
@@ -78,7 +78,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	func() { // Note: defer works on function level, not scope level!
 		bkpFile, err := os.Open(req.BkpName)
 		if err != nil {
-			sendHttpResponse(w, 400, MergeJsonResponse{
+			sendHttpResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to open incremental backup file",
 			})
 			return
@@ -87,7 +87,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		log.Info("Backup file is opened")
 		if globalBadgerHandler == nil {
-			sendHttpResponse(w, 500, MergeJsonResponse{
+			sendHttpResponse(w, 500, MergeJSONResponse{
 				Message: "DB handler is nil",
 			})
 			return
@@ -104,7 +104,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = globalBadgerHandler.Load(bkpFile, 1)
 		if err != nil {
-			sendHttpResponse(w, 400, MergeJsonResponse{
+			sendHttpResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to load incremental backup file",
 			})
 			return
@@ -124,7 +124,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	sendHttpResponse(w, 200, MergeJsonResponse{
+	sendHttpResponse(w, 200, MergeJSONResponse{
 		Message: msg,
 	})
 }
@@ -207,7 +207,7 @@ func parseDaemonParams() *cobra.Command {
 }
 
 func daemonMerge(address string, backupFileName string, runGC bool) {
-	reqJson := MergeJsonRequest{BkpName: backupFileName, RunGC: runGC}
+	reqJson := MergeJSONRequest{BkpName: backupFileName, RunGC: runGC}
 	reqBytes, err := json.Marshal(reqJson)
 	if err != nil {
 		err = errors.Wrap(err, "daemonMerge - json.Marshal failed")
@@ -233,7 +233,7 @@ func daemonMerge(address string, backupFileName string, runGC bool) {
 		err = errors.Wrap(err, "daemonMerge - ioutil.ReadAll failed")
 		exitWithError(err)
 	}
-	var resp MergeJsonResponse
+	var resp MergeJSONResponse
 	err = json.Unmarshal(respBytes, &resp)
 	if err != nil {
 		err = errors.Wrap(err, "daemonMerge - json.Unmarshal failed")
