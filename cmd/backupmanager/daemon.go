@@ -82,7 +82,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	defer bkpFile.Close()
+	// defer bkpFile.Close() // AALEKSEEV TODO ???
 
 	log.Info("Backup file is opened")
 	if globalBadgerHandler == nil {
