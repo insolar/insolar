@@ -38,7 +38,7 @@ func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJsonRespo
 
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
-		log.Errorf("sendHttpResonse, json.Marshal: %v\n", err)
+		log.Errorf("sendHttpResonse, json.Marshal: %v", err)
 		return
 	}
 
@@ -46,14 +46,14 @@ func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJsonRespo
 
 	_, err = w.Write(respBytes)
 	if err != nil {
-		log.Errorf("sendHttpResonse, w.Write: %v\n", err)
+		log.Errorf("sendHttpResonse, w.Write: %v", err)
 	}
 }
 
 func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	reqBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Errorf("MergeHttpHandler, ioutil.ReadAll: %v\n", err)
+		log.Errorf("MergeHttpHandler, ioutil.ReadAll: %v", err)
 		return
 	}
 
@@ -62,7 +62,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	var req MergeJsonRequest
 	err = json.Unmarshal(reqBytes, &req)
 	if err != nil {
-		log.Errorf("MergeHttpHandler, json.Unmarshal: %v\n", err)
+		log.Errorf("MergeHttpHandler, json.Unmarshal: %v", err)
 		return
 	}
 
@@ -95,8 +95,13 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	msg := "Merge done."
 	{
 		// only one globalBadgerHandler.Load() and GC can run at a time!
+		log.Info("MergeHttpHandler - about to Lock() globalBadgerLock")
 		globalBadgerLock.Lock()
-		defer globalBadgerLock.Unlock()
+		log.Info("MergeHttpHandler - globalBadgerLock Locked(), executing  globalBadgerHandler.Load()")
+		defer func() {
+			log.Info("MergeHttpHandler - calling globalBadgerLock.Unlock()")
+			globalBadgerLock.Unlock()
+		}()
 
 		err = globalBadgerHandler.Load(bkpFile, 1)
 		if err != nil {
@@ -128,8 +133,14 @@ func daemon(listenAddr string, targetDBPath string) {
 	ops.Logger = badgerLogger
 	var err error
 	{
-		globalBadgerLock.Lock() // it guarantees defined behavior if terms of `globalBadgerHandler` value
-		defer globalBadgerLock.Unlock()
+		log.Info("daemon() - about to Lock() globalBadgerLock")
+		// it guarantees defined behavior if terms of `globalBadgerHandler` value
+		globalBadgerLock.Lock()
+		log.Info("daemon() - globalBadgerLock Locked(), executing  globalBadgerHandler.Load()")
+		defer func() {
+			log.Info("daemon() - calling globalBadgerLock.Unlock()")
+			globalBadgerLock.Unlock()
+		}()
 
 		// Note: make sure `globalBadgerHandler` will be assigned (don't use := here)
 		globalBadgerHandler, err = badger.Open(ops)
@@ -137,7 +148,7 @@ func daemon(listenAddr string, targetDBPath string) {
 			err = errors.Wrap(err, "failed to open DB")
 			exitWithError(err)
 		}
-		log.Info("DB is opened")
+		log.Info("DB opened")
 
 		err = isDBEmpty(globalBadgerHandler)
 		if err == nil {
@@ -227,7 +238,7 @@ func daemonMerge(address string, backupFileName string, runGC bool) {
 	}
 
 	if httpResp.StatusCode != 200 {
-		err = errors.New(fmt.Sprintf("Merge failed: daemon returned code %d and body: %s\n", httpResp.StatusCode, respBytes))
+		err = errors.New(fmt.Sprintf("Merge failed: daemon returned code %d and body: %s", httpResp.StatusCode, respBytes))
 		exitWithError(err)
 	}
 
