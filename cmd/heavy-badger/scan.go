@@ -39,7 +39,7 @@ type dbScanner struct {
 	nonStrict bool
 
 	perPulseStat bool
-	statGraph    string
+	statGraph    bool
 
 	disableProgressbar bool
 
@@ -72,8 +72,8 @@ func (app *appCtx) scanCommand() *cobra.Command {
 			"show stat for every pulse")
 	}
 	graphSizesHistoryFlag := func(cmd *cobra.Command) {
-		cmd.Flags().StringVar(&scan.statGraph, "graph", "",
-			"show pulse size graph over time")
+		cmd.Flags().BoolVar(&scan.statGraph, "graph", false,
+			"show per pulse db size graph (generates html in tmp dir and runs browser by open command)")
 	}
 	limitPulsesFlag := func(cmd *cobra.Command) {
 		cmd.Flags().IntVarP(&scan.limitPulses, "limit", "l", 0,
@@ -352,7 +352,13 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 	baseIters = append(baseIters, sumValuesHistogram.iter)
 	pulsePrinter := func() {}
 
-	graphImpl := newGrapher(dbs.statGraph)
+	var graphImpl Grapher = StubDrawer{}
+	if dbs.statGraph {
+		graphImpl = &webGraph{
+			Title:       "Heavy Storage Consumption",
+			DataHeaders: []string{"pulse", "record's values Mb"},
+		}
+	}
 
 	bar := createProgressBar(limit, dbs.disableProgressbar)
 
@@ -367,7 +373,7 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 		iters = append(iters, baseIters...)
 
 		var valuesH *histogram
-		if dbs.statGraph != "" || dbs.perPulseStat {
+		if dbs.statGraph || dbs.perPulseStat {
 			valuesH = newHistogram("Per Pulse Sizes")
 			iters = append(iters, valuesH.iter)
 		}

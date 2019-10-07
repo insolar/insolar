@@ -18,11 +18,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"html/template"
+	"io"
+	"io/ioutil"
 	"os"
-	"time"
-
-	"github.com/campoy/tools/imgcat"
-	"github.com/wcharczuk/go-chart"
+	"os/exec"
+	"syscall"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -38,104 +40,109 @@ func (d StubDrawer) Add(insolar.Pulse, float64) {}
 
 func (d StubDrawer) Draw() {}
 
-type ConsoleGraph struct {
-	x []time.Time
-	y []float64
+type webGraph struct {
+	Title string
+
+	CurveType           string
+	HorizontalAxisTitle string
+	VerticalAxisTitle   string
+	DataHeaders         []string
+	Data                []tmplData
 }
 
-func (g *ConsoleGraph) Add(x insolar.Pulse, y float64) {
-	g.x = append(g.x, pulseTime(x))
-	g.y = append(g.y, y)
+type tmplData struct {
+	XValue  string
+	YValues []float64
 }
 
-func (g *ConsoleGraph) Draw() {
-	enc, err := imgcat.NewEncoder(
-		os.Stdout,
-		imgcat.Inline(true),
-		imgcat.Width(imgcat.Percent(100)),
-	)
-	if err != nil {
-		fatalf("%s\n", err)
-	}
+// based on https://developers-dot-devsite-v2-prod.appspot.com/chart/interactive/docs/gallery/linechart.html
+// https://jsfiddle.net/api/post/library/pure/
+var graphTmpl = template.Must(template.New("graphHtml").Parse(`
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load('current', {'packages':['corechart']});
+      google.charts.setOnLoadCallback(drawChart);
 
-	pressEnter("Press 'Enter' to show size graph...")
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+		  // headers
+          [ {{ range .DataHeaders }}'{{ . }}',{{ end }} ],
+		  // values
+		  {{ range .Data }}
+          [{{ .XValue }}, {{ range .YValues }} {{ . }}, {{ end }} ],
+		  {{ end }}
+        ]);
 
-	b := g.genImage()
-	if err := enc.Encode(bytes.NewReader(b)); err != nil {
-		fatalf("image encode failed: %v", err)
-	}
-}
+        var options = {
+          title: '{{ .Title }}',
+          curveType: '{{ .CurveType }}',
+          legend: { position: 'bottom' },
+		  hAxis: { title: '{{ .HorizontalAxisTitle }}' },
+          vAxis: { title: '{{ .VerticalAxisTitle }}' }
+        };
 
-func (g *ConsoleGraph) genImage() []byte {
-	mainSeries := chart.TimeSeries{
-		Name: "DB Size Rate (Mb)",
-		Style: chart.Style{
-			Show:        true,
-			StrokeColor: chart.ColorBlue,
-			FillColor:   chart.ColorBlue.WithAlpha(100),
-		},
-		XValues: g.x,
-		YValues: g.y,
-	}
-	width := 1280
-	if len(g.y) > width {
-		width = len(g.y)
-	}
-	graph := chart.Chart{
-		Width:  width,
-		Height: 720,
-		Background: chart.Style{
-			Padding: chart.Box{
-				Top: 50,
-			},
-		},
-		YAxis: chart.YAxis{
-			Name:  "Values size",
-			Style: chart.StyleShow(),
-			TickStyle: chart.Style{
-				TextRotationDegrees: 45.0,
-			},
-		},
-		XAxis: chart.XAxis{
-			Style: chart.Style{
-				Show: true,
-			},
-			ValueFormatter: chart.TimeHourValueFormatter,
-			GridMajorStyle: chart.Style{
-				// Show:        true,
-				StrokeColor: chart.ColorAlternateGray,
-				StrokeWidth: 1.0,
-			},
-		},
-		Series: []chart.Series{
-			mainSeries,
-		},
-	}
+        var chart = new google.visualization.LineChart(document.getElementById('chart'));
 
-	graph.Elements = []chart.Renderable{chart.LegendThin(&graph)}
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="chart" style="width: 900px; height: 500px"></div>
+  </body>
+</html>
+`))
 
+func makeWebDrawFile(tCtx webGraph) (*os.File, error) {
+	// to avoid creating and cleaning temporary files on template errors
 	var b bytes.Buffer
-	err := graph.Render(chart.PNG, &b)
+	err := graphTmpl.ExecuteTemplate(&b, "graphHtml", tCtx)
 	if err != nil {
-		fatalf("render failed: %v", err)
+		return nil, fmt.Errorf("template failed: %v", err)
 	}
-	return b.Bytes()
+
+	f, err := ioutil.TempFile("", "heavy_badger_web_report_*.html")
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(f, &b)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
-func newGrapher(output string) Grapher {
-	var g Grapher
-	switch output {
-	case "": // do nothing
-		g = StubDrawer{}
-	case "console":
-		g = &ConsoleGraph{}
-	case "web":
-		g = &webGraph{
-			Title:       "Heavy Storage Consumption",
-			DataHeaders: []string{"pulse", "record's values Mb"},
-		}
-	default:
-		fatalf("unknown graph output type: %v", output)
+func (g *webGraph) Add(x insolar.Pulse, y float64) {
+	g.Data = append(g.Data, tmplData{
+		XValue:  pulseTime(x).String(),
+		YValues: []float64{y},
+	})
+}
+
+func (g *webGraph) Draw() {
+	tmpFile, err := makeWebDrawFile(*g)
+	if err != nil {
+		fatalf("failed to make web draw: %v", err)
 	}
-	return g
+
+	fmt.Println("saves report html file in", tmpFile.Name())
+	cmd := exec.Command("open", "--wait-apps", tmpFile.Name())
+
+	fin := &finalizersHolder{}
+	fin.add(func() error {
+		fmt.Println("\nremove", tmpFile.Name())
+		return os.Remove(tmpFile.Name())
+	})
+	done := fin.onSignals(syscall.SIGINT, syscall.SIGTERM)
+
+	err = cmd.Run()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); !ok {
+			fatalf("\nopen command failed: %v", err)
+		}
+		fmt.Println("\nopen command finished:", err)
+	}
+	<-done
 }

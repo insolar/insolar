@@ -68,14 +68,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:ac1e0c1c60a7dc4f68415338717c7a9bd3b314c7712f897242497755ba0eb700"
-  name = "github.com/campoy/tools"
-  packages = ["imgcat"]
-  pruneopts = "UT"
-  revision = "c445bd4548958502638777f4b21d75dd9d5a0251"
-  version = "v2.0.1"
-
-[[projects]]
   digest = "1:c1100fc71e23b6a32b2c68a5202a848fd13811d5a10b12edb8019c3667d1cd9a"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
@@ -200,17 +192,6 @@
   pruneopts = "UT"
   revision = "1672f6126e23b7f7fd76ce77268c71689e435eeb"
   version = "v2.1.9"
-
-[[projects]]
-  branch = "master"
-  digest = "1:62c57507df491b657e9ae2645f30958d9964c8eeb380600469eedc951ebb3a0e"
-  name = "github.com/golang/freetype"
-  packages = [
-    "raster",
-    "truetype",
-  ]
-  pruneopts = "UT"
-  revision = "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
 
 [[projects]]
   digest = "1:b532ee3f683c057e797694b5bfeb3827d89e6adf41c53dbc80e549bca76364ea"
@@ -659,21 +640,6 @@
   revision = "772ced7fd4c2f6322c07537a9a93b68d74551fa6"
 
 [[projects]]
-  digest = "1:cf762a0ce01d48d8ac03f717aa41f66b655abea67c616d89994ce091a2cc6831"
-  name = "github.com/wcharczuk/go-chart"
-  packages = [
-    ".",
-    "drawing",
-    "matrix",
-    "roboto",
-    "seq",
-    "util",
-  ]
-  pruneopts = "UT"
-  revision = "7c3982fe3d8ab0c9eea9ab5d2aced51e45d447bc"
-  version = "v2.0.1"
-
-[[projects]]
   digest = "1:b7c2ac33d95453f9285cb06d1dd07e666341f597e8090c0c925af4e9f8a3a150"
   name = "go.opencensus.io"
   packages = [
@@ -711,19 +677,6 @@
   ]
   pruneopts = "UT"
   revision = "60c769a6c58655dab1b9adac0d58967dd517cfba"
-
-[[projects]]
-  branch = "master"
-  digest = "1:8aa52c7f7476f9ce660f5db479eb0e19681b58783442f33459954757fc6732fe"
-  name = "golang.org/x/image"
-  packages = [
-    "draw",
-    "font",
-    "math/f64",
-    "math/fixed",
-  ]
-  pruneopts = "UT"
-  revision = "69e4b8554b2a817a1f0015867f0858d02801f0f5"
 
 [[projects]]
   branch = "master"
@@ -910,7 +863,6 @@
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/ThreeDotsLabs/watermill/pubsub/gochannel",
-    "github.com/campoy/tools/imgcat",
     "github.com/cheggaaa/pb/v3",
     "github.com/dgraph-io/badger",
     "github.com/dustin/go-humanize",
@@ -952,7 +904,6 @@
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
-    "github.com/wcharczuk/go-chart",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
