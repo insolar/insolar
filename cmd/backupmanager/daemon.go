@@ -30,7 +30,7 @@ type MergeJSONResponse struct {
 var globalBadgerHandler *badger.DB
 var globalBadgerLock sync.Mutex // see comments below
 
-func sendHttpResponse(w http.ResponseWriter, statusCode int, resp MergeJSONResponse) {
+func sendHTTPResponse(w http.ResponseWriter, statusCode int, resp MergeJSONResponse) {
 	h := w.Header()
 	h.Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -66,7 +66,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.BkpName == "" {
-		sendHttpResponse(w, 400, MergeJSONResponse{
+		sendHTTPResponse(w, 400, MergeJSONResponse{
 			Message: "Missing bkpName",
 		})
 		return
@@ -78,7 +78,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 	func() { // Note: defer works on function level, not scope level!
 		bkpFile, err := os.Open(req.BkpName)
 		if err != nil {
-			sendHttpResponse(w, 400, MergeJSONResponse{
+			sendHTTPResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to open incremental backup file",
 			})
 			return
@@ -87,7 +87,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		log.Info("Backup file is opened")
 		if globalBadgerHandler == nil {
-			sendHttpResponse(w, 500, MergeJSONResponse{
+			sendHTTPResponse(w, 500, MergeJSONResponse{
 				Message: "DB handler is nil",
 			})
 			return
@@ -104,7 +104,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = globalBadgerHandler.Load(bkpFile, 1)
 		if err != nil {
-			sendHttpResponse(w, 400, MergeJSONResponse{
+			sendHTTPResponse(w, 400, MergeJSONResponse{
 				Message: "Failed to load incremental backup file",
 			})
 			return
@@ -124,7 +124,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	sendHttpResponse(w, 200, MergeJSONResponse{
+	sendHTTPResponse(w, 200, MergeJSONResponse{
 		Message: msg,
 	})
 }
