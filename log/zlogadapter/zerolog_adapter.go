@@ -19,7 +19,6 @@ package zlogadapter
 import (
 	"context"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 
@@ -27,7 +26,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/inssyslog"
 	"github.com/insolar/insolar/log/logadapter"
 	"github.com/insolar/insolar/log/logmetrics"
 )
@@ -118,17 +116,6 @@ func FromZerologLevel(zLevel zerolog.Level) insolar.LogLevel {
 	return zerologReverseMapping[zLevel]
 }
 
-func selectOutput(output insolar.LogOutput, param string) (w io.Writer, err error) {
-	switch output {
-	case insolar.StdErrOutput:
-		return os.Stderr, nil
-	case insolar.SysLogOutput:
-		return inssyslog.ConnectSyslogByParam(param, "insolar") // breaks dependency on windows
-	default:
-		return nil, errors.New("unknown output " + output.String())
-	}
-}
-
 func selectFormatter(format insolar.LogFormat, output io.Writer) (io.Writer, error) {
 	switch format {
 	case insolar.TextFormat:
@@ -144,9 +131,15 @@ const zerologSkipFrameCount = 4
 
 func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFormatConfig) (insolar.Logger, error) {
 
-	bareOutput, err := selectOutput(pCfg.OutputType, pCfg.OutputParam)
+	zc := logadapter.Config{}
+
+	var err error
+	zc.BareOutput, err = logadapter.OpenLogBareOutput(pCfg.OutputType, pCfg.OutputParam)
 	if err != nil {
 		return nil, err
+	}
+	if zc.BareOutput.Writer == nil {
+		return nil, errors.New("output is nil")
 	}
 
 	sfb := zerologSkipFrameCount + pCfg.SkipFrameBaselineAdjustment
@@ -154,13 +147,12 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 		sfb = 0
 	}
 
-	zc := logadapter.Config{}
 	zc.Output = pCfg.Output
 	zc.Instruments = pCfg.Instruments
 	zc.MsgFormat = msgFmt
 	zc.Instruments.SkipFrameCountBaseline = uint8(sfb)
 
-	zb := logadapter.NewBuilder(zerologFactory{}, bareOutput, zc, pCfg.LogLevel)
+	zb := logadapter.NewBuilder(zerologFactory{}, zc, pCfg.LogLevel)
 
 	return zb.Build()
 }
@@ -340,19 +332,18 @@ func (zf zerologFactory) CreateGlobalLogAdapter() insolar.GlobalLogAdapter {
 	return zerologGlobalAdapter
 }
 
-func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logmetrics.MetricsHelper, config logadapter.BuildConfig) (io.Writer, error) {
-	var err error
-	output, err = selectFormatter(config.Output.Format, output)
+func (zf zerologFactory) PrepareBareOutput(output logadapter.BareOutput, metrics *logmetrics.MetricsHelper, config logadapter.BuildConfig) (io.Writer, error) {
+	outputWriter, err := selectFormatter(config.Output.Format, output.Writer)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if ok, name, reportFn := getWriteDelayConfig(metrics, config); ok {
-		output = newWriteDelayPostHook(output, name, writeDelayPreferTrim, reportFn)
+		outputWriter = newWriteDelayPostHook(outputWriter, name, writeDelayPreferTrim, reportFn)
 	}
 
-	return output, nil
+	return outputWriter, nil
 }
 
 func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
@@ -463,6 +454,10 @@ func (z zerologAdapterOutput) WriteLevel(level zerolog.Level, b []byte) (int, er
 	return z.LoggerOutput.LogLevelWrite(FromZerologLevel(level), b)
 }
 
+func (z zerologAdapterOutput) Write(b []byte) (int, error) {
+	panic("unexpected") // zerolog writes only to WriteLevel
+}
+
 /* ========================================= */
 
 var _ zerolog.LevelWriter = &zerologAdapterLLOutput{}
@@ -473,6 +468,10 @@ type zerologAdapterLLOutput struct {
 
 func (z zerologAdapterLLOutput) WriteLevel(level zerolog.Level, b []byte) (int, error) {
 	return z.LoggerOutput.LowLatencyWrite(FromZerologLevel(level), b)
+}
+
+func (z zerologAdapterLLOutput) Write(b []byte) (int, error) {
+	panic("unexpected") // zerolog writes only to WriteLevel
 }
 
 /* ========================================= */

@@ -1,6 +1,7 @@
 package critlog
 
 import (
+	"github.com/insolar/insolar/log/logoutput"
 	"github.com/pkg/errors"
 	"strings"
 	"testing"
@@ -13,7 +14,6 @@ import (
 type testWriter struct {
 	strings.Builder
 	closed, flushed bool
-	flushSupported  bool
 }
 
 func (w *testWriter) Close() error {
@@ -22,8 +22,8 @@ func (w *testWriter) Close() error {
 }
 
 func (w *testWriter) Flush() error {
-	if !w.flushSupported {
-		return errors.New("not supported: Flush")
+	if w.closed {
+		return errors.New("closed")
 	}
 	w.flushed = true
 	return nil
@@ -31,11 +31,11 @@ func (w *testWriter) Flush() error {
 
 func TestFatalDirectWriter_mute_on_fatal(t *testing.T) {
 	tw := testWriter{}
-	writer := NewFatalDirectWriter(&tw)
+	writer := NewFatalDirectWriter(logoutput.NewAdapter(&tw, false, nil, func() error {
+		_ = tw.Flush()
+		panic("fatal")
+	}))
 	// We don't want to lock the writer on fatal in tests.
-	writer.fatal.unlockPostFatal = true
-	tw.flushSupported = true
-
 	var err error
 
 	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
@@ -49,81 +49,19 @@ func TestFatalDirectWriter_mute_on_fatal(t *testing.T) {
 	assert.True(t, tw.flushed)
 
 	tw.flushed = false
-	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-	require.NoError(t, err)
+	require.PanicsWithValue(t, "fatal", func() {
+		_, _ = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+	})
 	assert.True(t, tw.flushed)
 	assert.False(t, tw.closed)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-	require.NoError(t, err)
-
+	// MUST hang. Tested by logoutput.Adapter
+	//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
 	testLog := tw.String()
 	assert.Contains(t, testLog, "WARN must pass")
 	assert.Contains(t, testLog, "ERROR must pass")
 	assert.Contains(t, testLog, "FATAL must pass")
-	assert.NotContains(t, testLog, "must NOT pass")
-}
-
-func TestFatalDirectWriter_close_on_no_flush(t *testing.T) {
-	tw := testWriter{}
-	writer := NewFatalDirectWriter(&tw)
-	// We don't want to lock the writer on fatal in tests.
-	writer.fatal.unlockPostFatal = true
-	tw.flushSupported = false
-
-	var err error
-
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
-	require.NoError(t, err)
-
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
-	require.NoError(t, err)
-	assert.False(t, tw.flushed)
-
-	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-	require.NoError(t, err)
-	assert.False(t, tw.flushed)
-	assert.True(t, tw.closed)
-
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-	require.NoError(t, err)
-
-	testLog := tw.String()
-	assert.Contains(t, testLog, "WARN must pass")
-	assert.Contains(t, testLog, "ERROR must pass")
-	assert.Contains(t, testLog, "FATAL must pass")
-	assert.NotContains(t, testLog, "must NOT pass")
-}
-
-func TestFatalDirectWriter_close(t *testing.T) {
-	tw := testWriter{}
-	writer := NewFatalDirectWriter(&tw)
-
-	assert.False(t, tw.closed)
-	require.NoError(t, writer.Close())
-	assert.True(t, tw.closed)
-	require.Error(t, writer.Close())
-	assert.True(t, tw.closed)
-}
-
-func TestFatalDirectWriter_no_close(t *testing.T) {
-	tw := testWriter{}
-	writer := NewFatalDirectWriter(&tw)
-	writer.SetNoClosePropagation()
-
-	assert.False(t, tw.closed)
-	require.NoError(t, writer.Close())
-	assert.False(t, tw.closed)
-	require.Error(t, writer.Close())
-	assert.False(t, tw.closed)
+	//assert.NotContains(t, testLog, "must NOT pass")
 }
