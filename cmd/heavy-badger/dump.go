@@ -84,7 +84,7 @@ func (app *appCtx) valueHexDumpCommand() *cobra.Command {
 
 			printLine("-")
 			fmt.Println("Material Record:")
-			fmt.Println(pairsToString(20,
+			fmt.Println(pairFormatter{width: 20}.Pairs(
 				"ID", material.ID.String(),
 				"JetID", material.JetID.DebugString(),
 				"ObjectID", material.ObjectID.String(),

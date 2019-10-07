@@ -106,8 +106,12 @@ func reverseInts(a []int) {
 	}
 }
 
-func pairsToString(width int, pairs ...string) string {
-	format := "%" + fmt.Sprintf("%ds", width) + ": %s"
+type pairFormatter struct {
+	width int
+}
+
+func (p pairFormatter) Pairs(pairs ...string) string {
+	format := "%" + fmt.Sprintf("%ds", p.width) + ": %s"
 	lines := make([]string, 0, len(pairs)/2)
 	for i := range pairs {
 		if i%2 == 1 {
