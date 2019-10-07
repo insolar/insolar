@@ -207,8 +207,8 @@ func parseDaemonParams() *cobra.Command {
 }
 
 func daemonMerge(address string, backupFileName string, runGC bool) {
-	reqJson := MergeJSONRequest{BkpName: backupFileName, RunGC: runGC}
-	reqBytes, err := json.Marshal(reqJson)
+	reqJSON := MergeJSONRequest{BkpName: backupFileName, RunGC: runGC}
+	reqBytes, err := json.Marshal(reqJSON)
 	if err != nil {
 		err = errors.Wrap(err, "daemonMerge - json.Marshal failed")
 		exitWithError(err)
