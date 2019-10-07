@@ -120,7 +120,7 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 		err = errors.Wrap(err, "failed to open incremental backup file")
 		closeRawDB(bdb, err)
 	}
-	// defer bkpFile.Close() // AALEKSEEV TODO ???
+	defer bkpFile.Close()
 	log.Info("Backup file is opened")
 
 	err = bdb.Load(bkpFile, numberOfWorkers)

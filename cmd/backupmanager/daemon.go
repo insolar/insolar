@@ -75,25 +75,25 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Infof("Merging incremental backup, bkpName = %s", req.BkpName)
 
-	bkpFile, err := os.Open(req.BkpName)
-	if err != nil {
-		sendHttpResponse(w, 400, MergeJsonResponse{
-			Message: "Failed to open incremental backup file",
-		})
-		return
-	}
-	// defer bkpFile.Close() // AALEKSEEV TODO ???
-
-	log.Info("Backup file is opened")
-	if globalBadgerHandler == nil {
-		sendHttpResponse(w, 500, MergeJsonResponse{
-			Message: "DB handler is nil",
-		})
-		return
-	}
-
 	msg := "Merge done."
-	{
+	func() { // Note: defer works on function level, not scope level!
+		bkpFile, err := os.Open(req.BkpName)
+		if err != nil {
+			sendHttpResponse(w, 400, MergeJsonResponse{
+				Message: "Failed to open incremental backup file",
+			})
+			return
+		}
+		defer bkpFile.Close()
+
+		log.Info("Backup file is opened")
+		if globalBadgerHandler == nil {
+			sendHttpResponse(w, 500, MergeJsonResponse{
+				Message: "DB handler is nil",
+			})
+			return
+		}
+
 		// only one globalBadgerHandler.Load() and GC can run at a time!
 		log.Info("MergeHttpHandler - about to Lock() globalBadgerLock")
 		globalBadgerLock.Lock()
@@ -119,7 +119,7 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 				msg += " GC failed: " + err.Error()
 			}
 		}
-	}
+	}()
 
 	sendHttpResponse(w, 200, MergeJsonResponse{
 		Message: msg,
@@ -132,7 +132,7 @@ func daemon(listenAddr string, targetDBPath string) {
 	ops := badger.DefaultOptions(targetDBPath)
 	ops.Logger = badgerLogger
 	var err error
-	{
+	func() { // Note: defer works on function level, not scope level!
 		log.Info("daemon() - about to Lock() globalBadgerLock")
 		// it guarantees defined behavior if terms of `globalBadgerHandler` value
 		globalBadgerLock.Lock()
@@ -156,7 +156,7 @@ func daemon(listenAddr string, targetDBPath string) {
 			err = errors.New("DB must not be empty")
 			closeRawDB(globalBadgerHandler, err)
 		}
-	}
+	}()
 
 	log.Info("DB opened and it's not empty. Starting HTTP server...")
 	r := mux.NewRouter().
