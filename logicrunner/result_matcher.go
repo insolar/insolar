@@ -98,6 +98,7 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.R
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
 		if node == rm.jetCoordinator.Me() {
 			logger.Error("got unwanted response from this node")
+			stats.Record(ctx, metrics.ResultMatchSelfResults.M(int64(len(rm.unwantedResponses))))
 			return
 		}
 

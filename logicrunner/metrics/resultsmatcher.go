@@ -43,6 +43,11 @@ var (
 		"dropped results in pulse",
 		stats.UnitDimensionless,
 	)
+	ResultMatchSelfResults = stats.Int64(
+		"vm_results_matcher_self_results",
+		"unwanted results that should be sent to self",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -69,6 +74,12 @@ func init() {
 			Name:        ResultsMatcherDroppedResults.Name(),
 			Description: ResultsMatcherDroppedResults.Description(),
 			Measure:     ResultsMatcherDroppedResults,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ResultMatchSelfResults.Name(),
+			Description: ResultMatchSelfResults.Description(),
+			Measure:     ResultMatchSelfResults,
 			Aggregation: view.Sum(),
 		},
 	)
