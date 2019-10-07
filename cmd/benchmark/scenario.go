@@ -47,7 +47,7 @@ type benchmark struct {
 
 type scenario interface {
 	canBeStarted() error
-	prepare()
+	prepare(int)
 	start(int, int) (string, error)
 	getBalanceCheckMembers() []sdk.Member
 }

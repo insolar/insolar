@@ -328,50 +328,39 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.GetLocal()
-	var lifeline record.Lifeline
+	var (
+		index record.Index
+		err   error
+	)
 	if request.IsCreationRequest() {
-		logger.Debug("looking for index locally")
-		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
+		index, err = c.findIndex(ctx, reasonID, requestID)
 		if err == object.ErrIndexNotFound {
-			// Searching for the requests in the network
-			// We need to be sure, that there is no duplicate of creationg request
-			// INS-3607
-			logger.Debug("looking for index on heavy")
-			lfl, err := c.checkHeavyForLifeline(ctx, requestID, reasonID.Pulse())
-			if err != nil && err != object.ErrIndexNotFound {
-				return nil, nil, errors.Wrap(err, "failed to fetch index")
-			}
-			if err == object.ErrIndexNotFound {
-				logger.Debug("index not found")
-				return nil, nil, nil
-			}
-			lifeline = lfl
-		} else if err != nil {
+			return nil, nil, nil
+		}
+		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
-		lifeline = l
 	} else {
-		l, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
+		index, err = c.indexes.ForID(ctx, requestID.Pulse(), objectID)
 		if err != nil {
 			return nil, nil, err
 		}
-		lifeline = l.Lifeline
 	}
 
-	if lifeline.LatestRequest == nil {
+	if index.Lifeline.LatestRequest == nil {
 		logger.Warn("request pointer is nil")
 		return nil, nil, nil
 	}
 
-	cache := c.cache.Get(objectID)
+	cache := c.cache.Get(index.ObjID)
 	cache.Lock()
 	defer cache.Unlock()
 
 	iter := newFetchingIterator(
 		ctx,
 		cache,
-		objectID,
-		*lifeline.LatestRequest,
+		index.ObjID,
+		*index.Lifeline.LatestRequest,
 		reasonID.Pulse(),
 		c.jetFetcher,
 		c.coordinator,
@@ -523,12 +512,31 @@ func (c *FilamentCalculatorDefault) ClearAllExcept(ids []insolar.ID) {
 	c.cache.DeleteAllExcept(ids)
 }
 
-func (c FilamentCalculatorDefault) checkHeavyForLifeline(
+func (c FilamentCalculatorDefault) findIndex(ctx context.Context, reasonID, requestID insolar.ID) (record.Index, error) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debug("looking for index locally")
+	idx, err := c.findIndexLocal(ctx, reasonID.Pulse(), requestID)
+	if err == nil {
+		return idx, nil
+	}
+	if err != object.ErrIndexNotFound {
+		return record.Index{}, errors.Wrap(err, "failed to find index")
+	}
+
+	// Searching for the requests in the network
+	// We need to be sure, that there is no duplicate of creationg request
+	// INS-3607
+	logger.Debug("looking for index on heavy")
+	return c.findIndexHeavy(ctx, requestID, reasonID.Pulse())
+}
+
+func (c FilamentCalculatorDefault) findIndexHeavy(
 	ctx context.Context, objID insolar.ID, readUntil insolar.PulseNumber,
-) (record.Lifeline, error) {
+) (record.Index, error) {
 	node, err := c.coordinator.Heavy(ctx)
 	if err != nil {
-		return record.Lifeline{}, errors.Wrap(err, "failed to check index origin")
+		return record.Index{}, errors.Wrap(err, "failed to check index origin")
 	}
 
 	msg, err := payload.NewMessage(&payload.SearchIndex{
@@ -536,7 +544,7 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 		Until:    readUntil,
 	})
 	if err != nil {
-		return record.Lifeline{}, errors.Wrap(err, "failed to create message")
+		return record.Index{}, errors.Wrap(err, "failed to create message")
 	}
 
 	reps, done := c.sender.SendTarget(ctx, msg, *node)
@@ -544,55 +552,63 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 
 	res, ok := <-reps
 	if !ok {
-		return record.Lifeline{}, errors.New("no reply")
+		return record.Index{}, errors.New("no reply")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
-		return record.Lifeline{}, errors.Wrap(err, "failed to unmarshal reply")
+		return record.Index{}, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
 	switch rep := pl.(type) {
 	case *payload.SearchIndexInfo:
 		if rep.Index == nil {
-			return record.Lifeline{}, object.ErrIndexNotFound
+			return record.Index{}, object.ErrIndexNotFound
 		}
 
-		return rep.Index.Lifeline, nil
+		return *rep.Index, nil
 	case *payload.Error:
-		return record.Lifeline{}, &payload.CodedError{
+		return record.Index{}, &payload.CodedError{
 			Text: fmt.Sprint("failed to fetch index from heavy: ", rep.Text),
 			Code: rep.Code,
 		}
 	default:
-		return record.Lifeline{}, fmt.Errorf("unexpected reply %T", pl)
+		return record.Index{}, fmt.Errorf("unexpected reply %T", pl)
 	}
 }
 
-func (c *FilamentCalculatorDefault) findLifeline(
+func (c *FilamentCalculatorDefault) findIndexLocal(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
-) (record.Lifeline, error) {
+) (record.Index, error) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id": requestID.DebugString(),
+		"until":     until,
+	})
 	iter := requestID.Pulse()
+	logger.Debug("findIndex. start executing")
 	for iter >= until {
 		// We search for combination of id in a latest bucket
-		// requestID.Pulse() is a latest, because findLifeline is called only for Creationg requests
+		// requestID.Pulse() is a latest, because findIndex is called only for Creationg requests
 		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
-			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
+			return record.Index{}, errors.Wrap(err, "failed to fetch index")
 		}
 		if err == nil {
-			return idx.Lifeline, nil
+			logger.Debug("findIndex. found:", idx.ObjID)
+			return idx, nil
 		}
+		logger.Debug("findIndex. didn't find for:", iter)
 
 		prev, err := c.pulses.Backwards(ctx, iter, 1)
 		if err != nil {
-			return record.Lifeline{}, object.ErrIndexNotFound
+			return record.Index{}, object.ErrIndexNotFound
 		}
 
 		iter = prev.PulseNumber
+		logger.Debug("findIndex. next iter:", iter)
 	}
 
-	return record.Lifeline{}, object.ErrIndexNotFound
+	return record.Index{}, object.ErrIndexNotFound
 }
 
 type fetchingIterator struct {

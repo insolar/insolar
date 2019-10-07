@@ -84,6 +84,12 @@ func NewReferenceFromBase58(input string) (*Reference, error) {
 	return &global, nil
 }
 
+// IsReferenceInBase58 checks the validity of the reference
+func IsReferenceInBase58(input string) bool {
+	_, err := NewObjectReferenceFromBase58(input)
+	return err == nil
+}
+
 // NewReferenceFromBytes : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
 func NewReferenceFromBytes(byteReference []byte) *Reference {
 	g := reference.Global{}

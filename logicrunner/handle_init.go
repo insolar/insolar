@@ -88,7 +88,7 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) replyError(ctx context.Context, meta payload.Meta, err error) {
-	errCode := uint32(payload.CodeUnknown)
+	errCode := payload.CodeUnknown
 
 	// Throwing custom error code
 	cause := errors.Cause(err)
@@ -99,7 +99,7 @@ func (s *Init) replyError(ctx context.Context, meta payload.Meta, err error) {
 
 	// todo refactor this #INS-3191
 	if cause == flow.ErrCancelled {
-		errCode = uint32(payload.CodeFlowCanceled)
+		errCode = payload.CodeFlowCanceled
 	}
 	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
 	if newErr != nil {
@@ -253,7 +253,7 @@ func checkOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) 
 	return checkIncomingRequest(ctx, (*record.IncomingRequest)(request))
 }
 
-func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) error {
+func checkIncomingRequest(_ context.Context, request *record.IncomingRequest) error {
 	if !request.CallerPrototype.IsEmpty() && !request.CallerPrototype.IsObjectReference() {
 		return errors.Errorf("request.CallerPrototype should be ObjectReference; ref=%s", request.CallerPrototype.String())
 	}

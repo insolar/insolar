@@ -17,10 +17,7 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -45,28 +42,15 @@ func main() {
 		fatalf("cobra error: %v", err)
 	}
 
-	app.addFixCommand(rootCmd)
+	rootCmd.AddCommand(
+		scopesListCommand(),
+		app.fixCommand(),
+		app.valueHexDumpCommand(),
+		app.scanCommand(),
+	)
+
 	err := rootCmd.Execute()
 	if err != nil {
 		fatalf("%v execution failed: %v", arg0, err)
 	}
-
-}
-
-func checkDirectory(dir string) error {
-	_, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-
-	manifest := filepath.Join(dir, "MANIFEST")
-	if _, err := os.Stat(manifest); err != nil {
-		return fmt.Errorf("failed %v file check", manifest)
-	}
-	return nil
-}
-
-func fatalf(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, format, args...)
-	os.Exit(1)
 }

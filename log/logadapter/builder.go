@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/log/logoutput"
 	"io"
 	"math"
 
@@ -30,9 +31,18 @@ import (
 
 type Config struct {
 	BuildConfig
-	MsgFormat    MsgFormatConfig
+
+	BareOutput   BareOutput
 	LoggerOutput insolar.LoggerOutput
-	Metrics      *logmetrics.MetricsHelper
+
+	Metrics   *logmetrics.MetricsHelper
+	MsgFormat MsgFormatConfig
+}
+
+type BareOutput struct {
+	Writer         io.Writer
+	FlushFn        logoutput.LogFlushFunc
+	ProtectedClose bool
 }
 
 type BuildConfig struct {
@@ -77,7 +87,7 @@ func (v InstrumentationConfig) CanReuseOutputFor(config InstrumentationConfig) b
 }
 
 type Factory interface {
-	PrepareBareOutput(output io.Writer, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
+	PrepareBareOutput(output BareOutput, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
 	CreateNewLogger(level insolar.LogLevel, config Config, lowLatency bool, dynFields map[string]func() interface{}) (insolar.Logger, error)
 	CanReuseMsgBuffer() bool
 }
@@ -93,18 +103,16 @@ func NewBuilderWithTemplate(template Template, level insolar.LogLevel) LoggerBui
 	return LoggerBuilder{
 		factory:     template,
 		hasTemplate: true,
-		bareOutput:  config.LoggerOutput.GetBareOutput(),
 		level:       level,
 		Config:      config,
 	}
 }
 
-func NewBuilder(factory Factory, bareOutput io.Writer, config Config, level insolar.LogLevel) LoggerBuilder {
+func NewBuilder(factory Factory, config Config, level insolar.LogLevel) LoggerBuilder {
 	return LoggerBuilder{
-		factory:    factory,
-		bareOutput: bareOutput,
-		level:      level,
-		Config:     config,
+		factory: factory,
+		level:   level,
+		Config:  config,
 	}
 }
 
@@ -112,7 +120,6 @@ var _ insolar.GlobalLogAdapterFactory = &LoggerBuilder{}
 
 type LoggerBuilder struct {
 	factory     Factory
-	bareOutput  io.Writer
 	hasTemplate bool
 	level       insolar.LogLevel
 	fields      map[string]interface{}
@@ -128,7 +135,7 @@ func (z LoggerBuilder) CreateGlobalLogAdapter() insolar.GlobalLogAdapter {
 }
 
 func (z LoggerBuilder) GetOutput() io.Writer {
-	return z.bareOutput
+	return z.BareOutput.Writer
 }
 
 func (z LoggerBuilder) GetLoggerOutput() insolar.LoggerOutput {
@@ -140,7 +147,22 @@ func (z LoggerBuilder) GetLogLevel() insolar.LogLevel {
 }
 
 func (z LoggerBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {
-	z.bareOutput = w
+
+	type flusher interface {
+		Flush() error
+	}
+	type syncer interface {
+		Sync() error
+	}
+
+	z.BareOutput = BareOutput{Writer: w}
+	switch ww := w.(type) {
+	case flusher:
+		z.BareOutput.FlushFn = ww.Flush
+	case syncer:
+		z.BareOutput.FlushFn = ww.Sync
+	}
+
 	return z
 }
 
@@ -243,29 +265,42 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 	}
 
 	var output insolar.LoggerOutput
+
 	switch {
-	case z.bareOutput == nil:
+	case z.BareOutput.Writer == nil:
 		return nil, errors.New("output is nil")
 	case z.hasTemplate:
 		template := z.factory.(Template)
 		origConfig := template.GetTemplateConfig()
 
-		if origConfig.BuildConfig == z.Config.BuildConfig {
-			if z.bareOutput == origConfig.LoggerOutput || z.bareOutput == origConfig.LoggerOutput.GetBareOutput() {
-				if needsLowLatency && !origConfig.LoggerOutput.IsLowLatencySupported() {
-					break
-				}
-				return template.GetTemplateLogger(), nil
-			}
+		sameBareOutput := false
+		switch {
+		case z.BareOutput.Writer == origConfig.LoggerOutput: // users can be crazy
+			fallthrough
+		case z.BareOutput.Writer == origConfig.BareOutput.Writer:
+			// keep the original settings if writer wasn't changed
+			z.BareOutput = origConfig.BareOutput
+			sameBareOutput = true
 		}
-		if lo, ok := z.bareOutput.(insolar.LoggerOutput); ok {
+
+		if origConfig.BuildConfig == z.Config.BuildConfig && sameBareOutput {
+			// config and output are identical - we can reuse the original logger
+			if needsLowLatency && !origConfig.LoggerOutput.IsLowLatencySupported() {
+				// ... LL support is missing - shall not reuse the original logger
+				break
+			}
+			return template.GetTemplateLogger(), nil
+		}
+		if lo, ok := z.BareOutput.Writer.(insolar.LoggerOutput); ok {
+			// something strange, but we can also work this way
 			output = lo
 			break
 		}
-		if z.bareOutput == origConfig.LoggerOutput.GetBareOutput() &&
+		if sameBareOutput &&
 			origConfig.Output.CanReuseOutputFor(z.Output) &&
 			origConfig.Instruments.CanReuseOutputFor(z.Instruments) {
 
+			// same output, and it can be reused with the new settings
 			output = origConfig.LoggerOutput
 			break
 		}
@@ -291,10 +326,13 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 
 func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (insolar.LoggerOutput, error) {
 
-	output, err := z.factory.PrepareBareOutput(z.bareOutput, metrics, z.Config.BuildConfig)
+	outputWriter, err := z.factory.PrepareBareOutput(z.BareOutput, metrics, z.Config.BuildConfig)
 	if err != nil {
 		return nil, err
 	}
+
+	outputAdapter := logoutput.NewAdapter(outputWriter, z.BareOutput.ProtectedClose,
+		z.BareOutput.FlushFn, z.BareOutput.FlushFn)
 
 	if z.Config.Output.ParallelWriters < 0 || z.Config.Output.ParallelWriters > math.MaxUint8 {
 		return nil, errors.New("argument ParallelWriters is out of bounds")
@@ -325,12 +363,12 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			if z.Config.Output.ParallelWriters != 0 {
 				pw = uint8(z.Config.Output.ParallelWriters)
 			}
-			bpb = critlog.NewBackpressureBuffer(output, z.Config.Output.BufferSize, pw, flags, missedFn)
+			bpb = critlog.NewBackpressureBuffer(outputAdapter, z.Config.Output.BufferSize, pw, flags, missedFn)
 		case z.Config.Output.ParallelWriters == 0 || z.Config.Output.ParallelWriters == math.MaxUint8:
-			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
+			bpb = critlog.NewBackpressureBufferWithBypass(outputAdapter, z.Config.Output.BufferSize,
 				0 /* no limit */, flags, missedFn)
 		default:
-			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
+			bpb = critlog.NewBackpressureBufferWithBypass(outputAdapter, z.Config.Output.BufferSize,
 				uint8(z.Config.Output.ParallelWriters), flags, missedFn)
 		}
 
@@ -342,7 +380,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		return nil, errors.New("low latency buffer was disabled but is required")
 	}
 
-	fdw := critlog.NewFatalDirectWriter(output)
+	fdw := critlog.NewFatalDirectWriter(outputAdapter)
 	return fdw, nil
 }
 

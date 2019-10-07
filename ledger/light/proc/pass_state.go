@@ -57,7 +57,7 @@ func (p *PassState) Dep(
 
 func (p *PassState) Proceed(ctx context.Context) error {
 
-	sendError := func(text string, code uint32) error {
+	sendError := func(text string, code payload.ErrorCode) error {
 		// Replying to origin
 		msg, err := payload.NewMessage(&payload.Error{
 			Text: text,

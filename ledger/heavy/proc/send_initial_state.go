@@ -68,7 +68,7 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 
 	if err != nil {
 		errStr := "Couldn't get start pulse"
-		msg, newErr := payload.NewMessage(&payload.Error{Text: errStr, Code: uint32(payload.CodeNoStartPulse)})
+		msg, newErr := payload.NewMessage(&payload.Error{Text: errStr, Code: payload.CodeNoStartPulse})
 		if newErr != nil {
 			logger.Fatal("failed to reply error", err)
 		}

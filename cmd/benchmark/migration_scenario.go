@@ -24,7 +24,11 @@ import (
 	"github.com/insolar/insolar/api/sdk"
 )
 
-const migrationAmount = 101
+const (
+	migrationAmount = 101
+
+	txHashPrefix = "tx_hash_"
+)
 
 type migrationScenario struct {
 	insSDK           *sdk.SDK
@@ -39,13 +43,13 @@ func (s *migrationScenario) canBeStarted() error {
 		return fmt.Errorf("not enough members for start")
 	}
 
-	if len(s.migrationDaemons) < 3 {
+	if len(s.migrationDaemons) < 2 {
 		return fmt.Errorf("not enough migration daemons")
 	}
 	return nil
 }
 
-func (s *migrationScenario) prepare() {
+func (s *migrationScenario) prepare(repetition int) {
 	members, err := getMembers(s.insSDK, concurrent, true)
 	check("Error while loading members: ", err)
 
@@ -55,7 +59,8 @@ func (s *migrationScenario) prepare() {
 
 	s.members = members
 
-	s.migrationDaemons = s.insSDK.GetMigrationDaemonMembers()
+	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
+	check("failed to get and activate migration daemons: ", err)
 
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)
@@ -70,10 +75,10 @@ func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (str
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
 		return traceID, err
 	}
-	return s.insSDK.Migration(s.migrationDaemons[1], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.Migration(s.migrationDaemons[1], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
 func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
