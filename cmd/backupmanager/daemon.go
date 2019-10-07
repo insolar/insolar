@@ -112,12 +112,16 @@ func MergeHttpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if req.RunGC {
+			log.Info("Running GC...")
 			err = globalBadgerHandler.RunValueLogGC(0.7)
+			var m string
 			if err == nil {
-				msg += " GC done."
+				m = " GC done."
 			} else {
-				msg += " GC failed: " + err.Error()
+				m = " GC failed: " + err.Error()
 			}
+			log.Info(m)
+			msg += m
 		}
 	}()
 
