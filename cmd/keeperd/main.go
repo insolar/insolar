@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 )
 
 var configPath string
@@ -66,6 +67,18 @@ func rootCommand(cmd *cobra.Command, args []string) {
 
 	ctx := context.Background()
 	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, "main", "", "keeperd")
+
+	m := metrics.NewMetrics(cfg.Metrics, GetRegistry(), "keeper")
+	err = m.Init(ctx)
+	if err != nil {
+		log.Fatal("Couldn't init metrics:", err)
+		os.Exit(1)
+	}
+	err = m.Start(ctx)
+	if err != nil {
+		log.Fatal("Couldn't start metrics:", err)
+		os.Exit(1)
+	}
 
 	keeper := NewKeeper(cfg.Keeper)
 	keeper.Run(ctx)

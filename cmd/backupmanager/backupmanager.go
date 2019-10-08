@@ -91,16 +91,17 @@ var (
 	badgerLogger BadgerLogger
 )
 
-func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
+func merge(targetDBPath string, backupFileName string, numberOfWorkers int, runGC bool, runCompact bool) {
 	log.GlobalLogger().WithFields(map[string]interface{}{
 		"targetDBPath":    targetDBPath,
 		"backupFileName":  backupFileName,
 		"numberOfWorkers": numberOfWorkers,
 	}).Info("merge started")
 
-	ops := badger.DefaultOptions(targetDBPath)
-	ops.Logger = badgerLogger
-	bdb, err := badger.Open(ops)
+	opts := badger.DefaultOptions(targetDBPath)
+	opts.Logger = badgerLogger
+	opts.CompactL0OnClose = runCompact
+	bdb, err := badger.Open(opts)
 	if err != nil {
 		err = errors.Wrap(err, "failed to open DB")
 		exitWithError(err)
@@ -130,14 +131,19 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 		closeRawDB(bdb, err)
 	}
 
-	log.Info("Successfully loaded, running GC")
-	err = bdb.RunValueLogGC(0.7)
-	if err == nil {
-		log.Info("GC done, closing DB")
-	} else {
-		log.Warn("Failed to run GC: " + err.Error())
+	log.Info("Successfully loaded")
+
+	if runGC {
+		log.Info("Running GC")
+		err = bdb.RunValueLogGC(0.7)
+		if err == nil {
+			log.Info("GC done, closing DB")
+		} else {
+			log.Warn("Failed to run GC: " + err.Error())
+		}
 	}
 
+	log.Info("Closing DB")
 	closeRawDB(bdb, nil)
 	log.Info("DB closed")
 }
@@ -148,6 +154,8 @@ func parseMergeParams() *cobra.Command {
 		backupFileName  string
 		numberOfWorkers int
 		pprofFlag       bool
+		runGC           bool
+		compact         bool
 	)
 
 	var mergeCmd = &cobra.Command{
@@ -165,7 +173,7 @@ func parseMergeParams() *cobra.Command {
 				defer pprof.StopCPUProfile()
 			}
 
-			merge(targetDBPath, backupFileName, numberOfWorkers)
+			merge(targetDBPath, backupFileName, numberOfWorkers, runGC, compact)
 		},
 	}
 	mergeFlags := mergeCmd.Flags()
@@ -177,6 +185,10 @@ func parseMergeParams() *cobra.Command {
 		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
 	mergeFlags.IntVarP(
 		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
+	mergeFlags.BoolVarP(
+		&pprofFlag, "run-gc", "g", false, "run GC after merge")
+	mergeFlags.BoolVarP(
+		&pprofFlag, "run-compact", "c", false, "run Compact before closing DB")
 	mergeFlags.BoolVarP(
 		&pprofFlag, "pprof", "p", false, "run merge with cpu profile")
 
