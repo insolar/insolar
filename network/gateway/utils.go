@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -140,10 +141,20 @@ func getKeyStore(cryptographyService insolar.CryptographyService) insolar.KeySto
 	return cryptographyService.(*cryptography.NodeCryptographyService).KeyStore
 }
 
-type randomState struct{}
+type consensusProxy struct {
+	Gatewayer network.Gatewayer
+}
 
-func (n randomState) State() []byte {
+func (p consensusProxy) State() []byte {
 	nshBytes := make([]byte, 64)
 	_, _ = rand.Read(nshBytes)
 	return nshBytes
+}
+
+func (p *consensusProxy) ChangePulse(ctx context.Context, newPulse insolar.Pulse) {
+	p.Gatewayer.Gateway().(adapters.PulseChanger).ChangePulse(ctx, newPulse)
+}
+
+func (p *consensusProxy) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	p.Gatewayer.Gateway().(adapters.StateUpdater).UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
 }

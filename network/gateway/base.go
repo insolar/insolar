@@ -192,15 +192,16 @@ func (g *Base) initConsensus(ctx context.Context) error {
 	}
 	g.datagramTransport = datagramTransport
 
+	proxy := &consensusProxy{g.Gatewayer}
 	g.consensusInstaller = consensus.New(ctx, consensus.Dep{
 		KeyProcessor:        g.KeyProcessor,
 		Scheme:              g.CryptographyScheme,
 		CertificateManager:  g.CertificateManager,
 		KeyStore:            getKeyStore(g.CryptographyService),
 		NodeKeeper:          g.NodeKeeper,
-		StateGetter:         randomState{},
-		PulseChanger:        g,
-		StateUpdater:        g,
+		StateGetter:         proxy,
+		PulseChanger:        proxy,
+		StateUpdater:        proxy,
 		DatagramTransport:   g.datagramTransport,
 		EphemeralController: g,
 	})
