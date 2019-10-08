@@ -247,8 +247,8 @@ type LogObjectMetricCollector interface {
 }
 
 type LogObjectWriter interface {
-	AddFieldMap(map[string]interface{})
 	AddField(key string, v interface{})
+	AddStrField(key string, v string)
 	AddRawJSON(key string, b []byte)
 }
 

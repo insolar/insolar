@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -115,237 +114,6 @@ func (v defaultLogObjectMarshaller) MarshalMutedLogObject(collector insolar.LogO
 	v.t.reportFields(v.v, collector)
 }
 
-type fieldValueGetterFunc func(value reflect.Value) interface{}
-
-var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc){
-	// ======== Simple values, are safe to read from unexported fields ============
-	reflect.Bool: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.Bool()
-		}
-	},
-	reflect.Int: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return int(value.Int())
-		}
-	},
-	reflect.Int8: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return int8(value.Int())
-		}
-	},
-	reflect.Int16: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return int16(value.Int())
-		}
-	},
-	reflect.Int32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return int32(value.Int())
-		}
-	},
-	reflect.Int64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.Int()
-		}
-	},
-	reflect.Uint: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return uint(value.Uint())
-		}
-	},
-	reflect.Uint8: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return uint8(value.Uint())
-		}
-	},
-	reflect.Uint16: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return uint16(value.Uint())
-		}
-	},
-	reflect.Uint32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return uint32(value.Uint())
-		}
-	},
-	reflect.Uint64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.Uint()
-		}
-	},
-	reflect.Uintptr: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return uintptr(value.Uint())
-		}
-	},
-	reflect.Float32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return float32(value.Float())
-		}
-	},
-	reflect.Float64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.Float()
-		}
-	},
-	reflect.Complex64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return complex64(value.Complex())
-		}
-	},
-	reflect.Complex128: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.Complex()
-		}
-	},
-	reflect.String: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			return value.String()
-		}
-	},
-
-	// ============ Special handling for unexported fields ===========
-
-	reflect.Ptr: func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
-		te := t.Elem()
-		if te.Kind() == reflect.String {
-			return false, func(value reflect.Value) interface{} {
-				if value.IsNil() {
-					return nil
-				}
-				return value.Elem().String()
-			}
-		}
-		return defaultObjFieldGetterFactory(unexported, t)
-	},
-
-	reflect.Func: func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
-		if t.NumIn() == 0 && t.NumOut() == 1 && t.Out(0).Kind() == reflect.String {
-			return unexported, func(value reflect.Value) interface{} {
-				if value.IsNil() {
-					return nil
-				}
-				fn := value.Interface().(func() string)
-				return fn()
-			}
-		}
-		return unexported, reflect.Value.Interface
-	},
-
-	reflect.Interface: func(unexported bool, _ reflect.Type) (b bool, getterFunc fieldValueGetterFunc) {
-		return unexported, func(value reflect.Value) interface{} {
-			if value.IsNil() {
-				return nil
-			}
-			iv := value.Interface()
-			switch vv := iv.(type) {
-			case func() string:
-				return vv()
-			default:
-				vv, _ = tryDefaultValuePrepare(vv)
-				return vv
-			}
-		}
-	},
-
-	reflect.Struct: defaultObjFieldGetterFactory,
-	reflect.Array:  defaultObjFieldGetterFactory,
-	reflect.Map:    defaultObjFieldGetterFactory,
-	reflect.Slice:  defaultObjFieldGetterFactory,
-	reflect.Chan:   defaultObjFieldGetterFactory,
-
-	// ============ Excluded ===================
-	//reflect.UnsafePointer
-}
-
-var prepareObjTypes = []struct {
-	t  reflect.Type
-	fn func(interface{}) (interface{}, bool)
-}{
-	{reflect.TypeOf((*LogStringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
-		if vv, ok := value.(LogStringer); ok {
-			return vv.LogString(), true
-		}
-		return value, false
-	}},
-	{reflect.TypeOf((*fmt.Stringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
-		if vv, ok := value.(fmt.Stringer); ok {
-			return vv.String(), true
-		}
-		return value, false
-	}},
-}
-
-func defaultStrValuePrepare(iv interface{}) (string, bool) {
-	switch vv := iv.(type) {
-	case string:
-		return vv, true
-	case *string:
-		if vv == nil {
-			return "", false
-		}
-		return *vv, true
-	case func() string:
-		return vv(), true
-	}
-	if vv, ok := tryDefaultValuePrepare(iv); ok {
-		return vv.(string), true
-	}
-	return "", false
-}
-
-func defaultObjFieldGetterFactory(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
-	for _, f := range prepareObjTypes {
-		if t.Implements(f.t) {
-			fn := f.fn
-			if t.Kind() == reflect.Struct {
-				return unexported, func(value reflect.Value) interface{} {
-					vv, _ := fn(value.Interface())
-					return vv
-				}
-			}
-
-			return unexported, func(value reflect.Value) interface{} {
-				if value.IsNil() {
-					return nil
-				}
-				vv, _ := fn(value.Interface())
-				return vv
-			}
-		}
-	}
-	return unexported, reflect.Value.Interface
-}
-
-func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
-	for _, f := range prepareObjTypes {
-		if vv, ok := f.fn(iv); ok {
-			return vv, true
-		}
-	}
-	return iv, false
-}
-
-func getFieldGetter(index int, fd reflect.StructField, useAddr bool, baseOffset uintptr) func(reflect.Value) reflect.Value {
-	if !useAddr {
-		return func(value reflect.Value) reflect.Value {
-			return value.Field(index)
-		}
-	}
-
-	fieldOffset := fd.Offset + baseOffset
-	fieldType := fd.Type
-
-	return func(value reflect.Value) reflect.Value {
-		return offsetFieldGetter(value, fieldOffset, fieldType)
-	}
-}
-
-func offsetFieldGetter(v reflect.Value, fieldOffset uintptr, fieldType reflect.Type) reflect.Value {
-	return reflect.NewAt(fieldType, unsafe.Pointer(v.UnsafeAddr()+fieldOffset)).Elem()
-}
-
 type fieldMarshallerFunc func(value reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector)
 type fieldReportFunc func(value reflect.Value, collector insolar.LogObjectMetricCollector)
 type fieldMarshallerMsgFunc func(value reflect.Value) string
@@ -358,12 +126,14 @@ type typeMarshaller struct {
 	reportNeedsAddr bool
 }
 
+type fieldOutputFunc func(insolar.LogObjectWriter, insolar.LogObjectMetricCollector, interface{})
+
 type fieldDesc struct {
 	reflect.StructField
-	getFn      fieldValueGetterFunc
-	reportFn   FieldReporterFunc
-	index      int
-	printField bool
+	getFn    fieldValueGetterFunc
+	index    int
+	outputFn fieldOutputFunc
+	reportFn FieldReporterFunc
 }
 
 func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getReporterFn func(reflect.Type) FieldReporterFunc) bool {
@@ -385,21 +155,36 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		needsAddr := false
 		fd := fieldDesc{StructField: tf, index: i}
 
-		needsAddr, fd.getFn = valueGetterFactory(unexported, tf.Type) // default handler
 		fd.reportFn = getReporterFn(fd.Type)
+		skipField := tf.Anonymous || fieldName == "" || fieldName[0] == '_'
 
-		if tf.Anonymous || fieldName == "" || fieldName[0] == '_' || strings.HasPrefix(string(tf.Tag), `skip:"`) {
+		if fd.reportFn == nil && skipField {
+			continue
+		}
+
+		tagType, fmtStr := singleTag(fd.Tag)
+
+		outputFn, optional := outputOfField(fieldName, tagType, fmtStr, fd.reportFn)
+
+		msgField := false
+		if outputFn == nil {
 			if fd.reportFn == nil {
 				continue
 			}
 		} else {
-			fd.printField = true
 			switch fieldName {
 			case "msg", "Msg", "message", "Message":
-				msgGetter = fd
-			default:
-				valueGetters = append(valueGetters, fd)
+				msgField = true
 			}
+		}
+
+		fd.outputFn = outputFn
+		needsAddr, fd.getFn = valueGetterFactory(unexported, tf.Type, optional)
+
+		if msgField {
+			msgGetter = fd
+		} else {
+			valueGetters = append(valueGetters, fd)
 		}
 
 		if needsAddr {
@@ -423,8 +208,8 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 	for _, fd := range valueGetters {
 		fieldGetter := getFieldGetter(fd.index, fd.StructField, p.printNeedsAddr, baseOffset)
 
-		if fd.printField {
-			printFn := p.printOfField(fd, fieldGetter)
+		if fd.outputFn != nil {
+			printFn := printOfField(fd, fieldGetter)
 			p.fields = append(p.fields, printFn)
 		}
 
@@ -434,138 +219,187 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 				reportFieldGetter = getFieldGetter(fd.index, fd.StructField, p.reportNeedsAddr, baseOffset)
 			}
 
-			reportFn := p.reportOfField(fd, reportFieldGetter)
-
+			reportFn := reportOfField(fd, reportFieldGetter)
 			p.reporters = append(p.reporters, reportFn)
 		}
 	}
 
 	if msgGetter.getFn == nil {
 		p.msgField = nil
-		return true
+	} else {
+		fieldGetter := getFieldGetter(msgGetter.index, msgGetter.StructField, p.printNeedsAddr, baseOffset)
+		p.msgField = messageOfField(msgGetter, fieldGetter)
 	}
 
-	fieldGetter := getFieldGetter(msgGetter.index, msgGetter.StructField, p.printNeedsAddr, baseOffset)
-	valueGetter := msgGetter.getFn
-
-	switch tagType, fmtStr := singleTag(msgGetter.Tag); tagType {
-	case "opt+fmt":
-		zero := reflect.Zero(msgGetter.Type).Interface()
-		p.msgField = func(obj reflect.Value) string {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if v == zero {
-				return ""
-			}
-			s := fmt.Sprintf(fmtStr, v)
-			return s
-		}
-	case "fmt":
-		p.msgField = func(obj reflect.Value) string {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			s := fmt.Sprintf(fmtStr, v)
-			return s
-		}
-	case "txt":
-		p.msgField = func(_ reflect.Value) string {
-			return fmtStr
-		}
-	default:
-		p.msgField = func(obj reflect.Value) string {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			s := fmt.Sprintf("%v", v)
-			return s
-		}
-	}
 	return true
 }
 
-func (p *typeMarshaller) printOfField(fd fieldDesc, fieldGetter func(reflect.Value) reflect.Value) fieldMarshallerFunc {
-	fieldName := fd.Name
-	valueGetter := fd.getFn
-	fieldReporter := fd.reportFn
+func outputOfField(fieldName, tagType, fmtStr string, reportFn FieldReporterFunc) (fieldOutputFunc, bool) {
 
-	switch tagType, fmtStr := singleTag(fd.Tag); tagType {
-	case "opt+fmt":
-		zero := reflect.Zero(fd.Type).Interface()
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
-			}
-			if v == nil || zero == v {
+	switch tagType {
+	case "fmt+opt", "opt+fmt":
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				if v == nil {
+					return
+				}
+				s := fmt.Sprintf(fmtStr, v)
+				writer.AddStrField(fieldName, s)
+			}, true
+		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if v == nil {
 				return
 			}
+			if collector != nil {
+				reportFn(collector, fieldName, v)
+			}
 			s := fmt.Sprintf(fmtStr, v)
-			writer.AddField(fieldName, s)
-		}
+			writer.AddStrField(fieldName, s)
+		}, true
 	case "fmt":
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				s := fmt.Sprintf(fmtStr, v)
+				writer.AddStrField(fieldName, s)
+			}, false
+		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if collector != nil {
+				reportFn(collector, fieldName, v)
 			}
 			s := fmt.Sprintf(fmtStr, v)
-			writer.AddField(fieldName, s)
+			writer.AddStrField(fieldName, s)
+		}, false
+	case "raw+opt", "opt+raw":
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				if v == nil {
+					return
+				}
+				s := fmt.Sprintf(fmtStr, v)
+				writer.AddRawJSON(fieldName, []byte(s))
+			}, true
 		}
-	case "opt+raw":
-		zero := reflect.Zero(fd.Type).Interface()
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
-			}
-			if v == nil || zero == v {
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if v == nil {
 				return
+			}
+			if collector != nil {
+				reportFn(collector, fieldName, v)
 			}
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddRawJSON(fieldName, []byte(s))
-		}
+		}, true
 	case "raw":
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				s := fmt.Sprintf(fmtStr, v)
+				writer.AddRawJSON(fieldName, []byte(s))
+			}, false
+		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if collector != nil {
+				reportFn(collector, fieldName, v)
 			}
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddRawJSON(fieldName, []byte(s))
-		}
-	case "txt":
-		return func(_ reflect.Value, writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector) {
-			writer.AddField(fieldName, fmtStr)
-		}
+		}, false
 	case "opt":
-		zero := reflect.Zero(fd.Type).Interface()
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
-			}
-			if v == nil || zero == v {
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				if v == nil {
+					return
+				}
+				writer.AddField(fieldName, v)
+			}, true
+		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if v == nil {
 				return
 			}
-			writer.AddField(fieldName, v)
-		}
-	default:
-		return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
-			f := fieldGetter(obj)
-			v := valueGetter(f)
-			if fieldReporter != nil && collector != nil {
-				fieldReporter(collector, fieldName, v)
+			if collector != nil {
+				reportFn(collector, fieldName, v)
 			}
 			writer.AddField(fieldName, v)
+		}, true
+	case "skip":
+		return nil, false
+	case "txt":
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, _ interface{}) {
+				writer.AddStrField(fieldName, fmtStr)
+			}, false
 		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, _ interface{}) {
+			if collector != nil {
+				reportFn(collector, fieldName, fmtStr)
+			}
+			writer.AddStrField(fieldName, fmtStr)
+		}, false
+	default:
+		if reportFn == nil {
+			return func(writer insolar.LogObjectWriter, _ insolar.LogObjectMetricCollector, v interface{}) {
+				writer.AddField(fieldName, v)
+			}, false
+		}
+
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
+			if collector != nil {
+				reportFn(collector, fieldName, v)
+			}
+			writer.AddField(fieldName, v)
+		}, false
 	}
 }
 
-func (p *typeMarshaller) reportOfField(fd fieldDesc, reportFieldGetter func(reflect.Value) reflect.Value) fieldReportFunc {
+type stringCapturer struct {
+	v string
+}
+
+func (p *stringCapturer) AddStrField(_ string, v string) {
+	p.v = v
+}
+
+func (p *stringCapturer) AddRawJSON(key string, b []byte) {
+	p.v = string(b)
+}
+
+func (p *stringCapturer) AddField(key string, v interface{}) {
+	p.v = fmt.Sprintf("%s", v)
+}
+
+func messageOfField(fd fieldDesc, fieldGetter func(reflect.Value) reflect.Value) func(obj reflect.Value) string {
+	valueGetter := fd.getFn
+	valueOutput := fd.outputFn
+
+	return func(obj reflect.Value) string {
+		f := fieldGetter(obj)
+		v := valueGetter(f)
+		sc := stringCapturer{}
+		valueOutput(&sc, nil, v)
+		return sc.v
+	}
+}
+
+func printOfField(fd fieldDesc, fieldGetter func(reflect.Value) reflect.Value) fieldMarshallerFunc {
+	valueGetter := fd.getFn
+	valueOutput := fd.outputFn
+
+	return func(obj reflect.Value, writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) {
+		f := fieldGetter(obj)
+		v := valueGetter(f)
+		valueOutput(writer, collector, v)
+	}
+}
+
+func reportOfField(fd fieldDesc, reportFieldGetter func(reflect.Value) reflect.Value) fieldReportFunc {
 	fieldName := fd.Name
 	valueGetter := fd.getFn
 	fieldReporter := fd.reportFn

@@ -206,15 +206,15 @@ func TestTryLogObject_Optionals(t *testing.T) {
 	f := GetDefaultLogMsgFormatter()
 
 	require.Equal(t,
+		"msg:fixedObjectMessage",
+		f.testTryLogObject(SomeLogObjectWithMsg{}))
+
+	require.Equal(t,
 		"msg:inlineConstantText",
 		f.testTryLogObject(struct {
 			Data int    `opt:""`
 			Msg  string `txt:"inlineConstantText"`
 		}{}))
-
-	require.Equal(t,
-		"msg:fixedObjectMessage",
-		f.testTryLogObject(SomeLogObjectWithMsg{}))
 }
 
 func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
@@ -235,16 +235,16 @@ type output struct {
 	buf strings.Builder
 }
 
+func (p *output) AddStrField(key string, v string) {
+	p.AddField(key, v)
+}
+
 func (p *output) AddField(k string, v interface{}) {
 	if v == nil {
 		p.buf.WriteString(fmt.Sprintf("%s:nil,", k))
 	} else {
 		p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, v, reflect.TypeOf(v).Name()))
 	}
-}
-
-func (output) AddFieldMap(m map[string]interface{}) {
-	panic("implement me")
 }
 
 func (p *output) AddRawJSON(k string, b []byte) {

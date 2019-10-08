@@ -163,12 +163,12 @@ type zerologMarshaller struct {
 	event *zerolog.Event
 }
 
-func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
-	m.event.Fields(fields)
-}
-
 func (m zerologMarshaller) AddField(key string, v interface{}) {
 	m.event.Interface(key, v)
+}
+
+func (m zerologMarshaller) AddStrField(key string, v string) {
+	m.event.Str(key, v)
 }
 
 func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
