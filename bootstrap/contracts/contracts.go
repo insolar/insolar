@@ -196,7 +196,7 @@ func GetDepositGenesisContractState(
 			PulseDepositUnHold: pulseDepositUnHold,
 			VestingType:        vestingType,
 			MaturePulse:        maturePulse,
-			TxHash:             name,
+			TxHash:             genesisrefs.FundsDepositName,
 			Lockup:             lockup,
 			Vesting:            vesting,
 			VestingStep:        vestingStep,

@@ -18,6 +18,7 @@ package deposit
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"math/big"
@@ -157,7 +158,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		if err != nil {
 			return fmt.Errorf("failed to get wallet: %s", err.Error())
 		}
-		ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit("migrationdeposit")
+		ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit(genesisrefs.FundsDepositName)
 		if !ok {
 			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
 		}

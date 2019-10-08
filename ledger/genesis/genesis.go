@@ -59,7 +59,6 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	FundsDepositName           = "genesis_deposit"
 	MigrationDaemonLockup      = 1578700800 // 11.01.2020
 	MigrationDaemonVesting     = 31622400   // 1 year
 	MigrationDaemonVestingStep = 2629746    // 1 month
@@ -247,7 +246,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	migrationAccounts[XNS] = genesisrefs.ContractMigrationAccount.String()
 
 	migrationDeposits := make(foundation.StableMap)
-	migrationDeposits[insolar.GenesisNameMigrationAdminDeposit] = genesisrefs.ContractMigrationDeposit.String()
+	migrationDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractMigrationDeposit.String()
 
 	// Hint: order matters, because of dependency contracts on each other.
 	states := []insolar.GenesisContractState{
@@ -400,7 +399,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractApplicationIncentivesAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[FundsDepositName] = genesisrefs.ContractApplicationIncentivesDeposits[i].String()
+		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractApplicationIncentivesDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameApplicationIncentivesWallets[i],
@@ -415,7 +414,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractNetworkIncentivesAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[FundsDepositName] = genesisrefs.ContractNetworkIncentivesDeposits[i].String()
+		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractNetworkIncentivesDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameNetworkIncentivesWallets[i],
@@ -430,7 +429,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractFoundationAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[FundsDepositName] = genesisrefs.ContractFoundationDeposits[i].String()
+		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractFoundationDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFoundationWallets[i],
@@ -445,7 +444,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractFundsAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[FundsDepositName] = genesisrefs.ContractFundsDeposits[i].String()
+		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractFundsDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFundsWallets[i],
@@ -460,7 +459,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractEnterpriseAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[FundsDepositName] = genesisrefs.ContractEnterpriseDeposits[i].String()
+		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractEnterpriseDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameEnterpriseWallets[i],

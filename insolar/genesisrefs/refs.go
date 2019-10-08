@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	PrototypeType   = "prototype"
-	PrototypeSuffix = "_proto"
+	PrototypeType    = "prototype"
+	PrototypeSuffix  = "_proto"
+	FundsDepositName = "genesis_deposit"
 )
 
 var PredefinedPrototypes = map[string]insolar.Reference{
