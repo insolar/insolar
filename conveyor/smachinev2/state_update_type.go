@@ -17,7 +17,8 @@
 package smachine
 
 import (
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
 )
 
 func newStateUpdateTemplate(contextType updCtxMode, marker ContextMarker, updKind stateUpdKind) StateUpdateTemplate {
@@ -89,6 +90,8 @@ const (
 	updCtxInit
 	updCtxExec
 	updCtxMigrate
+
+	updCtxInternal
 )
 
 const (
@@ -96,64 +99,70 @@ const (
 	updParamUint
 	updParamLink
 	updParamVar
+
+	//updParamStepNonNil
 )
 
-func (v *StateUpdateType) verify(ctxType updCtxMode) {
+func (v StateUpdateType) verify(ctxType updCtxMode) {
 	if ctxType <= updCtxDiscarded {
-		panic("illegal value")
+		panic(v.panicText(ctxType, "illegal value"))
 	}
 	if v.updKind == 0 {
-		panic("unknown type")
+		panic(v.panicText(ctxType, "unknown type"))
 	}
 	if v.apply == nil {
-		panic("not implemented")
+		panic(v.panicText(ctxType, "not implemented"))
 	}
 	if ctxType&v.filter != ctxType {
-		panic("not allowed")
+		panic(v.panicText(ctxType, "not allowed"))
 	}
 }
 
-func (v *StateUpdateType) template(marker ContextMarker, ctxType updCtxMode) StateUpdateTemplate {
-	v.verify(ctxType)
-	return StateUpdateTemplate{v, marker, ctxType}
+func (v StateUpdateType) panicText(ctxType updCtxMode, msg string) string {
+	return fmt.Sprintf("updKind=%v ctxType=%v: %v", v.updKind, ctxType, msg)
 }
 
-func (v *StateUpdateType) getForMode(ctxType updCtxMode) StateUpdateType {
+func (v StateUpdateType) template(marker ContextMarker, ctxType updCtxMode) StateUpdateTemplate {
 	v.verify(ctxType)
-	return *v
+	return StateUpdateTemplate{&v, marker, ctxType}
 }
 
-func (v *StateUpdateType) get() StateUpdateType {
+func (v StateUpdateType) getForMode(ctxType updCtxMode) StateUpdateType {
+	v.verify(ctxType)
+	return v
+}
+
+func (v StateUpdateType) get() StateUpdateType {
 	if v.updKind == 0 {
 		panic("unknown type")
 	}
 	if v.apply == nil {
 		panic("not implemented")
 	}
-	return *v
+	return v
 }
 
-func (v *StateUpdateType) verifyVar(u interface{}) interface{} {
+func (v StateUpdateType) verifyVar(u interface{}) interface{} {
 	if v.varVerify != nil {
 		v.varVerify(u)
 	}
 	return u
 }
 
-func (v *StateUpdateType) ShortLoop(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
+func (v StateUpdateType) ShortLoop(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
 	if v.shortLoop == nil {
 		return false
 	}
 	return v.shortLoop(slot, stateUpdate, loopCount)
 }
 
-func (v *StateUpdateType) Prepare(slot *Slot, stateUpdate *StateUpdate) {
+func (v StateUpdateType) Prepare(slot *Slot, stateUpdate *StateUpdate) {
 	if v.prepare != nil {
 		v.prepare(slot, stateUpdate)
 	}
 }
 
-func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+func (v StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 	if v.apply == nil {
 		return false, errors.New("not implemented")
 	}
@@ -167,6 +176,9 @@ func (v StateUpdateTemplate) ensureTemplate(params stateUpdParam) {
 	if v.t.params&params != params {
 		panic("illegal value")
 	}
+	if v.t.updKind == 0 {
+		panic("illegal kind")
+	}
 }
 
 func (v StateUpdateTemplate) newNoArg() StateUpdate {
@@ -179,7 +191,14 @@ func (v StateUpdateTemplate) newNoArg() StateUpdate {
 
 type StepPrepareFunc func()
 
+func (v StateUpdateTemplate) checkStep(step SlotStep) {
+	//if step.Transition == nil && v.t.params&updParamStepNonNil != 0 {
+	//	panic("illegal value")
+	//}
+}
+
 func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
@@ -189,7 +208,8 @@ func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc)
 	}
 }
 
-func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare func(), until uint32) StateUpdate {
+func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare StepPrepareFunc, until uint32) StateUpdate {
+	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamUint | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
@@ -201,6 +221,7 @@ func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare func(), unt
 }
 
 func (v StateUpdateTemplate) newStepUint(slotStep SlotStep, param uint32) StateUpdate {
+	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamUint)
 	return StateUpdate{
 		marker:  v.marker,
@@ -211,6 +232,7 @@ func (v StateUpdateTemplate) newStepUint(slotStep SlotStep, param uint32) StateU
 }
 
 func (v StateUpdateTemplate) newStepLink(slotStep SlotStep, link SlotLink) StateUpdate {
+	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamLink)
 	return StateUpdate{
 		marker:  v.marker,

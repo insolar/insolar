@@ -85,15 +85,15 @@ func (m *SlotMachineSync) _addAsyncCallback(q *tools.SyncQueue, link SlotLink, f
 	})
 }
 
-func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasSignal, wasDetached bool) {
+func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasUpdates, hasSignal, wasDetached bool) {
 
 	if worker.HasSignal() {
-		return true, false
+		return true, true, false
 	}
 
 	tasks := m.callbackQueue.Flush()
 	if len(tasks) == 0 {
-		return false, false
+		return false, false, false
 	}
 
 	hasSignal = false
@@ -108,7 +108,7 @@ func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasSignal, w
 		m.callbackQueue.AddAll(tasks)
 	}
 
-	return hasSignal, wasDetached
+	return true, hasSignal, wasDetached
 }
 
 func (m *SlotMachineSync) processCallbacks(tasks tools.SyncFuncList, worker DetachableSlotWorker) (hasSignal bool) {

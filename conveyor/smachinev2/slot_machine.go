@@ -18,8 +18,8 @@ package smachine
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"math"
 	"runtime"
 	"sync/atomic"
@@ -41,7 +41,7 @@ func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, // ad
 	//	ownsAdapters = true
 	//}
 	return SlotMachine{
-		//config:        config,
+		config:   config,
 		injector: injector,
 		//adapters:      adapters,
 		//ownsAdapters:  ownsAdapters,
@@ -54,6 +54,7 @@ func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, // ad
 }
 
 type SlotMachine struct {
+	config     SlotMachineConfig
 	lastSlotID SlotID // atomic
 	slotPool   SlotPool
 
@@ -86,6 +87,50 @@ func (m *SlotMachine) IsEmpty() bool {
 
 /* -- Methods to run state machines ------------------------------ */
 
+func (m *SlotMachine) ScanOnce(worker FixedSlotWorker) (repeatNow bool, nextPollTime time.Time) {
+	scanTime := time.Now()
+	m.beforeScan(scanTime)
+
+	switch {
+	case m.machineStartedAt.IsZero():
+		m.machineStartedAt = scanTime
+		fallthrough
+	case m.workingSlots.IsEmpty():
+		m.scanCount++
+
+		m.hotWaitOnly = true
+		m.workingSlots.AppendAll(&m.prioritySlots)
+		m.workingSlots.AppendAll(&m.activeSlots)
+		m.pollingSlots.FilterOut(scanTime, m.workingSlots.AppendAll)
+	default:
+		// we were interrupted
+		m.workingSlots.PrependAll(&m.prioritySlots)
+	}
+
+	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod).Truncate(m.config.PollingTruncate))
+
+	repeatNow = m.syncQueue.ProcessUpdates(worker)
+	hasUpdates, hasSignal, wasDetached := m.syncQueue.ProcessCallbacks(worker)
+	if hasUpdates {
+		repeatNow = true
+	}
+
+	if !hasSignal && !wasDetached {
+		m.scanWorkingSlots(worker)
+	}
+
+	repeatNow = repeatNow || !m.hotWaitOnly
+	return repeatNow, minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
+}
+
+func (m *SlotMachine) beforeScan(scanTime time.Time) {
+	if m.machineStartedAt.IsZero() {
+		m.machineStartedAt = scanTime
+	}
+	m.scanStartedAt = scanTime
+	m.scanWakeUpAt = time.Time{}
+}
+
 func (m *SlotMachine) scanWorkingSlots(worker FixedSlotWorker) {
 	for {
 		currentSlot := m.workingSlots.First()
@@ -96,13 +141,13 @@ func (m *SlotMachine) scanWorkingSlots(worker FixedSlotWorker) {
 		prevStepNo := currentSlot.startWorking(m.scanCount) // its counterpart is in slotPostExecution()
 		currentSlot.removeFromQueue()
 
-		if stopNow := m.executeSlot(currentSlot, prevStepNo, false, worker); stopNow {
+		if stopNow := m.executeSlot(currentSlot, prevStepNo, worker); stopNow {
 			return
 		}
 	}
 }
 
-func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, singleStep bool, worker FixedSlotWorker) bool {
+func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker FixedSlotWorker) bool {
 	hasSignal := false
 	var stateUpdate StateUpdate
 	//var err error
@@ -136,7 +181,7 @@ func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, singleSt
 				currentSlot.addAsyncCount(asyncCnt)
 			}
 
-			if singleStep || !sut.ShortLoop(currentSlot, stateUpdate, loopCount) {
+			if !sut.ShortLoop(currentSlot, stateUpdate, loopCount) {
 				return
 			}
 		}
@@ -154,7 +199,7 @@ func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, singleSt
 
 	hasAsync := m.slotPostExecution(currentSlot, stateUpdate, worker, prevStepNo, false)
 	if hasAsync && !hasSignal {
-		hasSignal, wasDetached = m.syncQueue.ProcessCallbacks(worker)
+		_, hasSignal, wasDetached = m.syncQueue.ProcessCallbacks(worker)
 		return hasSignal || wasDetached
 	}
 	return hasSignal
@@ -401,7 +446,7 @@ func (m *SlotMachine) verifyPage(slotPage []Slot, _ FixedSlotWorker) (isPageEmpt
 	return isPageEmptyOrWeak, hasWeakSlots
 }
 
-func (m *SlotMachine) recycleSlot(slot *Slot, w SlotWorker) {
+func (m *SlotMachine) recycleSlot(slot *Slot, w FixedSlotWorker) {
 	dependants := m._recycleSlot(slot)
 	if dependants != nil {
 		w.ActivateLinkedList(dependants, false)
@@ -435,6 +480,14 @@ func (m *SlotMachine) _cleanupSlot(slot *Slot) *Slot {
 		slot.removeFromQueue()
 	}
 	return nil
+}
+
+func (m *SlotMachine) OccupiedSlotCount() int {
+	return m.slotPool.Count()
+}
+
+func (m *SlotMachine) AllocatedSlotCount() int {
+	return m.slotPool.Capacity()
 }
 
 /* -- Methods to create/allocate and start new slots ------------------------------ */
@@ -507,9 +560,12 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 	}
 
 	slot.step = SlotStep{Transition: func(ctx ExecutionContext) StateUpdate {
-		ic := initializationContext{ctx.(*executionContext).clone()}
+		ec := ctx.(*executionContext)
+		ic := initializationContext{ec.clone()}
 		slot.incStep()
-		return ic.executeInitialization(initFn)
+		su := ic.executeInitialization(initFn)
+		su.marker = ec.getMarker()
+		return su
 	}}
 }
 
@@ -697,7 +753,7 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate, w Fi
 	return m.handleSlotUpdateError(slot, w, isPanic, false, err)
 }
 
-func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker SlotWorker, isPanic bool, isAsync bool, err error) bool {
+func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, isPanic bool, isAsync bool, err error) bool {
 
 	eh := slot.getErrorHandler()
 	if eh != nil {
@@ -706,6 +762,7 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker SlotWorker, isPan
 	}
 	if err != nil {
 		// TODO log error m._handleStateUpdateError(slot, stateUpdate, w, err)
+		fmt.Printf("SLOT ERROR: slot=%v err=%v\n", slot.GetSlotID(), err)
 		runtime.KeepAlive(err)
 	}
 

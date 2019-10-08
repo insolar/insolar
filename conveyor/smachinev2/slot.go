@@ -283,7 +283,7 @@ func (s *Slot) _stopWorking() (prevStepNo uint32) {
 }
 
 func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
-	isEmpty, isStarted, prevStepNo = s._tryStart(1)
+	isEmpty, isStarted, prevStepNo = s._tryStart(2)
 	return
 }
 
@@ -292,7 +292,7 @@ func (s *Slot) stopMigrate(prevStepNo uint32) {
 }
 
 func (s *Slot) tryStartWorking() (isStarted bool, prevStepNo uint32) {
-	_, isStarted, prevStepNo = s._tryStart(2)
+	_, isStarted, prevStepNo = s._tryStart(1)
 	return
 }
 

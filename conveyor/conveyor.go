@@ -112,13 +112,13 @@ func (p *PulseConveyor) getPulseSlot(ctx context.Context, pn pulse.Number) (*Pul
 }
 
 func (p *PulseConveyor) PreparePulseChange(out chan<- PreparedState) {
-	p.signalQueue.Add(func() {
+	p.signalQueue.Add(func(interface{}) {
 		p.pulseService.svc.onPreparePulseChange(out)
 	})
 }
 
 func (p *PulseConveyor) CancelPulseChange() {
-	p.signalQueue.Add(func() {
+	p.signalQueue.Add(func(interface{}) {
 		p.pulseService.svc.onCancelPulseChange()
 	})
 }
@@ -126,7 +126,7 @@ func (p *PulseConveyor) CancelPulseChange() {
 func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 	pd.EnsurePulsarData()
 
-	p.signalQueue.Add(func() {
+	p.signalQueue.Add(func(interface{}) {
 		if p.present != nil {
 			p.present.isPast = true
 			p.present = nil
@@ -188,7 +188,7 @@ func (p *PulseConveyor) workerConveyor() {
 			mark := p.internalSignal.Mark()
 
 			for _, sig := range p.signalQueue.Flush() {
-				sig()
+				sig(nil)
 			}
 
 			p.slotMachine.ScanOnce(worker)
