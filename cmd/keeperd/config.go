@@ -23,14 +23,16 @@ import (
 )
 
 type Config struct {
-	Log    configuration.Log
-	Keeper KeeperConfig
+	Log     configuration.Log
+	Metrics configuration.Metrics
+	Keeper  KeeperConfig
 }
 
 func NewConfig() Config {
 	return Config{
-		Log:    configuration.NewLog(),
-		Keeper: NewKeeperConfig(),
+		Log:     configuration.NewLog(),
+		Metrics: configuration.NewMetrics(),
+		Keeper:  NewKeeperConfig(),
 	}
 }
 
