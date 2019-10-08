@@ -28,32 +28,42 @@ var (
 		stats.UnitDimensionless,
 	)
 	statSetRequestTotal = stats.Int64(
-		"set_request_total",
+		"proc_set_request_total",
 		"How many requests have been set",
 		stats.UnitDimensionless,
 	)
 	statSetRequestDuplicate = stats.Int64(
-		"set_request_duplicate",
+		"proc_set_request_duplicate",
 		"How many requests have been duplicated",
 		stats.UnitDimensionless,
 	)
 	statSetRequestSuccess = stats.Int64(
-		"set_request_success",
+		"proc_set_request_success",
+		"How many requests have been saved successfully",
+		stats.UnitDimensionless,
+	)
+	statSetRequestError = stats.Int64(
+		"proc_set_request_error",
 		"How many requests have been saved successfully",
 		stats.UnitDimensionless,
 	)
 	statSetResultTotal = stats.Int64(
-		"set_result_total",
+		"proc_set_result_total",
 		"How many results have been set",
 		stats.UnitDimensionless,
 	)
 	statSetResultDuplicate = stats.Int64(
-		"set_result_duplicate",
+		"proc_set_result_duplicate",
 		"How many results have been duplicated",
 		stats.UnitDimensionless,
 	)
+	statSetResultError = stats.Int64(
+		"proc_set_result_error",
+		"How many results finished with errors",
+		stats.UnitDimensionless,
+	)
 	statSetResultSuccess = stats.Int64(
-		"set_result_success",
+		"proc_set_result_success",
 		"How many results have been saved successfully",
 		stats.UnitDimensionless,
 	)
@@ -80,11 +90,18 @@ func init() {
 			Aggregation: view.Count(),
 		},
 		&view.View{
+			Name:        statSetRequestError.Name(),
+			Description: statSetRequestError.Description(),
+			Measure:     statSetRequestError,
+			Aggregation: view.Count(),
+		},
+		&view.View{
 			Name:        statSetRequestDuplicate.Name(),
 			Description: statSetRequestDuplicate.Description(),
 			Measure:     statSetRequestDuplicate,
 			Aggregation: view.Count(),
 		},
+
 		&view.View{
 			Name:        statSetResultTotal.Name(),
 			Description: statSetResultTotal.Description(),
@@ -95,6 +112,12 @@ func init() {
 			Name:        statSetResultSuccess.Name(),
 			Description: statSetResultSuccess.Description(),
 			Measure:     statSetResultSuccess,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetResultError.Name(),
+			Description: statSetResultError.Description(),
+			Measure:     statSetResultError,
 			Aggregation: view.Count(),
 		},
 		&view.View{

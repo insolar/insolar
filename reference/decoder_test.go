@@ -82,7 +82,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 func TestDecoder_Decode_new(t *testing.T) {
 	t.Parallel()
 
-	newReference_fixed := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
+	newReference_fixed := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
 	{ //
 		dec := NewDefaultDecoder(AllowRecords)
 		_, err := dec.Decode(newReference_fixed)
@@ -96,8 +96,8 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_var_notReally := "base58+insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_var_really := "base58+insolarv1:0115Ltamw9sE7JyRPGtz53j8FUbhdipmJ.record"
+	newReference_var_notReally := "base58+insolar:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_var_really := "base58+insolar:0115Ltamw9sE7JyRPGtz53j8FUbhdipmJ.record"
 	{
 		dec := NewDefaultDecoder(AllowRecords)
 
@@ -115,7 +115,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_wo_part1 := "insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_wo_part1 := "insolar:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	newReference_wo_part2 := "base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
@@ -128,7 +128,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	newReference_part_switched := "insolarv1+base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_part_switched := "insolar+base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
 		dec := NewDefaultDecoder(AllowRecords)
@@ -138,8 +138,8 @@ func TestDecoder_Decode_new(t *testing.T) {
 	}
 
 	newReference_bad_parts1 := "insolarv0+base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_bad_parts2 := "insolarv1+base59:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_bad_parts3 := "insolarv1+base58+bad:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_bad_parts2 := "insolar+base59:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_bad_parts3 := "insolar+base58+bad:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
 		dec := NewDefaultDecoder(AllowRecords)
@@ -160,9 +160,9 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_with_authority := "insolarv1://authority/0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_with_empty_authority := "insolarv1:///0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_with_bad_authority := "insolarv1://0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_with_authority := "insolar://authority/0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_with_empty_authority := "insolar:///0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_with_bad_authority := "insolar://0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
 		dec := NewDefaultDecoder(AllowRecords)
@@ -179,10 +179,10 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_empty_body := "insolarv1:"
-	newReference_empty_first := "insolarv1:.record"
-	newReference_empty_second := "insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3."
-	newReference_legacy_domain := "insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.11111111111111111111111111111111"
+	newReference_empty_body := "insolar:"
+	newReference_empty_first := "insolar:.record"
+	newReference_empty_second := "insolar:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3."
+	newReference_legacy_domain := "insolar:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.11111111111111111111111111111111"
 	{
 		var err error
 		dec := NewDefaultDecoder(AllowRecords)
@@ -208,9 +208,9 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_badPrefix1 := "base58+insolarv1:21tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
-	newReference_badPrefix2 := "base58+insolarv1:91tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
-	newReference_badPrefix3 := "base58+insolarv1:a1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
+	newReference_badPrefix1 := "base58+insolar:21tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
+	newReference_badPrefix2 := "base58+insolar:91tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
+	newReference_badPrefix3 := "base58+insolar:a1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
 	{
 		var err error
 		dec := NewDefaultDecoder(AllowRecords)
@@ -231,8 +231,8 @@ func TestDecoder_Decode_new(t *testing.T) {
 		}
 	}
 
-	newReference_full := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
-	newReference_empty := "base58+insolarv1:0.0"
+	newReference_full := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
+	newReference_empty := "base58+insolar:0.0"
 	{
 		var err error
 		dec := NewDefaultDecoder(0)
@@ -244,9 +244,9 @@ func TestDecoder_Decode_new(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	newReference_brokenBody1 := "base58+insolarv1:11tJEBzbVurpgUolortyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
-	newReference_brokenBody2 := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hyoloCsSAxKLJ5U8LTb1EaerkZs"
-	newReference_brokenBody3 := "base58+insolarv1:01tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.01tJEBzbVurpgUrtyAM3hyoloCsSAxKLJ5U8LTb1EaerkZs"
+	newReference_brokenBody1 := "base58+insolar:11tJEBzbVurpgUolortyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
+	newReference_brokenBody2 := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hyoloCsSAxKLJ5U8LTb1EaerkZs"
+	newReference_brokenBody3 := "base58+insolar:01tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.01tJEBzbVurpgUrtyAM3hyoloCsSAxKLJ5U8LTb1EaerkZs"
 	{
 		var err error
 		dec := NewDefaultDecoder(IgnoreParity)
@@ -271,10 +271,10 @@ func TestDecoder_Decode_new(t *testing.T) {
 func TestDecoder_Decode_parity(t *testing.T) {
 	t.Parallel()
 
-	newReference_with_parity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/22FwFmj"
-	newReference_with_badParity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/2ololo"
-	newReference_with_badParityPrefix := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/FwFmj"
-	newReference_with_emptyBodyAndParity := "base58+insolarv1:/ololo"
+	newReference_with_parity := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/22FwFmj"
+	newReference_with_badParity := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/2ololo"
+	newReference_with_badParityPrefix := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/FwFmj"
+	newReference_with_emptyBodyAndParity := "base58+insolar:/ololo"
 	{
 		var err error
 		dec := NewDefaultDecoder(IgnoreParity)
@@ -302,8 +302,8 @@ func TestDecoder_Decode_parity(t *testing.T) {
 func TestDecoder_Decode_aliases(t *testing.T) {
 	t.Parallel()
 
-	newReference_withDomainNameDecoder := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.help.somebody"
-	newReference_withRecordNameDecoder := "base58+insolarv1:help.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
+	newReference_withDomainNameDecoder := "base58+insolar:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.help.somebody"
+	newReference_withRecordNameDecoder := "base58+insolar:help.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
 	{
 		var err error
 		dec := NewDefaultDecoder(0)

@@ -91,18 +91,19 @@ var (
 	badgerLogger BadgerLogger
 )
 
-func merge(_ context.Context, targetDBPath string, backupFileName string, numberOfWorkers int) {
+func merge(targetDBPath string, backupFileName string, numberOfWorkers int, runGC bool, runCompact bool) {
 	log.GlobalLogger().WithFields(map[string]interface{}{
 		"targetDBPath":    targetDBPath,
 		"backupFileName":  backupFileName,
 		"numberOfWorkers": numberOfWorkers,
 	}).Info("merge started")
 
-	ops := badger.DefaultOptions(targetDBPath)
-	ops.Logger = badgerLogger
-	bdb, err := badger.Open(ops)
+	opts := badger.DefaultOptions(targetDBPath)
+	opts.Logger = badgerLogger
+	opts.CompactL0OnClose = runCompact
+	bdb, err := badger.Open(opts)
 	if err != nil {
-		err = errors.Wrap(err, "failed to open badger")
+		err = errors.Wrap(err, "failed to open DB")
 		exitWithError(err)
 	}
 	log.Info("DB is opened")
@@ -110,39 +111,51 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 	err = isDBEmpty(bdb)
 	if err == nil {
 		// will exit
-		err = errors.New("db must not be empty")
+		err = errors.New("DB must not be empty")
 		closeRawDB(bdb, err)
 	}
 	log.Info("DB is not empty")
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
-		// will exit
+		err = errors.Wrap(err, "failed to open incremental backup file")
 		closeRawDB(bdb, err)
 	}
+	defer bkpFile.Close()
 	log.Info("Backup file is opened")
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
 		// will exit
+		err = errors.Wrap(err, "failed to load incremental backup file")
 		closeRawDB(bdb, err)
 	}
 
-	err = bdb.RunValueLogGC(0.7)
-	if err != nil {
-		log.Warn("Failed to run GC: " + err.Error())
+	log.Info("Successfully loaded")
+
+	if runGC {
+		log.Info("Running GC")
+		err = bdb.RunValueLogGC(0.7)
+		if err == nil {
+			log.Info("GC done, closing DB")
+		} else {
+			log.Warn("Failed to run GC: " + err.Error())
+		}
 	}
 
-	log.Info("Successfully merged")
+	log.Info("Closing DB")
 	closeRawDB(bdb, nil)
+	log.Info("DB closed")
 }
 
-func parseMergeParams(ctx context.Context) *cobra.Command {
+func parseMergeParams() *cobra.Command {
 	var (
 		targetDBPath    string
 		backupFileName  string
 		numberOfWorkers int
 		pprofFlag       bool
+		runGC           bool
+		compact         bool
 	)
 
 	var mergeCmd = &cobra.Command{
@@ -160,7 +173,7 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 				defer pprof.StopCPUProfile()
 			}
 
-			merge(ctx, targetDBPath, backupFileName, numberOfWorkers)
+			merge(targetDBPath, backupFileName, numberOfWorkers, runGC, compact)
 		},
 	}
 	mergeFlags := mergeCmd.Flags()
@@ -172,6 +185,10 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
 	mergeFlags.IntVarP(
 		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
+	mergeFlags.BoolVarP(
+		&pprofFlag, "run-gc", "g", false, "run GC after merge")
+	mergeFlags.BoolVarP(
+		&pprofFlag, "run-compact", "c", false, "run Compact before closing DB")
 	mergeFlags.BoolVarP(
 		&pprofFlag, "pprof", "p", false, "run merge with cpu profile")
 
@@ -204,7 +221,7 @@ func isDBEmpty(bdb *badger.DB) error {
 	return nil
 }
 
-func createEmptyBadger(_ context.Context, dbDir string) {
+func createEmptyBadger(dbDir string) {
 	log.Info("createEmptyBadger. dbDir: ", dbDir)
 
 	ops := badger.DefaultOptions(dbDir)
@@ -251,13 +268,13 @@ func createEmptyBadger(_ context.Context, dbDir string) {
 	closeRawDB(bdb, nil)
 }
 
-func parseCreateParams(ctx context.Context) *cobra.Command {
+func parseCreateParams() *cobra.Command {
 	var dbDir string
 	var createCmd = &cobra.Command{
 		Use:   "create",
 		Short: "create new empty DB",
 		Run: func(cmd *cobra.Command, args []string) {
-			createEmptyBadger(ctx, dbDir)
+			createEmptyBadger(dbDir)
 		},
 	}
 
@@ -333,7 +350,7 @@ func (nopWriter) Write(p []byte) (n int, err error) {
 // 1. finalize last pulse, since it comes not finalized ( since we set finalization after success of backup )
 // 2. gets last backuped version
 // 3. write 2. to file
-func prepareBackup(_ context.Context, dbDir string, lastBackupedVersionFile string) {
+func prepareBackup(dbDir string, lastBackupedVersionFile string) {
 	log.Info("prepareBackup. dbDir: ", dbDir, ", lastBackupedVersionFile: ", lastBackupedVersionFile)
 
 	ops := badger.DefaultOptions(dbDir)
@@ -369,7 +386,7 @@ func prepareBackup(_ context.Context, dbDir string, lastBackupedVersionFile stri
 	log.Info("New top sync pulse: ", topSyncPulse.String())
 }
 
-func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
+func parsePrepareBackupParams() *cobra.Command {
 	var (
 		dbDir                   string
 		lastBackupedVersionFile string
@@ -378,7 +395,7 @@ func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
 		Use:   "prepare_backup",
 		Short: "prepare backup for usage",
 		Run: func(cmd *cobra.Command, args []string) {
-			prepareBackup(ctx, dbDir, dbDir+"/"+lastBackupedVersionFile)
+			prepareBackup(dbDir, dbDir+"/"+lastBackupedVersionFile)
 		},
 	}
 
@@ -404,15 +421,17 @@ func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
 	return prepareBackupCmd
 }
 
-func parseInputParams(ctx context.Context) {
+func parseInputParams() {
 	var rootCmd = &cobra.Command{
 		Use:   "backupmanager",
 		Short: "backupmanager is the command line client for managing backups",
 	}
 
-	rootCmd.AddCommand(parseMergeParams(ctx))
-	rootCmd.AddCommand(parseCreateParams(ctx))
-	rootCmd.AddCommand(parsePrepareBackupParams(ctx))
+	rootCmd.AddCommand(parseCreateParams())
+	rootCmd.AddCommand(parseMergeParams())
+	rootCmd.AddCommand(parseDaemonParams())
+	rootCmd.AddCommand(parseDaemonMergeParams())
+	rootCmd.AddCommand(parsePrepareBackupParams())
 
 	exit(rootCmd.Execute())
 }
@@ -445,5 +464,5 @@ func initExit(ctx context.Context) {
 func main() {
 	ctx := initLogger()
 	initExit(ctx)
-	parseInputParams(ctx)
+	parseInputParams()
 }

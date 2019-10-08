@@ -70,7 +70,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		err := checker.CheckRequest(ctx, gen.ID(), req)
 		coded, ok := err.(*payload.CodedError)
 		require.True(t, ok, "should be coded error")
-		assert.Equal(t, uint32(payload.CodeRequestInvalid), coded.Code)
+		assert.Equal(t, payload.CodeRequestInvalid, coded.Code)
 	})
 
 	t.Run("incoming, reason is empty returns error", func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+1), req)
 		coded, ok := err.(*payload.CodedError)
 		require.True(t, ok, "should be coded error")
-		assert.Equal(t, uint32(payload.CodeRequestInvalid), coded.Code)
+		assert.Equal(t, payload.CodeRequestInvalid, coded.Code)
 	})
 
 	t.Run("incoming API request is ok", func(t *testing.T) {
@@ -204,7 +204,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
+		require.Equal(t, payload.CodeRequestNotFound, insError.GetCode())
 	})
 
 	t.Run("incoming local reason check is ok", func(t *testing.T) {
@@ -278,7 +278,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
+		require.Equal(t, payload.CodeRequestNotFound, insError.GetCode())
 	})
 
 	t.Run("incoming reason is closed for regular request", func(t *testing.T) {
@@ -322,7 +322,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
+		require.Equal(t, payload.CodeReasonIsWrong, insError.GetCode())
 	})
 
 	t.Run("incoming reason is not closed for detached request", func(t *testing.T) {
@@ -362,7 +362,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
+		require.Equal(t, payload.CodeReasonIsWrong, insError.GetCode())
 	})
 
 	t.Run("outgoing reason is not found returns error", func(t *testing.T) {
@@ -381,7 +381,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
+		require.Equal(t, payload.CodeReasonIsWrong, insError.GetCode())
 	})
 
 	t.Run("outgoing, reason is immutable does not have to be the latest", func(t *testing.T) {

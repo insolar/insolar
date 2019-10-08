@@ -201,6 +201,29 @@ func main() {
 	)
 	rootCmd.AddCommand(freeMigrationCountCmd)
 
+	var (
+		addressesPath string
+	)
+	var addMigrationAddressesCmd = &cobra.Command{
+		Use: "add-migration-addresses",
+		Run: func(cmd *cobra.Command, args []string) {
+			addMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesPath, shardsCount)
+		},
+	}
+	addMigrationAddressesCmd.Flags().StringVarP(
+		&migrationAdminKeys, "migration-admin-keys", "k", "",
+		"Dir with config that contains public/private keys of admin member",
+	)
+	addMigrationAddressesCmd.Flags().StringVarP(
+		&addressesPath, "addresses", "a", "",
+		"Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
+	)
+	addMigrationAddressesCmd.Flags().IntVarP(
+		&shardsCount, "shards-count", "s", 10,
+		"Count of shards at platform (must be a multiple of ten)",
+	)
+	rootCmd.AddCommand(addMigrationAddressesCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -344,6 +367,10 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	}
 	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
 	check("[ sendRequest ]", err)
+
+	if !insolar.IsReferenceInBase58(userCfg.Caller) && insolar.IsReferenceInBase58(reqCfg.Reference) {
+		userCfg.Caller = reqCfg.Reference
+	}
 
 	if userCfg.Caller == "" {
 		info, err := requester.Info(adminURL)

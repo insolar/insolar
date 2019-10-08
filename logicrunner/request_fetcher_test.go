@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,6 +40,8 @@ func TestRequestsFetcher_New(t *testing.T) {
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client)

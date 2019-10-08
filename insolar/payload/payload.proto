@@ -22,7 +22,7 @@ message Meta {
 message Error {
     uint32 Polymorph = 16;
 
-    uint32 Code = 20;
+    uint32 Code = 20 [(gogoproto.customtype) = "ErrorCode", (gogoproto.nullable) = false];
     string Text = 21;
 }
 
@@ -250,6 +250,8 @@ message ReturnResults {
     bytes Reason = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Reply = 23;
     string Error = 24;
+
+    uint32 ResendCount = 25;
 }
 
 message CallMethod {

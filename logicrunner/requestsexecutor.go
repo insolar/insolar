@@ -121,6 +121,13 @@ func (e *requestsExecutor) SendReply(
 		return
 	}
 
+	if reqRef.IsEmpty() {
+		logger.Error(
+			"Not sending result, empty request reference, request: ", req.String(),
+		)
+		return
+	}
+
 	logger.Debug("returning result")
 
 	var errStr string
@@ -165,6 +172,8 @@ func (e *requestsExecutor) sendToCaller(
 		return
 	}
 
+	inslogger.FromContext(ctx).Debug("sending to caller")
+
 	sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, req.Caller)
 }
 
@@ -184,6 +193,8 @@ func (e *requestsExecutor) sendToAPINode(
 		inslogger.FromContext(ctx).Error("couldn't serialize message: ", err)
 		return
 	}
+
+	inslogger.FromContext(ctx).Debug("sending to APINode")
 
 	sender.SendTarget(ctx, msg, req.APINode)
 }

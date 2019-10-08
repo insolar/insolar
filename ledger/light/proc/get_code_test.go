@@ -165,6 +165,6 @@ func TestGetCode_Proceed(t *testing.T) {
 		assert.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		assert.True(t, ok)
-		assert.Equal(t, uint32(payload.CodeNotFound), insError.GetCode())
+		assert.Equal(t, payload.CodeNotFound, insError.GetCode())
 	})
 }

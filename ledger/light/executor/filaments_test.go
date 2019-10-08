@@ -764,7 +764,7 @@ func TestFilamentCalculatorDefault_RequestInfo(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
+		require.Equal(t, payload.CodeRequestNotFound, insError.GetCode())
 	})
 }
 

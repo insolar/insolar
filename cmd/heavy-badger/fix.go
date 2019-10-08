@@ -17,32 +17,17 @@
 package main
 
 import (
-	"github.com/dgraph-io/badger"
 	"github.com/spf13/cobra"
-
-	"github.com/insolar/insolar/insolar/store"
 )
 
-func (app *appCtx) addFixCommand(parent *cobra.Command) {
+func (app *appCtx) fixCommand() *cobra.Command {
 	var fixCmd = &cobra.Command{
 		Use:   "fix",
 		Short: "opens and closes badger database. Could fix 'Database was not properly closed' error.",
 		Run: func(_ *cobra.Command, _ []string) {
-			if err := checkDirectory(app.dataDir); err != nil {
-				fatalf("Database directory '%v' open failed. Error: \"%v\"", app.dataDir, err)
-			}
-
-			ops := badger.DefaultOptions(app.dataDir)
-			dbWrapped, err := store.NewBadgerDB(ops)
-			if err != nil {
-				fatalf("failed open database directory %v: %v", app.dataDir, err)
-			}
-			err = dbWrapped.Backend().Close()
-			if err != nil {
-				fatalf("failed close database directory %v: %v", app.dataDir, err)
-			}
+			_, close := openDB(app.dataDir)
+			close()
 		},
 	}
-
-	parent.AddCommand(fixCmd)
+	return fixCmd
 }

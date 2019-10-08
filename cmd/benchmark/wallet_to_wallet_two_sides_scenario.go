@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/log"
 )
 
 type walletToWalletTwoSidesScenario struct {
@@ -43,15 +42,12 @@ func (s *walletToWalletTwoSidesScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *walletToWalletTwoSidesScenario) prepare() {
+func (s *walletToWalletTwoSidesScenario) prepare(repetition int) {
 	members, err := getMembers(s.insSDK, concurrent*2, false)
 	check("Error while loading members: ", err)
 
 	if useMembersFromFile {
-		if members[len(members)-1].GetReference() != s.insSDK.GetFeeMember().GetReference() {
-			log.Fatal("last element must be fee member, but its not")
-		}
-		members = members[:len(members)-1]
+		members = members[:len(members)-2]
 	}
 
 	s.members = members
@@ -59,6 +55,7 @@ func (s *walletToWalletTwoSidesScenario) prepare() {
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members))
 	copy(s.balanceCheckMembers, s.members)
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 
 func (s *walletToWalletTwoSidesScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {

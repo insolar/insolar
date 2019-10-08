@@ -483,7 +483,7 @@ func RequireError(pl payload.Payload) {
 	}
 }
 
-func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
+func RequireErrorCode(pl payload.Payload, expectedCode payload.ErrorCode) {
 	RequireError(pl)
 	err := pl.(*payload.Error)
 	if err.Code != expectedCode {
