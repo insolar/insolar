@@ -194,7 +194,6 @@ func (p *PulseConveyor) workerConveyor() {
 			p.slotMachine.ScanOnce(worker)
 
 			if !mark.HasSignal() {
-				zz
 				// TODO we need a Yield to indicate "no work done"
 			}
 		}

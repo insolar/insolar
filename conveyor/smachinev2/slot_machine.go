@@ -18,7 +18,6 @@ package smachine
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"runtime"
@@ -343,9 +342,10 @@ func recoverSlotPanic(msg string, recovered interface{}, prev error) error {
 		return prev
 	}
 	if prev != nil {
-		return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
+		return fmt.Errorf("%s: %v, %v", msg, recovered, prev)
+		//return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
 	}
-	return errors.Errorf("%s: %v", msg, recovered)
+	return fmt.Errorf("%s: %v", msg, recovered)
 }
 
 func recoverSlotPanicAsUpdate(update *StateUpdate, msg string, recovered interface{}, prev error) {
