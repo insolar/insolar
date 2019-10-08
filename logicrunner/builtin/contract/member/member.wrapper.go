@@ -21,7 +21,6 @@ package member
 
 import (
 	"github.com/insolar/insolar/insolar"
-	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -441,7 +440,7 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := make([]interface{}, 5)
@@ -474,7 +473,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 
 	result := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret1}},
+		foundation.Result{Returns: []interface{}{ref, ret1}},
 		&result,
 	)
 	if err != nil {
@@ -495,11 +494,11 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	return state, result, nil
 }
 
-func Initialize() XXX_insolar.ContractWrapper {
-	return XXX_insolar.ContractWrapper{
+func Initialize() insolar.ContractWrapper {
+	return insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_insolar.ContractMethods{
+		Methods: insolar.ContractMethods{
 			"GetName":             INSMETHOD_GetName,
 			"GetWallet":           INSMETHOD_GetWallet,
 			"GetAccount":          INSMETHOD_GetAccount,
@@ -508,7 +507,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetMigrationAddress": INSMETHOD_GetMigrationAddress,
 			"Accept":              INSMETHOD_Accept,
 		},
-		Constructors: XXX_insolar.ContractConstructors{
+		Constructors: insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
 		},
 	}

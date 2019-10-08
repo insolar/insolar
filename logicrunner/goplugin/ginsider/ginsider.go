@@ -171,12 +171,13 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, []byte, error))
+	f, ok := symbol.(func(ref insolar.Reference, data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	state, result, err := f(args.Arguments)
+	objRef := insolar.NewReference(*args.Context.Request.GetLocal())
+	state, result, err := f(*objRef, args.Arguments)
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
@@ -336,14 +337,14 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, immutable bool, saga bool,
 func (gi *GoInsider) SaveAsChild(
 	parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
 ) (
-	*insolar.Reference, []byte, error,
+	[]byte, error,
 ) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if gi.GetSystemError() != nil {
-		return nil, nil, gi.GetSystemError()
+		return nil, gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -362,10 +363,10 @@ func (gi *GoInsider) SaveAsChild(
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return nil, nil, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return nil, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
-	return res.Reference, res.Result, nil
+	return res.Result, nil
 }
 
 // DeactivateObject ...

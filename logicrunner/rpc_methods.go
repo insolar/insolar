@@ -225,7 +225,7 @@ func (m *executionProxyImplementation) RouteCall(
 	logger.Debug("sending outgoing request")
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
-	_, rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
+	rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
 	if err != nil {
 		err = errors.Wrap(err, "failed to send outgoing request")
 		logger.Error(err)
@@ -272,9 +272,9 @@ func (m *executionProxyImplementation) SaveAsChild(
 	logger.Debug("sending outgoing request")
 
 	var incoming *record.IncomingRequest
-	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
+	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
-		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, err)
 	}
 
 	logger.Debug("got result of outgoing request")
@@ -355,8 +355,6 @@ func (m *validationProxyImplementation) SaveAsChild(
 	if reqRes.Error != nil {
 		return reqRes.Error
 	}
-
-	rep.Reference = reqRes.NewObject
 
 	return nil
 }

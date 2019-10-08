@@ -61,14 +61,15 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Deposit, error) {
-	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
 
+	var ref insolar.Reference
 	var constructorError *foundation.Error
 	resultContainer := foundation.Result{
-		Returns: []interface{}{&constructorError},
+		Returns: []interface{}{&ref, &constructorError},
 	}
 	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
 	if err != nil {
@@ -83,7 +84,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Deposit,
 		return nil, constructorError
 	}
 
-	return &Deposit{Reference: *ref}, nil
+	return &Deposit{Reference: ref}, nil
 }
 
 // GetObject returns proxy object

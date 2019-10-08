@@ -85,12 +85,11 @@ func NewTranscriptCloneContext(
 }
 
 func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.IncomingRequest, result []byte, newObject *insolar.Reference, err error,
+	ctx context.Context, request record.IncomingRequest, result []byte, err error,
 ) {
 	rec := OutgoingRequest{
 		Request:   request,
 		Response:  result,
-		NewObject: newObject,
 		Error:     err,
 	}
 	t.OutgoingRequests = append(t.OutgoingRequests, rec)
