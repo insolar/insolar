@@ -79,7 +79,7 @@ func (p *contextTemplate) ensureValid() {
 	}
 }
 
-func (p *contextTemplate) template(updType stateUpdType) StateUpdateTemplate {
+func (p *contextTemplate) template(updType stateUpdKind) StateUpdateTemplate {
 	return newStateUpdateTemplate(p.mode, p.getMarker(), updType)
 }
 
@@ -194,7 +194,7 @@ func (p *slotContext) Stay() StateUpdate {
 }
 
 func (p *slotContext) WakeUp() StateUpdate {
-	return p.template(stateUpdRepeat).newUint(0)
+	return p.template(stateUpdWakeup).newUint(0)
 }
 
 func (p *slotContext) Share(data interface{}, wakeUpAfterUse bool) SharedDataLink {
@@ -210,6 +210,14 @@ func (p *slotContext) AffectedStep() SlotStep {
 }
 
 func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
+	return p._newChild(ctx, fn, false)
+}
+
+func (p *slotContext) InitChild(ctx context.Context, fn CreateFunc) SlotLink {
+	return p._newChild(ctx, fn, true)
+}
+
+func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool) SlotLink {
 	p.ensureAny2(updCtxExec, updCtxFail)
 	if fn == nil {
 		panic("illegal value")
@@ -225,13 +233,7 @@ func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 	link := newSlot.NewLink()
 
 	m.prepareNewSlot(newSlot, p.s, fn, nil)
-
-	if !p.w.NonDetachableCall(func(w FixedSlotWorker) {
-		m.startNewSlot(p.s, w)
-	}) {
-		m.syncQueue.AddAsyncUpdate(link, m.startNewSlotByLink)
-	}
-
+	m.startNewSlotByDetachable(p.s, runInit, p.w)
 	return link
 }
 

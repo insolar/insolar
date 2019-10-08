@@ -35,7 +35,6 @@ type BasicContext interface {
 
 	GetContext() context.Context
 	//GetContainer() SlotMachineState
-
 }
 
 /* During construction SlotLink() will have correct SlotID, but MAY have INVALID status, as slot was not yet created */
@@ -103,10 +102,18 @@ type ExecutionContext interface {
 	//SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)
 
+	// Allocates a new slot and schedules initialization.
+	// It is guaranteed that:
+	// 1) the child will start at the same migration state as the creator (caller of this function)
+	// 1) initialization of the new slot will happen before any migration
 	NewChild(context.Context, CreateFunc) SlotLink
-	//NewShared(context.Context, SharedState) SharedStateAdapter
 
-	UseShared(SharedDataAccessor) SharedAccessReport
+	// Same as NewChild, but also grantees that child's initialization will be completed on return.
+	// Please avoid using it unless necessary.
+	InitChild(context.Context, CreateFunc) SlotLink
+
+	//NewShared(context.Context, SharedState) SharedStateAdapter
+	UseShared(SharedDataAccessor) SharedAccessReport // ?
 
 	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
 	BargeInThisStepOnly() BargeInRequester
@@ -183,7 +190,14 @@ type FailureContext interface {
 	/* A step the slot is at */
 	AffectedStep() SlotStep
 
-	GetError() (isPanic, isAsync bool, err error)
+	GetError() error
+	IsPanic() bool
 
-	NewChild(CreateFunc) SlotLink
+	IgnoreDefaultHandler()
+
+	// See ExecutionContext.NewChild
+	NewChild(context.Context, CreateFunc) SlotLink
+
+	// See ExecutionContext.InitChild
+	InitChild(context.Context, CreateFunc) SlotLink
 }

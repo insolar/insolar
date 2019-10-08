@@ -24,11 +24,11 @@ type StateUpdate struct {
 	param0  uint32
 	param1  interface{}
 	step    SlotStep
-	updType uint8
+	updKind uint8
 }
 
 func (u StateUpdate) IsZero() bool {
-	return u.marker == 0 && u.updType == 0
+	return u.marker == 0 && u.updKind == 0
 }
 
 func (u StateUpdate) getLink() SlotLink {

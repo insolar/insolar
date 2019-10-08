@@ -54,6 +54,14 @@ func (p SlotLink) IsValid() bool {
 	return p.id == id
 }
 
+func (p SlotLink) isValidAndBusy() bool {
+	if p.s == nil {
+		return false
+	}
+	id, _, isBusy := p.s.GetState()
+	return p.id == id && isBusy
+}
+
 type StepLink struct {
 	SlotLink
 	step uint32

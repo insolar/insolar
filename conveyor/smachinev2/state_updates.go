@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	_ stateUpdType = iota
+	_ stateUpdKind = iota
 
 	stateUpdNoChange
 	stateUpdStop
@@ -45,17 +45,19 @@ const (
 	stateUpdWaitForShared
 )
 
+const stateUpdWakeup = stateUpdRepeat
+
 func init() {
 	for i := range stateUpdateTypes {
 		if stateUpdateTypes[i].filter != 0 {
-			stateUpdateTypes[i].updType = stateUpdType(i)
+			stateUpdateTypes[i].updKind = stateUpdKind(i)
 		}
 	}
 }
 
 var stateUpdateTypes = []StateUpdateType{
 	stateUpdNoChange: {
-		filter: updCtxMigrate | updCtxBargeIn,
+		filter: updCtxMigrate | updCtxBargeIn | updCtxAsyncCallback,
 
 		apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 			if !slot.isInQueue() {
@@ -66,7 +68,7 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdInternalRepeatNow: {
-		filter: 0, // this can't be created with templates
+		filter: 0, // this can't be created by a template
 		apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 			if slot.isInQueue() {
 				return false, errors.New("unexpected internal repeat")
@@ -142,7 +144,7 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdRepeat: {
-		filter: updCtxExec | updCtxBargeIn,
+		filter: updCtxExec | updCtxBargeIn | updCtxAsyncCallback,
 		params: updParamUint,
 
 		shortLoop: func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
@@ -283,12 +285,14 @@ func stateUpdateDefaultVerifyError(u interface{}) {
 	}
 }
 
-func stateUpdateDefaultError(_ *Slot, stateUpdate StateUpdate, _ FixedSlotWorker) (isAvailable bool, err error) {
+func stateUpdateDefaultError(slot *Slot, stateUpdate StateUpdate, w FixedSlotWorker) (isAvailable bool, err error) {
 	err = stateUpdate.param1.(error)
 	if err == nil {
 		err = errors.New("error argument is missing")
 	}
-	return true, err
+
+	return slot.machine.handleSlotUpdateError(slot, w,
+		getStateUpdateKind(stateUpdate) == stateUpdPanic, false, err), nil
 }
 
 func stateUpdateDefaultJump(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {

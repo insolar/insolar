@@ -133,8 +133,19 @@ func (c *adapterCallRequest) _startAsync() {
 
 	c.ctx.countAsyncCalls++
 
-	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
-		c.ctx.s.machine.addAdapterCallback(stepLink.SlotLink, fn, recovered)
+	cancelFn := c.executor.StartCall(stepLink, c.fn, func(resultFn AsyncResultFunc, recovered interface{}) {
+		c.ctx.s.machine.queueAsyncCallback(stepLink.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
+			c.ctx.countAsyncCalls--
+
+			if recovered == nil {
+				rc := asyncResultContext{slot: slot}
+				if wakeup := rc.executeResult(resultFn); wakeup {
+					return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
+				}
+			}
+
+			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdNoChange).newNoArg()
+		}, recovered)
 	}, c.cancel != nil)
 
 	if c.cancel != nil {

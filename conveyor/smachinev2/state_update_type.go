@@ -20,24 +20,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newStateUpdateTemplate(contextType updCtxMode, marker ContextMarker, updType stateUpdType) StateUpdateTemplate {
-	return stateUpdateTypes[updType].template(marker, contextType)
+func newStateUpdateTemplate(contextType updCtxMode, marker ContextMarker, updKind stateUpdKind) StateUpdateTemplate {
+	return stateUpdateTypes[updKind].template(marker, contextType)
 }
 
-func getStateUpdateType(updType stateUpdType) StateUpdateType {
+func getStateUpdateType(updType stateUpdKind) StateUpdateType {
 	return stateUpdateTypes[updType].get()
 }
 
 func typeOfStateUpdate(stateUpdate StateUpdate) StateUpdateType {
-	return stateUpdateTypes[stateUpdate.updType].get()
+	return stateUpdateTypes[stateUpdate.updKind].get()
 }
 
 func typeOfStateUpdateForMode(contextMode updCtxMode, stateUpdate StateUpdate) StateUpdateType {
-	return stateUpdateTypes[stateUpdate.updType].getForMode(contextMode)
+	return stateUpdateTypes[stateUpdate.updKind].getForMode(contextMode)
 }
 
 func newPanicStateUpdate(err error) StateUpdate {
 	return StateUpdateTemplate{t: &stateUpdateTypes[stateUpdPanic]}.newError(err)
+}
+
+func getStateUpdateKind(stateUpdate StateUpdate) stateUpdKind {
+	return stateUpdKind(stateUpdate.updKind)
 }
 
 type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error)
@@ -45,7 +49,7 @@ type SlotUpdatePrepareFunc func(slot *Slot, stateUpdate *StateUpdate)
 type SlotUpdateShortLoopFunc func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool
 
 type StateUpdateType struct {
-	updType stateUpdType
+	updKind stateUpdKind
 
 	/* Runs within a valid ExecutionContext / detachable */
 	shortLoop SlotUpdateShortLoopFunc
@@ -70,7 +74,7 @@ type StateUpdateTemplate struct {
 }
 
 type stateUpdBaseType = uint8
-type stateUpdType stateUpdBaseType
+type stateUpdKind stateUpdBaseType
 type stateUpdParam uint8
 type updCtxMode uint32
 
@@ -98,7 +102,7 @@ func (v *StateUpdateType) verify(ctxType updCtxMode) {
 	if ctxType <= updCtxDiscarded {
 		panic("illegal value")
 	}
-	if v.updType == 0 {
+	if v.updKind == 0 {
 		panic("unknown type")
 	}
 	if v.apply == nil {
@@ -120,7 +124,7 @@ func (v *StateUpdateType) getForMode(ctxType updCtxMode) StateUpdateType {
 }
 
 func (v *StateUpdateType) get() StateUpdateType {
-	if v.updType == 0 {
+	if v.updKind == 0 {
 		panic("unknown type")
 	}
 	if v.apply == nil {
@@ -169,7 +173,7 @@ func (v StateUpdateTemplate) newNoArg() StateUpdate {
 	v.ensureTemplate(0)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 	}
 }
 
@@ -179,7 +183,7 @@ func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc)
 	v.ensureTemplate(updParamStep | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		step:    slotStep,
 		param1:  prepare,
 	}
@@ -189,7 +193,7 @@ func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare func(), unt
 	v.ensureTemplate(updParamStep | updParamUint | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		step:    slotStep,
 		param1:  prepare,
 		param0:  until,
@@ -200,7 +204,7 @@ func (v StateUpdateTemplate) newStepUint(slotStep SlotStep, param uint32) StateU
 	v.ensureTemplate(updParamStep | updParamUint)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		param0:  param,
 		step:    slotStep,
 	}
@@ -210,7 +214,7 @@ func (v StateUpdateTemplate) newStepLink(slotStep SlotStep, link SlotLink) State
 	v.ensureTemplate(updParamStep | updParamLink)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		link:    link.s,
 		param0:  uint32(link.id),
 		step:    slotStep,
@@ -221,7 +225,7 @@ func (v StateUpdateTemplate) newVar(u interface{}) StateUpdate {
 	v.ensureTemplate(updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		param1:  v.t.verifyVar(u),
 	}
 }
@@ -230,7 +234,7 @@ func (v StateUpdateTemplate) newError(e error) StateUpdate {
 	v.ensureTemplate(updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		param1:  v.t.verifyVar(e),
 	}
 }
@@ -239,7 +243,7 @@ func (v StateUpdateTemplate) newUint(param uint32) StateUpdate {
 	v.ensureTemplate(updParamUint)
 	return StateUpdate{
 		marker:  v.marker,
-		updType: stateUpdBaseType(v.t.updType),
+		updKind: stateUpdBaseType(v.t.updKind),
 		param0:  param,
 	}
 }

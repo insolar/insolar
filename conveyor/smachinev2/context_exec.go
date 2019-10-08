@@ -59,12 +59,12 @@ func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalUpdate 
 	return &ncu
 }
 
-func (p *executionContext) newConditionalUpdate(updType stateUpdType) conditionalUpdate {
+func (p *executionContext) newConditionalUpdate(updType stateUpdKind) conditionalUpdate {
 	p.ensure(updCtxExec)
 	return conditionalUpdate{template: newStateUpdateTemplate(p.mode, p.getMarker(), updType)}
 }
 
-func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateConditionalUpdate {
+func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateConditionalUpdate {
 	p.ensure(updCtxExec)
 	if link.IsEmpty() {
 		panic("illegal value")

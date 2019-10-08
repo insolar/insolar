@@ -92,3 +92,41 @@ func (p *migrationContext) executeMigration(fn MigrateFunc) (stateUpdate StateUp
 
 	return p.ensureAndPrepare(p.s, fn(p))
 }
+
+/* ========================================================================= */
+
+var _ FailureContext = &failureContext{}
+
+type failureContext struct {
+	slotContext
+	isPanic, isAsync bool
+	isIgnoreDefault  bool
+	err              error
+}
+
+func (p *failureContext) GetError() error {
+	p.ensure(updCtxFail)
+	return p.err
+}
+
+func (p *failureContext) IsPanic() bool {
+	p.ensure(updCtxFail)
+	return p.isPanic
+}
+
+func (p *failureContext) IgnoreDefaultHandler() {
+	p.isIgnoreDefault = true
+}
+
+func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (err error) {
+	p.setMode(updCtxFail)
+	defer func() {
+		p.discardAndCapture("failure handler", recover(), &err)
+	}()
+	err = p.err // ensure it will be included on panic
+	fn(p)
+	if p.isIgnoreDefault {
+		return nil
+	}
+	return err
+}
