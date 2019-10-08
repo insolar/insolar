@@ -82,6 +82,8 @@ var (
 	ContractMigrationWallet = GenesisRef(insolar.GenesisNameMigrationAdminWallet)
 	// ContractMigrationAccount is the migration account contract reference.
 	ContractMigrationAccount = GenesisRef(insolar.GenesisNameMigrationAdminAccount)
+	// ContractMigrationDeposit is the migration deposit contract reference.
+	ContractMigrationDeposit = GenesisRef(insolar.GenesisNameMigrationAdminDeposit)
 	// ContractDeposit is the deposit contract reference.
 	ContractDeposit = GenesisRef(insolar.GenesisNameDeposit)
 	// ContractCostCenter is the cost center contract reference.

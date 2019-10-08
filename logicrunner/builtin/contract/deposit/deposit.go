@@ -157,14 +157,15 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		if err != nil {
 			return fmt.Errorf("failed to get wallet: %s", err.Error())
 		}
-		if ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit("genesis_deposit"); ok {
-			_, err := deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference())
-			if err != nil {
-				return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
-			}
-			return nil
+		ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit("migrationdeposit")
+		if !ok {
+			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
 		}
-		return fmt.Errorf("cannot find migtation deposit")
+		_, err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference())
+		if err != nil {
+			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
+		}
+		return nil
 	}
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
 	return nil
