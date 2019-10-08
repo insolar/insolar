@@ -34,7 +34,7 @@ const (
 	FormatSchema
 
 	NilRef   = "<nil>" // non-parsable
-	SchemaV1 = "insolarv1"
+	SchemaV1 = "insolar"
 )
 
 type Encoder interface {
@@ -163,12 +163,13 @@ func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 
 func (v encoder) appendPrefix(b *strings.Builder) {
 
-	if v.options&(EncodingSchema|FormatSchema) != 0 {
-		b.WriteString(v.byteEncoderName)
-		if v.options&FormatSchema != 0 {
-			b.WriteString("+" + SchemaV1)
-		}
-		b.WriteByte(':')
+	switch v.options & (EncodingSchema | FormatSchema) {
+	case EncodingSchema | FormatSchema:
+		b.WriteString(SchemaV1 + "+" + v.byteEncoderName + ":")
+	case FormatSchema:
+		b.WriteString(SchemaV1 + ":")
+	case EncodingSchema:
+		b.WriteString(v.byteEncoderName + ":")
 	}
 
 	if len(v.authorityName) > 0 {

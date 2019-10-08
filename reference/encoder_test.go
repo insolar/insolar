@@ -186,7 +186,7 @@ func TestEncoder_Encode(t *testing.T) {
 		enc := NewBase58Encoder(FormatSchema)
 		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
-		assert.Contains(t, result, "base58+insolarv1:")
+		assert.Contains(t, result, "insolar:")
 	}
 
 	{
@@ -261,7 +261,7 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(FormatSchema)
 		result, _ := enc.EncodeRecord(&g.addressLocal)
-		assert.Contains(t, result, "base58+insolarv1:")
+		assert.Contains(t, result, "insolar:")
 	}
 
 	{
@@ -360,7 +360,7 @@ func TestEncoder_FixedEncode(t *testing.T) {
 
 		val, err := enc.Encode(g)
 		assert.NoError(t, err)
-		assert.Equal(t, "base58+insolarv1:011dWdkKLrn91P6sfRJgRSmk8j", val)
+		assert.Equal(t, "insolar:011dWdkKLrn91P6sfRJgRSmk8j", val)
 	}
 }
 
@@ -372,22 +372,22 @@ func TestNewBase64Encoder(t *testing.T) {
 		enc := NewBase64Encoder(FormatSchema)
 		result, err := enc.EncodeRecord(&g.addressLocal)
 		assert.NoError(t, err)
-		assert.Contains(t, result, "base64+insolarv1:")
+		assert.Contains(t, result, "insolar:")
 	}
 
 	{
 		g := fixedReference()
-		enc := NewBase64Encoder(FormatSchema)
+		enc := NewBase64Encoder(FormatSchema | EncodingSchema)
 		result, err := enc.Encode(g)
 		assert.NoError(t, err)
-		assert.Equal(t, result, "base64+insolarv1:1Fu4_KAuts3xYIbbZVSakGpUEaAtOfIt2OhsdSdSVXIQ.1Fu4_KMvgJVqlt9RL7ED4TIkrm__UNimwIjvupfT3Q5E")
+		assert.Equal(t, result, "insolar+base64:1Fu4_KAuts3xYIbbZVSakGpUEaAtOfIt2OhsdSdSVXIQ.1Fu4_KMvgJVqlt9RL7ED4TIkrm__UNimwIjvupfT3Q5E")
 	}
 
 	{
 		g := fixedSelfReferenceWithSpecialPulseZeroed()
-		enc := NewBase64Encoder(FormatSchema)
+		enc := NewBase64Encoder(FormatSchema | EncodingSchema)
 		result, err := enc.Encode(g)
 		assert.NoError(t, err)
-		assert.Equal(t, result, "base64+insolarv1:0AABC_QQDdPaSS5jL-HE_jZYtfA")
+		assert.Equal(t, result, "insolar+base64:0AABC_QQDdPaSS5jL-HE_jZYtfA")
 	}
 }
