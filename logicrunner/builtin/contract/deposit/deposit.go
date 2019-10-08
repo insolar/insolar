@@ -18,14 +18,13 @@ package deposit
 
 import (
 	"fmt"
-	"math/big"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
+	"math/big"
 )
 
 const XNS = "XNS"
@@ -49,15 +48,16 @@ type Deposit struct {
 // Form of Deposit that is applied in API
 type DepositOut struct {
 	Balance                 string                 `json:"balance"`
-	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"`
+	HoldStartDate           int64                  `json:"holdStartDate"`
+	PulseDepositUnHold      int64                  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms []DaemonConfirm        `json:"confirmerReferences"`
 	Amount                  string                 `json:"amount"`
 	TxHash                  string                 `json:"ethTxHash"`
 	VestingType             foundation.VestingType `json:"vestingType"`
-	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
-	Lockup                  int64                  `json:"lockupInPulses"`
-	Vesting                 int64                  `json:"vestingInPulses"`
-	VestingStep             int64                  `json:"vestingStepInPulses"`
+	MaturePulse             int64                  `json:"matureDate"`
+	Lockup                  int64                  `json:"lockup"`
+	Vesting                 int64                  `json:"vesting"`
+	VestingStep             int64                  `json:"vestingStep"`
 }
 
 type DaemonConfirm struct {
@@ -67,17 +67,27 @@ type DaemonConfirm struct {
 
 func (d Deposit) toOut() DepositOut {
 	var daemonConfirms = make([]DaemonConfirm, 0, len(d.MigrationDaemonConfirms))
+	var pulseDepositUnHold, matureTime int64
 	for k, v := range d.MigrationDaemonConfirms {
 		daemonConfirms = append(daemonConfirms, DaemonConfirm{Reference: k, Amount: v})
 	}
+	t, err := d.PulseDepositUnHold.AsApproximateTime()
+	if err == nil {
+		pulseDepositUnHold = t.UnixNano()
+	}
+	mature, err := d.MaturePulse.AsApproximateTime()
+	if err == nil {
+		matureTime = mature.UnixNano()
+	}
 	return DepositOut{
 		Balance:                 d.Balance,
-		PulseDepositUnHold:      d.PulseDepositUnHold,
+		HoldStartDate:           pulseDepositUnHold - d.Lockup,
+		PulseDepositUnHold:      pulseDepositUnHold,
 		MigrationDaemonConfirms: daemonConfirms,
 		Amount:                  d.Amount,
 		TxHash:                  d.TxHash,
 		VestingType:             d.VestingType,
-		MaturePulse:             d.MaturePulse,
+		MaturePulse:             matureTime,
 		Lockup:                  d.Lockup,
 		Vesting:                 d.Vesting,
 		VestingStep:             d.VestingStep,
