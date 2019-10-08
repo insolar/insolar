@@ -208,17 +208,11 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// if we replay abandoned request after node was down we can already have Result
 	if outReqInfo.Result != nil {
-		rec := record.Material{}
-		err := rec.Unmarshal(outReqInfo.Result)
+		returns, err := unwrapResult(ctx, outReqInfo.Result)
 		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal existing result")
+			return errors.Wrap(err, "couldn't unwrap result from ledger")
 		}
-		virtual := record.Unwrap(&rec.Virtual)
-		resultRecord, ok := virtual.(*record.Result)
-		if !ok {
-			return fmt.Errorf("unexpected record %T", virtual)
-		}
-		rep.Result = resultRecord.Payload
+		rep.Result = returns
 		return nil
 	}
 
@@ -265,6 +259,16 @@ func (m *executionProxyImplementation) SaveAsChild(
 	}
 
 	logger.Debug("registered outgoing request")
+
+	// if we replay abandoned request after node was down we can already have Result
+	if outReqInfo.Result != nil {
+		returns, err := unwrapResult(ctx, outReqInfo.Result)
+		if err != nil {
+			return errors.Wrap(err, "couldn't unwrap result from ledger")
+		}
+		rep.Result = returns
+		return nil
+	}
 
 	// Register result of the outgoing method
 	outgoingReqRef := *getRequestReference(outReqInfo)
@@ -457,4 +461,20 @@ func buildOutgoingSaveAsChildRequest(
 	}
 
 	return &outgoing
+}
+
+func unwrapResult(
+	_ context.Context, materialBlob []byte,
+) ([]byte, error) {
+	rec := record.Material{}
+	err := rec.Unmarshal(materialBlob)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal existing result")
+	}
+	virtual := record.Unwrap(&rec.Virtual)
+	resultRecord, ok := virtual.(*record.Result)
+	if !ok {
+		return nil, fmt.Errorf("unexpected record %T", virtual)
+	}
+	return resultRecord.Payload, nil
 }
