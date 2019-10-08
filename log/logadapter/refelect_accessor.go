@@ -217,7 +217,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type, n
 	//reflect.UnsafePointer
 }
 
-var prepareObjTypes = []struct {
+var prepareObjTypes = []struct { // MUST be ordered, not map
 	t  reflect.Type
 	fn func(interface{}) (interface{}, bool)
 }{
