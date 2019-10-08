@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock_test.go -g
 
 type ResultMatcher interface {
 	AddStillExecution(ctx context.Context, msg payload.StillExecuting)

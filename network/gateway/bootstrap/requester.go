@@ -71,7 +71,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/gateway/bootstrap.Requester -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/gateway/bootstrap.Requester -o ./ -s _mock_test.go -g
 
 type Requester interface {
 	Authorize(context.Context, insolar.Certificate) (*packet.Permit, error)

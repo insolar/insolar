@@ -58,7 +58,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotStorage -o ../../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotStorage -o ../../testutils/network -s _mock_test.go -g
 
 // SnapshotStorage provides methods for accessing Snapshot.
 type SnapshotStorage interface {

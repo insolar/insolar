@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/machinesmanager.MachinesManager -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/machinesmanager.MachinesManager -o ./ -s _mock_test.go -g
 
 type MachinesManager interface {
 	RegisterExecutor(t insolar.MachineType, e insolar.MachineLogicExecutor) error

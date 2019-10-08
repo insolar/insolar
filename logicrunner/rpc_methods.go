@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock_test.go -g
 
 type ProxyImplementation interface {
 	GetCode(context.Context, *common.Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error

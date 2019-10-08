@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.InitialStateAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.InitialStateAccessor -o ./ -s _mock_test.go -g
 
 // InitialStateAccessor interface can receive initial state for lights
 type InitialStateAccessor interface {

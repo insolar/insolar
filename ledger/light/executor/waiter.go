@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetWaiter -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetWaiter -o ./ -s _mock_test.go -g
 // JetWaiter provides method for locking on jet id.
 type JetWaiter interface {
 	Wait(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) error
@@ -35,7 +35,7 @@ type HotDataStatusChecker interface {
 	IsReceived(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetReleaser -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetReleaser -o ./ -s _mock_test.go -g
 // JetReleaser provides methods for releasing jet waiters.
 type JetReleaser interface {
 	Unlock(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.JetID) error

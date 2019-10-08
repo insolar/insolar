@@ -82,7 +82,7 @@ type BootstrapResult struct {
 // RequestHandler handler function to process incoming requests from network and return responses to these requests.
 type RequestHandler func(ctx context.Context, request ReceivedPacket) (response Packet, err error)
 
-//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock_test.go -g
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
@@ -127,14 +127,14 @@ type Future interface {
 	Cancel()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock_test.go -g
 
 // PulseHandler interface to process new pulse.
 type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket ReceivedPacket)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock_test.go -g
 
 //Deprecated: network internal usage only
 type OriginProvider interface {
@@ -142,7 +142,7 @@ type OriginProvider interface {
 	GetOrigin() insolar.NetworkNode
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock_test.go -g
 
 //Deprecated: todo: move GetWorkingNodes to ServiceNetwork facade
 type NodeNetwork interface {
@@ -152,7 +152,7 @@ type NodeNetwork interface {
 	GetAccessor(insolar.PulseNumber) Accessor
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock_test.go -g
 
 // NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
@@ -171,7 +171,7 @@ type PartitionPolicy interface {
 	ShardsCount() int
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock_test.go -g
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
@@ -179,7 +179,7 @@ type RoutingTable interface {
 	Resolve(insolar.Reference) (*host.Host, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock_test.go -g
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
@@ -198,7 +198,7 @@ type Accessor interface {
 	GetActiveNodeByAddr(address string) insolar.NetworkNode
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock_test.go -g
 
 // Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
@@ -206,7 +206,7 @@ type Gatewayer interface {
 	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock_test.go -g
 
 // Gateway responds for whole network state
 type Gateway interface {
@@ -245,7 +245,7 @@ type Bootstrapper interface {
 	HandleReconnect(context.Context, Packet) (Packet, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.Aborter -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.Aborter -o ./ -s _mock_test.go -g
 
 // Aborter provide method for immediately stop node
 type Aborter interface {
@@ -253,7 +253,7 @@ type Aborter interface {
 	Abort(ctx context.Context, reason string)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network.TerminationHandler -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network.TerminationHandler -o ../testutils -s _mock_test.go -g
 
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 type TerminationHandler interface {

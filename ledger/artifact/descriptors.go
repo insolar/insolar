@@ -28,7 +28,7 @@ type RefIterator interface {
 	HasNext() bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/artifact.ObjectDescriptor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/artifact.ObjectDescriptor -o ./ -s _mock_test.go -g
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {

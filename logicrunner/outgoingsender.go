@@ -25,7 +25,7 @@ import (
 var OutgoingRequestSenderDefaultQueueLimit = 1000
 var OutgoingRequestSenderDefaultGoroutineLimit = int32(5000)
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock_test.go -g
 
 // OutgoingRequestSender is a type-safe wrapper for an actor implementation.
 // Currently OutgoingRequestSender is implemented as a pair of actors. OutgoingSenderActor is

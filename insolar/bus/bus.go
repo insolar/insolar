@@ -50,7 +50,7 @@ const (
 	TopicIncomingRequestResults = "TopicIncomingRequestResults"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock_test.go -g
 
 // Sender interface sends messages by watermill.
 type Sender interface {

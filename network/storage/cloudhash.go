@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashStorage -o ../../testutils/network -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashStorage -o ../../testutils/network -s _mock_test.go -g
 
 // CloudHashStorage provides methods for accessing CloudHash.
 type CloudHashStorage interface {

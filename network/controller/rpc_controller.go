@@ -68,7 +68,7 @@ import (
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
-//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o . -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o . -s _mock_test.go -g
 
 type RPCController interface {
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)

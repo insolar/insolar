@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock_test.go -g
 
 // Client is a high level storage interface.
 type Client interface {
@@ -79,7 +79,7 @@ type Client interface {
 	InjectFinish()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock_test.go -g
 
 // CodeDescriptor represents meta info required to fetch all code data.
 type CodeDescriptor interface {
@@ -93,7 +93,7 @@ type CodeDescriptor interface {
 	Code() ([]byte, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock_test.go -g
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type ObjectDescriptor interface {
@@ -116,7 +116,7 @@ type ObjectDescriptor interface {
 	EarliestRequestID() *insolar.ID
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.PrototypeDescriptor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.PrototypeDescriptor -o ./ -s _mock_test.go -g
 
 // PrototypeDescriptor represents meta info required to fetch all prototype data.
 type PrototypeDescriptor interface {
@@ -130,7 +130,7 @@ type PrototypeDescriptor interface {
 	Code() *insolar.Reference
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock_test.go -g
 
 // DescriptorsCache provides convenient way to get prototype and code descriptors
 // of objects without fetching them twice

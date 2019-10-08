@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/shutdown"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock_test.go -g
 type StateStorage interface {
 	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI

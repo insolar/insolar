@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.WriteAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.WriteAccessor -o ./ -s _mock_test.go -g
 
 type WriteAccessor interface {
 	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
@@ -32,7 +32,7 @@ type WriteAccessor interface {
 	Begin(context.Context, insolar.PulseNumber) (done func(), err error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.WriteManager -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.WriteManager -o ./ -s _mock_test.go -g
 
 type WriteManager interface {
 	// Open marks pulse number as opened for writing. It can be used later by Begin from accessor.

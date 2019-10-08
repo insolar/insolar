@@ -40,21 +40,21 @@ type NetworkStatus interface {
 	GetNetworkStatus() StatusReply
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Leaver -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.Leaver -o ../testutils -s _mock_test.go -g
 
 type Leaver interface {
 	// Leave notify other nodes that this node want to leave and doesn't want to receive new tasks
 	Leave(ctx context.Context, ETA PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.CertificateGetter -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.CertificateGetter -o ../testutils -s _mock_test.go -g
 
 type CertificateGetter interface {
 	// GetState returns our current thoughs about whole network
 	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock_test.go -g
 
 // PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {

@@ -104,7 +104,7 @@ func (c *descriptorsCache) GetCode(
 	return res.(CodeDescriptor), nil
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.cache -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.cache -o ./ -s _mock_test.go -g
 
 type cache interface {
 	get(ref insolar.Reference, getter func() (val interface{}, err error)) (val interface{}, err error)

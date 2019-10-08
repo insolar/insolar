@@ -25,7 +25,7 @@ type APIRunner interface {
 	IsAPIRunner() bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.AvailabilityChecker -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.AvailabilityChecker -o ../testutils -s _mock_test.go -g
 
 // AvailabilityChecker component checks if insolar network can't process any new requests
 type AvailabilityChecker interface {

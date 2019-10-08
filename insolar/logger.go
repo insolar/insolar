@@ -60,7 +60,7 @@ const DefaultLogOutput = StdErrOutput
 
 const DefaultOutputParallelLimit = 5
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Logger -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.Logger -o ./ -s _mock_test.go -g
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {

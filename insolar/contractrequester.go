@@ -20,7 +20,7 @@ import (
 	"context"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.ContractRequester -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.ContractRequester -o ../testutils -s _mock_test.go -g
 
 // Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {

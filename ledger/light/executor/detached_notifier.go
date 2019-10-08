@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.DetachedNotifier -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.DetachedNotifier -o ./ -s _mock_test.go -g
 
 type DetachedNotifier interface {
 	Notify(

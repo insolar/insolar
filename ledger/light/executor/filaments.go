@@ -37,7 +37,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCalculator -o ./ -s _mock_test.go -g
 
 type FilamentCalculator interface {
 	// Requests returns request records for objectID's chain, starts from provided id until provided pulse.
@@ -97,7 +97,7 @@ type FilamentsRequestInfo struct {
 	OldestMutable bool
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock_test.go -g
 
 type FilamentCleaner interface {
 	ClearIfLonger(limit int)

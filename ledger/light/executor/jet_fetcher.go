@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock_test.go -g
 
 // JetFetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
 // jet tree.

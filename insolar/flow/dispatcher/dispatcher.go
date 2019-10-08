@@ -41,7 +41,7 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock_test.go -g
 type Dispatcher interface {
 	BeginPulse(ctx context.Context, pulse insolar.Pulse)
 	ClosePulse(ctx context.Context, pulse insolar.Pulse)

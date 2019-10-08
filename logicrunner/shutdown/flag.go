@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/shutdown.Flag -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/shutdown.Flag -o ./ -s _mock_test.go -g
 type Flag interface {
 	Stop(ctx context.Context) func()
 	Done(ctx context.Context, isDone func() bool)

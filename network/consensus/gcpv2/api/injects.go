@@ -75,7 +75,7 @@ type ConsensusController interface {
 	Abort()
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api.CandidateControlFeeder -o . -s _mock_test.go -g
 type CandidateControlFeeder interface {
 	PickNextJoinCandidate() (profiles.CandidateProfile /* joinerSecret */, cryptkit.DigestHolder)
 	RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) bool

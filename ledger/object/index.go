@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock_test.go -g
 
 // IndexModifier provides methods for modifying buckets of index.
 // Lifeline contains buckets with pn->objID->Bucket hierarchy.
@@ -35,7 +35,7 @@ type IndexModifier interface {
 	UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock_test.go -g
 
 // IndexAccessor provides an interface for fetching buckets from an index.
 type IndexAccessor interface {
@@ -46,7 +46,7 @@ type IndexAccessor interface {
 	LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexModifier -o ./ -s _mock_test.go
 
 // MemoryIndexModifier writes index to in-memory storage.
 type MemoryIndexModifier interface {
@@ -54,7 +54,7 @@ type MemoryIndexModifier interface {
 	SetIfNone(ctx context.Context, pn insolar.PulseNumber, index record.Index)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexAccessor -o ./ -s _mock_test.go -g
 
 // MemoryIndexAccessor provides an interface for fetching buckets from an index.
 type MemoryIndexAccessor interface {
@@ -63,21 +63,21 @@ type MemoryIndexAccessor interface {
 	ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock_test.go -g
 
 type IndexStorage interface {
 	IndexAccessor
 	IndexModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexStorage -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexStorage -o ./ -s _mock_test.go -g
 
 type MemoryIndexStorage interface {
 	MemoryIndexAccessor
 	MemoryIndexModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock_test.go -g
 
 // IndexCleaner provides an interface for removing backets from a storage.
 type IndexCleaner interface {

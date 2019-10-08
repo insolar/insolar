@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock_test.go -g
 
 // JetCalculator provides get jets method for provided pulse.
 type JetCalculator interface {

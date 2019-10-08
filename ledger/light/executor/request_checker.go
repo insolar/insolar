@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock_test.go -g
 
 type RequestChecker interface {
 	// ValidateRequest is a smoke test. It doesn't perform expensive checks. Good to check requests before deduplication.

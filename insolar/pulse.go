@@ -83,7 +83,7 @@ func NewPulseNumberFromStr(pn string) (PulseNumber, error) {
 	return PulseNumber(i), nil
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock_test.go -g
 
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {

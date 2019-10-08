@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.Cleaner -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.Cleaner -o ./ -s _mock_test.go -g
 
 // Cleaner is an interface that represents a cleaner-component
 // It's supposed, that all the process of cleaning data from LME will be doing by it

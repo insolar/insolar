@@ -55,7 +55,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior.Report -o . -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior.Report -o . -s _mock_test.go -g
 
 type Report interface {
 	CaptureMark() interface{}
