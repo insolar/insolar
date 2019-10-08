@@ -57,7 +57,6 @@ func TestSetResult_Proceed(t *testing.T) {
 	sender := bus.NewSenderMock(mc)
 	sender.ReplyMock.Return()
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -150,40 +149,39 @@ func TestSetResult_Proceed(t *testing.T) {
 		return nil
 	})
 
+	vImmut := record.Wrap(&record.IncomingRequest{Immutable: true})
+	vMut := record.Wrap(&record.IncomingRequest{})
+	opened := []record.CompositeFilamentRecord{
+		{
+			RecordID: earliestID,
+			Record:   record.Material{Virtual: vImmut},
+		},
+		{
+			RecordID: requestID,
+			Record:   record.Material{Virtual: vMut},
+		},
+		{
+			RecordID: gen.ID(),
+			Record: record.Material{
+				Virtual: record.Wrap(&record.OutgoingRequest{
+					Reason:     *insolar.NewReference(requestID),
+					ReturnMode: record.ReturnSaga,
+				}),
+			},
+		},
+	}
+
 	filaments := executor.NewFilamentCalculatorMock(mc)
 	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, *resultRecord, r)
 		return nil, nil
 	})
-	filaments.OpenedRequestsMock.Set(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
+	filaments.OpenedRequestsMock.Inspect(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) {
 		require.Equal(t, objectID, objID)
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
-
-		vImmut := record.Wrap(&record.IncomingRequest{Immutable: true})
-		vMut := record.Wrap(&record.IncomingRequest{})
-		opened = []record.CompositeFilamentRecord{
-			{
-				RecordID: earliestID,
-				Record:   record.Material{Virtual: vImmut},
-			},
-			{
-				RecordID: requestID,
-				Record:   record.Material{Virtual: vMut},
-			},
-			{
-				RecordID: gen.ID(),
-				Record: record.Material{
-					Virtual: record.Wrap(&record.OutgoingRequest{
-						Reason:     *insolar.NewReference(requestID),
-						ReturnMode: record.ReturnSaga,
-					}),
-				},
-			},
-		}
-		return opened, nil
-	})
+	}).Return(opened, nil)
 
 	detachedNotifier.NotifyMock.Inspect(func(ctx context.Context, openedRequests []record.CompositeFilamentRecord, objID insolar.ID, closedRequestID insolar.ID) {
 		require.Equal(t, objectID, objID)
@@ -215,7 +213,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	indexes.ForIDMock.Return(record.Index{}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()
 
-	sender := bus.NewSenderMock(t)
+	sender := bus.NewSenderMock(mc)
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -253,7 +251,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 			RecordID: resultID,
 		}, nil
 	})
-	sender.ReplyMock.Inspect(func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
+	sender.ReplyMock.Set(func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
 		require.Equal(t, msg, receivedMeta)
 
 		resp, err := payload.Unmarshal(resMsg.Payload)
@@ -266,7 +264,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		err = receivedResult.Unmarshal(res.Result)
 		require.NoError(t, err)
 		require.Equal(t, virtual, receivedResult.Virtual)
-	}).Return()
+	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
@@ -291,7 +289,6 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 
 	sender := bus.NewSenderMock(mc)
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -361,7 +358,7 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -402,7 +399,6 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 
 	sender := bus.NewSenderMock(mc)
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -472,7 +468,7 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -511,7 +507,6 @@ func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
 
 	sender := bus.NewSenderMock(mc)
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -581,7 +576,7 @@ func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			{
 				RecordID: gen.ID(),
 				Record: record.Material{
@@ -629,7 +624,6 @@ func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
 
 	sender := bus.NewSenderMock(mc)
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -698,7 +692,7 @@ func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -746,7 +740,6 @@ func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
 
 	sender := bus.NewSenderMock(mc)
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -809,7 +802,7 @@ func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			// Here we have unclosed Mutable request (Immutable == false below)
 			// and other IDs for closing attempt. We should get an error from check this record.
 			{
@@ -863,7 +856,6 @@ func TestSetResult_Proceed_CloseImmutOutWhenOpenedMutableInFilaments(t *testing.
 	sender := bus.NewSenderMock(mc)
 	sender.ReplyMock.Return()
 	detachedNotifier := executor.NewDetachedNotifierMock(mc)
-	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -959,7 +951,7 @@ func TestSetResult_Proceed_CloseImmutOutWhenOpenedMutableInFilaments(t *testing.
 
 		vImmut := record.Wrap(&record.IncomingRequest{Immutable: true})
 		vMut := record.Wrap(&record.IncomingRequest{})
-		opened = []record.CompositeFilamentRecord{
+		opened := []record.CompositeFilamentRecord{
 			{
 				RecordID: earliestID,
 				Record:   record.Material{Virtual: vImmut},

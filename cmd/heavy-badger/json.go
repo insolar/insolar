@@ -17,40 +17,48 @@
 package main
 
 import (
-	"os"
-
-	"github.com/spf13/cobra"
+	"encoding/json"
+	"fmt"
 )
 
-type appCtx struct {
-	dataDir string
+type jsonCfg struct {
+	pretty bool
+	indent string
+	prefix string
 }
 
-func main() {
-	arg0 := os.Args[0]
+type jsonOpt func(*jsonCfg)
 
-	app := appCtx{}
-	var rootCmd = &cobra.Command{
-		Use: arg0,
-		Run: func(_ *cobra.Command, _ []string) {
-			fatalf("bye!")
-		},
+func setPretty(pretty bool) jsonOpt {
+	return func(cfg *jsonCfg) { cfg.pretty = pretty }
+}
+
+func jsonPrefix(prefix string) jsonOpt {
+	return func(cfg *jsonCfg) { cfg.prefix = prefix }
+}
+
+func printJSON(v interface{}, opts ...jsonOpt) {
+	cfg := &jsonCfg{
+		indent: "  ",
+		prefix: "",
 	}
-	dirFlagName := "dir"
-	rootCmd.PersistentFlags().StringVarP(&app.dataDir, dirFlagName, "d", "", "badger data dir")
-	if err := rootCmd.MarkPersistentFlagRequired(dirFlagName); err != nil {
-		fatalf("cobra error: %v", err)
+	for _, o := range opts {
+		o(cfg)
 	}
 
-	rootCmd.AddCommand(
-		scopesListCommand(),
-		app.fixCommand(),
-		app.valueHexDumpCommand(),
-		app.scanCommand(),
-	)
-
-	err := rootCmd.Execute()
+	var b []byte
+	var err error
+	if cfg.pretty {
+		b, err = json.MarshalIndent(v, cfg.prefix, cfg.indent)
+	} else {
+		b, err = json.Marshal(v)
+	}
 	if err != nil {
-		fatalf("%v execution failed: %v", arg0, err)
+		panic(err)
 	}
+
+	if cfg.pretty {
+		fmt.Printf(cfg.prefix)
+	}
+	fmt.Printf("%s\n", b)
 }

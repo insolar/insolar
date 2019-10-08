@@ -3,7 +3,7 @@ package critlog
 import (
 	"context"
 	"errors"
-	"io"
+	"github.com/insolar/insolar/log/logoutput"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -20,6 +20,7 @@ const (
 	BufferDropOnFatal BackpressureBufferFlags = 1 << iota
 	// Buffer may apply additional delay to writes done into a queue to equalize timings.
 	// This mode requires either BufferTrackWriteDuration flag or use of SetAvgWriteDuration() externally.
+	// This flag has no effect when bufferBypassForRegular is set.
 	BufferWriteDelayFairness
 	// With this flag the buffer will update GetAvgWriteDuration with every regular write.
 	BufferTrackWriteDuration
@@ -29,11 +30,11 @@ const (
 	// USE WITH CAUTION! This flag enables to use argument of Write([]byte) outside of the call.
 	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
 	BufferReuse
-	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
+	// INTERNAL USE ONLY. Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
 	bufferBypassForRegular
 )
 
-func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites uint8,
+func NewBackpressureBufferWithBypass(output *logoutput.Adapter, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
@@ -51,7 +52,7 @@ func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites
 	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|bufferBypassForRegular, missFn, bypassCond)
 }
 
-func NewBackpressureBuffer(output io.Writer, bufSize int, maxParWrites uint8,
+func NewBackpressureBuffer(output *logoutput.Adapter, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
@@ -67,9 +68,13 @@ func NewBackpressureBuffer(output io.Writer, bufSize int, maxParWrites uint8,
 	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags, missFn, nil)
 }
 
-func newBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, maxParWrites uint8,
+func newBackpressureBuffer(output *logoutput.Adapter, bufSize int, extraPenalty uint8, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc, bypassCond *sync.Cond,
 ) *BackpressureBuffer {
+
+	if output == nil {
+		panic("illegal value")
+	}
 
 	if bufSize <= 1 {
 		panic("illegal value")
@@ -80,7 +85,7 @@ func newBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 	}
 
 	internal := &internalBackpressureBuffer{
-		output:       NewFlushBypass(output),
+		output:       output,
 		flags:        flags,
 		extraPenalty: extraPenalty,
 		maxParWrites: maxParWrites,
@@ -113,8 +118,7 @@ type BackpressureBuffer struct {
 }
 
 type internalBackpressureBuffer struct {
-	output  FlushBypass
-	fatal   FatalHelper
+	output  *logoutput.Adapter
 	missFn  MissedEventFunc
 	writeFn func(insolar.LogLevel, []byte, int64) (int, error)
 
@@ -171,36 +175,26 @@ func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffe
 	return p
 }
 
-func (p *internalBackpressureBuffer) SetNoClosePropagation() bool {
-	return p.output.SetNoClosePropagation()
-}
-
 const internalOpLevel = insolar.LogLevel(255)
 
 func (p *internalBackpressureBuffer) Close() error {
-	ok, closeDown := p.output.SetClosed()
-
-	if p.fatal.IsFatal() {
-		if closeDown {
-			_, _ = p.output.DoClose()
-		}
-		p.fatal.LockFatal()
-		return nil
+	if p.output.IsFatal() {
+		err := p.output.DirectClose()
+		_ = p.output.Close()
+		return err
 	}
 
-	if !ok {
+	if !p.output.SetClosed() {
 		return errors.New("closed")
 	}
 
 	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
-	if closeDown {
-		_, _ = p.output.DoClose()
-	}
+	_ = p.output.DirectClose()
 	return nil
 }
 
 func (p *internalBackpressureBuffer) closeWorker() {
-	if p.fatal.IsFatal() || p.output.IsClosed() {
+	if p.output.IsFatal() || p.output.IsClosed() {
 		return
 	}
 	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
@@ -208,12 +202,12 @@ func (p *internalBackpressureBuffer) closeWorker() {
 
 // NB! Flush() may NOT be able to clean up whole buffer when there are too many pending writers
 func (p *internalBackpressureBuffer) Flush() error {
-	if p.fatal.IsFatal() || p.output.IsClosed() {
+	if p.output.IsFatal() || p.output.IsClosed() {
 		return nil
 	}
 
 	_, err := p.flushTillMark(internalOpLevel, nil, 0)
-	_, _ = p.output.DoFlushOrSync()
+	_ = p.output.Flush()
 	return err
 }
 
@@ -225,13 +219,9 @@ func (p *internalBackpressureBuffer) IsLowLatencySupported() bool {
 	return true
 }
 
-func (p *internalBackpressureBuffer) GetBareOutput() io.Writer {
-	return p.output.Writer
-}
-
 func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b []byte) (n int, err error) {
-	if p.fatal.IsFatal() {
-		return p.fatal.PostFatalWrite(level, b)
+	if p.output.IsFatal() {
+		return p.output.LogLevelWrite(level, b)
 	}
 
 	if level == insolar.FatalLevel {
@@ -264,8 +254,8 @@ func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []b
 }
 
 func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
-	if p.fatal.IsFatal() {
-		return p.fatal.PostFatalWrite(level, b)
+	if p.output.IsFatal() {
+		return p.output.LogLevelWrite(level, b)
 	}
 
 	switch level {
@@ -274,9 +264,7 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 
 	case insolar.PanicLevel:
 		n, err = p.flushTillMark(level, b, 0)
-		if err == nil {
-			_, _ = p.output.DoFlushOrSync()
-		}
+		_ = p.output.Flush()
 		return n, err
 	}
 
@@ -285,8 +273,8 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 }
 
 func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int, err error) {
-	if !p.fatal.SetFatal() {
-		return p.fatal.PostFatalWrite(level, b)
+	if !p.output.SetFatal() {
+		return p.output.LogLevelWrite(level, b)
 	}
 
 	if p.flags&BufferDropOnFatal != 0 {
@@ -300,11 +288,8 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 	}
 	p.writeMissedCount(p.getAndResetMissedCount() + len(p.buffer))
 
-	if ok, err := p.output.DoFlushOrSync(); ok && err == nil {
-		return n, nil
-	}
-
-	return n, p.output.Close()
+	_ = p.output.DirectFlushFatal()
+	return n, nil
 }
 
 func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
@@ -325,14 +310,14 @@ func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byt
 		}
 
 		switch {
-		case p.fatal.IsFatal():
+		case p.output.IsFatal():
 			p.incMissCount()
 			p.bypassCond.L.Unlock()
-			return p.fatal.PostFatalWrite(level, b)
+			return p.output.LogLevelWrite(level, b)
 		case p.output.IsClosed():
 			p.incMissCount()
 			p.bypassCond.L.Unlock()
-			return 0, p.output.ClosedError()
+			return 0, errors.New("closed")
 		}
 		p.bypassCond.Wait()
 	}
@@ -435,7 +420,7 @@ func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte
 }
 
 func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
-	n, err := p.output.DoLevelWrite(level, b)
+	n, err := p.output.DirectLevelWrite(level, b)
 
 	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
 		writeDuration := time.Now().UnixNano() - startNano
@@ -677,7 +662,7 @@ func (p *internalBackpressureBuffer) getAndResetMissedCount() int {
 }
 
 func (p *internalBackpressureBuffer) getAndWriteMissed() {
-	if p.missFn == nil || p.output.IsClosed() || p.fatal.IsFatal() {
+	if p.missFn == nil || p.output.IsClosed() || p.output.IsFatal() {
 		return
 	}
 	p.writeMissedCount(p.getAndResetMissedCount())
@@ -691,7 +676,7 @@ func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {
 	if lvl == insolar.NoLevel || len(missMsg) == 0 {
 		return
 	}
-	_, _ = p.output.DoLevelWrite(lvl, missMsg)
+	_, _ = p.output.DirectLevelWrite(lvl, missMsg)
 }
 
 func (p *internalBackpressureBuffer) GetAvgWriteDuration() time.Duration {
