@@ -98,56 +98,25 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 
 	// get head
 	head, err := func() (insolar.PulseNumber, error) {
-		type badgerIterator struct {
-			once      sync.Once
-			pivot     store.Key
-			reverse   bool
-			txn       *badger.Txn
-			it        *badger.Iterator
-			prevKey   []byte
-			prevValue []byte
-		}
-
 		pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
-		reverse := true
-
-		bi := badgerIterator{pivot: pivot, reverse: reverse}
-		bi.txn = s.db.Backend().NewTransaction(false)
+		txn := s.db.Backend().NewTransaction(false)
 		opts := badger.DefaultIteratorOptions
-		opts.Reverse = reverse
-		bi.it = bi.txn.NewIterator(opts)
-		defer func() {
-			bi.it.Close()
-			bi.txn.Discard()
-		}()
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
 
-		// rit.Next()
-		next := func() bool {
-			scope := bi.pivot.Scope().Bytes()
-			bi.once.Do(func() {
-				prefix := append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...)
-				bi.it.Seek(prefix)
-			})
-			if !bi.it.ValidForPrefix(scope) {
-				return false
-			}
-
-			k := bi.it.Item().KeyCopy(nil)
-			bi.prevKey = k[len(scope):]
-			v, err := bi.it.Item().ValueCopy(nil)
-			if err != nil {
-				return false
-			}
-			bi.prevValue = v
-
-			bi.it.Next()
-			return true
-		}()
-
-		if !next {
+		scope := pivot.Scope().Bytes()
+		prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+		it.Seek(prefix)
+		if !it.ValidForPrefix(scope) {
+			it.Close()
+			txn.Discard()
 			return insolar.GenesisPulse.PulseNumber, ErrNotFound
 		}
-		return insolar.NewPulseNumber(bi.prevKey), nil
+
+		k := it.Item().KeyCopy(nil)
+		it.Close()
+		txn.Discard()
+		return insolar.NewPulseNumber(k[len(scope):]), nil
 	}()
 
 	if err != nil {
