@@ -37,7 +37,7 @@ type DepositOut struct {
 	Amount                  string                 `json:"amount"`
 	TxHash                  string                 `json:"ethTxHash"`
 	VestingType             foundation.VestingType `json:"vestingType"`
-	MaturePulse             int64                  `json:"matureDate"`
+	MatureDate              int64                  `json:"matureDate"`
 	Lockup                  int64                  `json:"lockup"`
 	Vesting                 int64                  `json:"vesting"`
 	VestingStep             int64                  `json:"vestingStep"`
