@@ -22,187 +22,161 @@ import (
 	"unsafe"
 )
 
-type fieldValueGetterFunc func(value reflect.Value) interface{}
+type fieldValueGetterFunc func(value reflect.Value) (interface{}, bool)
+type fieldValueGetterFactoryFunc func(unexported bool, t reflect.Type, checkZero bool) (bool, fieldValueGetterFunc)
 
-var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type, nilZero bool) (bool, fieldValueGetterFunc){
+var fieldValueGetters = map[reflect.Kind]fieldValueGetterFactoryFunc{
 	// ======== Simple values, are safe to read from unexported fields ============
-	reflect.Bool: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && !value.Bool() {
-				return nil
-			}
-			return value.Bool()
+	reflect.Bool: func(_ bool, _ reflect.Type, _ bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			return value.Bool(), !value.Bool()
 		}
 	},
-	reflect.Int: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Int() == 0 {
-				return nil
-			}
-			return int(value.Int())
+	reflect.Int: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Int()
+			return int(v), checkZero && v == 0
 		}
 	},
-	reflect.Int8: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Int() == 0 {
-				return nil
-			}
-			return int8(value.Int())
+	reflect.Int8: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Int()
+			return int8(v), checkZero && v == 0
 		}
 	},
-	reflect.Int16: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Int() == 0 {
-				return nil
-			}
-			return int16(value.Int())
+	reflect.Int16: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Int()
+			return int16(v), checkZero && v == 0
 		}
 	},
-	reflect.Int32: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Int() == 0 {
-				return nil
-			}
-			return int32(value.Int())
+	reflect.Int32: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Int()
+			return int32(v), checkZero && v == 0
 		}
 	},
-	reflect.Int64: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Int() == 0 {
-				return nil
-			}
-			return value.Int()
+	reflect.Int64: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Int()
+			return v, checkZero && v == 0
 		}
 	},
-	reflect.Uint: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return uint(value.Uint())
+	reflect.Uint: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return uint(v), checkZero && v == 0
 		}
 	},
-	reflect.Uint8: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return uint8(value.Uint())
+	reflect.Uint8: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return uint8(v), checkZero && v == 0
 		}
 	},
-	reflect.Uint16: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return uint16(value.Uint())
+	reflect.Uint16: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return uint16(v), checkZero && v == 0
 		}
 	},
-	reflect.Uint32: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return uint32(value.Uint())
+	reflect.Uint32: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return uint32(v), checkZero && v == 0
 		}
 	},
-	reflect.Uint64: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return value.Uint()
+	reflect.Uint64: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return v, checkZero && v == 0
 		}
 	},
-	reflect.Uintptr: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Uint() == 0 {
-				return nil
-			}
-			return uintptr(value.Uint())
+	reflect.Uintptr: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Uint()
+			return uintptr(v), checkZero && v == 0
 		}
 	},
-	reflect.Float32: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Float() == 0.0 {
-				return nil
-			}
-			return float32(value.Float())
+	reflect.Float32: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Float()
+			return float32(v), checkZero && v == 0.0
 		}
 	},
-	reflect.Float64: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Float() == 0.0 {
-				return nil
-			}
-			return value.Float()
+	reflect.Float64: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Float()
+			return v, checkZero && v == 0.0
 		}
 	},
-	reflect.Complex64: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Complex() == 0.0 {
-				return nil
-			}
-			return complex64(value.Complex())
+	reflect.Complex64: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Complex()
+			return complex64(v), checkZero && v == 0.0
 		}
 	},
-	reflect.Complex128: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Complex() == 0.0 {
-				return nil
-			}
-			return value.Complex()
+	reflect.Complex128: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.Complex()
+			return v, checkZero && v == 0.0
 		}
 	},
-	reflect.String: func(_ bool, _ reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
-		return false, func(value reflect.Value) interface{} {
-			if nilZero && value.Len() == 0 {
-				return nil
-			}
-			return value.String()
+	reflect.String: func(_ bool, _ reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) (interface{}, bool) {
+			v := value.String()
+			return v, checkZero && len(v) == 0
 		}
 	},
 
 	// ============ Special handling for unexported fields ===========
 
-	reflect.Ptr: func(unexported bool, t reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
+	reflect.Ptr: func(unexported bool, t reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
 		te := t.Elem()
 		if te.Kind() == reflect.String {
-			return false, func(value reflect.Value) interface{} {
-				if value.IsNil() || nilZero && value.Len() == 0 {
-					return nil
+			return false, func(value reflect.Value) (interface{}, bool) {
+				if value.IsNil() {
+					return nil, checkZero
 				}
-				return value.Elem().String()
+				v := value.Elem().String()
+				return v, checkZero && len(v) == 0
 			}
 		}
-		return defaultObjFieldGetterFactory(unexported, t, nilZero)
+		return defaultObjFieldGetterFactory(unexported, t, checkZero)
 	},
 
-	reflect.Func: func(unexported bool, t reflect.Type, _ bool) (bool, fieldValueGetterFunc) {
+	reflect.Func: func(unexported bool, t reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
 		if t.NumIn() == 0 && t.NumOut() == 1 && t.Out(0).Kind() == reflect.String {
-			return unexported, func(value reflect.Value) interface{} {
+			return unexported, func(value reflect.Value) (interface{}, bool) {
 				if value.IsNil() {
-					return nil
+					return nil, checkZero
 				}
 				fn := value.Interface().(func() string)
-				return fn()
+				v := fn()
+				return v, checkZero && len(v) == 0
 			}
 		}
-		return unexported, reflect.Value.Interface
+		return unexported, func(value reflect.Value) (interface{}, bool) {
+			if value.IsNil() {
+				return nil, checkZero
+			}
+			return value.Interface(), false
+		}
 	},
 
-	reflect.Interface: func(unexported bool, _ reflect.Type, _ bool) (b bool, getterFunc fieldValueGetterFunc) {
-		return unexported, func(value reflect.Value) interface{} {
+	reflect.Interface: func(unexported bool, _ reflect.Type, checkZero bool) (b bool, getterFunc fieldValueGetterFunc) {
+		return unexported, func(value reflect.Value) (interface{}, bool) {
 			if value.IsNil() {
-				return nil
+				return nil, checkZero
 			}
 			iv := value.Interface()
 			switch vv := iv.(type) {
 			case func() string:
-				return vv()
+				v := vv()
+				return v, checkZero && len(v) == 0
 			default:
 				vv, _ = tryDefaultValuePrepare(vv)
-				return vv
+				return vv, checkZero && vv == nil
 			}
 		}
 	},
@@ -253,7 +227,7 @@ func defaultStrValuePrepare(iv interface{}) (string, bool) {
 	return "", false
 }
 
-func defaultObjFieldGetterFactory(unexported bool, t reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
+func defaultObjFieldGetterFactory(unexported bool, t reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
 	for _, f := range prepareObjTypes {
 		if !t.Implements(f.t) {
 			continue
@@ -261,33 +235,39 @@ func defaultObjFieldGetterFactory(unexported bool, t reflect.Type, nilZero bool)
 
 		fn := f.fn
 		if t.Kind() == reflect.Struct {
-			if nilZero {
+			if checkZero {
 				zeroValue := reflect.Zero(t).Interface()
-				return unexported, func(value reflect.Value) interface{} {
+				return unexported, func(value reflect.Value) (interface{}, bool) {
 					iv := value.Interface()
 					if iv == zeroValue {
-						return nil
+						return iv, true
 					}
 					vv, _ := fn(iv)
-					return vv
+					return vv, vv == nil
 				}
 			}
 
-			return unexported, func(value reflect.Value) interface{} {
+			return unexported, func(value reflect.Value) (interface{}, bool) {
 				vv, _ := fn(value.Interface())
-				return vv
+				return vv, false
 			}
 		}
 
-		return unexported, func(value reflect.Value) interface{} {
+		return unexported, func(value reflect.Value) (interface{}, bool) {
 			if value.IsNil() {
-				return nil
+				return nil, checkZero
 			}
 			vv, _ := fn(value.Interface())
-			return vv
+			return vv, checkZero && vv == nil
 		}
 	}
-	return unexported, reflect.Value.Interface
+	return unexported, func(value reflect.Value) (interface{}, bool) {
+		if value.IsNil() {
+			return nil, checkZero
+		}
+		v := value.Interface()
+		return v, checkZero && v == nil
+	}
 }
 
 func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
