@@ -157,7 +157,7 @@ var fieldValueGetters = map[reflect.Kind]fieldValueGetterFactoryFunc{
 			}
 		}
 		return unexported, func(value reflect.Value) (interface{}, bool) {
-			if value.IsNil() {
+			if value.IsNil() { // avoids interface nil
 				return nil, checkZero
 			}
 			return value.Interface(), false
@@ -166,7 +166,7 @@ var fieldValueGetters = map[reflect.Kind]fieldValueGetterFactoryFunc{
 
 	reflect.Interface: func(unexported bool, _ reflect.Type, checkZero bool) (b bool, getterFunc fieldValueGetterFunc) {
 		return unexported, func(value reflect.Value) (interface{}, bool) {
-			if value.IsNil() {
+			if value.IsNil() { // avoids interface nil
 				return nil, checkZero
 			}
 			iv := value.Interface()
@@ -232,41 +232,65 @@ func defaultObjFieldGetterFactory(unexported bool, t reflect.Type, checkZero boo
 		if !t.Implements(f.t) {
 			continue
 		}
+		return unexported, _defaultObjFieldGetterFactory(t, checkZero, f.fn)
+	}
 
-		fn := f.fn
-		if t.Kind() == reflect.Struct {
-			if checkZero {
-				zeroValue := reflect.Zero(t).Interface()
-				return unexported, func(value reflect.Value) (interface{}, bool) {
-					iv := value.Interface()
-					if iv == zeroValue {
-						return iv, true
-					}
-					vv, _ := fn(iv)
-					return vv, vv == nil
+	return unexported, _defaultObjFieldGetterFactoryNoConv(t, checkZero)
+}
+
+func _defaultObjFieldGetterFactory(t reflect.Type, checkZero bool, fn func(interface{}) (interface{}, bool)) fieldValueGetterFunc {
+	if t.Kind() == reflect.Struct {
+		if checkZero {
+			zeroValue := reflect.Zero(t).Interface()
+			return func(value reflect.Value) (interface{}, bool) {
+				iv := value.Interface()
+				if iv == zeroValue {
+					return iv, true
 				}
-			}
-
-			return unexported, func(value reflect.Value) (interface{}, bool) {
-				vv, _ := fn(value.Interface())
-				return vv, false
+				vv, _ := fn(iv)
+				return vv, vv == nil
 			}
 		}
 
-		return unexported, func(value reflect.Value) (interface{}, bool) {
-			if value.IsNil() {
-				return nil, checkZero
-			}
+		return func(value reflect.Value) (interface{}, bool) {
 			vv, _ := fn(value.Interface())
-			return vv, checkZero && vv == nil
+			return vv, false
 		}
 	}
-	return unexported, func(value reflect.Value) (interface{}, bool) {
-		if value.IsNil() {
+
+	return func(value reflect.Value) (interface{}, bool) {
+		if value.IsNil() { // avoids interface nil
 			return nil, checkZero
 		}
-		v := value.Interface()
-		return v, checkZero && v == nil
+		vv, _ := fn(value.Interface())
+		return vv, checkZero && vv == nil
+	}
+}
+
+func _defaultObjFieldGetterFactoryNoConv(t reflect.Type, checkZero bool) fieldValueGetterFunc {
+	if t.Kind() == reflect.Struct {
+		if checkZero {
+			zeroValue := reflect.Zero(t).Interface()
+			return func(value reflect.Value) (interface{}, bool) {
+				iv := value.Interface()
+				if iv == zeroValue {
+					return iv, true
+				}
+				return iv, iv == nil
+			}
+		}
+
+		return func(value reflect.Value) (interface{}, bool) {
+			return value.Interface(), false
+		}
+	}
+
+	return func(value reflect.Value) (interface{}, bool) {
+		if value.IsNil() { // avoids interface nil
+			return nil, checkZero
+		}
+		vv := value.Interface()
+		return vv, checkZero && vv == nil
 	}
 }
 
