@@ -50,7 +50,7 @@ func byteDecodeBase58(s string, target io.ByteWriter) (stringRead int, err error
 }
 
 func byteDecodeBase64(s string, target io.ByteWriter) (stringRead int, err error) {
-	bytes, err := base64.URLEncoding.DecodeString(s)
+	bytes, err := base64.RawURLEncoding.DecodeString(s)
 	if err != nil {
 		return 0, err
 	}

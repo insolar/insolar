@@ -387,7 +387,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings() {
 			)
 
 			// Act
-			references, err := s.amClient.GetPendings(s.ctx, objectRef, make([] insolar.ID, 0))
+			references, err := s.amClient.GetPendings(s.ctx, objectRef, make([]insolar.ID, 0))
 
 			// Assert
 			test.check(references, err)
@@ -405,7 +405,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.GetPendings(s.ctx, *request.Object, make([] insolar.ID, 0))
+	_, err := s.amClient.GetPendings(s.ctx, *request.Object, make([]insolar.ID, 0))
 
 	// Assert
 	s.Error(err)
