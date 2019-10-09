@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/dgraph-io/badger"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -111,7 +113,30 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 
 	// get(head)
 	nd, err := func() (nd dbNode, err error) {
-		buf, err := s.db.Get(pulseKey(head))
+		key := pulseKey(head)
+		// get()
+		buf, err := func() (value []byte, err error) {
+			fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+			err = s.db.Backend().View(func(txn *badger.Txn) error {
+				item, err := txn.Get(fullKey)
+				if err != nil {
+					return err
+				}
+				value, err = item.ValueCopy(nil)
+				return err
+			})
+
+			if err != nil {
+				if err == badger.ErrKeyNotFound {
+					return nil, ErrNotFound
+				}
+				return nil, err
+			}
+
+			return
+		}()
+
 		if err == store.ErrNotFound {
 			err = ErrNotFound
 			return
