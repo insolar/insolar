@@ -71,99 +71,70 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse 
 }
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
-func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
-	/*for {
-		err = s.db.Backend().View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			opts.Reverse = true
-			pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
-			scope := pivot.Scope().Bytes()
-			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
-			it := txn.NewIterator(opts)
-			it.Seek(prefix)
-		}
-
-		if err == nil {
-			inslogger.FromContext(ctx).Debugf("DB.Latest -  s.db.Backend().View returned an error, retrying: %s", err.Error())
-			break
-		}
-	} */
-
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	if s.latest != nil {
-		return *s.latest, nil
-	}
-
-	// get head
-	head, err := func() (insolar.PulseNumber, error) {
-		pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
-		txn := s.db.Backend().NewTransaction(false)
-		opts := badger.DefaultIteratorOptions
-		opts.Reverse = true
-		it := txn.NewIterator(opts)
-
-		scope := pivot.Scope().Bytes()
-		prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
-		it.Seek(prefix)
-		if !it.ValidForPrefix(scope) {
-			it.Close()
-			txn.Discard()
-			return insolar.GenesisPulse.PulseNumber, ErrNotFound
-		}
-
-		k := it.Item().KeyCopy(nil)
-		it.Close()
-		txn.Discard()
-		return insolar.NewPulseNumber(k[len(scope):]), nil
-	}()
-
-	if err != nil {
-		return
-	}
-
-	// get(head)
-	nd, err := func() (nd dbNode, err error) {
-		key := pulseKey(head)
-		// get()
-		buf, err := func() (value []byte, err error) {
-			fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-			err = s.db.Backend().View(func(txn *badger.Txn) error {
-				item, err := txn.Get(fullKey)
-				if err != nil {
-					return err
-				}
-				value, err = item.ValueCopy(nil)
-				return err
-			})
-
+func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
+	for {
+		err := s.db.Backend().View(func(txn *badger.Txn) error {
+			head, err := txHead(txn)
 			if err != nil {
-				if err == badger.ErrKeyNotFound {
-					return nil, ErrNotFound
-				}
-				return nil, err
+				retErr = err
+				return nil
 			}
 
-			return
-		}()
+			node, err := txGet(txn, pulseKey(head))
+			if err != nil {
+				retErr = err
+				return nil
+			}
 
-		if err == store.ErrNotFound {
-			err = ErrNotFound
-			return
-		}
-		if err != nil {
-			return
-		}
-		nd = deserialize(buf)
-		return
-	}()
+			retPulse = node.Pulse
+			return nil
+		})
 
+		if err == nil {
+			break
+		}
+
+		inslogger.FromContext(ctx).Debugf("DB.Latest -  s.db.Backend().View returned an error, retrying: %s", err.Error())
+	}
+	return
+}
+
+func txHead(txn *badger.Txn) (insolar.PulseNumber, error) {
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = true
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
+	scope := pivot.Scope().Bytes()
+	prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+	it.Seek(prefix)
+	if !it.ValidForPrefix(scope) {
+		return insolar.GenesisPulse.PulseNumber, ErrNotFound
+	}
+
+	k := it.Item().KeyCopy(nil)
+	return insolar.NewPulseNumber(k[len(scope):]), nil
+}
+
+func txGet(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	item, err := txn.Get(fullKey)
 	if err != nil {
+		retErr = err
 		return
 	}
-	return nd.Pulse, nil
+	buf, err := item.ValueCopy(nil)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			err = ErrNotFound
+		}
+		retErr = err
+		return
+	}
+
+	retNode = deserialize(buf)
+	return
 }
 
 // TruncateHead remove all records after lastPulse
