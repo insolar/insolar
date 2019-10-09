@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -150,6 +151,19 @@ func generateMigrationAddress() (string, error) {
 func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
 	balance, _ := getBalanceAndDepositsNoErr(t, caller, reference)
 	return balance
+}
+
+func getAdminDepositBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
+	_, deposits := getBalanceAndDepositsNoErr(t, caller, reference)
+	mapd, ok := deposits[genesisrefs.FundsDepositName].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("can't parse deposit")
+	}
+	amount, ok := new(big.Int).SetString(mapd["balance"].(string), 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse deposit balance")
+	}
+	return amount, nil
 }
 
 func getBalanceAndDepositsNoErr(t *testing.T, caller *launchnet.User, reference string) (*big.Int, map[string]interface{}) {
@@ -371,6 +385,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 		CallSite:   method,
 		CallParams: params,
 		PublicKey:  user.PubKey,
+		Reference:  user.Ref,
 		Test:       caller}, seed)
 
 	if err != nil {

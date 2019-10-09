@@ -19,7 +19,6 @@ package genesis
 import (
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/bootstrap/contracts"

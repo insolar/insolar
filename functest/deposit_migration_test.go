@@ -38,7 +38,8 @@ func TestMigrationToken(t *testing.T) {
 	firstMemberBalance := deposit["balance"].(string)
 
 	require.Equal(t, "0", firstMemberBalance)
-	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	firstMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	require.NoError(t, err)
 
 	for i := 1; i < len(activeDaemons); i++ {
 		deposit = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
@@ -55,7 +56,9 @@ func TestMigrationToken(t *testing.T) {
 
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, "10000", secondMemberBalance)
-	secondMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	secondMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	require.NoError(t, err)
+
 	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
 	require.Equal(t, "10000", dif.String())
 }
@@ -183,7 +186,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
-	activateDaemons(t, countTwoActiveDaemon)
+	activateDaemons(t, countThreeActiveDaemon)
 
 	member := createMigrationMemberForMA(t)
 
@@ -214,7 +217,9 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	firstMemberBalance := deposit["balance"].(string)
 
 	require.Equal(t, "0", firstMemberBalance)
-	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	firstMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	require.NoError(t, err)
+
 	for i := 1; i < countThreeActiveDaemon; i++ {
 		go func(i int) {
 			res, _, err := makeSignedRequest(
@@ -240,7 +245,8 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	require.Equal(t, deposit["amount"], "10000")
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, "10000", secondMemberBalance)
-	secondMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	secondMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	require.NoError(t, err)
 	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
 	require.Equal(t, "10000", dif.String())
 }
