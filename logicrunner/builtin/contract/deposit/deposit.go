@@ -39,7 +39,6 @@ type Deposit struct {
 	Amount                  string                 `json:"amount"`
 	TxHash                  string                 `json:"ethTxHash"`
 	VestingType             foundation.VestingType `json:"vestingType"`
-	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
 	Lockup                  int64                  `json:"lockupInPulses"`
 	Vesting                 int64                  `json:"vestingInPulses"`
 	VestingStep             int64                  `json:"vestingStepInPulses"`
@@ -54,7 +53,6 @@ type DepositOut struct {
 	Amount                  string                 `json:"amount"`
 	TxHash                  string                 `json:"ethTxHash"`
 	VestingType             foundation.VestingType `json:"vestingType"`
-	MatureDate              int64                  `json:"matureDate"`
 	Lockup                  int64                  `json:"lockup"`
 	Vesting                 int64                  `json:"vesting"`
 	VestingStep             int64                  `json:"vestingStep"`
@@ -67,17 +65,13 @@ type DaemonConfirm struct {
 
 func (d Deposit) toOut() DepositOut {
 	var daemonConfirms = make([]DaemonConfirm, 0, len(d.MigrationDaemonConfirms))
-	var pulseDepositUnHold, matureDate int64
+	var pulseDepositUnHold int64
 	for k, v := range d.MigrationDaemonConfirms {
 		daemonConfirms = append(daemonConfirms, DaemonConfirm{Reference: k, Amount: v})
 	}
 	t, err := d.PulseDepositUnHold.AsApproximateTime()
 	if err == nil {
 		pulseDepositUnHold = t.Unix()
-	}
-	mature, err := d.MaturePulse.AsApproximateTime()
-	if err == nil {
-		matureDate = mature.Unix()
 	}
 	return DepositOut{
 		Balance:                 d.Balance,
@@ -87,7 +81,6 @@ func (d Deposit) toOut() DepositOut {
 		Amount:                  d.Amount,
 		TxHash:                  d.TxHash,
 		VestingType:             d.VestingType,
-		MatureDate:              matureDate,
 		Lockup:                  d.Lockup,
 		Vesting:                 d.Vesting,
 		VestingStep:             d.VestingStep,

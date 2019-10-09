@@ -387,7 +387,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameApplicationIncentivesWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractApplicationIncentivesWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -403,7 +402,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameNetworkIncentivesWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractNetworkIncentivesWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -419,7 +417,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFoundationWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractFoundationWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -435,7 +432,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFundsWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractFundsWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -451,7 +447,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameEnterpriseWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractEnterpriseWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
