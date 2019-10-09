@@ -99,8 +99,6 @@ const (
 	updParamUint
 	updParamLink
 	updParamVar
-
-	//updParamStepNonNil
 )
 
 func (v StateUpdateType) verify(ctxType updCtxMode) {
@@ -191,14 +189,7 @@ func (v StateUpdateTemplate) newNoArg() StateUpdate {
 
 type StepPrepareFunc func()
 
-func (v StateUpdateTemplate) checkStep(step SlotStep) {
-	//if step.Transition == nil && v.t.params&updParamStepNonNil != 0 {
-	//	panic("illegal value")
-	//}
-}
-
 func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
@@ -209,7 +200,6 @@ func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc)
 }
 
 func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare StepPrepareFunc, until uint32) StateUpdate {
-	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamUint | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
@@ -221,7 +211,6 @@ func (v StateUpdateTemplate) newStepUntil(slotStep SlotStep, prepare StepPrepare
 }
 
 func (v StateUpdateTemplate) newStepUint(slotStep SlotStep, param uint32) StateUpdate {
-	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamUint)
 	return StateUpdate{
 		marker:  v.marker,
@@ -232,7 +221,6 @@ func (v StateUpdateTemplate) newStepUint(slotStep SlotStep, param uint32) StateU
 }
 
 func (v StateUpdateTemplate) newStepLink(slotStep SlotStep, link SlotLink) StateUpdate {
-	v.checkStep(slotStep)
 	v.ensureTemplate(updParamStep | updParamLink)
 	return StateUpdate{
 		marker:  v.marker,

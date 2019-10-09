@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/conveyor/smachine/tools"
 	smachine "github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/conveyor/smachinev2/main/example"
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 )
 
 func main() {
@@ -80,17 +79,4 @@ func (*implA) DoSomething(param string) string {
 
 func (*implA) DoSomethingElse(param0 string, param1 int) (bool, string) {
 	return param1 != 0, param0
-}
-
-var _ smachine.WorkSynchronizationStrategy = &syncStrategy{}
-
-type syncStrategy struct {
-}
-
-func (*syncStrategy) NewSlotPoolLocker() rwlock.RWLocker {
-	return rwlock.DummyLocker()
-}
-
-func (*syncStrategy) GetInternalSignalCallback() smachine.SignalCallbackFunc {
-	return nil
 }

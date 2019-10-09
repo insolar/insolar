@@ -16,13 +16,40 @@
 
 package smachine
 
+import "reflect"
+
 type StateMachine interface {
 	//GetStateMachineName() string
 	GetStateMachineDeclaration() StateMachineDeclaration
 }
 
-type SharedState interface {
-	CanBeDisposed(ctx BasicContext) bool
-	CanBeDisposedBy(ctx BasicContext, initiator SlotLink) bool
-	CanBeMigrated(ctx BasicContext) bool
+type DependencyRegistry interface {
+	FindDependency(id string, targetType reflect.Type) interface{}
+}
+
+type StateMachineDeclaration interface {
+	IsConsecutive(cur, next StateFunc) bool
+	GetInitStateFor(StateMachine) InitFunc
+	InjectDependencies(StateMachine, SlotLink, *SlotMachine, DependencyRegistry) bool
+}
+
+type StateMachineDeclTemplate struct {
+}
+
+//var _ StateMachineDeclaration = &StateMachineDeclTemplate{}
+//
+//func (s *StateMachineDeclTemplate) GetInitStateFor(StateMachine) InitFunc {
+//	panic("implement me")
+//}
+
+func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
+	return false
+}
+
+func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
+	return nil
+}
+
+func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *SlotMachine, DependencyInjector) bool {
+	return false
 }

@@ -22,6 +22,7 @@ import (
 	"math"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -34,16 +35,16 @@ type SlotMachineConfig struct {
 	ScanCountLimit  int
 }
 
-func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, // adapters *SharedRegistry
+func NewSlotMachine(config SlotMachineConfig, injectables DependencyRegistry, // adapters *SharedRegistry
 ) SlotMachine {
 	//ownsAdapters := false
 	//if adapters == nil {
-	//	adapters = NewSharedRegistry()
+	//	adapters = NewAdapterRegistry()
 	//	ownsAdapters = true
 	//}
 	return SlotMachine{
-		config:   config,
-		injector: injector,
+		config:      config,
+		injectables: injectables,
 		//adapters:      adapters,
 		//ownsAdapters:  ownsAdapters,
 		slotPool:      NewSlotPool(config.SyncStrategy.NewSlotPoolLocker(), config.SlotPageSize),
@@ -59,7 +60,8 @@ type SlotMachine struct {
 	lastSlotID SlotID // atomic
 	slotPool   SlotPool
 
-	injector DependencyInjector
+	injectables DependencyRegistry
+	sharedData  sync.Map
 
 	scanCount        uint32
 	machineStartedAt time.Time
@@ -556,9 +558,7 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 	slot.declaration = decl
 
 	link := slot.NewLink()
-	if !decl.InjectDependencies(sm, link, m, m.injector) && m.injector != nil {
-		m.injector.InjectDependencies(sm, link, m)
-	}
+	decl.InjectDependencies(sm, link, m, m.injectables)
 
 	initFn := slot.declaration.GetInitStateFor(sm)
 	if initFn == nil {
