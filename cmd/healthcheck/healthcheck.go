@@ -46,7 +46,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	ref, err := insolar.NewReferenceFromBase58(*refString)
+	ref, err := insolar.NewReferenceFromString(*refString)
 	if err != nil {
 		log.Errorf("Failed to parse healthcheck contract ref: %s", err.Error())
 		os.Exit(2)

@@ -38,7 +38,7 @@ func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 }
 
 func shouldLoadRef(strRef string) XXX_insolar.Reference {
-    ref, err := XXX_insolar.NewReferenceFromBase58(strRef)
+    ref, err := XXX_insolar.NewReferenceFromString(strRef)
     if err != nil {
         panic(errors.Wrap(err, "Unexpected error, bailing out"))
     }

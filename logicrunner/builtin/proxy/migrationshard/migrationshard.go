@@ -27,7 +27,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromBase58("0111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj")
 
 // MigrationShard holds proxy type
 type MigrationShard struct {
