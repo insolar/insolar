@@ -34,9 +34,10 @@ func main() {
 
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SyncStrategy:    &syncStrategy{},
-		SlotPageSize:    10,
+		SlotPageSize:    1000,
 		PollingPeriod:   1000 * time.Millisecond,
 		PollingTruncate: 100 * time.Millisecond,
+		ScanCountLimit:  1000,
 	}, nil)
 
 	//example.SetInjectServiceAdapterA(&implA{}, &sm)
@@ -46,10 +47,18 @@ func main() {
 	signal := tools.NewVersionedSignal()
 	worker := example.NewSimpleSlotWorker(signal.Mark())
 
+	prev := 0
 	for i := 0; ; i++ {
 		repeatNow, nextPollTime := sm.ScanOnce(worker)
-		fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
-		fmt.Printf("%03d %v =============== repeatNow=%v nextPollTime=%v\n", i, time.Now(), repeatNow, nextPollTime)
+		//fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
+		//fmt.Printf("%03d %v =============== repeatNow=%v nextPollTime=%v\n", i, time.Now(), repeatNow, nextPollTime)
+
+		if i >= prev+10 {
+			prev = i
+			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
+			sm.Cleanup(worker)
+			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
+		}
 
 		if repeatNow {
 			continue
@@ -58,12 +67,6 @@ func main() {
 			time.Sleep(time.Until(nextPollTime))
 		} else {
 			time.Sleep(3 * time.Second)
-		}
-
-		if i%100 == 0 {
-			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
-			sm.Cleanup(worker)
-			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 		}
 	}
 }

@@ -32,7 +32,7 @@ type SlotWorker interface {
 type DetachableSlotWorker interface {
 	SlotWorker
 
-	CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool)
+	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
 	GetCond() (bool, *sync.Cond)
 	// provides temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 )
@@ -30,6 +31,7 @@ type SlotMachineConfig struct {
 	PollingPeriod   time.Duration
 	PollingTruncate time.Duration
 	SlotPageSize    uint16
+	ScanCountLimit  int
 }
 
 func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, // adapters *SharedRegistry
@@ -130,26 +132,35 @@ func (m *SlotMachine) beforeScan(scanTime time.Time) {
 	m.scanWakeUpAt = time.Time{}
 }
 
+const maxLoopCount = 10000
+
 func (m *SlotMachine) scanWorkingSlots(worker FixedSlotWorker) {
-	for {
+	limit := m.config.ScanCountLimit
+	if limit <= 0 || limit > maxLoopCount {
+		limit = maxLoopCount
+	}
+
+	for i := 0; i < limit; {
 		currentSlot := m.workingSlots.First()
 		if currentSlot == nil {
 			return
 		}
+		loopLimit := 1 + ((limit - i) / m.workingSlots.Count())
 
 		prevStepNo := currentSlot.startWorking(m.scanCount) // its counterpart is in slotPostExecution()
 		currentSlot.removeFromQueue()
 
-		if stopNow := m.executeSlot(currentSlot, prevStepNo, worker); stopNow {
+		if stopNow, loopIncrement := m.executeSlot(currentSlot, prevStepNo, worker, loopLimit); stopNow {
 			return
+		} else {
+			i += loopIncrement
 		}
 	}
 }
 
-func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker FixedSlotWorker) bool {
-	hasSignal := false
+func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker FixedSlotWorker, loopLimit int) (hasSignal bool, loopCount int) {
 	var stateUpdate StateUpdate
-	//var err error
+
 	// TODO consider use of sync.Pool for executionContext if they are allocated on heap
 
 	wasDetached := worker.DetachableCall(func(worker DetachableSlotWorker) {
@@ -157,7 +168,7 @@ func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker F
 		//	err = recoverSlotPanic("slot execution failed", recover(), err)
 		//}()
 
-		for loopCount := uint32(0); ; loopCount++ {
+		for ; loopCount < loopLimit; loopCount++ {
 			canLoop := false
 			canLoop, hasSignal = worker.CanLoopOrHasSignal(loopCount)
 			if !canLoop || hasSignal {
@@ -180,11 +191,12 @@ func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker F
 				currentSlot.addAsyncCount(asyncCnt)
 			}
 
-			if !sut.ShortLoop(currentSlot, stateUpdate, loopCount) {
+			if !sut.ShortLoop(currentSlot, stateUpdate, uint32(loopCount)) {
 				return
 			}
 		}
 	})
+	loopCount++
 
 	//if err != nil {
 	//	stateUpdate = newStateUpdateTemplate(updCtxExec, 0, stateUpdPanic).newError(err)
@@ -193,15 +205,15 @@ func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker F
 	if wasDetached {
 		// MUST NOT apply any changes in the current routine, as it is no more safe to update queues
 		m.asyncPostSlotExecution(currentSlot, stateUpdate, prevStepNo)
-		return true
+		return true, loopCount
 	}
 
 	hasAsync := m.slotPostExecution(currentSlot, stateUpdate, worker, prevStepNo, false)
 	if hasAsync && !hasSignal {
 		_, hasSignal, wasDetached = m.syncQueue.ProcessCallbacks(worker)
-		return hasSignal || wasDetached
+		return hasSignal || wasDetached, loopCount
 	}
-	return hasSignal
+	return hasSignal, loopCount
 }
 
 func (m *SlotMachine) _executeSlotInitByCreator(currentSlot *Slot, worker DetachableSlotWorker) {
@@ -329,16 +341,29 @@ func recoverSlotPanic(msg string, recovered interface{}, prev error) error {
 	if recovered == nil {
 		return prev
 	}
+	stack := debug.Stack()
 	if prev != nil {
-		return fmt.Errorf("%s: %v, %v", msg, recovered, prev)
+		return fmt.Errorf("%s: %v, %v\n%s", msg, recovered, prev, string(stack))
 		//return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
 	}
-	return fmt.Errorf("%s: %v", msg, recovered)
+	return fmt.Errorf("%s: %v\n%s", msg, recovered, string(stack))
+}
+
+func recoverSlotPanicWithStack(msg string, recovered interface{}, prev error) error {
+	if recovered == nil {
+		return prev
+	}
+	stack := debug.Stack()
+	if prev != nil {
+		return fmt.Errorf("%s: %v, %v\n%s", msg, recovered, prev, string(stack))
+		//return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
+	}
+	return fmt.Errorf("%s: %v\n%s", msg, recovered, string(stack))
 }
 
 func recoverSlotPanicAsUpdate(update *StateUpdate, msg string, recovered interface{}, prev error) {
 	if recovered != nil {
-		*update = newPanicStateUpdate(recoverSlotPanic(msg, recovered, prev))
+		*update = newPanicStateUpdate(recoverSlotPanicWithStack(msg, recovered, prev))
 	} else if prev != nil {
 		*update = newPanicStateUpdate(prev)
 	}
@@ -542,10 +567,10 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 
 	if creator != nil {
 		slot.migrationCount = creator.migrationCount
-		slot.lastWorkScan = creator.lastWorkScan - 1
+		slot.lastWorkScan = creator.lastWorkScan
 	} else {
 		slot.migrationCount = m.migrationCount
-		slot.lastWorkScan = uint8(m.scanCount - 1)
+		slot.lastWorkScan = uint8(m.scanCount)
 	}
 
 	slot.step = SlotStep{Transition: func(ctx ExecutionContext) StateUpdate {

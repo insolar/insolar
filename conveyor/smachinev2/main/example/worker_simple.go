@@ -17,7 +17,6 @@
 package example
 
 import (
-	"context"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
 	smachine "github.com/insolar/insolar/conveyor/smachinev2"
 
@@ -66,7 +65,7 @@ type DetachableSimpleSlotWorker struct {
 	*SimpleSlotWorker
 }
 
-func (p *DetachableSimpleSlotWorker) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {
+func (p *DetachableSimpleSlotWorker) CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool) {
 	return loopCount < 100, false
 }
 

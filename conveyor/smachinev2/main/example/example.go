@@ -77,9 +77,9 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	fmt.Printf("state1: %d %v\n", ctx.SlotLink().SlotID(), s.result)
 
-	//ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
-	//	return &StateMachine1{sharedB: s.sharedB}
-	//})
+	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &StateMachine1{} //sharedB: s.sharedB}
+	})
 
 	//mutex := ctx.SyncOneStep("test", 0, nil)
 
@@ -107,9 +107,9 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 	s.count++
 	//s.result = fmt.Sprint(s.count)
 	if s.count < 5 {
-		//return ctx.Yield()
+		return ctx.Yield().ThenRepeat()
 		//return ctx.Repeat(0)
-		return ctx.Poll().ThenRepeat()
+		//return ctx.Poll().ThenRepeat()
 	}
 
 	return ctx.Jump(s.State4)
@@ -125,8 +125,9 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	fmt.Printf("wait: %d %v result:%v\n", ctx.SlotLink().SlotID(), time.Now(), s.result)
 	s.count = 0
+	return ctx.Jump(s.State5)
 	//return ctx.WaitAny().ThenJump(s.State1)
-	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
+	//return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {

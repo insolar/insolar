@@ -233,7 +233,7 @@ func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool
 	link := newSlot.NewLink()
 
 	m.prepareNewSlot(newSlot, p.s, fn, nil)
-	m.startNewSlotByDetachable(p.s, runInit, p.w)
+	m.startNewSlotByDetachable(newSlot, runInit, p.w)
 	return link
 }
 
