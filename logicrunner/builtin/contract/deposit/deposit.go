@@ -22,12 +22,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 const XNS = "XNS"
@@ -166,7 +166,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		if !ok {
 			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
 		}
-		_, err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference())
+		err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference())
 		if err != nil {
 			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
 		}
@@ -177,30 +177,30 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 }
 
 // TransferToDeposit transfers funds to deposit.
-func (d *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference) (interface{}, error) {
+func (d *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
+		return fmt.Errorf("can't parse input amount")
 	}
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse deposit balance")
+		return fmt.Errorf("can't parse deposit balance")
 	}
 	if balance.Sign() <= 0 {
-		return nil, fmt.Errorf("not enough balance for transfer")
+		return fmt.Errorf("not enough balance for transfer")
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
-		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
+		return fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 	d.Balance = newBalance.String()
 	destination := deposit.GetObject(toDeposit)
 	acceptDepositErr := destination.Accept(amountStr)
 	if acceptDepositErr == nil {
-		return nil, nil
+		return nil
 	}
 	d.Balance = balance.String()
-	return nil, fmt.Errorf("failed to transfer amount: %s", acceptDepositErr.Error())
+	return fmt.Errorf("failed to transfer amount: %s", acceptDepositErr.Error())
 
 }
 

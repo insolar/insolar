@@ -370,7 +370,7 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.TransferToDeposit(args0, args1)
+	ret0 := self.TransferToDeposit(args0, args1)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -382,11 +382,11 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, err
 	}
 
-	ret1 = ph.MakeErrorSerializable(ret1)
+	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		foundation.Result{Returns: []interface{}{ret0}},
 		&ret,
 	)
 	if err != nil {
