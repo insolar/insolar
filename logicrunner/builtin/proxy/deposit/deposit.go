@@ -31,20 +31,20 @@ type DaemonConfirm struct {
 }
 type DepositOut struct {
 	Balance                 string                 `json:"balance"`
-	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"`
+	HoldStartDate           int64                  `json:"holdStartDate"`
+	PulseDepositUnHold      int64                  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms []DaemonConfirm        `json:"confirmerReferences"`
 	Amount                  string                 `json:"amount"`
 	TxHash                  string                 `json:"ethTxHash"`
 	VestingType             foundation.VestingType `json:"vestingType"`
-	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
-	Lockup                  int64                  `json:"lockupInPulses"`
-	Vesting                 int64                  `json:"vestingInPulses"`
-	VestingStep             int64                  `json:"vestingStepInPulses"`
+	Lockup                  int64                  `json:"lockup"`
+	Vesting                 int64                  `json:"vesting"`
+	VestingStep             int64                  `json:"vestingStep"`
 }
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromBase58("0111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj")
 
 // Deposit holds proxy type
 type Deposit struct {

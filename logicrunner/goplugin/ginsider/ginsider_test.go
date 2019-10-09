@@ -84,7 +84,7 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.17ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
-	ref, err := insolar.NewReferenceFromBase58(refString)
+	ref, err := insolar.NewReferenceFromString(refString)
 	s.Require().NoError(err)
 
 	healthcheckSoFile := path.Join(tmpDir, "healthcheck.so")

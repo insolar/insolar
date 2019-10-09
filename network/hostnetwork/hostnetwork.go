@@ -75,7 +75,7 @@ import (
 // NewHostNetwork constructor creates new NewHostNetwork component
 func NewHostNetwork(nodeRef string) (network.HostNetwork, error) {
 
-	id, err := insolar.NewReferenceFromBase58(nodeRef)
+	id, err := insolar.NewReferenceFromString(nodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid nodeRef")
 	}

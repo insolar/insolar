@@ -67,7 +67,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	i := HelloWorldInstance{}
-	i.Ref, err = insolar.NewReferenceFromBase58(rv)
+	i.Ref, err = insolar.NewReferenceFromString(rv)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	child := HelloWorldInstance{}
-	child.Ref, err = insolar.NewReferenceFromBase58(rv)
+	child.Ref, err = insolar.NewReferenceFromString(rv)
 	if err != nil {
 		return nil, err
 	}

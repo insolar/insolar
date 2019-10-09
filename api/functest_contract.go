@@ -119,7 +119,7 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 		return errors.New("params.PrototypeRefString is missing")
 	}
 
-	protoRef, err := insolar.NewReferenceFromBase58(args.PrototypeRefString)
+	protoRef, err := insolar.NewReferenceFromString(args.PrototypeRefString)
 	if err != nil {
 		return errors.Wrap(err, "can't get protoRef")
 	}
@@ -180,7 +180,7 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 		return errors.New("params.ObjectRefString is missing")
 	}
 
-	objectRef, err := insolar.NewReferenceFromBase58(args.ObjectRefString)
+	objectRef, err := insolar.NewReferenceFromString(args.ObjectRefString)
 	if err != nil {
 		return errors.Wrap(err, "can't get objectRef")
 	}
