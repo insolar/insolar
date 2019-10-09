@@ -19,7 +19,6 @@ package reference
 import (
 	"bytes"
 	"strings"
-	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -43,24 +42,12 @@ type Encoder interface {
 	EncodeRecord(rec *Local) (string, error)
 }
 
-var defaultEncoderOnce sync.Once
-var defaultEncoder Encoder
-
-var base64EncoderOnce sync.Once
-var base64Encoder Encoder
-
 func DefaultEncoder() Encoder {
-	defaultEncoderOnce.Do(func() {
-		defaultEncoder = NewBase58Encoder(0)
-	})
-	return defaultEncoder
+	return NewBase58Encoder(0)
 }
 
 func Base64Encoder() Encoder {
-	base64EncoderOnce.Do(func() {
-		base64Encoder = NewBase64Encoder(0)
-	})
-	return base64Encoder
+	return NewBase64Encoder(0)
 }
 
 type encoder struct {
