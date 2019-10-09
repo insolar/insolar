@@ -70,6 +70,10 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse 
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
+	//	for {}
+	//		err = s.db.View(func(txn *badger.Txn) error {
+	//		}
+	//	}
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
