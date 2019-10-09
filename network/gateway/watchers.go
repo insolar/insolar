@@ -72,21 +72,70 @@ func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.P
 	}()
 }
 
-func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration, done chan struct{}) {
-	logger := inslogger.FromContext(ctx)
+//func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration, done chan struct{}) {
+//	logger := inslogger.FromContext(ctx)
+//
+//	go func() {
+//		for {
+//			select {
+//			case <-time.After(timeout):
+//				gateway.FailState(ctx, "New valid pulse timeout exceeded")
+//			case _, ok := <-done:
+//				if !ok {
+//					return
+//				}
+//
+//				logger.Debug("Resetting new pulse watchdog")
+//			}
+//		}
+//	}()
+//}
 
-	go func() {
+type pulseWatchdog struct {
+	ctx       context.Context
+	gateway   *Base
+	timer     *time.Timer
+	timeout   time.Duration
+	stopChan  chan struct{}
+	resetChan chan struct{}
+}
+
+func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration) *pulseWatchdog {
+	w := &pulseWatchdog{
+		ctx:       ctx,
+		gateway:   gateway,
+		timeout:   timeout,
+		stopChan:  make(chan struct{}, 1),
+		resetChan: make(chan struct{}, 1),
+	}
+
+	return w
+}
+
+func (w *pulseWatchdog) Start() {
+	go func(w *pulseWatchdog) {
+		w.timer = time.NewTimer(w.timeout)
 		for {
 			select {
-			case <-time.After(timeout):
-				gateway.FailState(ctx, "New valid pulse timeout exceeded")
-			case _, ok := <-done:
-				if !ok {
-					return
-				}
-
-				logger.Debug("Resetting new pulse watchdog")
+			case <-w.stopChan:
+				w.timer.Stop()
+				return
+			case <-w.resetChan:
+				w.timer.Reset(w.timeout)
+				return
+			case <-w.timer.C:
+				w.Reset()
+				w.gateway.FailState(w.ctx, "New valid pulse timeout exceeded")
 			}
 		}
-	}()
+	}(w)
+}
+
+func (w *pulseWatchdog) Stop() {
+	w.stopChan <- struct{}{}
+}
+
+func (w *pulseWatchdog) Reset() {
+	inslogger.FromContext(w.ctx).Debug("Resetting new pulse watchdog")
+	w.resetChan <- struct{}{}
 }
