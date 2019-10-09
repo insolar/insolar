@@ -109,7 +109,7 @@ type ContractMethod func(oldState []byte, args []byte) (newState []byte, result 
 type ContractMethods map[string]ContractMethod
 
 // ContractConstructor is a typedef of typical contract constructor
-type ContractConstructor func(args []byte) (state []byte, result []byte, err error)
+type ContractConstructor func(ref Reference, args []byte) (state []byte, result []byte, err error)
 
 // ContractConstructors maps name to contract constructor
 type ContractConstructors map[string]ContractConstructor

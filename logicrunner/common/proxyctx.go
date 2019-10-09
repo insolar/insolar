@@ -31,7 +31,7 @@ type ProxyHelper interface {
 	) (result []byte, err error)
 	SaveAsChild(
 		parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
-	) (objRef *insolar.Reference, result []byte, err error)
+	) (result []byte, err error)
 	DeactivateObject(object insolar.Reference) error
 	MakeErrorSerializable(error) error
 }
