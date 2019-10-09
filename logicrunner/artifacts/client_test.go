@@ -1523,7 +1523,7 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 }
 
 func shouldLoadRef(strRef string) insolar.Reference {
-	ref, err := insolar.NewReferenceFromBase58(strRef)
+	ref, err := insolar.NewReferenceFromString(strRef)
 	if err != nil {
 		panic(errors.Wrap(err, "Unexpected error, bailing out"))
 	}

@@ -472,7 +472,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		classReference = genesisrefs.GenerateProtoReferenceFromCode(0, pf.code).String()
 	}
 
-	_, err = insolar.NewReferenceFromBase58(classReference)
+	_, err = insolar.NewReferenceFromString(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}

@@ -234,7 +234,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	resp = callMethod(t, objectRef, "GetFriend")
 	require.Empty(t, resp.Error)
 
-	two, err2 := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	two, err2 := insolar.NewReferenceFromString(resp.ExtractedReply.(string))
 	require.NoError(t, err2)
 
 	for i := 6; i <= 9; i++ {
@@ -320,7 +320,7 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
 
-	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	secondWalletRef, err := insolar.NewReferenceFromString(resp.ExtractedReply.(string))
 	require.NoError(t, err)
 
 	checkPassed := false
@@ -429,7 +429,7 @@ func (w *TestSagaCallFromAcceptMethodContract) RollbackStepTwo(amount int) error
 	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
 
-	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	secondWalletRef, err := insolar.NewReferenceFromString(resp.ExtractedReply.(string))
 	require.NoError(t, err)
 
 	checkPassed := false
@@ -528,7 +528,7 @@ func (w *TestSagaMultipleCallsContract) Rollback(amount int) error {
 	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
 
-	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	secondWalletRef, err := insolar.NewReferenceFromString(resp.ExtractedReply.(string))
 	require.NoError(t, err)
 
 	checkPassed := false
@@ -633,7 +633,7 @@ func (w *SagaMagicFlagTwo) Accept(amount int) error {
 	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
 	require.Empty(t, resp.Error)
 
-	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	secondWalletRef, err := insolar.NewReferenceFromString(resp.ExtractedReply.(string))
 	require.NoError(t, err)
 
 	checkPassed := false

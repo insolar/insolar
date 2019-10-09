@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"io"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 

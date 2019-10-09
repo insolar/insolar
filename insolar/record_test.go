@@ -37,10 +37,10 @@ func TestNewIDFromBytes(t *testing.T) {
 	insolar.NewIDFromBytes(nil)
 }
 
-func TestNewIDFromBase58(t *testing.T) {
+func TestNewIDFromString(t *testing.T) {
 	id := gen.ID()
 	idStr := "1" + base58.Encode(id.Bytes())
-	id2, err := insolar.NewIDFromBase58(idStr)
+	id2, err := insolar.NewIDFromString(idStr)
 	require.NoError(t, err)
 
 	assert.Equal(t, id, *id2)
@@ -53,13 +53,13 @@ func TestRecordID_String(t *testing.T) {
 	assert.Equal(t, idStr, id.String())
 }
 
-func TestNewRefFromBase58(t *testing.T) {
+func TestNewRefFromString(t *testing.T) {
 	recordID := gen.ID()
 	domainID := gen.ID()
 	refStr := "1" + base58.Encode(recordID.Bytes()) + insolar.RecordRefIDSeparator + "1" + base58.Encode(domainID.Bytes())
 
 	expectedRef := insolar.NewGlobalReference(recordID, domainID)
-	actualRef, err := insolar.NewReferenceFromBase58(refStr)
+	actualRef, err := insolar.NewReferenceFromString(refStr)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedRef, actualRef)
@@ -108,9 +108,9 @@ func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
 	}
 }
 
-func TestNewReferenceFromBase58(t *testing.T) {
+func TestNewReferenceFromString(t *testing.T) {
 	origin := gen.Reference()
-	decoded, err := insolar.NewReferenceFromBase58(origin.String())
+	decoded, err := insolar.NewReferenceFromString(origin.String())
 	require.NoError(t, err)
 	assert.Equal(t, origin, *decoded)
 }
