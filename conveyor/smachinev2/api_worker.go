@@ -17,25 +17,13 @@
 package smachine
 
 import (
-	"context"
 	"sync"
 )
 
 type DetachableFunc func(DetachableSlotWorker)
 type NonDetachableFunc func(FixedSlotWorker)
 
-type WorkerContextMode uint8
-
-const (
-	_ WorkerContextMode = iota
-	NonDetachableContext
-	DetachableContext
-	DetachedContext
-)
-
 type SlotWorker interface {
-	//EnsureMode(expectedMode WorkerContextMode)
-	AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
 	ActivateLinkedList(linkedList *Slot, hotWait bool)
 	HasSignal() bool
 	IsDetached() bool

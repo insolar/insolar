@@ -828,3 +828,49 @@ func (m *SlotMachine) wakeupOnDeactivationOf(slot *Slot, waitOn SlotLink, worker
 		return true
 	})
 }
+
+func (m *SlotMachine) useSlotAsShared(link SharedDataLink, accessFn SharedDataFunc, worker DetachableSlotWorker) SharedAccessReport {
+	isValid, isBusy, isAtStep := link.link.getIsValidBusyAndAtStep()
+
+	if !isValid || !isAtStep {
+		return SharedSlotAbsent
+	}
+
+	isLocal := link.link.s.machine == m
+	if isBusy {
+		if isLocal {
+			return SharedSlotLocalBusy
+		}
+		return SharedSlotRemoteBusy
+	}
+
+	if isLocal {
+		if m._useLocalSlotAsShared(link, accessFn, worker) {
+			return SharedSlotLocalAvailable
+		}
+		return SharedSlotLocalBusy
+	}
+
+	panic("not implemented")
+}
+
+func (m *SlotMachine) _useLocalSlotAsShared(link SharedDataLink, accessFn SharedDataFunc, worker DetachableSlotWorker) bool {
+	slot := link.link.s
+	isStarted, prevStepNo := slot.tryStartWorking()
+	if !isStarted {
+		return false
+	}
+
+	defer slot.stopWorking(prevStepNo)
+	accessFn(link.data)
+
+	_, hasSignal := m.syncQueue.ProcessSlotCallbacksByDetachable(link.link.SlotLink, worker)
+	if hasSignal || !link.wakeup || slot.QueueType().IsActiveOrPolling() {
+		return true
+	}
+
+	if !worker.NonDetachableCall(slot.activateSlot) {
+		m.syncQueue.AddAsyncUpdate(link.link.SlotLink, SlotLink.activateSlot)
+	}
+	return true
+}

@@ -111,6 +111,20 @@ func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasUpdates, 
 	return true, hasSignal, wasDetached
 }
 
+func (m *SlotMachineSync) ProcessSlotCallbacksByDetachable(link SlotLink, worker DetachableSlotWorker) (hasUpdates, hasSignal bool) {
+	if worker.HasSignal() {
+		return true, true
+	}
+
+	tasks := m.FlushDetachQueue(link)
+	if len(tasks) == 0 {
+		return false, false
+	}
+
+	hasSignal = m.processCallbacks(tasks, worker)
+	return true, hasSignal
+}
+
 func (m *SlotMachineSync) processCallbacks(tasks tools.SyncFuncList, worker DetachableSlotWorker) (hasSignal bool) {
 	for i, fn := range tasks {
 		fn(worker)

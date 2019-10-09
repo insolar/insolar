@@ -36,10 +36,6 @@ type SimpleSlotWorker struct {
 	cond        *sync.Cond
 }
 
-func (p *SimpleSlotWorker) AttachTo(slot *smachine.Slot, link smachine.SlotLink, wakeUpOnUse bool) (smachine.SharedAccessReport, context.CancelFunc) {
-	panic("implement me")
-}
-
 func (p *SimpleSlotWorker) ActivateLinkedList(linkedList *smachine.Slot, hotWait bool) {
 	panic("implement me")
 }

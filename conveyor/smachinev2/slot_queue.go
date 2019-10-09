@@ -25,13 +25,21 @@ const (
 
 	UnusedSlots
 
-	WorkingSlots
-	ActiveSlots
-
 	PollingSlots
+
+	ActiveSlots
+	WorkingSlots
 )
 
 const NoQueue QueueType = -1
+
+func (v QueueType) IsActiveOrPolling() bool {
+	return v >= PollingSlots
+}
+
+func (v QueueType) IsActive() bool {
+	return v >= ActiveSlots
+}
 
 func NewSlotQueue(t QueueType) SlotQueue {
 	if t <= InvalidQueue {

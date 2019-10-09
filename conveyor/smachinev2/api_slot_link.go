@@ -98,6 +98,14 @@ func (p StepLink) isValidAndAtExactStep() (valid, atExactStep bool) {
 	return p.id == id, p.step == step
 }
 
+func (p StepLink) getIsValidBusyAndAtStep() (isValid, isBusy, atExactStep bool) {
+	if p.s == nil {
+		return false, false, false
+	}
+	id, step, isBusy := p.s.GetState()
+	return p.id == id, isBusy, p.step == 0 || p.step == step
+}
+
 type SharedDataFunc func(interface{})
 
 type SharedDataLink struct {

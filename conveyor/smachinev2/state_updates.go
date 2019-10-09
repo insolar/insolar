@@ -55,9 +55,9 @@ func init() {
 			filter: updCtxMigrate | updCtxBargeIn | updCtxAsyncCallback,
 
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
-				if !slot.isInQueue() {
-					return false, errors.New("unexpected state update")
-				}
+				//if !slot.isInQueue() {
+				//	return false, errors.New("unexpected state update")
+				//}
 				return true, nil
 			},
 		},

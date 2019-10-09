@@ -71,20 +71,10 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateCon
 		//		return &conditionalUpdate{marker: p.getMarker()}
 	}
 
-	r, releaseFn := p.w.AttachTo(p.s, link, false)
-	if releaseFn != nil {
-		defer releaseFn()
-	}
-	switch r {
-	case SharedSlotAbsent, SharedSlotAvailableAlways:
-		// no wait
+	if !link.isValidAndBusy() { // cheap and easy pre-check
 		ncu := p.newConditionalUpdate(stateUpdNext)
 		ncu.isAvailable = true
 		return &ncu
-
-	case SharedSlotRemoteBusy, SharedSlotRemoteAvailable:
-		// state has to be re-detected upon applying the update
-		panic("not implemented")
 	}
 
 	ncu := p.newConditionalUpdate(updMode)
@@ -102,19 +92,13 @@ func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdat
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	p.ensure(updCtxExec)
-	if a.link.link.s == p.s {
+
+	if p.s == a.link.link.s {
 		a.accessFn(a.link.data)
 		return SharedSlotAvailableAlways
 	}
 
-	r, releaseFn := p.w.AttachTo(p.s, a.link.link.SlotLink, a.link.wakeup)
-	if releaseFn != nil {
-		defer releaseFn()
-	}
-	if r.IsAvailable() {
-		a.accessFn(a.link.data)
-	}
-	return r
+	return p.s.machine.useSlotAsShared(a.link, a.accessFn, p.w)
 }
 
 func (p *executionContext) executeNextStep() (stateUpdate StateUpdate, sut StateUpdateType, asyncCallCount uint16) {
