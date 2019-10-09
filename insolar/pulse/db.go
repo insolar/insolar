@@ -30,10 +30,10 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	lock sync.RWMutex
-	db   store.DB
+	db store.DB
 
-	latest *insolar.Pulse
+	lock   sync.RWMutex   // AALEKSEEV TODO get rid of this
+	latest *insolar.Pulse // AALEKSEEV TODO get rid of this
 }
 
 type pulseKey insolar.PulseNumber
@@ -142,52 +142,62 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error { // AALEKSEEV TODO looks easy to rewrite
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
+	for {
+		err := s.db.Backend().Update(func(txn *badger.Txn) error {
+			var insertWithHead = func(head insolar.PulseNumber) error {
+				oldHead, err := txGet(txn, pulseKey(head))
+				if err != nil {
+					return err
+				}
+				oldHead.Next = &pulse.PulseNumber
 
-	var insertWithHead = func(head insolar.PulseNumber) error {
-		oldHead, err := s.get(head)
-		if err != nil {
+				// Set new pulse.
+				err = txSet(txn, pulse.PulseNumber, dbNode{
+					Prev:  &oldHead.Pulse.PulseNumber,
+					Pulse: pulse,
+				})
+				if err != nil {
+					return err
+				}
+				// Set old updated tail.
+				return txSet(txn, oldHead.Pulse.PulseNumber, oldHead)
+			}
+			var insertWithoutHead = func() error {
+				// Set new pulse.
+				return txSet(txn, pulse.PulseNumber, dbNode{
+					Pulse: pulse,
+				})
+			}
+
+			head, err := txHead(txn)
+			if err == ErrNotFound {
+				err = insertWithoutHead()
+				if err != nil {
+					txn.Discard()
+				}
+				return err
+			}
+
+			if pulse.PulseNumber <= head {
+				retErr = ErrBadPulse
+				return nil
+			}
+
+			err = insertWithHead(head)
+			if err != nil {
+				txn.Discard()
+			}
 			return err
-		}
-		oldHead.Next = &pulse.PulseNumber
-
-		// Set new pulse.
-		err = s.set(pulse.PulseNumber, dbNode{
-			Prev:  &oldHead.Pulse.PulseNumber,
-			Pulse: pulse,
 		})
-		if err != nil {
-			return err
-		}
-		// Set old updated tail.
-		return s.set(oldHead.Pulse.PulseNumber, oldHead)
-	}
-	var insertWithoutHead = func() error {
-		// Set new pulse.
-		return s.set(pulse.PulseNumber, dbNode{
-			Pulse: pulse,
-		})
-	}
 
-	head, err := s.head()
-	if err == ErrNotFound {
-		err := insertWithoutHead()
 		if err == nil {
-			s.latest = &pulse
+			break
 		}
-		return err
-	}
 
-	if pulse.PulseNumber <= head {
-		return ErrBadPulse
+		inslogger.FromContext(ctx).Debugf("DB.Append -  s.db.Backend().Update returned an error, retrying: %s", err.Error())
 	}
-	err = insertWithHead(head)
-	if err == nil {
-		s.latest = &pulse
-	}
-	return err
+	return
 }
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
@@ -278,6 +288,12 @@ func txGet(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
 
 	retNode = deserialize(buf)
 	return
+}
+
+func txSet(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
+	key := pulseKey(pn)
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	return txn.Set(fullKey, serialize(node))
 }
 
 func (s *DB) get(pn insolar.PulseNumber) (nd dbNode, err error) { // AALEKSEEV TODO delete this
