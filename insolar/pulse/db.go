@@ -115,10 +115,10 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	for {
 		hasKeys = false
 		err := s.db.Backend().Update(func(txn *badger.Txn) error {
-			pivot := pulseKey(from)
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
 			defer it.Close()
 
+			pivot := pulseKey(from)
 			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
 			scope := pivot.Scope().Bytes()
 			it.Seek(prefix)
@@ -223,34 +223,68 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	return s.traverse(pn, steps, false)
+	return s.traverse(ctx, pn, steps, false)
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	return s.traverse(pn, steps, true)
+	return s.traverse(ctx, pn, steps, true)
 }
 
-func (s *DB) traverse(pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
-	_, err := s.db.Get(pulseKey(pn))
-	if err != nil {
-		return *insolar.GenesisPulse, err
+func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (retPulse insolar.Pulse, retErr error) {
+	if steps < 0 {
+		return *insolar.GenesisPulse, errors.New("DB.traverse - `steps` argument should be not negative")
 	}
 
-	rit := s.db.NewIterator(pulseKey(pn), reverse)
-	defer rit.Close()
-	for i := 0; rit.Next(); i++ {
-		if i == steps {
-			buf, err := rit.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
+	for {
+		err := s.db.Backend().View(func(txn *badger.Txn) error {
+			opts := badger.DefaultIteratorOptions
+			opts.Reverse = reverse
+			it := txn.NewIterator(opts)
+			defer it.Close()
+
+			pivot := pulseKey(pn)
+			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+			scope := pivot.Scope().Bytes()
+			it.Seek(prefix)
+			i := 0
+			for {
+				if !it.ValidForPrefix(scope) {
+					break
+				}
+
+				if i == steps {
+					buf, err := it.Item().ValueCopy(nil)
+					if err != nil {
+						retPulse = *insolar.GenesisPulse
+						retErr = err
+						return nil
+					}
+					node := deserialize(buf)
+					retPulse = node.Pulse
+					retErr = nil
+					return nil
+				}
+
+				it.Next()
+				i++
 			}
-			nd := deserialize(buf)
-			return nd.Pulse, nil
+
+			// not found
+			retPulse = *insolar.GenesisPulse
+			retErr = ErrNotFound
+			return nil
+		})
+
+		if err == nil {
+			break
 		}
+
+		inslogger.FromContext(ctx).Debugf("DB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
 	}
-	return *insolar.GenesisPulse, ErrNotFound
+
+	return
 }
 
 func head(txn *badger.Txn) (insolar.PulseNumber, error) {
