@@ -178,7 +178,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type, n
 		return defaultObjFieldGetterFactory(unexported, t, nilZero)
 	},
 
-	reflect.Func: func(unexported bool, t reflect.Type, nilZero bool) (bool, fieldValueGetterFunc) {
+	reflect.Func: func(unexported bool, t reflect.Type, _ bool) (bool, fieldValueGetterFunc) {
 		if t.NumIn() == 0 && t.NumOut() == 1 && t.Out(0).Kind() == reflect.String {
 			return unexported, func(value reflect.Value) interface{} {
 				if value.IsNil() {

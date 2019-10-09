@@ -157,6 +157,11 @@ type SomeLogObjectWithTemplate struct {
 	IntVal int
 }
 
+type SomeLogObjectWithTemplateAndMsg struct {
+	*insolar.LogObjectTemplate `txt:"TemplateAndMsg"`
+	IntVal                     int
+}
+
 func TestTryLogObject_SingleLogObject(t *testing.T) {
 	f := GetDefaultLogMsgFormatter()
 
@@ -179,6 +184,10 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 	require.Equal(t,
 		"IntVal:7:int,msg:",
 		f.testTryLogObject(SomeLogObjectWithTemplate{nil, 7}))
+
+	require.Equal(t,
+		"IntVal:7:int,msg:TemplateAndMsg",
+		f.testTryLogObject(SomeLogObjectWithTemplateAndMsg{nil, 7}))
 }
 
 type SomeLogObjectWithMsg struct {

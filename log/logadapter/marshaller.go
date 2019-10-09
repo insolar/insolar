@@ -156,14 +156,14 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		fd := fieldDesc{StructField: tf, index: i}
 
 		fd.reportFn = getReporterFn(fd.Type)
-		skipField := tf.Anonymous || fieldName == "" || fieldName[0] == '_'
-
-		if fd.reportFn == nil && skipField {
-			continue
-		}
-
 		tagType, fmtStr := singleTag(fd.Tag)
 
+		if tf.Anonymous && tagType == `txt` {
+			// a special case - we can take `txt` of an anonymous as a message text
+			fieldName = "Message"
+		} else if fd.reportFn == nil && (tf.Anonymous || fieldName == "" || fieldName[0] == '_') {
+			continue
+		}
 		outputFn, optional := outputOfField(fieldName, tagType, fmtStr, fd.reportFn)
 
 		msgField := false
@@ -337,9 +337,9 @@ func outputOfField(fieldName, tagType, fmtStr string, reportFn FieldReporterFunc
 			}, false
 		}
 
-		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, _ interface{}) {
+		return func(writer insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector, v interface{}) {
 			if collector != nil {
-				reportFn(collector, fieldName, fmtStr)
+				reportFn(collector, fieldName, v)
 			}
 			writer.AddStrField(fieldName, fmtStr)
 		}, false
