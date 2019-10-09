@@ -70,10 +70,23 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse 
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
-	//	for {}
-	//		err = s.db.View(func(txn *badger.Txn) error {
-	//		}
-	//	}
+	/*for {
+		err = s.db.Backend().View(func(txn *badger.Txn) error {
+			opts := badger.DefaultIteratorOptions
+			opts.Reverse = true
+			pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
+			scope := pivot.Scope().Bytes()
+			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+			it := txn.NewIterator(opts)
+			it.Seek(prefix)
+		}
+
+		if err == nil {
+			inslogger.FromContext(ctx).Debugf("DB.Latest -  s.db.Backend().View returned an error, retrying: %s", err.Error())
+			break
+		}
+	} */
+
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -81,11 +94,35 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 		return *s.latest, nil
 	}
 
-	head, err := s.head()
+	// get head
+	head, err := func() (insolar.PulseNumber, error) {
+		rit := s.db.NewIterator(pulseKey(insolar.PulseNumber(0xFFFFFFFF)), true)
+		defer rit.Close()
+
+		if !rit.Next() {
+			return insolar.GenesisPulse.PulseNumber, ErrNotFound
+		}
+		return insolar.NewPulseNumber(rit.Key()), nil
+	}()
+
 	if err != nil {
 		return
 	}
-	nd, err := s.get(head)
+
+	// get(head)
+	nd, err := func() (nd dbNode, err error) {
+		buf, err := s.db.Get(pulseKey(head))
+		if err == store.ErrNotFound {
+			err = ErrNotFound
+			return
+		}
+		if err != nil {
+			return
+		}
+		nd = deserialize(buf)
+		return
+	}()
+
 	if err != nil {
 		return
 	}
