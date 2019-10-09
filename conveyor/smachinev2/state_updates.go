@@ -75,7 +75,7 @@ func init() {
 		},
 
 		stateUpdStop: {
-			filter: updCtxExec | updCtxInit | updCtxMigrate,
+			filter: updCtxExec | updCtxInit | updCtxMigrate | updCtxBargeIn,
 			apply:  stateUpdateDefaultStop,
 		},
 
@@ -229,26 +229,27 @@ func init() {
 				m := slot.machine
 				slot.setNextStep(stateUpdate.step)
 				waitOn := stateUpdate.getLink()
-				switch {
-				case waitOn.s == slot || !waitOn.IsValid():
+
+				if waitOn.s == slot || !waitOn.IsValid() {
 					// don't wait for self
 					// don't wait for an expired slot
 					m.updateSlotQueue(slot, worker, activateSlot)
-				default:
-					switch waitOn.s.QueueType() {
-					case ActiveSlots, WorkingSlots:
-						// don't wait
-						m.updateSlotQueue(slot, worker, activateSlot)
-					case NoQueue:
-						waitOn.s.makeQueueHead()
-						fallthrough
-					case ActivationOfSlot, PollingSlots:
-						m.updateSlotQueue(slot, worker, deactivateSlot)
-						waitOn.s.queue.AddLast(slot)
-					default:
-						return false, errors.New("illegal slot queue")
-					}
+					return
 				}
+				panic("not implemented") // TODO requires sync
+				//switch waitOn.s.QueueType() {
+				//case ActiveSlots, WorkingSlots:
+				//	// don't wait
+				//	m.updateSlotQueue(slot, worker, activateSlot)
+				//case NoQueue:
+				//	waitOn.s.makeQueueHead()
+				//	fallthrough
+				//case ActivationOfSlot, PollingSlots:
+				//	m.updateSlotQueue(slot, worker, deactivateSlot)
+				//	waitOn.s.queue.AddLast(slot)
+				//default:
+				//	return false, errors.New("illegal slot queue")
+				//}
 				return true, nil
 			},
 		},
@@ -257,7 +258,34 @@ func init() {
 			filter:  updCtxExec,
 			params:  updParamStep | updParamLink,
 			prepare: stateUpdateDefaultNoArgPrepare,
-			apply:   nil, // TODO not implemented
+			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+				m := slot.machine
+				slot.setNextStep(stateUpdate.step)
+
+				waitOn := stateUpdate.getLink()
+				if waitOn.s == slot || !waitOn.IsValid() {
+					// don't wait for self
+					// don't wait for an expired slot
+					m.updateSlotQueue(slot, worker, activateSlot)
+					return
+				}
+
+				wakeupLink := slot.NewLink()
+				m.syncQueue.AddAsyncCallback(waitOn, func(waitOn SlotLink, worker DetachableSlotWorker) bool {
+					switch {
+					case !wakeupLink.IsValid():
+						return true
+					case waitOn.isValidAndBusy():
+						// add this back
+						return false
+					case !worker.NonDetachableCall(wakeupLink.s.activateSlot):
+						m.syncQueue.AddAsyncUpdate(wakeupLink, SlotLink.activateSlot)
+					}
+					return true
+				})
+
+				return true, nil
+			},
 		},
 	}
 

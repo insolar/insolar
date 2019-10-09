@@ -102,6 +102,11 @@ func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdat
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	p.ensure(updCtxExec)
+	if a.link.link.s == p.s {
+		a.accessFn(a.link.data)
+		return SharedSlotAvailableAlways
+	}
+
 	r, releaseFn := p.w.AttachTo(p.s, a.link.link.SlotLink, a.link.wakeup)
 	if releaseFn != nil {
 		defer releaseFn()

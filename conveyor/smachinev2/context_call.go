@@ -19,6 +19,7 @@ package smachine
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
+	"sync/atomic"
 )
 
 var _ ExecutionAdapter = &adapterExecHelper{}
@@ -132,12 +133,29 @@ func (c *adapterCallRequest) _startAsync() {
 	}
 
 	c.ctx.countAsyncCalls++
+	cancelFn := c.executor.StartCall(stepLink, c.fn, _asyncCallback(stepLink), c.cancel != nil)
 
-	cancelFn := c.executor.StartCall(stepLink, c.fn, func(resultFn AsyncResultFunc, recovered interface{}) {
-		c.ctx.s.machine.queueAsyncCallback(stepLink.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
-			c.ctx.countAsyncCalls--
+	if c.cancel != nil {
+		c.cancel.SetChain(cancelFn)
+	}
+}
 
-			if recovered == nil {
+func _asyncCallback(stepLink StepLink) AdapterCallbackFunc {
+	callbackGuard := uint32(0)
+
+	return func(resultFn AsyncResultFunc, recovered interface{}) {
+		if atomic.SwapUint32(&callbackGuard, 1) != 0 {
+			panic("repeated callback")
+		}
+
+		if !stepLink.IsValid() {
+			return
+		}
+
+		stepLink.s.machine.queueAsyncCallback(stepLink.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
+			slot.asyncCallCount--
+
+			if recovered == nil && resultFn != nil {
 				rc := asyncResultContext{slot: slot}
 				if wakeup := rc.executeResult(resultFn); wakeup {
 					return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
@@ -146,10 +164,6 @@ func (c *adapterCallRequest) _startAsync() {
 
 			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdNoChange).newNoArg()
 		}, recovered)
-	}, c.cancel != nil)
-
-	if c.cancel != nil {
-		c.cancel.SetChain(cancelFn)
 	}
 }
 
@@ -183,11 +197,15 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 	stepLink := c.ctx.s.NewStepLink()
 	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
 		wc.L.Lock()
-		if callState == 0 {
+		switch callState {
+		case 0:
 			resultFn = fn
 			resultRecovered = recovered
 			callState = 1
 			wc.Broadcast()
+		case 1:
+			wc.L.Unlock()
+			panic("repeated callback")
 		}
 		wc.L.Unlock()
 	}, false)

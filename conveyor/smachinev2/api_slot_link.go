@@ -62,6 +62,14 @@ func (p SlotLink) isValidAndBusy() bool {
 	return p.id == id && isBusy
 }
 
+func (p SlotLink) getIsValidAndBusy() (isValid, isBusy bool) {
+	if p.s == nil {
+		return false, false
+	}
+	id, _, isBusy := p.s.GetState()
+	return p.id == id, isBusy
+}
+
 type StepLink struct {
 	SlotLink
 	step uint32
@@ -107,6 +115,24 @@ type SharedDataAccessor struct {
 	accessFn SharedDataFunc
 }
 
+func (v SharedDataAccessor) TryUse(ctx ExecutionContext) SharedAccessReport {
+	return ctx.UseShared(v)
+}
+
+func (v SharedDataAccessor) TryUseThenJump(ctx ExecutionContext, thenNext StateFunc) StateUpdate {
+	return v.TryUseThenElseJump(ctx, thenNext, thenNext)
+}
+
+func (v SharedDataAccessor) TryUseThenElseJump(ctx ExecutionContext, thenNext, elseNext StateFunc) StateUpdate {
+	switch r := v.TryUse(ctx); {
+	case r.IsAvailable():
+		return ctx.Jump(thenNext)
+	case r.IsAbsent():
+		return ctx.Jump(elseNext)
+	}
+	return ctx.WaitShared(v.link).ThenRepeat()
+}
+
 type SharedAccessReport uint8
 
 const (
@@ -128,4 +154,8 @@ func (v SharedAccessReport) IsRemote() bool {
 
 func (v SharedAccessReport) IsAbsent() bool {
 	return v == SharedSlotAbsent
+}
+
+func (v SharedAccessReport) IsBusy() bool {
+	return v == SharedSlotLocalBusy || v == SharedSlotRemoteBusy
 }

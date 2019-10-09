@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
@@ -22,6 +22,16 @@ type bargeInRequest struct {
 	p    *contextTemplate
 	m    *SlotMachine
 	link StepLink
+}
+
+func (b bargeInRequest) WithStop() BargeInFunc {
+	b.p.ensureAny2(updCtxExec, updCtxInit)
+	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
+		return ctx.Stop()
+	})
+	return func() bool {
+		return bfn(nil)
+	}
 }
 
 func (b bargeInRequest) WithWakeUp() BargeInFunc {

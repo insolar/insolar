@@ -75,6 +75,7 @@ type BargeInRequester interface {
 	WithJumpExt(SlotStep) BargeInFunc
 	WithJump(StateFunc) BargeInFunc
 	WithWakeUp() BargeInFunc
+	WithStop() BargeInFunc
 }
 
 type MigrationContext interface {
@@ -182,6 +183,8 @@ type BargeInContext interface {
 	Stay() StateUpdate
 	/* Makes active if was waiting or polling */
 	WakeUp() StateUpdate
+
+	Stop() StateUpdate
 }
 
 type FailureContext interface {

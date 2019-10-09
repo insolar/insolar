@@ -54,22 +54,24 @@ type AsyncCallRequester interface {
 
 type AdapterCallbackFunc func(fn AsyncResultFunc, recovered interface{})
 type AdapterCallFunc func() AsyncResultFunc
+type AdapterNestedEventFunc func(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
 
-type AdapterNestedEvent interface {
-	SendNestedEvent(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
-}
+//type AdapterNestedEvent interface {
+//	SendNestedEvent(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
+//}
 
-/* Provided by internal adapter */
+/* Provided by adapter's internals */
 type AdapterExecutor interface {
-	/* Schedules asynchronous execution, MAY return native cancellation function if supported.
-	When callback == nil then fn() must return nil as well.
-	Panics are handled by caller.
+	/*
+		Schedules asynchronous execution, MAY return native cancellation function if supported.
+		When callback == nil then fn() must return nil as well.
+		Panics are handled by caller.
 	*/
 	StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc
 
 	/*
-		    Performs sync call if *natively* supported by the adapter, otherwise must return (false, nil)
-			Panics are handled by caller.
+	    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
+		Panics are handled by caller.
 	*/
 	TrySyncCall(fn AdapterCallFunc) (bool, AsyncResultFunc)
 	//Migrate(slotMachineState SlotMachineState, migrationCount uint16)
