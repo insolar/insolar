@@ -18,7 +18,6 @@ package pulse
 
 import (
 	"context"
-	"sync"
 
 	"github.com/dgraph-io/badger"
 
@@ -31,9 +30,6 @@ import (
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
 	db store.DB
-
-	lock   sync.RWMutex   // AALEKSEEV TODO get rid of this
-	latest *insolar.Pulse // AALEKSEEV TODO get rid of this
 }
 
 type pulseKey insolar.PulseNumber
@@ -65,7 +61,7 @@ func NewDB(db store.DB) *DB {
 func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
 	for {
 		err := s.db.Backend().View(func(txn *badger.Txn) error {
-			node, err := txGet(txn, pulseKey(pn))
+			node, err := get(txn, pulseKey(pn))
 			if err != nil {
 				retErr = err
 				return nil
@@ -88,13 +84,13 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
 	for {
 		err := s.db.Backend().View(func(txn *badger.Txn) error {
-			head, err := txHead(txn)
+			head, err := head(txn)
 			if err != nil {
 				retErr = err
 				return nil
 			}
 
-			node, err := txGet(txn, pulseKey(head))
+			node, err := get(txn, pulseKey(head))
 			if err != nil {
 				retErr = err
 				return nil
@@ -114,13 +110,9 @@ func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) 
 }
 
 // TruncateHead remove all records after lastPulse
-func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error { // AALEKSEEV TODO rewrite
 	it := s.db.NewIterator(pulseKey(from), false)
 	defer it.Close()
-
-	s.lock.Lock()
-	s.latest = nil
-	s.lock.Unlock()
 
 	var hasKeys bool
 	for it.Next() {
@@ -146,14 +138,14 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 	for {
 		err := s.db.Backend().Update(func(txn *badger.Txn) error {
 			var insertWithHead = func(head insolar.PulseNumber) error {
-				oldHead, err := txGet(txn, pulseKey(head))
+				oldHead, err := get(txn, pulseKey(head))
 				if err != nil {
 					return err
 				}
 				oldHead.Next = &pulse.PulseNumber
 
 				// Set new pulse.
-				err = txSet(txn, pulse.PulseNumber, dbNode{
+				err = set(txn, pulse.PulseNumber, dbNode{
 					Prev:  &oldHead.Pulse.PulseNumber,
 					Pulse: pulse,
 				})
@@ -161,16 +153,16 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 					return err
 				}
 				// Set old updated tail.
-				return txSet(txn, oldHead.Pulse.PulseNumber, oldHead)
+				return set(txn, oldHead.Pulse.PulseNumber, oldHead)
 			}
 			var insertWithoutHead = func() error {
 				// Set new pulse.
-				return txSet(txn, pulse.PulseNumber, dbNode{
+				return set(txn, pulse.PulseNumber, dbNode{
 					Pulse: pulse,
 				})
 			}
 
-			head, err := txHead(txn)
+			head, err := head(txn)
 			if err == ErrNotFound {
 				err = insertWithoutHead()
 				if err != nil {
@@ -202,10 +194,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
+func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
 	_, err := s.db.Get(pulseKey(pn))
 	if err != nil {
 		return *insolar.GenesisPulse, err
@@ -228,10 +217,7 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (i
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
+func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
 	_, err := s.db.Get(pulseKey(pn))
 	if err != nil {
 		return *insolar.GenesisPulse, err
@@ -252,7 +238,7 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 	return *insolar.GenesisPulse, ErrNotFound
 }
 
-func txHead(txn *badger.Txn) (insolar.PulseNumber, error) {
+func head(txn *badger.Txn) (insolar.PulseNumber, error) {
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = true
 	it := txn.NewIterator(opts)
@@ -270,7 +256,7 @@ func txHead(txn *badger.Txn) (insolar.PulseNumber, error) {
 	return insolar.NewPulseNumber(k[len(scope):]), nil
 }
 
-func txGet(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
+func get(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 	item, err := txn.Get(fullKey)
 	if err != nil {
@@ -290,38 +276,10 @@ func txGet(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
 	return
 }
 
-func txSet(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
+func set(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
 	key := pulseKey(pn)
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 	return txn.Set(fullKey, serialize(node))
-}
-
-func (s *DB) get(pn insolar.PulseNumber) (nd dbNode, err error) { // AALEKSEEV TODO delete this
-	buf, err := s.db.Get(pulseKey(pn))
-	if err == store.ErrNotFound {
-		err = ErrNotFound
-		return
-	}
-	if err != nil {
-		return
-	}
-	nd = deserialize(buf)
-	return
-}
-
-func (s *DB) set(pn insolar.PulseNumber, nd dbNode) error { // AALEKSEEV TODO delete this
-	return s.db.Set(pulseKey(pn), serialize(nd))
-}
-
-func (s *DB) head() (pn insolar.PulseNumber, err error) { // AALEKSEEV TODO delete this
-
-	rit := s.db.NewIterator(pulseKey(insolar.PulseNumber(0xFFFFFFFF)), true)
-	defer rit.Close()
-
-	if !rit.Next() {
-		return insolar.GenesisPulse.PulseNumber, ErrNotFound
-	}
-	return insolar.NewPulseNumber(rit.Key()), nil
 }
 
 func serialize(nd dbNode) []byte {
