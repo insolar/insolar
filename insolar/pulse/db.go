@@ -29,7 +29,7 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db store.DB // AALEKSEEV TODO: only Backend is required
+	db store.DB // AALEKSEEV TODO: only Backend is required. Also revert changes in store.DB interface
 }
 
 type pulseKey insolar.PulseNumber
