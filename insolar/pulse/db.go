@@ -29,7 +29,7 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db store.DB
+	db store.DB // AALEKSEEV TODO: only Backend is required
 }
 
 type pulseKey insolar.PulseNumber
@@ -110,23 +110,51 @@ func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) 
 }
 
 // TruncateHead remove all records after lastPulse
-func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error { // AALEKSEEV TODO rewrite
-	it := s.db.NewIterator(pulseKey(from), false)
-	defer it.Close()
-
+func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newPulseKey(it.Key())
-		err := s.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
+	for {
+		hasKeys = false
+		err := s.db.Backend().Update(func(txn *badger.Txn) error {
+			pivot := pulseKey(from)
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+			scope := pivot.Scope().Bytes()
+			it.Seek(prefix)
+			for {
+				if !it.ValidForPrefix(scope) {
+					break
+				}
+
+				hasKeys = true
+				k := it.Item().KeyCopy(nil)
+				loggedKey := newPulseKey(k[len(scope):])
+				it.Next()
+
+				err := txn.Delete(k)
+				if err != nil {
+					txn.Discard()
+					return errors.Wrapf(err, "can't delete key: %+v", loggedKey)
+				}
+
+				// It's not very good to write logs from inside of the transaction, but since
+				// TruncateHead() is not called often it's OK in this case.
+				inslogger.FromContext(ctx).Debugf("DB.TruncateHead - Erased key with pulse number: %s", insolar.PulseNumber(loggedKey))
+			}
+
+			return nil
+		})
+
+		if err == nil {
+			break
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
+		inslogger.FromContext(ctx).Debugf("DB.TruncateHead - s.db.Backend().Update returned an error, retrying: %s", err.Error())
 	}
+
 	if !hasKeys {
-		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())
+		inslogger.FromContext(ctx).Debug("DB.TruncateHead - No records to delete from pulse number: " + from.String())
 	}
 
 	return nil
