@@ -222,36 +222,23 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
-	_, err := s.db.Get(pulseKey(pn))
-	if err != nil {
-		return *insolar.GenesisPulse, err
-	}
-
-	it := s.db.NewIterator(pulseKey(pn), false)
-	defer it.Close()
-	for i := 0; it.Next(); i++ {
-		if i == steps {
-			buf, err := it.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
-			}
-			nd := deserialize(buf)
-			return nd.Pulse, nil
-		}
-	}
-	return *insolar.GenesisPulse, ErrNotFound
+func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
+	return s.traverse(pn, steps, false)
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
+func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
+	return s.traverse(pn, steps, true)
+}
+
+func (s *DB) traverse(pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) { // AALEKSEEV TODO rewrite
 	_, err := s.db.Get(pulseKey(pn))
 	if err != nil {
 		return *insolar.GenesisPulse, err
 	}
 
-	rit := s.db.NewIterator(pulseKey(pn), true)
+	rit := s.db.NewIterator(pulseKey(pn), reverse)
 	defer rit.Close()
 	for i := 0; rit.Next(); i++ {
 		if i == steps {
