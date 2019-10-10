@@ -107,7 +107,7 @@ func (w *pulseWatchdog) start() {
 				w.timer.Stop()
 				return
 			case <-w.timer.C:
-				w.Reset()
+				w.timer.Stop()
 				w.gateway.FailState(w.ctx, "New valid pulse timeout exceeded")
 			}
 		}

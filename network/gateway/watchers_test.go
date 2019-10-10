@@ -66,12 +66,11 @@ func TestPulseWatchdog(t *testing.T) {
 
 	gw := network.NewGatewayMock(mc)
 
-	wd := newPulseWatchdog(context.Background(), gw, time.Second)
+	wd := newPulseWatchdog(context.Background(), gw, 300*time.Millisecond)
 	wd.Reset()
-	<-time.After(500 * time.Millisecond)
+	<-time.After(200 * time.Millisecond)
 	wd.Reset()
-	<-time.After(700 * time.Millisecond)
-	<-time.After(100 * time.Millisecond)
+	<-time.After(200 * time.Millisecond)
 	defer wd.Stop()
 }
 
@@ -85,9 +84,8 @@ func TestPulseWatchdog_timeout_exceeded(t *testing.T) {
 		assert.Equal(t, "New valid pulse timeout exceeded", reason)
 	})
 
-	wd := newPulseWatchdog(context.Background(), gw, time.Second)
+	wd := newPulseWatchdog(context.Background(), gw, 300*time.Millisecond)
 	wd.Reset()
-	<-time.After(time.Second)
-	<-time.After(100 * time.Millisecond)
+	<-time.After(400 * time.Millisecond)
 	defer wd.Stop()
 }
