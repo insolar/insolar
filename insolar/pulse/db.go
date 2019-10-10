@@ -162,7 +162,8 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
+func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
+	var retErr error
 	for {
 		err := s.db.Update(func(txn *badger.Txn) error {
 			var insertWithHead = func(head insolar.PulseNumber) error {
@@ -217,7 +218,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 
 		inslogger.FromContext(ctx).Debugf("DB.Append -  s.db.Backend().Update returned an error, retrying: %s", err.Error())
 	}
-	return
+	return retErr
 }
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
@@ -232,11 +233,15 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 	return s.traverse(ctx, pn, steps, true)
 }
 
-func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (retPulse insolar.Pulse, retErr error) {
+func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
 	if steps < 0 {
 		return *insolar.GenesisPulse, errors.New("DB.traverse - `steps` argument should be not negative")
 	}
 
+	var (
+		retPulse insolar.Pulse
+		retErr   error
+	)
 	for {
 		err := s.db.View(func(txn *badger.Txn) error {
 			opts := badger.DefaultIteratorOptions
@@ -284,7 +289,7 @@ func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, re
 		inslogger.FromContext(ctx).Debugf("DB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
 	}
 
-	return
+	return retPulse, retErr
 }
 
 func head(txn *badger.Txn) (insolar.PulseNumber, error) {
