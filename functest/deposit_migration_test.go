@@ -38,7 +38,7 @@ func TestMigrationToken(t *testing.T) {
 	firstMemberBalance := deposit["balance"].(string)
 
 	require.Equal(t, "0", firstMemberBalance)
-	firstMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	firstMABalance, err := getAdminDepositBalance(&launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 	require.NoError(t, err)
 
 	for i := 1; i < len(activeDaemons); i++ {
@@ -56,7 +56,7 @@ func TestMigrationToken(t *testing.T) {
 
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, "10000", secondMemberBalance)
-	secondMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	secondMABalance, err := getAdminDepositBalance(&launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 	require.NoError(t, err)
 
 	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
@@ -217,7 +217,7 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	firstMemberBalance := deposit["balance"].(string)
 
 	require.Equal(t, "0", firstMemberBalance)
-	firstMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	firstMABalance, err := getAdminDepositBalance(&launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 	require.NoError(t, err)
 
 	for i := 1; i < countThreeActiveDaemon; i++ {
@@ -245,7 +245,7 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	require.Equal(t, deposit["amount"], "10000")
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, "10000", secondMemberBalance)
-	secondMABalance, err := getAdminDepositBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	secondMABalance, err := getAdminDepositBalance(&launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 	require.NoError(t, err)
 	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
 	require.Equal(t, "10000", dif.String())
