@@ -199,7 +199,10 @@ func (p *slotContext) WakeUp() StateUpdate {
 
 func (p *slotContext) Share(data interface{}, wakeUpAfterUse bool) SharedDataLink {
 	p.ensureAtLeast(updCtxInit)
-	return SharedDataLink{p.s.NewStepLink(), wakeUpAfterUse, data}
+	if data == nil {
+		panic("illegal value")
+	}
+	return SharedDataLink{p.s.NewLink(), wakeUpAfterUse, data}
 }
 
 func (p *slotContext) AffectedStep() SlotStep {

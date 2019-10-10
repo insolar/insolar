@@ -116,21 +116,22 @@ type asyncResultContext struct {
 }
 
 func (p *asyncResultContext) SlotLink() SlotLink {
-	p.setMode(updCtxAsyncCallback)
+	p.ensure(updCtxAsyncCallback)
 	return p.slot.NewLink()
 }
 
 func (p *asyncResultContext) ParentLink() SlotLink {
+	p.ensure(updCtxAsyncCallback)
 	return p.slot.parent
 }
 
 func (p *asyncResultContext) GetContext() context.Context {
-	p.setMode(updCtxAsyncCallback)
+	p.ensure(updCtxAsyncCallback)
 	return p.slot.ctx
 }
 
 func (p *asyncResultContext) WakeUp() {
-	p.setMode(updCtxAsyncCallback)
+	p.ensure(updCtxAsyncCallback)
 	p.wakeup = true
 }
 

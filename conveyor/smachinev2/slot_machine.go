@@ -28,32 +28,25 @@ import (
 )
 
 type SlotMachineConfig struct {
-	SyncStrategy    WorkSynchronizationStrategy
 	PollingPeriod   time.Duration
 	PollingTruncate time.Duration
 	SlotPageSize    uint16
 	ScanCountLimit  int
 }
 
-func NewSlotMachine(config SlotMachineConfig, injectables DependencyRegistry, // adapters *SharedRegistry
-) SlotMachine {
-	//ownsAdapters := false
-	//if adapters == nil {
-	//	adapters = NewAdapterRegistry()
-	//	ownsAdapters = true
-	//}
+func NewSlotMachine(config SlotMachineConfig, signalCallback func(), injectables DependencyRegistry) SlotMachine {
 	return SlotMachine{
-		config:      config,
-		injectables: injectables,
-		//adapters:      adapters,
-		//ownsAdapters:  ownsAdapters,
-		slotPool:      NewSlotPool(config.SyncStrategy.NewSlotPoolLocker(), config.SlotPageSize),
+		config:        config,
+		injectables:   injectables,
+		slotPool:      NewSlotPool(config.SlotPageSize),
 		activeSlots:   NewSlotQueue(ActiveSlots),
 		prioritySlots: NewSlotQueue(ActiveSlots),
 		workingSlots:  NewSlotQueue(WorkingSlots),
-		syncQueue:     NewSlotMachineSync(config.SyncStrategy.GetInternalSignalCallback()),
+		syncQueue:     NewSlotMachineSync(signalCallback),
 	}
 }
+
+var _ DependencyRegistry = &SlotMachine{}
 
 type SlotMachine struct {
 	config     SlotMachineConfig
@@ -86,6 +79,27 @@ func (m *SlotMachine) IsZero() bool {
 
 func (m *SlotMachine) IsEmpty() bool {
 	return m.slotPool.IsEmpty()
+}
+
+/* -- Methods for dependencies ------------------------------ */
+
+func (m *SlotMachine) FindDependency(id string) interface{} {
+	if v, ok := m.sharedData.Load(id); ok {
+		return v
+	}
+	if m.injectables != nil {
+		return m.injectables.FindDependency(id)
+	}
+	return nil
+}
+
+func (m *SlotMachine) PutDependency(id string, v interface{}) {
+	m.sharedData.Store(id, v)
+}
+
+func (m *SlotMachine) TryPutDependency(id string, v interface{}) bool {
+	_, loaded := m.sharedData.LoadOrStore(id, v)
+	return !loaded
 }
 
 /* -- Methods to run state machines ------------------------------ */
@@ -558,7 +572,7 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 	slot.declaration = decl
 
 	link := slot.NewLink()
-	decl.InjectDependencies(sm, link, m, m.injectables)
+	decl.InjectDependencies(sm, link, m)
 
 	initFn := slot.declaration.GetInitStateFor(sm)
 	if initFn == nil {
@@ -855,9 +869,9 @@ func (m *SlotMachine) wakeupOnDeactivationOf(slot *Slot, waitOn SlotLink, worker
 }
 
 func (m *SlotMachine) useSlotAsShared(link SharedDataLink, accessFn SharedDataFunc, worker DetachableSlotWorker) SharedAccessReport {
-	isValid, isBusy, isAtStep := link.link.getIsValidBusyAndAtStep()
+	isValid, isBusy := link.link.getIsValidAndBusy()
 
-	if !isValid || !isAtStep {
+	if !isValid {
 		return SharedSlotAbsent
 	}
 
@@ -889,13 +903,13 @@ func (m *SlotMachine) _useLocalSlotAsShared(link SharedDataLink, accessFn Shared
 	defer slot.stopWorking(prevStepNo)
 	accessFn(link.data)
 
-	_, hasSignal := m.syncQueue.ProcessSlotCallbacksByDetachable(link.link.SlotLink, worker)
+	_, hasSignal := m.syncQueue.ProcessSlotCallbacksByDetachable(link.link, worker)
 	if hasSignal || !link.wakeup || slot.QueueType().IsActiveOrPolling() {
 		return true
 	}
 
 	if !worker.NonDetachableCall(slot.activateSlot) {
-		m.syncQueue.AddAsyncUpdate(link.link.SlotLink, SlotLink.activateSlot)
+		m.syncQueue.AddAsyncUpdate(link.link, SlotLink.activateSlot)
 	}
 	return true
 }

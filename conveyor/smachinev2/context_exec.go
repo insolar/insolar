@@ -87,7 +87,7 @@ func (p *executionContext) WaitActivation(link SlotLink) StateConditionalUpdate 
 }
 
 func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdate {
-	return p.waitFor(link.link.SlotLink, stateUpdWaitForShared)
+	return p.waitFor(link.link, stateUpdWaitForShared)
 }
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {

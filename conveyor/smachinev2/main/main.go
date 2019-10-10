@@ -32,14 +32,14 @@ func main() {
 	//fn1(&implA{}, "test")
 
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
-		SyncStrategy:    &syncStrategy{},
 		SlotPageSize:    1000,
 		PollingPeriod:   1000 * time.Millisecond,
 		PollingTruncate: 100 * time.Millisecond,
 		ScanCountLimit:  1000,
-	}, nil)
+	}, nil, nil)
 
-	//example.SetInjectServiceAdapterA(&implA{}, &sm)
+	sm.PutDependency("example.ServiceAdapterA", example.CreateServiceAdapterA())
+	sm.PutDependency("example.catalogC", example.CreateCatalogC())
 
 	sm.AddNew(context.Background(), smachine.NoLink(), &example.StateMachine1{})
 
@@ -52,7 +52,7 @@ func main() {
 		//fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 		//fmt.Printf("%03d %v =============== repeatNow=%v nextPollTime=%v\n", i, time.Now(), repeatNow, nextPollTime)
 
-		if i >= prev+10 {
+		if i >= prev+1 {
 			prev = i
 			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 			sm.Cleanup(worker)
@@ -68,15 +68,4 @@ func main() {
 			time.Sleep(3 * time.Second)
 		}
 	}
-}
-
-type implA struct {
-}
-
-func (*implA) DoSomething(param string) string {
-	return param
-}
-
-func (*implA) DoSomethingElse(param0 string, param1 int) (bool, string) {
-	return param1 != 0, param0
 }

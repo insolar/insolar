@@ -23,18 +23,15 @@ import (
 
 type InitFunc func(ctx InitializationContext) StateUpdate
 type StateFunc func(ctx ExecutionContext) StateUpdate
-type MigrateFunc func(ctx MigrationContext) StateUpdate
 type CreateFunc func(ctx ConstructionContext) StateMachine
+type MigrateFunc func(ctx MigrationContext) StateUpdate
 type AsyncResultFunc func(ctx AsyncResultContext)
-type BroadcastReceiveFunc func(ctx AsyncResultContext, payload interface{}) bool
 type ErrorHandlerFunc func(ctx FailureContext)
 
 type BasicContext interface {
 	SlotLink() SlotLink
 	ParentLink() SlotLink
-
 	GetContext() context.Context
-	//GetContainer() SlotMachineState
 }
 
 /* During construction SlotLink() will have correct SlotID, but MAY have INVALID status, as slot was not yet created */
@@ -113,8 +110,7 @@ type ExecutionContext interface {
 	// Please avoid using it unless necessary.
 	InitChild(context.Context, CreateFunc) SlotLink
 
-	//NewShared(context.Context, SharedState) SharedStateAdapter
-	UseShared(SharedDataAccessor) SharedAccessReport // ?
+	UseShared(SharedDataAccessor) SharedAccessReport
 
 	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
 	BargeInThisStepOnly() BargeInRequester

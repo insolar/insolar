@@ -16,6 +16,8 @@
 
 package smachine
 
+import "fmt"
+
 const UnknownSlotID SlotID = 0
 
 type SlotID uint32
@@ -36,6 +38,16 @@ func NoStepLink() StepLink {
 type SlotLink struct {
 	id SlotID
 	s  *Slot
+}
+
+func (p SlotLink) String() string {
+	if p.s == nil {
+		if p.id == 0 {
+			return "<nil>"
+		}
+		return fmt.Sprintf("noslot-%d", p.id)
+	}
+	return fmt.Sprintf("slot-%d", p.id)
 }
 
 func (p SlotLink) SlotID() SlotID {
@@ -82,6 +94,13 @@ func (p StepLink) AnyStep() StepLink {
 	return p
 }
 
+func (p StepLink) String() string {
+	if p.step == 0 {
+		return p.SlotLink.String()
+	}
+	return fmt.Sprintf("%s-step-%d", p.SlotLink.String(), p.id)
+}
+
 func (p StepLink) IsAtStep() bool {
 	if p.s == nil {
 		return false
@@ -109,12 +128,30 @@ func (p StepLink) getIsValidBusyAndAtStep() (isValid, isBusy, atExactStep bool) 
 type SharedDataFunc func(interface{})
 
 type SharedDataLink struct {
-	link   StepLink
+	link   SlotLink
 	wakeup bool
 	data   interface{}
 }
 
+func (v SharedDataLink) IsZero() bool {
+	return v.data == nil
+}
+
+func (v SharedDataLink) IsValid() bool {
+	return v.link.s == nil || v.link.IsValid()
+}
+
+func (v SharedDataLink) IsUnbound() bool {
+	return v.link.s == nil
+}
+
 func (v SharedDataLink) PrepareAccess(fn SharedDataFunc) SharedDataAccessor {
+	if v.IsZero() {
+		panic("illegal state")
+	}
+	if fn == nil {
+		panic("illegal value")
+	}
 	return SharedDataAccessor{v, fn}
 }
 

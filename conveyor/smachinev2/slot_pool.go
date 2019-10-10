@@ -16,24 +16,25 @@
 
 package smachine
 
-import "github.com/insolar/insolar/network/consensus/common/rwlock"
+import (
+	"sync"
+)
 
-func NewSlotPool(locker rwlock.RWLocker, pageSize uint16) SlotPool {
-	if locker == nil {
-		panic("illegal value")
-	}
+func NewSlotPool(pageSize uint16) SlotPool {
+	//if locker == nil {
+	//	panic("illegal value")
+	//}
 	if pageSize < 1 {
 		panic("illegal value")
 	}
 	return SlotPool{
-		mutex:       locker,
 		slots:       [][]Slot{make([]Slot, pageSize)},
 		unusedSlots: NewSlotQueue(UnusedSlots),
 	}
 }
 
 type SlotPool struct {
-	mutex rwlock.RWLocker
+	mutex sync.RWMutex
 
 	slots     [][]Slot
 	slotPgPos uint16
@@ -65,10 +66,6 @@ func (p *SlotPool) Capacity() int {
 
 func (p *SlotPool) IsEmpty() bool {
 	return p.Count() == 0
-}
-
-func (p *SlotPool) IsZero() bool {
-	return p.mutex == nil
 }
 
 /* creates or reuse a slot, and marks it as BUSY */
@@ -142,14 +139,28 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 	}
 
 	if isAllEmptyOrWeak && (cleanupWeak || !hasSomeWeakSlots) {
-		for _, slotPage := range p.slots {
-			for i := range slotPage {
-				slot := &slotPage[i]
-				if slot.isEmpty() {
+		for i, slotPage := range p.slots {
+			if slotPage == nil {
+				break
+			}
+			for j := range slotPage {
+				slot := &slotPage[j]
+				if !slot.isEmpty() {
+					disposeFn(slot, w)
+				}
+				qt := slot.QueueType()
+				if qt == UnusedSlots {
+					slot.removeFromQueue()
 					continue
 				}
-				disposeFn(slot, w)
+				if qt == NoQueue && i == 0 {
+					break
+				}
+				panic("illegal state")
 			}
+		}
+		if p.unusedSlots.Count() != 0 {
+			panic("illegal state")
 		}
 		p.slots = p.slots[:1]
 		p.slotPgPos = 0

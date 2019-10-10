@@ -17,13 +17,25 @@
 package example
 
 import (
-	"github.com/insolar/insolar/conveyor/smachine"
+	"context"
+	"github.com/insolar/insolar/conveyor/smachinev2"
 )
 
 /* Actual service */
 type ServiceA interface {
 	DoSomething(param string) string
 	DoSomethingElse(param0 string, param1 int) (bool, string)
+}
+
+type implA struct {
+}
+
+func (implA) DoSomething(param string) string {
+	return param
+}
+
+func (implA) DoSomethingElse(param0 string, param1 int) (bool, string) {
+	return param1 != 0, param0
 }
 
 /* generated or provided adapter */
@@ -43,4 +55,22 @@ func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(sv
 	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
+}
+
+func CreateServiceAdapterA() *ServiceAdapterA {
+	ach := NewChannelAdapter(context.Background(), 0, -1)
+	ea := smachine.NewExecutionAdapter("ServiceA", &ach)
+
+	go func() {
+		for {
+			select {
+			case <-ach.Context().Done():
+				return
+			case t := <-ach.Channel():
+				t.RunAndSendResult()
+			}
+		}
+	}()
+
+	return &ServiceAdapterA{implA{}, ea}
 }

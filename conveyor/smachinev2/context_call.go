@@ -22,6 +22,16 @@ import (
 	"sync/atomic"
 )
 
+func NewExecutionAdapter(adapterID AdapterID, executor AdapterExecutor) ExecutionAdapter {
+	if adapterID.IsEmpty() {
+		panic("illegal value")
+	}
+	if executor == nil {
+		panic("illegal value")
+	}
+	return adapterExecHelper{adapterID, executor}
+}
+
 var _ ExecutionAdapter = &adapterExecHelper{}
 
 type adapterExecHelper struct {
@@ -29,19 +39,19 @@ type adapterExecHelper struct {
 	executor  AdapterExecutor
 }
 
-func (p *adapterExecHelper) IsEmpty() bool {
+func (p adapterExecHelper) IsEmpty() bool {
 	return p.adapterID.IsEmpty()
 }
 
-func (p *adapterExecHelper) GetAdapterID() AdapterID {
+func (p adapterExecHelper) GetAdapterID() AdapterID {
 	return p.adapterID
 }
 
-func (p *adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester {
+func (p adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester {
 	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterSyncCallContext}
 }
 
-func (p *adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester {
+func (p adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester {
 	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
 }
 

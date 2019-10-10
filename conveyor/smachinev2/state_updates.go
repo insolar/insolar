@@ -87,7 +87,7 @@ func init() {
 		},
 
 		stateUpdPanic: {
-			filter:    updCtxInternal,
+			filter:    ^updCtxMode(0),
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
 			apply:     stateUpdateDefaultError,

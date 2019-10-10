@@ -19,8 +19,8 @@ package conveyor
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
+	"github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/pulse"
 	"sync"
 )
@@ -61,13 +61,8 @@ type PulseConveyor struct {
 	slotMachine smachine.SlotMachine
 
 	slotConfig   smachine.SlotMachineConfig
-	injector     smachine.DependencyInjector
 	factoryFn    StateMachineFactoryFn
 	pulseService PulseServiceAdapter
-}
-
-func (m *PulseConveyor) GetAdapters() *smachine.SharedRegistry {
-	return m.slotMachine.GetAdapters()
 }
 
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
@@ -209,8 +204,7 @@ const (
 	Past
 )
 
-func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig, injector smachine.DependencyInjector,
-	adapters *smachine.SharedRegistry) *PulseSlot {
+func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig) *PulseSlot {
 
 	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, adapters)}
 	r.slots.SetContainerState(r)
