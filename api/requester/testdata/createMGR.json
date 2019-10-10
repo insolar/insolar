@@ -1,0 +1,20 @@
+{
+  "jsonrpc": "2.0",
+  "method": "contract.call",
+  "id": 1,
+  "params": {
+    "callSite": "group.setMGR",
+    "callParams": {
+      "groupReference": "16hJNW39As8hxCyrkSqu9rxQ7brzC1Ngh2JTq3KGca6y",
+      "paymentFrequency": "weekly",
+      "startDate": "1570548429",
+      "amountDue": "1000",
+      "sequence": [
+        "16hJLiRQMB2ykg76Wh7Z7qW7hgBAmmGJZCVeEixrAEsb",
+        "16hJLi7Fcpc8LZMDWA2a6uQdBKswTj33tVTKyN1dVG7a",
+        "16f8mk2d9zfMXiQ8QSSA3u2qNmAyb5afCvzn7W9cgHpU"
+      ]
+    },
+    "reference": "16hJLgViQkKS2s2AdVu5iPN4HPVtPhfVRrCw14uJ9pXT"
+  }
+}

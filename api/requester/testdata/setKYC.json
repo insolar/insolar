@@ -5,8 +5,10 @@
   "params": {
     "callSite": "user.setKYCStatus",
     "callParams": {
-      "reference": "16aJdP9LHpoVqeCqzJzyWyB85He9spF3mDue2JKJybd7",
-      "eKYCStatus": true
+      "reference": "16hJLi7Fcpc8LZMDWA2a6uQdBKswTj33tVTKyN1dVG7a",
+      "timestamp": "1570702876",
+      "eKYCStatus": true,
+      "source": "ARIMAC"
     },
     "reference": "11tJBkSAUgMpZkSBR5AusKn45gnqY11qGoL6arqgYTP"
   }

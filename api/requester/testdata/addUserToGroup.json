@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "method": "contract.call",
+  "id": 1,
+  "params": {
+    "callSite": "group.addMember",
+    "callParams": {
+      "groupReference": "16hQEEnCJsfTDaPZAfAiUiR2Lv58o4uiM3SVSfgW94bh",
+      "memberReference": "16hQYr197nqKpcwKPKxRCLzTjDNZRWiGjaXAPCuwjJpT"
+    },
+    "reference": "16hQ2QkCz52QEPLmE3zui7GTmRdpVG8vAz9DCNksvg6z"
+  }
+}

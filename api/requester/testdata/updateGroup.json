@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "method": "contract.call",
+  "id": 1,
+  "params": {
+    "callSite": "group.setProperties",
+    "callParams": {
+      "groupReference": "16hJNW39As8hxCyrkSqu9rxQ7brzC1Ngh2JTq3KGca6y",
+      "purpose": "New water heaters for all",
+      "goal": "2000000",
+      "type": "merry-go-round"
+    },
+    "reference": "16hJLgViQkKS2s2AdVu5iPN4HPVtPhfVRrCw14uJ9pXT"
+  }
+}

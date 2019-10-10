@@ -5,7 +5,8 @@
   "params": {
     "callSite": "group.get",
     "callParams": {
-      "reference": "16aKnfW1ys2YFMfaHvXo6VVDA1cudGHmj35p3Egp2bxG"
-    }
+      "groupReference": "16hQEEnCJsfTDaPZAfAiUiR2Lv58o4uiM3SVSfgW94bh"
+    },
+    "reference": "16hQDkkRhVxFBrC43y2Zfu8gqDooQX73N52ELKZ2X5Dw"
   }
 }
