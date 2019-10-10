@@ -74,11 +74,11 @@ type SlotDependency interface {
 	//GetWeight() int32
 	//OnBroadcast(payload interface{}) (accepted, wakeup bool)
 
-	OnSlotWorking() bool
-	OnStepChanged() bool
-	OnSlotDisposed()
+	IsReleaseOnWorking() bool
+	IsReleaseOnStep() bool
 
-	Remove()
+	ReleaseOnDisposed(activateFn func(*Slot))
+	Release(FixedSlotWorker)
 }
 
 const (
@@ -269,7 +269,7 @@ func (s *Slot) _tryStart(minStepNo uint32) (isEmpty, isStarted bool, prevStepNo 
 	}
 }
 
-func (s *Slot) _stopWorking() (prevStepNo uint32) {
+func (s *Slot) stopWorking() (prevStepNo uint32) {
 	for {
 		v := atomic.LoadUint64(&s.idAndStep)
 		if v&slotFlagBusy == 0 {
@@ -287,10 +287,6 @@ func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
 	return
 }
 
-func (s *Slot) stopMigrate(prevStepNo uint32) {
-	s.stopWorking(prevStepNo)
-}
-
 func (s *Slot) tryStartWorking() (isStarted bool, prevStepNo uint32) {
 	_, isStarted, prevStepNo = s._tryStart(1)
 	return
@@ -302,13 +298,6 @@ func (s *Slot) startWorking(scanNo uint32) uint32 {
 		return prevStepNo
 	}
 	panic("illegal state")
-}
-
-func (s *Slot) stopWorking(prevStepNo uint32) {
-	newStepNo := s._stopWorking()
-	if newStepNo > 1 && s.dependency != nil && prevStepNo != newStepNo && s.dependency.OnStepChanged() {
-		s.dependency = nil
-	}
 }
 
 func (s *Slot) canMigrateWorking(prevStepNo uint32, migrateIsNeeded bool) bool {

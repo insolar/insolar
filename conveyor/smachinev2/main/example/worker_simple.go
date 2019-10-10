@@ -35,10 +35,6 @@ type SimpleSlotWorker struct {
 	cond        *sync.Cond
 }
 
-func (p *SimpleSlotWorker) ActivateLinkedList(linkedList *smachine.Slot, hotWait bool) {
-	panic("implement me")
-}
-
 func (p *SimpleSlotWorker) HasSignal() bool {
 	return false
 }

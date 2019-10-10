@@ -54,7 +54,9 @@ func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalUpdate 
 	ncu := p.newConditionalUpdate(stateUpdWaitForEvent)
 
 	ncu.until = p.s.machine.toRelativeTime(until)
-	ncu.isAvailable = ncu.until != 0 && !until.After(time.Now())
+	if ncu.until != 0 && !until.After(time.Now()) {
+		ncu.decision = Passed
+	}
 
 	return &ncu
 }
@@ -71,15 +73,21 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateCon
 		//		return &conditionalUpdate{marker: p.getMarker()}
 	}
 
-	if !link.isValidAndBusy() { // cheap and easy pre-check
+	switch isValid, isBusy := link.getIsValidAndBusy(); {
+	case !isValid:
 		ncu := p.newConditionalUpdate(stateUpdNext)
-		ncu.isAvailable = true
+		ncu.decision = Impossible
+		return &ncu
+	case !isBusy:
+		ncu := p.newConditionalUpdate(stateUpdNext)
+		ncu.decision = Passed
+		return &ncu
+	default:
+		ncu := p.newConditionalUpdate(updMode)
+		ncu.decision = NotPassed
+		ncu.dependency = link
 		return &ncu
 	}
-
-	ncu := p.newConditionalUpdate(updMode)
-	ncu.dependency = link
-	return &ncu
 }
 
 func (p *executionContext) WaitActivation(link SlotLink) StateConditionalUpdate {
@@ -119,13 +127,21 @@ func (p *executionContext) executeNextStep() (stateUpdate StateUpdate, sut State
 /* ========================================================================= */
 
 var _ ConditionalUpdate = &conditionalUpdate{}
+var _ StateConditionalUpdate = &conditionalUpdate{}
 
 type conditionalUpdate struct {
-	template    StateUpdateTemplate
-	kickOff     StepPrepareFunc
-	dependency  SlotLink
-	until       uint32
-	isAvailable bool
+	template   StateUpdateTemplate
+	kickOff    StepPrepareFunc
+	dependency SlotLink
+	until      uint32
+	decision   Decision
+}
+
+func (c *conditionalUpdate) GetDecision() Decision {
+	if c.decision.IsZero() {
+		return NotPassed
+	}
+	return c.decision
 }
 
 func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {
@@ -139,10 +155,6 @@ func (c *conditionalUpdate) ThenJumpExt(step SlotStep) StateUpdate {
 
 func (c *conditionalUpdate) ThenRepeat() StateUpdate {
 	return c.then(SlotStep{})
-}
-
-func (c *conditionalUpdate) IsAvailable() bool {
-	return c.isAvailable
 }
 
 func (c *conditionalUpdate) then(slotStep SlotStep) StateUpdate {

@@ -164,19 +164,7 @@ func (v SharedDataAccessor) TryUse(ctx ExecutionContext) SharedAccessReport {
 	return ctx.UseShared(v)
 }
 
-func (v SharedDataAccessor) TryUseThenJump(ctx ExecutionContext, thenNext StateFunc) StateUpdate {
-	return v.TryUseThenElseJump(ctx, thenNext, thenNext)
-}
-
-func (v SharedDataAccessor) TryUseThenElseJump(ctx ExecutionContext, thenNext, elseNext StateFunc) StateUpdate {
-	switch r := v.TryUse(ctx); {
-	case r.IsAvailable():
-		return ctx.Jump(thenNext)
-	case r.IsAbsent():
-		return ctx.Jump(elseNext)
-	}
-	return ctx.WaitShared(v.link).ThenRepeat()
-}
+var _ Decider = SharedAccessReport(0)
 
 type SharedAccessReport uint8
 
@@ -203,4 +191,15 @@ func (v SharedAccessReport) IsAbsent() bool {
 
 func (v SharedAccessReport) IsBusy() bool {
 	return v == SharedSlotLocalBusy || v == SharedSlotRemoteBusy
+}
+
+func (v SharedAccessReport) GetDecision() Decision {
+	switch {
+	case v.IsAvailable():
+		return Passed
+	case v.IsAbsent():
+		return Impossible
+	default:
+		return NotPassed
+	}
 }

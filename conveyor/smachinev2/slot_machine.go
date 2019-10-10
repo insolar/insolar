@@ -177,6 +177,11 @@ func (m *SlotMachine) scanWorkingSlots(worker FixedSlotWorker) {
 func (m *SlotMachine) executeSlot(currentSlot *Slot, prevStepNo uint32, worker FixedSlotWorker, loopLimit int) (hasSignal bool, loopCount int) {
 	var stateUpdate StateUpdate
 
+	dep := currentSlot.dependency
+	if dep != nil && dep.IsReleaseOnWorking() {
+		currentSlot.dependency = nil
+		dep.Release(worker)
+	}
 	// TODO consider use of sync.Pool for executionContext if they are allocated on heap
 
 	wasDetached := worker.DetachableCall(func(worker DetachableSlotWorker) {
@@ -270,7 +275,7 @@ func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, wor
 	}
 
 	hasAsync = wasAsync || slot.hasAsyncOrBargeIn()
-	slot.stopWorking(prevStepNo)
+	m.stopSlotWorking(slot, prevStepNo, worker)
 	return hasAsync
 }
 
@@ -419,7 +424,7 @@ func (m *SlotMachine) migrateSlot(slot *Slot, w FixedSlotWorker) (isEmptyOrWeak,
 	}
 	isEmptyOrWeak, isAvailable = m._migrateSlot(slot, w)
 	if isAvailable {
-		slot.stopMigrate(prevStepNo)
+		m.stopSlotWorking(slot, prevStepNo, w)
 	}
 	return isEmptyOrWeak, isAvailable
 }
@@ -477,39 +482,38 @@ func (m *SlotMachine) verifyPage(slotPage []Slot, _ FixedSlotWorker) (isPageEmpt
 }
 
 func (m *SlotMachine) recycleSlot(slot *Slot, w FixedSlotWorker) {
-	dependants := m._recycleSlot(slot)
-	if dependants != nil {
-		w.ActivateLinkedList(dependants, false)
-	}
+	m._recycleSlot(slot, func(dependants *Slot) {
+		m.processDependants(dependants, w, activateSlot)
+	})
+}
+
+func (m *SlotMachine) processDependants(slot *Slot, w FixedSlotWorker, activation slotActivationMode) {
+	panic("not implemented") // TODO processDependants
 }
 
 func (m *SlotMachine) recycleEmptySlot(slot *Slot) {
-	if m._recycleSlot(slot) != nil {
+	m._recycleSlot(slot, func(*Slot) {
 		panic("illegal state")
-	}
+	})
 }
 
-func (m *SlotMachine) _recycleSlot(slot *Slot) *Slot {
-	dependants := m._cleanupSlot(slot)
-	slot.dispose()
+func (m *SlotMachine) _recycleSlot(slot *Slot, activateFn func(*Slot)) {
 
-	m.slotPool.RecycleSlot(slot)
-	return dependants
-}
-
-func (m *SlotMachine) _cleanupSlot(slot *Slot) *Slot {
 	dep := slot.dependency
 	slot.dependency = nil
 	if dep != nil {
-		dep.OnSlotDisposed()
+		dep.ReleaseOnDisposed(activateFn)
 	}
 
 	if slot.isQueueHead() {
-		return slot.removeHeadedQueue()
+		toBeReleased := slot.removeHeadedQueue()
+		activateFn(toBeReleased)
 	} else {
 		slot.removeFromQueue()
 	}
-	return nil
+	slot.dispose()
+
+	m.slotPool.RecycleSlot(slot)
 }
 
 func (m *SlotMachine) OccupiedSlotCount() int {
@@ -599,7 +603,7 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 
 func (m *SlotMachine) startNewSlot(slot *Slot, worker FixedSlotWorker) {
 	slot.ensureInitializing()
-	slot.stopWorking(0)
+	m.stopSlotWorking(slot, 0, worker)
 	m.updateSlotQueue(slot, worker, activateSlot)
 }
 
@@ -611,7 +615,7 @@ func (m *SlotMachine) startNewSlotByDetachable(slot *Slot, runInit bool, w Detac
 
 	slot.ensureInitializing()
 	if !w.NonDetachableCall(func(worker FixedSlotWorker) {
-		slot.stopWorking(0)
+		m.stopSlotWorking(slot, 0, worker)
 		m.updateSlotQueue(slot, worker, activateSlot)
 	}) {
 		m.syncQueue.AddAsyncUpdate(slot.NewLink(), m._startAddedSlot)
@@ -624,7 +628,7 @@ func (m *SlotMachine) _startAddedSlot(link SlotLink, worker FixedSlotWorker) {
 	}
 	slot := link.s
 	slot.ensureInitializing()
-	slot.stopWorking(0)
+	m.stopSlotWorking(slot, 0, worker)
 	list := m._updateSlotQueue(slot, false, activateSlot)
 	if list != nil {
 		panic("unexpected")
@@ -665,7 +669,7 @@ func (m *SlotMachine) updateSlotQueue(slot *Slot, w FixedSlotWorker, activation 
 	if linkedList == nil {
 		return
 	}
-	w.ActivateLinkedList(linkedList, activation == activateHotWaitSlot)
+	m.processDependants(linkedList, w, activation)
 }
 
 func (m *SlotMachine) _updateSlotQueue(slot *Slot, inplaceUpdate bool, activation slotActivationMode) *Slot {
@@ -893,14 +897,30 @@ func (m *SlotMachine) useSlotAsShared(link SharedDataLink, accessFn SharedDataFu
 	panic("not implemented")
 }
 
+func (m *SlotMachine) stopSlotWorking(slot *Slot, prevStepNo uint32, worker FixedSlotWorker) {
+	dep := slot.dependency
+	newStepNo := slot.stopWorking()
+	if dep == nil || newStepNo == prevStepNo || newStepNo <= 1 {
+		return
+	}
+	if prevStepNo == 0 {
+		panic("illegal state")
+	}
+
+	if dep.IsReleaseOnStep() {
+		slot.dependency = nil
+		dep.Release(worker)
+	}
+}
+
 func (m *SlotMachine) _useLocalSlotAsShared(link SharedDataLink, accessFn SharedDataFunc, worker DetachableSlotWorker) bool {
 	slot := link.link.s
-	isStarted, prevStepNo := slot.tryStartWorking()
+	isStarted, _ := slot.tryStartWorking()
 	if !isStarted {
 		return false
 	}
 
-	defer slot.stopWorking(prevStepNo)
+	defer slot.stopWorking()
 	accessFn(link.data)
 
 	_, hasSignal := m.syncQueue.ProcessSlotCallbacksByDetachable(link.link, worker)

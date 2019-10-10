@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +12,20 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
-import (
-	"sync"
-)
-
-type DetachableFunc func(DetachableSlotWorker)
-type NonDetachableFunc func(FixedSlotWorker)
-
-type SlotWorker interface {
-	HasSignal() bool
-	IsDetached() bool
+type SemaphoreLink interface {
+	CheckState(ExecutionContext) Decider
+	TryAcquireForThisStep(ExecutionContext) Decider
+	TryAcquire(ExecutionContext) SemaphoreReleaser
 }
 
-type DetachableSlotWorker interface {
-	SlotWorker
-
-	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
-	GetCond() (bool, *sync.Cond)
-	// provides temporary protection from detach
-	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
+type SemaphoreReleaser interface {
+	Decider
+	Release(ExecutionContext)
 }
 
-type FixedSlotWorker interface {
-	SlotWorker
-	DetachableCall(DetachableFunc) (wasDetached bool)
-}
+//type SemaphoreController interface {
+//}

@@ -27,10 +27,6 @@ import (
 )
 
 func main() {
-	//var fn1 func(example.ServiceA, string) string
-	//fn1 = example.ServiceA.DoSomething
-	//fn1(&implA{}, "test")
-
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:    1000,
 		PollingPeriod:   1000 * time.Millisecond,

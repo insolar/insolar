@@ -34,6 +34,8 @@ type BasicContext interface {
 	GetContext() context.Context
 }
 
+/*------------------  Contexts for in-order steps -----------------------*/
+
 /* During construction SlotLink() will have correct SlotID, but MAY have INVALID status, as slot was not yet created */
 type ConstructionContext interface {
 	BasicContext
@@ -41,7 +43,8 @@ type ConstructionContext interface {
 	SetParent(SlotLink)
 }
 
-type stepContext interface {
+/* A context parent for all regular step contexts */
+type InOrderStepContext interface {
 	BasicContext
 
 	SetDefaultMigration(fn MigrateFunc)
@@ -52,46 +55,22 @@ type stepContext interface {
 	Jump(StateFunc) StateUpdate
 
 	Share(data interface{}, wakeUpAfterUse bool) SharedDataLink
+	//JoinMutex()
+	//JoinSemaphore() SemaphoreAccessor
 
 	Error(error) StateUpdate
 	Stop() StateUpdate
 }
 
 type InitializationContext interface {
-	stepContext
+	InOrderStepContext
 
 	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
 	BargeIn() BargeInRequester
 }
 
-type BargeInApplyFunc func(BargeInContext) StateUpdate
-type BargeInParamFunc func(interface{}) bool
-type BargeInFunc func() bool
-
-type BargeInRequester interface {
-	WithJumpExt(SlotStep) BargeInFunc
-	WithJump(StateFunc) BargeInFunc
-	WithWakeUp() BargeInFunc
-	WithStop() BargeInFunc
-}
-
-type MigrationContext interface {
-	stepContext
-
-	/* A step the target slot is at */
-	AffectedStep() SlotStep
-
-	Replace(CreateFunc) StateUpdate
-	ReplaceWith(StateMachine) StateUpdate
-
-	/* Keeps the last state */
-	Stay() StateUpdate
-	/* Makes active if was waiting or polling */
-	WakeUp() StateUpdate
-}
-
 type ExecutionContext interface {
-	stepContext
+	InOrderStepContext
 
 	StepLink() StepLink
 	GetPendingCallCount() int
@@ -131,11 +110,25 @@ type ExecutionContext interface {
 	Sleep() StateConditionalUpdate
 }
 
+type MigrationContext interface {
+	InOrderStepContext
+
+	/* A step the target slot is at */
+	AffectedStep() SlotStep
+
+	Replace(CreateFunc) StateUpdate
+	ReplaceWith(StateMachine) StateUpdate
+
+	/* Keeps the last state */
+	Stay() StateUpdate
+	/* Makes active if was waiting or polling */
+	WakeUp() StateUpdate
+}
+
 type StateConditionalUpdate interface {
 	ConditionalUpdate
-
-	/* Returns true when condition is already true */
-	IsAvailable() bool
+	/* Returns information if the condition is already met */
+	Decider
 }
 
 type CallConditionalUpdate interface {
@@ -157,10 +150,23 @@ type ConditionalUpdate interface {
 //	WaitOrDeadline(d time.Time) StateUpdate
 //}
 
+/*------------------  Contexts for out-of-order steps -----------------------*/
+
 type AsyncResultContext interface {
 	BasicContext
 
 	WakeUp()
+}
+
+type BargeInApplyFunc func(BargeInContext) StateUpdate
+type BargeInParamFunc func(interface{}) bool
+type BargeInFunc func() bool
+
+type BargeInRequester interface {
+	WithJumpExt(SlotStep) BargeInFunc
+	WithJump(StateFunc) BargeInFunc
+	WithWakeUp() BargeInFunc
+	WithStop() BargeInFunc
 }
 
 type BargeInContext interface {
@@ -168,9 +174,6 @@ type BargeInContext interface {
 
 	GetBargeInParam() interface{}
 	IsAtOriginalStep() bool
-
-	/* A step the target slot is at */
-	AffectedStep() SlotStep
 
 	JumpExt(SlotStep) StateUpdate
 	Jump(StateFunc) StateUpdate

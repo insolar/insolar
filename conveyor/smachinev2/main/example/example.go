@@ -76,15 +76,16 @@ func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateU
 }
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	return s.catalogC.GetOrCreate(ctx, s.testKey).Prepare(func(state *CustomSharedState) {
-		if state.GetKey() != s.testKey {
-			panic("wtf?")
-		}
-		before := state.Text
-		state.Counter++
-		state.Text = fmt.Sprintf("last-%v", ctx.SlotLink())
-		fmt.Printf("shared: accessed=%d %v -> %v\n", state.Counter, before, state.Text)
-	}).TryUseThenElseJump(ctx, s.State2, s.State5)
+	return smachine.RepeatOrJumpElse(ctx, s.catalogC.GetOrCreate(ctx, s.testKey).Prepare(
+		func(state *CustomSharedState) {
+			if state.GetKey() != s.testKey {
+				panic("wtf?")
+			}
+			before := state.Text
+			state.Counter++
+			state.Text = fmt.Sprintf("last-%v", ctx.SlotLink())
+			fmt.Printf("shared: accessed=%d %v -> %v\n", state.Counter, before, state.Text)
+		}).TryUse(ctx), s.State2, s.State5)
 }
 
 func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpdate {
