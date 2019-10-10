@@ -53,6 +53,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -93,35 +94,36 @@ func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.P
 
 type pulseWatchdog struct {
 	ctx       context.Context
-	gateway   *Base
+	gateway   network.Gateway
 	timer     *time.Timer
 	timeout   time.Duration
 	stopChan  chan struct{}
 	resetChan chan struct{}
+	started   bool
 }
 
-func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration) *pulseWatchdog {
+func newPulseWatchdog(ctx context.Context, gateway network.Gateway, timeout time.Duration) *pulseWatchdog {
 	w := &pulseWatchdog{
 		ctx:       ctx,
 		gateway:   gateway,
 		timeout:   timeout,
 		stopChan:  make(chan struct{}, 1),
 		resetChan: make(chan struct{}, 1),
+		started:   false,
 	}
 
 	return w
 }
 
-func (w *pulseWatchdog) Start() {
+func (w *pulseWatchdog) start() {
 	go func(w *pulseWatchdog) {
 		w.timer = time.NewTimer(w.timeout)
 		for {
 			select {
-			case <-w.stopChan:
-				w.timer.Stop()
-				return
 			case <-w.resetChan:
 				w.timer.Reset(w.timeout)
+			case <-w.stopChan:
+				w.timer.Stop()
 				return
 			case <-w.timer.C:
 				w.Reset()
@@ -136,6 +138,11 @@ func (w *pulseWatchdog) Stop() {
 }
 
 func (w *pulseWatchdog) Reset() {
-	inslogger.FromContext(w.ctx).Debug("Resetting new pulse watchdog")
-	w.resetChan <- struct{}{}
+	if !w.started {
+		w.start()
+		w.started = true
+	} else {
+		inslogger.FromContext(w.ctx).Warn("Resetting new pulse watchdog")
+		w.resetChan <- struct{}{}
+	}
 }

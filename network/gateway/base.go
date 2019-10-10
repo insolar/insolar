@@ -141,7 +141,7 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 }
 
 func (g *Base) Init(ctx context.Context) error {
-	g.pulseWatchdog = newPulseWatchdog(ctx, g, g.Options.PulseWatchdogTimeout)
+	g.pulseWatchdog = newPulseWatchdog(ctx, g.Gatewayer.Gateway(), g.Options.PulseWatchdogTimeout)
 
 	g.HostNetwork.RegisterRequestHandler(
 		types.Authorize, g.discoveryMiddleware(g.announceMiddleware(g.HandleNodeAuthorizeRequest)), // validate cert
