@@ -83,6 +83,7 @@ func (g *WaitMajority) GetState() insolar.NetworkState {
 }
 
 func (g *WaitMajority) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Base.OnConsensusFinished(ctx, report)
 	g.switchOnMajorityRule(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 

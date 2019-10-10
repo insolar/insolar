@@ -99,6 +99,7 @@ func (g *WaitPulsar) GetState() insolar.NetworkState {
 }
 
 func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Base.OnConsensusFinished(ctx, report)
 	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 

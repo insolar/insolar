@@ -94,6 +94,7 @@ func (g *WaitMinRoles) GetState() insolar.NetworkState {
 }
 
 func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Base.OnConsensusFinished(ctx, report)
 	g.switchOnMinRoles(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 

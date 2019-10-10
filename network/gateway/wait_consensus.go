@@ -81,6 +81,7 @@ func (g *WaitConsensus) GetState() insolar.NetworkState {
 }
 
 func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.Base.OnConsensusFinished(ctx, report)
 	g.consensusFinished <- EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber)
 	close(g.consensusFinished)
 }

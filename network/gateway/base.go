@@ -78,7 +78,8 @@ import (
 )
 
 const (
-	bootstrapTimeoutMessage = "Bootstrap timeout exceeded"
+	bootstrapTimeoutMessage    = "Bootstrap timeout exceeded"
+	populationIsInvalidMessage = "New population is invalid"
 )
 
 // Base is abstract class for gateways
@@ -419,6 +420,9 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 
 func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
 	inslogger.FromContext(ctx).Infof("OnConsensusFinished for pulse %d", report.PulseNumber)
+	if !report.PopulationValid {
+		g.FailState(ctx, populationIsInvalidMessage)
+	}
 }
 
 func (g *Base) createCandidateProfile() {
