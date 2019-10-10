@@ -18,7 +18,6 @@ package utils
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -50,12 +49,6 @@ func RandTraceID() string {
 		return "createRandomTraceIDFailed:" + err.Error()
 	}
 	return traceID.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
 }
 
 // CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
