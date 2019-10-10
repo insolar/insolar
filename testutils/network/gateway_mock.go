@@ -41,6 +41,12 @@ type GatewayMock struct {
 	beforeEphemeralModeCounter uint64
 	EphemeralModeMock          mGatewayMockEphemeralMode
 
+	funcFailState          func(ctx context.Context, reason string)
+	inspectFuncFailState   func(ctx context.Context, reason string)
+	afterFailStateCounter  uint64
+	beforeFailStateCounter uint64
+	FailStateMock          mGatewayMockFailState
+
 	funcGetState          func() (n1 insolar.NetworkState)
 	inspectFuncGetState   func()
 	afterGetStateCounter  uint64
@@ -100,6 +106,9 @@ func NewGatewayMock(t minimock.Tester) *GatewayMock {
 
 	m.EphemeralModeMock = mGatewayMockEphemeralMode{mock: m}
 	m.EphemeralModeMock.callArgs = []*GatewayMockEphemeralModeParams{}
+
+	m.FailStateMock = mGatewayMockFailState{mock: m}
+	m.FailStateMock.callArgs = []*GatewayMockFailStateParams{}
 
 	m.GetStateMock = mGatewayMockGetState{mock: m}
 
@@ -810,6 +819,194 @@ func (m *GatewayMock) MinimockEphemeralModeInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcEphemeralMode != nil && mm_atomic.LoadUint64(&m.afterEphemeralModeCounter) < 1 {
 		m.t.Error("Expected call to GatewayMock.EphemeralMode")
+	}
+}
+
+type mGatewayMockFailState struct {
+	mock               *GatewayMock
+	defaultExpectation *GatewayMockFailStateExpectation
+	expectations       []*GatewayMockFailStateExpectation
+
+	callArgs []*GatewayMockFailStateParams
+	mutex    sync.RWMutex
+}
+
+// GatewayMockFailStateExpectation specifies expectation struct of the Gateway.FailState
+type GatewayMockFailStateExpectation struct {
+	mock   *GatewayMock
+	params *GatewayMockFailStateParams
+
+	Counter uint64
+}
+
+// GatewayMockFailStateParams contains parameters of the Gateway.FailState
+type GatewayMockFailStateParams struct {
+	ctx    context.Context
+	reason string
+}
+
+// Expect sets up expected params for Gateway.FailState
+func (mmFailState *mGatewayMockFailState) Expect(ctx context.Context, reason string) *mGatewayMockFailState {
+	if mmFailState.mock.funcFailState != nil {
+		mmFailState.mock.t.Fatalf("GatewayMock.FailState mock is already set by Set")
+	}
+
+	if mmFailState.defaultExpectation == nil {
+		mmFailState.defaultExpectation = &GatewayMockFailStateExpectation{}
+	}
+
+	mmFailState.defaultExpectation.params = &GatewayMockFailStateParams{ctx, reason}
+	for _, e := range mmFailState.expectations {
+		if minimock.Equal(e.params, mmFailState.defaultExpectation.params) {
+			mmFailState.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFailState.defaultExpectation.params)
+		}
+	}
+
+	return mmFailState
+}
+
+// Inspect accepts an inspector function that has same arguments as the Gateway.FailState
+func (mmFailState *mGatewayMockFailState) Inspect(f func(ctx context.Context, reason string)) *mGatewayMockFailState {
+	if mmFailState.mock.inspectFuncFailState != nil {
+		mmFailState.mock.t.Fatalf("Inspect function is already set for GatewayMock.FailState")
+	}
+
+	mmFailState.mock.inspectFuncFailState = f
+
+	return mmFailState
+}
+
+// Return sets up results that will be returned by Gateway.FailState
+func (mmFailState *mGatewayMockFailState) Return() *GatewayMock {
+	if mmFailState.mock.funcFailState != nil {
+		mmFailState.mock.t.Fatalf("GatewayMock.FailState mock is already set by Set")
+	}
+
+	if mmFailState.defaultExpectation == nil {
+		mmFailState.defaultExpectation = &GatewayMockFailStateExpectation{mock: mmFailState.mock}
+	}
+
+	return mmFailState.mock
+}
+
+//Set uses given function f to mock the Gateway.FailState method
+func (mmFailState *mGatewayMockFailState) Set(f func(ctx context.Context, reason string)) *GatewayMock {
+	if mmFailState.defaultExpectation != nil {
+		mmFailState.mock.t.Fatalf("Default expectation is already set for the Gateway.FailState method")
+	}
+
+	if len(mmFailState.expectations) > 0 {
+		mmFailState.mock.t.Fatalf("Some expectations are already set for the Gateway.FailState method")
+	}
+
+	mmFailState.mock.funcFailState = f
+	return mmFailState.mock
+}
+
+// FailState implements network.Gateway
+func (mmFailState *GatewayMock) FailState(ctx context.Context, reason string) {
+	mm_atomic.AddUint64(&mmFailState.beforeFailStateCounter, 1)
+	defer mm_atomic.AddUint64(&mmFailState.afterFailStateCounter, 1)
+
+	if mmFailState.inspectFuncFailState != nil {
+		mmFailState.inspectFuncFailState(ctx, reason)
+	}
+
+	params := &GatewayMockFailStateParams{ctx, reason}
+
+	// Record call args
+	mmFailState.FailStateMock.mutex.Lock()
+	mmFailState.FailStateMock.callArgs = append(mmFailState.FailStateMock.callArgs, params)
+	mmFailState.FailStateMock.mutex.Unlock()
+
+	for _, e := range mmFailState.FailStateMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
+	}
+
+	if mmFailState.FailStateMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmFailState.FailStateMock.defaultExpectation.Counter, 1)
+		want := mmFailState.FailStateMock.defaultExpectation.params
+		got := GatewayMockFailStateParams{ctx, reason}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmFailState.t.Errorf("GatewayMock.FailState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		return
+
+	}
+	if mmFailState.funcFailState != nil {
+		mmFailState.funcFailState(ctx, reason)
+		return
+	}
+	mmFailState.t.Fatalf("Unexpected call to GatewayMock.FailState. %v %v", ctx, reason)
+
+}
+
+// FailStateAfterCounter returns a count of finished GatewayMock.FailState invocations
+func (mmFailState *GatewayMock) FailStateAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmFailState.afterFailStateCounter)
+}
+
+// FailStateBeforeCounter returns a count of GatewayMock.FailState invocations
+func (mmFailState *GatewayMock) FailStateBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmFailState.beforeFailStateCounter)
+}
+
+// Calls returns a list of arguments used in each call to GatewayMock.FailState.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmFailState *mGatewayMockFailState) Calls() []*GatewayMockFailStateParams {
+	mmFailState.mutex.RLock()
+
+	argCopy := make([]*GatewayMockFailStateParams, len(mmFailState.callArgs))
+	copy(argCopy, mmFailState.callArgs)
+
+	mmFailState.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockFailStateDone returns true if the count of the FailState invocations corresponds
+// the number of defined expectations
+func (m *GatewayMock) MinimockFailStateDone() bool {
+	for _, e := range m.FailStateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.FailStateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFailStateCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcFailState != nil && mm_atomic.LoadUint64(&m.afterFailStateCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockFailStateInspect logs each unmet expectation
+func (m *GatewayMock) MinimockFailStateInspect() {
+	for _, e := range m.FailStateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to GatewayMock.FailState with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.FailStateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFailStateCounter) < 1 {
+		if m.FailStateMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to GatewayMock.FailState")
+		} else {
+			m.t.Errorf("Expected call to GatewayMock.FailState with params: %#v", *m.FailStateMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcFailState != nil && mm_atomic.LoadUint64(&m.afterFailStateCounter) < 1 {
+		m.t.Error("Expected call to GatewayMock.FailState")
 	}
 }
 
@@ -2126,6 +2323,8 @@ func (m *GatewayMock) MinimockFinish() {
 
 		m.MinimockEphemeralModeInspect()
 
+		m.MinimockFailStateInspect()
+
 		m.MinimockGetStateInspect()
 
 		m.MinimockNewGatewayInspect()
@@ -2166,6 +2365,7 @@ func (m *GatewayMock) minimockDone() bool {
 		m.MinimockBeforeRunDone() &&
 		m.MinimockBootstrapperDone() &&
 		m.MinimockEphemeralModeDone() &&
+		m.MinimockFailStateDone() &&
 		m.MinimockGetStateDone() &&
 		m.MinimockNewGatewayDone() &&
 		m.MinimockOnConsensusFinishedDone() &&
