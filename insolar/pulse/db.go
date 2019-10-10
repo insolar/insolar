@@ -29,7 +29,7 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db store.DB // AALEKSEEV TODO: only Backend is required. Also revert changes in store.DB interface
+	db *badger.DB
 }
 
 type pulseKey insolar.PulseNumber
@@ -54,13 +54,13 @@ type dbNode struct {
 
 // NewDB creates new DB storage instance.
 func NewDB(db store.DB) *DB {
-	return &DB{db: db}
+	return &DB{db: db.Backend()}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
 func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
 	for {
-		err := s.db.Backend().View(func(txn *badger.Txn) error {
+		err := s.db.View(func(txn *badger.Txn) error {
 			node, err := get(txn, pulseKey(pn))
 			if err != nil {
 				retErr = err
@@ -83,7 +83,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
 	for {
-		err := s.db.Backend().View(func(txn *badger.Txn) error {
+		err := s.db.View(func(txn *badger.Txn) error {
 			head, err := head(txn)
 			if err != nil {
 				retErr = err
@@ -114,7 +114,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	var hasKeys bool
 	for {
 		hasKeys = false
-		err := s.db.Backend().Update(func(txn *badger.Txn) error {
+		err := s.db.Update(func(txn *badger.Txn) error {
 			it := txn.NewIterator(badger.DefaultIteratorOptions)
 			defer it.Close()
 
@@ -164,7 +164,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) (retErr error) {
 	for {
-		err := s.db.Backend().Update(func(txn *badger.Txn) error {
+		err := s.db.Update(func(txn *badger.Txn) error {
 			var insertWithHead = func(head insolar.PulseNumber) error {
 				oldHead, err := get(txn, pulseKey(head))
 				if err != nil {
@@ -238,7 +238,7 @@ func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, re
 	}
 
 	for {
-		err := s.db.Backend().View(func(txn *badger.Txn) error {
+		err := s.db.View(func(txn *badger.Txn) error {
 			opts := badger.DefaultIteratorOptions
 			opts.Reverse = reverse
 			it := txn.NewIterator(opts)

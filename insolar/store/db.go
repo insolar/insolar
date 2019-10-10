@@ -28,6 +28,7 @@ import (
 // But it is internally ordered ( lexicographically by key bytes )
 // so if you want you can iterate over store using Iterator interface.
 type DB interface {
+	// Backend returns the underlying badger.DB object. Use with care.
 	Backend() *badger.DB
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
