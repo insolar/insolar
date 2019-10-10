@@ -153,7 +153,7 @@ func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *bi
 	return balance
 }
 
-func getAdminDepositBalance(caller *launchnet.User, reference string) (*big.Int, error) {
+func getAdminDepositBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
 	_, deposits := getBalanceAndDepositsNoErr(t, caller, reference)
 	mapd, ok := deposits[genesisrefs.FundsDepositName].(map[string]interface{})
 	if !ok {
