@@ -17,6 +17,8 @@
 package mimic
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"sync"
 
@@ -31,7 +33,7 @@ import (
 
 // TODO[bigbes]: check for oldest mutable
 
-type MimicLedger interface {
+type Ledger interface {
 	ProcessMessage(meta payload.Meta, pl payload.Payload) []payload.Payload
 }
 
@@ -42,13 +44,14 @@ type mimicLedger struct {
 	pcs insolar.PlatformCryptographyScheme
 	pa  pulse.Accessor
 
+	ctx     context.Context
 	storage Storage
 }
 
 func NewMimicLedger(
 	pcs insolar.PlatformCryptographyScheme,
 	pa pulse.Accessor,
-) MimicLedger {
+) Ledger {
 	return &mimicLedger{
 		pcs:     pcs,
 		pa:      pa,
@@ -179,10 +182,38 @@ func (p *mimicLedger) setOutgoingRequest(pl *payload.SetOutgoingRequest) []paylo
 }
 
 func (p *mimicLedger) setResultCommon(result *record.Result) ([]payload.Payload, bool) {
-	resultID, resultBuf, isDuplicate, err := p.storage.SetResult(result)
+	resultID, err := p.storage.SetResult(result)
 	switch err {
 	case nil:
 		break
+	case ErrResultExists:
+		id, resultBuf, err := p.storage.GetResult(*result.Request.GetLocal())
+		if err != nil {
+			panic("unexpected error: " + err.Error())
+		}
+
+		materialDuplicatedRec := record.Material{}
+		if err := materialDuplicatedRec.Unmarshal(resultBuf); err != nil {
+			panic(errors.Wrap(err, "failed to unmarshal Material Result record").Error())
+		}
+
+		storedPayload := record.Unwrap(&materialDuplicatedRec.Virtual).(*record.Result).Payload
+		if bytes.Compare(storedPayload, result.Payload) != 0 {
+			return []payload.Payload{
+				&payload.ErrorResultExists{
+					ObjectID: result.Object,
+					ResultID: *id,
+					Result:   resultBuf,
+				},
+			}, true
+		}
+
+		return []payload.Payload{
+			&payload.ResultInfo{
+				ObjectID: result.Object,
+				ResultID: *id,
+			},
+		}, true
 	case ErrNotFound:
 		return []payload.Payload{
 			&payload.Error{
@@ -215,22 +246,12 @@ func (p *mimicLedger) setResultCommon(result *record.Result) ([]payload.Payload,
 		panic("unexpected error: " + err.Error())
 	}
 
-	if resultBuf != nil {
-		return []payload.Payload{
-			&payload.ErrorResultExists{
-				ObjectID: result.Object,
-				ResultID: *resultID,
-				Result:   resultBuf,
-			},
-		}, isDuplicate
-	}
-
 	return []payload.Payload{
 		&payload.ResultInfo{
 			ObjectID: result.Object,
 			ResultID: *resultID,
 		},
-	}, isDuplicate
+	}, false
 }
 
 // TODO[bigbes]: check outgoings
