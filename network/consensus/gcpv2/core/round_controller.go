@@ -212,7 +212,7 @@ func (r *PhasedRoundController) onConsensusStopper() {
 		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, expt)
 
 	if failed {
-		panic("DEBUG FAIL-FAST: consensus didn't finish")
+		inslogger.FromContext(r.realm.roundContext).Panic("DEBUG FAIL-FAST: consensus didn't finish")
 	}
 
 	// TODO print purgatory
@@ -271,14 +271,15 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		// TODO restore to exact equality for expected population!!!!!
 		if !lastCensus.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
 			// TODO inform control feeder when our pulse is less
-			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
-				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
+			inslogger.FromContext(r.realm.roundContext).Panicf(
+				"illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
+				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID())
 		}
 		if !isLastExpected {
 			if lastCensus.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
-				panic("DEBUG FAIL-FAST: local remains as joiner")
+				inslogger.FromContext(r.realm.roundContext).Panic("DEBUG FAIL-FAST: local remains as joiner")
 			}
-			panic("DEBUG FAIL-FAST: previous consensus didn't finish")
+			inslogger.FromContext(r.realm.roundContext).Panic("DEBUG FAIL-FAST: previous consensus didn't finish")
 			// r.realm.unsafeRound = true
 			// active = lastCensus.(census.Active)
 		} else {
