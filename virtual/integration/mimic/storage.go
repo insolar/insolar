@@ -17,10 +17,10 @@
 package mimic
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -31,6 +31,8 @@ import (
 )
 
 type Storage interface {
+	store.DB
+
 	// Object
 	GetObject(object insolar.ID) (record.State, *record.Index, *insolar.ID, error)
 	SetObject(object insolar.ID, requestID insolar.ID, newState record.State) error
@@ -39,7 +41,7 @@ type Storage interface {
 	SetRequest(request record.Request) (*insolar.ID, []byte, []byte, error)
 	// Result
 	GetResult(requestID insolar.ID) (*insolar.ID, []byte, error)
-	SetResult(result *record.Result) (*insolar.ID, []byte, bool, error)
+	SetResult(result *record.Result) (*insolar.ID, error)
 	RollbackSetResult(result *record.Result)
 	// Code
 	SetCode(code record.Code) (insolar.ID, error)
@@ -47,12 +49,6 @@ type Storage interface {
 	// Pendings
 	GetPendings(object insolar.ID, limit uint32) ([]insolar.ID, error)
 	HasPendings(object insolar.ID) (bool, error)
-
-	// Misc Storage
-	Get(key store.Key) (value []byte, err error)
-	Set(key store.Key, value []byte) error
-	Delete(key store.Key) error
-	NewIterator(pivot store.Key, reverse bool) store.Iterator
 }
 
 type storage struct {
@@ -67,29 +63,6 @@ type storage struct {
 	MiscStorage map[string][]byte
 }
 
-func (s *storage) Get(key store.Key) ([]byte, error) {
-	value, ok := s.MiscStorage[string(key.ID())]
-	if !ok {
-		return nil, store.ErrNotFound
-	}
-	return value, nil
-}
-
-func (s *storage) Set(key store.Key, value []byte) error {
-	s.MiscStorage[string(key.ID())] = value
-	return nil
-}
-
-// NOT NEEDED
-func (s *storage) Delete(key store.Key) error {
-	panic("implement me")
-}
-
-// NOT NEEDED
-func (s *storage) NewIterator(pivot store.Key, reverse bool) store.Iterator {
-	panic("implement me")
-}
-
 var (
 	// object related errors
 	ErrNotFound           = errors.New("object not found")
@@ -102,8 +75,8 @@ var (
 	ErrRequestParentNotFound = errors.New("parent request not found")
 	ErrRequestNotFound       = errors.New("request not found")
 	ErrRequestExists         = errors.New("request already exists")
-	// ErrResultExists          = errors.New("request result exists")
-	ErrResultNotFound = errors.New("request result not found")
+	ErrResultExists          = errors.New("request result exists")
+	ErrResultNotFound        = errors.New("request result not found")
 
 	// code related errors
 	ErrCodeExists   = errors.New("code already exists")
@@ -113,6 +86,11 @@ var (
 func (s *storage) calculateVirtualID(pulse insolar.PulseNumber, virtual record.Virtual) insolar.ID {
 	hash := record.HashVirtual(s.pcs.ReferenceHasher(), virtual)
 	return *insolar.NewID(pulse, hash)
+}
+
+func (s *storage) calculateRecordID(pulse insolar.PulseNumber, rec record.Record) insolar.ID {
+	virtual := record.Wrap(rec)
+	return s.calculateVirtualID(pulse, virtual)
 }
 
 func (s *storage) calculateSideEffectID(state *ObjectState) insolar.ID {
@@ -126,7 +104,7 @@ func (s *storage) calculateSideEffectID(state *ObjectState) insolar.ID {
 		panic("result is empty (should be closed)")
 	}
 
-	return s.calculateVirtualID(resultID.Pulse(), record.Wrap(state.State))
+	return s.calculateRecordID(resultID.Pulse(), state.State)
 }
 
 func (s *storage) GetObject(objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error) {
@@ -276,8 +254,7 @@ func (s *storage) SetRequest(request record.Request) (*insolar.ID, []byte, []byt
 	if err != nil {
 		panic(errors.Wrap(err, "failed to obtained latest pulse"))
 	}
-	virtual := record.Wrap(request)
-	requestID := s.calculateVirtualID(latest.PulseNumber, virtual)
+	requestID := s.calculateRecordID(latest.PulseNumber, request)
 
 	var objectID *insolar.ID
 	if objectRef := request.AffinityRef(); objectRef != nil {
@@ -360,21 +337,21 @@ func (s *storage) GetResult(requestID insolar.ID) (*insolar.ID, []byte, error) {
 	return &materialRec.ID, request.Result, nil
 }
 
-func (s *storage) SetResult(result *record.Result) (*insolar.ID, []byte, bool, error) {
+func (s *storage) SetResult(result *record.Result) (*insolar.ID, error) {
 	if !result.Object.IsEmpty() {
 		state, ok := s.Objects[result.Object]
 		if !ok {
-			return nil, nil, false, ErrNotFound
+			return nil, ErrNotFound
 		} else if len(state.ObjectChanges) == 0 {
-			return nil, nil, false, ErrNotActivated
+			return nil, ErrNotActivated
 		} else if state.isDeactivated() {
-			return nil, nil, false, ErrAlreadyDeactivated
+			return nil, ErrAlreadyDeactivated
 		}
 	}
 
 	request, ok := s.Requests[*result.Request.GetLocal()]
 	if !ok {
-		return nil, nil, false, ErrRequestNotFound
+		return nil, ErrRequestNotFound
 	}
 
 	latest, err := s.pa.Latest(context.Background())
@@ -385,15 +362,7 @@ func (s *storage) SetResult(result *record.Result) (*insolar.ID, []byte, bool, e
 	resultID := s.calculateVirtualID(latest.PulseNumber, virtual)
 
 	if request.Status == RequestFinished {
-		materialDuplicatedRec := record.Material{}
-		if err := materialDuplicatedRec.Unmarshal(request.Result); !ok {
-			panic(errors.Wrap(err, "failed to unmarshal Material Result record").Error())
-		}
-
-		if bytes.Compare(resultID.Hash(), materialDuplicatedRec.ID.Hash()) == 0 {
-			return &materialDuplicatedRec.ID, nil, true, nil
-		}
-		return &materialDuplicatedRec.ID, request.Result, true, nil
+		return nil, ErrResultExists
 	}
 
 	materialRec := record.Material{
@@ -413,7 +382,7 @@ func (s *storage) SetResult(result *record.Result) (*insolar.ID, []byte, bool, e
 	request.ResultID = resultID
 	s.Results[resultID] = request
 
-	return &resultID, nil, false, nil
+	return &resultID, nil
 }
 
 func (s *storage) RollbackSetResult(result *record.Result) {
@@ -464,6 +433,27 @@ func (s *storage) SetCode(code record.Code) (insolar.ID, error) {
 
 	return codeID, nil
 }
+
+func (s *storage) Get(key store.Key) ([]byte, error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	value, ok := s.MiscStorage[string(fullKey)]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	return value, nil
+}
+
+func (s *storage) Set(key store.Key, value []byte) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	s.MiscStorage[string(fullKey)] = value
+	return nil
+}
+
+func (s *storage) Delete(key store.Key) error                               { panic("not implemented") } // NOT NEEDED
+func (s *storage) Backend() *badger.DB                                      { panic("not implemented") } // NOT NEEDED
+func (s *storage) NewIterator(pivot store.Key, reverse bool) store.Iterator { panic("not implemented") } // NOT NEEDED
 
 func NewStorage(
 	pcs insolar.PlatformCryptographyScheme,
