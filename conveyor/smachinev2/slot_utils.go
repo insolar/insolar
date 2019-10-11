@@ -33,6 +33,6 @@ func (s *Slot) releaseDependency(worker FixedSlotWorker) {
 	}
 	s.dependency = nil
 	dep.Release(func(link SlotLink) {
-		s.machine._activateDependantByLink(link, worker)
+		s.machine.activateDependantByLink(link, worker)
 	})
 }

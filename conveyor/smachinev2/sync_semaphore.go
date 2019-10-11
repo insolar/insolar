@@ -16,7 +16,112 @@
 
 package smachine
 
-//func NewFixedLimiter() SemaphoreLink {
-//
-//}
-//
+func NewSemaphore(initialCount int, name string) SyncLink {
+	ctl := &semaSync{}
+	ctl.controller.Init(name)
+	deps, _ := ctl.AdjustLimit(initialCount)
+	if len(deps) != 0 {
+		panic("illegal state")
+	}
+	return NewSyncLink(ctl)
+}
+
+type semaSync struct {
+	controller holdingQueueController
+}
+
+func (p *semaSync) CheckState() Decision {
+	if p.controller.IsOpen() {
+		return Passed
+	}
+	return NotPassed
+}
+
+func (p *semaSync) CheckDependency(dep SlotDependency) Decision {
+	if entry, ok := dep.(*DependencyQueueEntry); ok {
+		switch {
+		case !entry.link.IsValid(): // just to make sure
+			return Impossible
+		case !p.controller.Contains(entry):
+			return Impossible
+		case p.controller.IsOpen():
+			return Passed
+		default:
+			return NotPassed
+		}
+	}
+	return Impossible
+}
+
+func (p *semaSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
+	if entry, ok := dep.(*DependencyQueueEntry); ok {
+		switch {
+		case !entry.link.IsValid(): // just to make sure
+			return Impossible
+		case !oneStep && (entry.slotFlags&syncForOneStep != 0):
+			return Impossible
+		case !p.controller.Contains(entry):
+			return Impossible
+		case p.controller.IsOpen():
+			return Passed
+		default:
+			return NotPassed
+		}
+	}
+	return Impossible
+}
+
+func (p *semaSync) CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency) {
+	flags := DependencyQueueEntryFlags(0)
+	if oneStep {
+		flags |= syncForOneStep
+	}
+	if p.controller.IsOpen() {
+		return Passed, nil
+	}
+	return NotPassed, p.controller.queue.AddSlot(slot.NewLink(), flags)
+}
+
+func (p *semaSync) GetLimit() (limit int, isAdjustable bool) {
+	return p.controller.state, true
+}
+
+func (p *semaSync) AdjustLimit(limit int) ([]SlotLink, bool) {
+	p.controller.state = limit
+	if !p.controller.IsOpen() {
+		return nil, false
+	}
+	return p.controller.queue.FlushAllAsLinks(), true
+}
+
+func (p *semaSync) GetWaitingCount() int {
+	return p.controller.queue.Count()
+}
+
+func (p *semaSync) GetName() string {
+	return p.controller.GetName()
+}
+
+type holdingQueueController struct {
+	waitingQueueController
+	state int
+}
+
+func (p *holdingQueueController) IsOpen() bool {
+	return p.state <= 0
+}
+
+func (p *holdingQueueController) Release(_ SlotLink, _ DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink)) {
+	removeFn()
+	if p.IsOpen() && p.queue.Count() > 0 {
+		panic("illegal state")
+	}
+}
+
+func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, DependencyQueueEntryFlags) bool {
+	return p.IsOpen()
+}
+
+func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags DependencyQueueEntryFlags) bool {
+	return flags&syncForOneStep != 0 || p.IsOpen()
+}

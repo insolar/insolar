@@ -492,7 +492,7 @@ func (m *SlotMachine) _recycleSlot(slot *Slot, worker FixedSlotWorker) {
 			if worker == nil {
 				panic("illegal state")
 			}
-			m._activateDependantByLink(link, worker)
+			m.activateDependantByLink(link, worker)
 		})
 	}
 
@@ -910,7 +910,7 @@ func (m *SlotMachine) stopSlotWorking(slot *Slot, prevStepNo uint32, worker Fixe
 
 	slot.dependency = nil
 	dep.Release(func(link SlotLink) {
-		m._activateDependantByLink(link, worker)
+		m.activateDependantByLink(link, worker)
 	})
 }
 
@@ -935,7 +935,7 @@ func (m *SlotMachine) _useLocalSlotAsShared(link SharedDataLink, accessFn Shared
 	return true
 }
 
-func (m *SlotMachine) _activateDependantByLink(link SlotLink, worker FixedSlotWorker) {
+func (m *SlotMachine) activateDependantByLink(link SlotLink, worker FixedSlotWorker) {
 	switch {
 	case !link.IsValid():
 		return

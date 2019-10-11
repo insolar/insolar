@@ -311,3 +311,40 @@ func (p *slotContext) Release(link SyncLink) bool {
 	}
 	return true
 }
+
+func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
+	p.ensureAtLeast(updCtxInit)
+
+	if adj.controller == nil {
+		panic("illegal value")
+	}
+
+	adjustment := adj.adjustment
+	if !adj.isAbsolute {
+		adjustmentBase, _ := adj.controller.GetLimit()
+		adjustment += adjustmentBase
+	}
+
+	deps, activate := adj.controller.AdjustLimit(adjustment)
+	if len(deps) == 0 {
+		return false
+	}
+	if !activate {
+		// actually, we MUST NOT stop a slot from outside, so we ignore it
+		return true
+	}
+
+	m := p.s.machine
+	if !p.w.NonDetachableCall(func(worker FixedSlotWorker) {
+		for _, link := range deps {
+			m.activateDependantByLink(link, worker)
+		}
+	}) {
+		m.syncQueue.AddAsyncUpdate(SlotLink{}, func(_ SlotLink, worker FixedSlotWorker) {
+			for _, link := range deps {
+				m.activateDependantByLink(link, worker)
+			}
+		})
+	}
+	return true
+}

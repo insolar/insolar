@@ -44,7 +44,7 @@ type limiterSync struct {
 }
 
 func (p *limiterSync) CheckState() Decision {
-	if p.controller.HasEmpty() {
+	if p.controller.IsOpen() {
 		return Passed
 	}
 	return NotPassed
@@ -85,7 +85,7 @@ func (p *limiterSync) CreateDependency(slot *Slot, oneStep bool) (Decision, Slot
 	if oneStep {
 		flags |= syncForOneStep
 	}
-	if p.controller.HasEmpty() {
+	if p.controller.IsOpen() {
 		return Passed, p.controller.queue.AddSlot(slot.NewLink(), flags)
 	}
 	return NotPassed, p.controller.awaiters.queue.AddSlot(slot.NewLink(), flags)
@@ -161,7 +161,7 @@ func (p *workingQueueController) Init(name string) {
 	p.awaiters.queue.controller = &p.awaiters
 }
 
-func (p *workingQueueController) HasEmpty() bool {
+func (p *workingQueueController) IsOpen() bool {
 	return p.queue.Count() < p.workerLimit
 }
 
@@ -174,7 +174,7 @@ func (p *workingQueueController) Release(link SlotLink, flags DependencyQueueEnt
 		if f == nil {
 			return
 		}
-		if !p.HasEmpty() {
+		if !p.IsOpen() {
 			return
 		}
 		f.removeFromQueue()

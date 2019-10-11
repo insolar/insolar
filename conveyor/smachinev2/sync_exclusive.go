@@ -49,17 +49,6 @@ func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *exclusiveSync) GetLimit() (limit int, isAdjustable bool) {
-	return 1, false
-}
-
-func (p *exclusiveSync) AdjustLimit(limit int) (deps []SlotDependency, activate bool) {
-	if limit != 1 {
-		panic("illegal value")
-	}
-	return nil, false
-}
-
 func (p *exclusiveSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
 	if entry, ok := dep.(*DependencyQueueEntry); ok {
 		switch {
@@ -96,6 +85,17 @@ func (p *exclusiveSync) GetWaitingCount() int {
 
 func (p *exclusiveSync) GetName() string {
 	return p.awaiters.GetName()
+}
+
+func (p *exclusiveSync) GetLimit() (limit int, isAdjustable bool) {
+	return 1, false
+}
+
+func (p *exclusiveSync) AdjustLimit(limit int) (deps []SlotLink, activate bool) {
+	if limit != 1 {
+		panic("illegal value")
+	}
+	return nil, false
 }
 
 var _ DependencyQueueController = &exclusiveQueueController{}

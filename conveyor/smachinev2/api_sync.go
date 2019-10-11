@@ -21,6 +21,7 @@ type SynchronizationContext interface {
 	AcquireForThisStep(SyncLink) Decision
 	Acquire(SyncLink) Decision
 	Release(SyncLink) bool
+	ApplyAdjustment(SyncAdjustment) bool
 }
 
 func NewSyncLink(controller DependencyController) SyncLink {
@@ -29,6 +30,12 @@ func NewSyncLink(controller DependencyController) SyncLink {
 
 type SyncLink struct {
 	controller DependencyController
+}
+
+type SyncAdjustment struct {
+	controller DependencyController
+	adjustment int
+	isAbsolute bool
 }
 
 func (v SyncLink) GetQueueCount() int {

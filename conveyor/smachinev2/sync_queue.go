@@ -96,7 +96,6 @@ func (p *DependencyQueueHead) initEmpty() {
 }
 
 func (p *DependencyQueueHead) FlushOut(limit int, cutHead bool) []*DependencyQueueEntry {
-
 	if limit > p.count {
 		limit = p.count
 	}
@@ -120,6 +119,26 @@ func (p *DependencyQueueHead) FlushOut(limit int, cutHead bool) []*DependencyQue
 		if entry.link.IsValid() {
 			deps = append(deps, entry)
 			limit--
+		}
+	}
+	return deps
+}
+
+func (p *DependencyQueueHead) FlushAllAsLinks() []SlotLink {
+	if p.count == 0 {
+		return nil
+	}
+
+	deps := make([]SlotLink, 0, p.count)
+	for {
+		entry := p.First()
+		if entry == nil {
+			break
+		}
+		entry.removeFromQueue()
+
+		if entry.link.IsValid() {
+			deps = append(deps, entry.link)
 		}
 	}
 	return deps
