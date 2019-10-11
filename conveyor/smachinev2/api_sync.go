@@ -25,6 +25,9 @@ type SynchronizationContext interface {
 }
 
 func NewSyncLink(controller DependencyController) SyncLink {
+	if controller == nil {
+		panic("illegal value")
+	}
 	return SyncLink{controller}
 }
 
@@ -32,10 +35,22 @@ type SyncLink struct {
 	controller DependencyController
 }
 
+func (v SyncLink) IsZero() bool {
+	return v.controller == nil
+}
+
 type SyncAdjustment struct {
 	controller DependencyController
 	adjustment int
 	isAbsolute bool
+}
+
+func (v SyncAdjustment) IsZero() bool {
+	return v.controller == nil
+}
+
+func (v SyncAdjustment) IsEmpty() bool {
+	return v.controller == nil || !v.isAbsolute && v.adjustment == 0
 }
 
 func (v SyncLink) GetQueueCount() int {

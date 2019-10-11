@@ -16,14 +16,47 @@
 
 package smachine
 
-func NewSemaphore(initialCount int, name string) SyncLink {
+func NewSemaphore(initialCount int, name string) SemaphoreLink {
 	ctl := &semaSync{}
 	ctl.controller.Init(name)
 	deps, _ := ctl.AdjustLimit(initialCount)
 	if len(deps) != 0 {
 		panic("illegal state")
 	}
-	return NewSyncLink(ctl)
+	return SemaphoreLink{ctl}
+}
+
+type SemaphoreLink struct {
+	ctl *semaSync
+}
+
+func (v SemaphoreLink) IsZero() bool {
+	return v.ctl == nil
+}
+
+func (v SemaphoreLink) NewDelta(delta int) SyncAdjustment {
+	if v.ctl == nil {
+		panic("illegal state")
+	}
+	return SyncAdjustment{controller: v.ctl, adjustment: delta, isAbsolute: false}
+}
+
+func (v SemaphoreLink) NewValue(value int) SyncAdjustment {
+	if v.ctl == nil {
+		panic("illegal state")
+	}
+	return SyncAdjustment{controller: v.ctl, adjustment: value, isAbsolute: true}
+}
+
+func (v SemaphoreLink) NewBoolValue(isOpen bool) SyncAdjustment {
+	if isOpen {
+		return v.NewValue(0)
+	}
+	return v.NewValue(1)
+}
+
+func (v SemaphoreLink) SyncLink() SyncLink {
+	return NewSyncLink(v.ctl)
 }
 
 type semaSync struct {
