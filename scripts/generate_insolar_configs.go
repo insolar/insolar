@@ -90,15 +90,6 @@ func parseInputParams() {
 	}
 }
 
-func writeGorundPorts(gorundPorts [][]string) {
-	var portsData string
-	for _, ports := range gorundPorts {
-		portsData += ports[0] + " " + ports[1] + "\n"
-	}
-	err := makeFileWithDir("./", gorundPortsPath, portsData)
-	check("failed to create gorund ports file: "+gorundPortsPath, err)
-}
-
 func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configuration) {
 	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
 	for index, conf := range insolardConfigs {
@@ -221,7 +212,6 @@ func main() {
 	writePromConfig(promVars)
 	writeInsolardConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
 	writeInsolardConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
-	writeGorundPorts(gorundPorts)
 
 	pulsarConf := &pulsarConfigVars{}
 	pulsarConf.DataDir = withBaseDir("pulsar_data")
@@ -359,5 +349,5 @@ func check(msg string, err error) {
 	logCfg := configuration.NewLog()
 	logCfg.Formatter = "text"
 	inslog, _ := log.NewGlobalLogger(logCfg)
-	inslog.WithField("error", err).Fatal(msg)
+	inslog.WithField("error", err.Error()).Fatal(msg)
 }

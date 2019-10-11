@@ -64,7 +64,7 @@ func (c *client) ActivateObject(
 		Parent:      parent,
 	}
 
-	return c.storage.SetObject(*obj.GetLocal(), insolar.ID{}, &rec)
+	return c.storage.SetObject(*obj.GetLocal(), *obj.GetLocal(), &rec)
 }
 
 func (c *client) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
