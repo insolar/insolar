@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
@@ -120,5 +121,7 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 	if err != nil || !ok {
 		return err
 	}
-	return c.realm.ApplyPulseData(ctx, pp, false, from)
+
+	startedAt := time.Now()
+	return c.realm.ApplyPulseData(ctx, startedAt, pp, false, from)
 }

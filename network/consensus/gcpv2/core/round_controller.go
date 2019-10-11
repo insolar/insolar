@@ -150,7 +150,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
 	prep.init(
-		func(successful bool) {
+		func(successful bool, startedAt time.Time) {
 			// RUNS under lock
 			if r.prepR == nil {
 				return
@@ -158,6 +158,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 			defer r.prepR.stop() // initiates handover from PrepRealm
 			r.prepR = nil
 
+			r.realm.roundStartedAt = startedAt
 			r.roundWorker.Start() // ensures that worker was started
 			r._startFullRealm(successful)
 		})
