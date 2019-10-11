@@ -35,12 +35,12 @@ func TestGetFreeAddressCount(t *testing.T) {
 	}
 }
 
+const numShards = 1000
+
 func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-
-	numShards := 1000
 
 	trimmedPublicKey := foundation.TrimPublicKey(member.PubKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, numShards)
@@ -83,7 +83,7 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 
 func TestGetFreeAddressCount_StartIndexTooBig(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithIndex": 1})
+		map[string]interface{}{"startWithIndex": numShards + 2})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
