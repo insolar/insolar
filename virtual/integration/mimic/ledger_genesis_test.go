@@ -95,7 +95,7 @@ func TestMimicLedger_Genesis(t *testing.T) {
 		UpdateLastKnownPulseMock.Return(nil)
 	rmm := object.NewRecordModifierMock(mc).SetMock.Return(nil)
 
-	mimicLedgerInstance := NewMimicLedger(pcs, pulseStorage)
+	mimicLedgerInstance := NewMimicLedger(ctx, pcs, pulseStorage)
 	mimicStorage := mimicLedgerInstance.(*mimicLedger).storage
 
 	mimicClient := NewClient(mimicStorage)

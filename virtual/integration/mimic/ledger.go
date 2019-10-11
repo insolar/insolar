@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // TODO[bigbes]: check for oldest mutable
@@ -49,18 +50,22 @@ type mimicLedger struct {
 }
 
 func NewMimicLedger(
+	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
 	pa pulse.Accessor,
 ) Ledger {
+	ctx, _ = inslogger.WithField(ctx, "component", "mimic")
 	return &mimicLedger{
-		pcs:     pcs,
-		pa:      pa,
+		pcs: pcs,
+		pa:  pa,
+
+		ctx:     ctx,
 		storage: NewStorage(pcs, pa),
 	}
 }
 
-func (p *mimicLedger) processGetPendings(pl *payload.GetPendings) []payload.Payload {
-	requests, err := p.storage.GetPendings(pl.ObjectID, pl.Count)
+func (p *mimicLedger) processGetPendings(ctx context.Context, pl *payload.GetPendings) []payload.Payload {
+	requests, err := p.storage.GetPendings(ctx, pl.ObjectID, pl.Count)
 	if err == ErrNotFound {
 		return []payload.Payload{
 			&payload.Error{
@@ -84,9 +89,12 @@ func (p *mimicLedger) processGetPendings(pl *payload.GetPendings) []payload.Payl
 	}
 }
 
-func (p *mimicLedger) processGetRequest(pl *payload.GetRequest) []payload.Payload {
-	request, err := p.storage.GetRequest(pl.RequestID)
-	if err == ErrRequestNotFound {
+func (p *mimicLedger) processGetRequest(ctx context.Context, pl *payload.GetRequest) []payload.Payload {
+	request, err := p.storage.GetRequest(ctx, pl.RequestID)
+	switch err {
+	case nil:
+		break
+	case ErrRequestNotFound:
 		return []payload.Payload{
 			&payload.Error{
 				Text: err.Error(),
@@ -105,8 +113,8 @@ func (p *mimicLedger) processGetRequest(pl *payload.GetRequest) []payload.Payloa
 	}
 }
 
-func (p *mimicLedger) setRequestCommon(request record.Request) []payload.Payload {
-	requestID, reqBuf, resBuf, err := p.storage.SetRequest(request)
+func (p *mimicLedger) setRequestCommon(ctx context.Context, request record.Request) []payload.Payload {
+	requestID, reqBuf, resBuf, err := p.storage.SetRequest(ctx, request)
 	switch err {
 	case nil, ErrRequestExists:
 		break
@@ -161,33 +169,33 @@ func (p *mimicLedger) setRequestCommon(request record.Request) []payload.Payload
 	}
 }
 
-func (p *mimicLedger) setIncomingRequest(pl *payload.SetIncomingRequest) []payload.Payload {
+func (p *mimicLedger) processSetIncomingRequest(ctx context.Context, pl *payload.SetIncomingRequest) []payload.Payload {
 	rec := record.Unwrap(&pl.Request)
 	request, ok := rec.(*record.IncomingRequest)
 	if !ok {
 		panic(fmt.Sprintf("wrong request type, expected Incoming: %T", rec))
 	}
 
-	return p.setRequestCommon(request)
+	return p.setRequestCommon(ctx, request)
 }
 
-func (p *mimicLedger) setOutgoingRequest(pl *payload.SetOutgoingRequest) []payload.Payload {
+func (p *mimicLedger) processSetOutgoingRequest(ctx context.Context, pl *payload.SetOutgoingRequest) []payload.Payload {
 	rec := record.Unwrap(&pl.Request)
 	request, ok := rec.(*record.OutgoingRequest)
 	if !ok {
 		panic(fmt.Sprintf("wrong request type, expected Outgoing: %T", rec))
 	}
 
-	return p.setRequestCommon(request)
+	return p.setRequestCommon(ctx, request)
 }
 
-func (p *mimicLedger) setResultCommon(result *record.Result) ([]payload.Payload, bool) {
-	resultID, err := p.storage.SetResult(result)
+func (p *mimicLedger) setResultCommon(ctx context.Context, result *record.Result) ([]payload.Payload, bool) {
+	resultID, err := p.storage.SetResult(ctx, result)
 	switch err {
 	case nil:
 		break
-	case ErrResultExists:
-		id, resultBuf, err := p.storage.GetResult(*result.Request.GetLocal())
+	case ErrResultExists: // duplicate result already exists
+		id, resultBuf, err := p.storage.GetResult(ctx, *result.Request.GetLocal())
 		if err != nil {
 			panic("unexpected error: " + err.Error())
 		}
@@ -198,7 +206,7 @@ func (p *mimicLedger) setResultCommon(result *record.Result) ([]payload.Payload,
 		}
 
 		storedPayload := record.Unwrap(&materialDuplicatedRec.Virtual).(*record.Result).Payload
-		if bytes.Compare(storedPayload, result.Payload) != 0 {
+		if !bytes.Equal(storedPayload, result.Payload) {
 			return []payload.Payload{
 				&payload.ErrorResultExists{
 					ObjectID: result.Object,
@@ -255,7 +263,7 @@ func (p *mimicLedger) setResultCommon(result *record.Result) ([]payload.Payload,
 }
 
 // TODO[bigbes]: check outgoings
-func (p *mimicLedger) setResult(pl *payload.SetResult) []payload.Payload {
+func (p *mimicLedger) processSetResult(ctx context.Context, pl *payload.SetResult) []payload.Payload {
 	virtualRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualRec.Unmarshal(pl.Result); err != nil {
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
@@ -267,11 +275,11 @@ func (p *mimicLedger) setResult(pl *payload.SetResult) []payload.Payload {
 		panic(fmt.Errorf("wrong result type: %T", rec))
 	}
 
-	setResult, _ := p.setResultCommon(result)
+	setResult, _ := p.setResultCommon(ctx, result)
 	return setResult
 }
 
-func (p *mimicLedger) activate(pl *payload.Activate) []payload.Payload {
+func (p *mimicLedger) processActivate(ctx context.Context, pl *payload.Activate) []payload.Payload {
 	virtualRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualRec.Unmarshal(pl.Result); err != nil {
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
@@ -283,7 +291,7 @@ func (p *mimicLedger) activate(pl *payload.Activate) []payload.Payload {
 		panic(fmt.Errorf("wrong result type: %T", rec))
 	}
 
-	setResultResult, isDuplicate := p.setResultCommon(result)
+	setResultResult, isDuplicate := p.setResultCommon(ctx, result)
 	if _, ok := setResultResult[0].(*payload.ResultInfo); !ok || isDuplicate {
 		return setResultResult
 	}
@@ -291,7 +299,7 @@ func (p *mimicLedger) activate(pl *payload.Activate) []payload.Payload {
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
 
@@ -303,9 +311,9 @@ func (p *mimicLedger) activate(pl *payload.Activate) []payload.Payload {
 	objectID := result.Object
 	requestID := *result.Request.GetLocal()
 
-	err := p.storage.SetObject(objectID, requestID, activate)
+	err := p.storage.SetObject(ctx, requestID, activate, objectID)
 	if err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 
 		return []payload.Payload{
 			&payload.Error{
@@ -318,7 +326,7 @@ func (p *mimicLedger) activate(pl *payload.Activate) []payload.Payload {
 	return setResultResult
 }
 
-func (p *mimicLedger) update(pl *payload.Update) []payload.Payload {
+func (p *mimicLedger) processUpdate(ctx context.Context, pl *payload.Update) []payload.Payload {
 	virtualRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualRec.Unmarshal(pl.Result); err != nil {
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
@@ -330,14 +338,14 @@ func (p *mimicLedger) update(pl *payload.Update) []payload.Payload {
 		panic(fmt.Errorf("wrong result type: %T", rec))
 	}
 
-	setResultResult, isDuplicate := p.setResultCommon(result)
+	setResultResult, isDuplicate := p.setResultCommon(ctx, result)
 	if _, ok := setResultResult[0].(*payload.ResultInfo); !ok || isDuplicate {
 		return setResultResult
 	}
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
 
@@ -349,9 +357,9 @@ func (p *mimicLedger) update(pl *payload.Update) []payload.Payload {
 	objectID := result.Object
 	requestID := *result.Request.GetLocal()
 
-	err := p.storage.SetObject(objectID, requestID, amend)
+	err := p.storage.SetObject(ctx, requestID, amend, objectID)
 	if err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 
 		if err == ErrNotFound {
 			return []payload.Payload{
@@ -379,7 +387,7 @@ func (p *mimicLedger) update(pl *payload.Update) []payload.Payload {
 
 	return setResultResult
 }
-func (p *mimicLedger) deactivate(pl *payload.Deactivate) []payload.Payload {
+func (p *mimicLedger) processDeactivate(ctx context.Context, pl *payload.Deactivate) []payload.Payload {
 	virtualRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualRec.Unmarshal(pl.Result); err != nil {
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
@@ -391,14 +399,14 @@ func (p *mimicLedger) deactivate(pl *payload.Deactivate) []payload.Payload {
 		panic(fmt.Errorf("wrong result type: %T", rec))
 	}
 
-	setResultResult, isDuplicate := p.setResultCommon(result)
+	setResultResult, isDuplicate := p.setResultCommon(ctx, result)
 	if _, ok := setResultResult[0].(*payload.ResultInfo); !ok || isDuplicate {
 		return setResultResult
 	}
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
 	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
 
@@ -410,9 +418,9 @@ func (p *mimicLedger) deactivate(pl *payload.Deactivate) []payload.Payload {
 	objectID := result.Object
 	requestID := *result.Request.GetLocal()
 
-	err := p.storage.SetObject(objectID, requestID, deactivate)
+	err := p.storage.SetObject(ctx, requestID, deactivate, objectID)
 	if err != nil {
-		p.storage.RollbackSetResult(result)
+		p.storage.RollbackSetResult(ctx, result)
 
 		if err == ErrNotFound {
 			return []payload.Payload{
@@ -441,8 +449,8 @@ func (p *mimicLedger) deactivate(pl *payload.Deactivate) []payload.Payload {
 	return setResultResult
 }
 
-func (p *mimicLedger) hasPendings(pl *payload.HasPendings) []payload.Payload {
-	hasPendings, err := p.storage.HasPendings(pl.ObjectID)
+func (p *mimicLedger) processHasPendings(ctx context.Context, pl *payload.HasPendings) []payload.Payload {
+	hasPendings, err := p.storage.HasPendings(ctx, pl.ObjectID)
 	if err == ErrNotFound {
 		return []payload.Payload{
 			&payload.Error{
@@ -466,8 +474,8 @@ func (p *mimicLedger) hasPendings(pl *payload.HasPendings) []payload.Payload {
 	}
 }
 
-func (p *mimicLedger) getObject(pl *payload.GetObject) []payload.Payload {
-	state, index, firstRequestID, err := p.storage.GetObject(pl.ObjectID)
+func (p *mimicLedger) processGetObject(ctx context.Context, pl *payload.GetObject) []payload.Payload {
+	state, index, firstRequestID, err := p.storage.GetObject(ctx, pl.ObjectID)
 	switch err {
 	case nil:
 		break
@@ -528,38 +536,55 @@ func (p *mimicLedger) getObject(pl *payload.GetObject) []payload.Payload {
 	}
 }
 
-func (p *mimicLedger) getCode(pl *payload.GetCode) []payload.Payload { panic("implement me") }
-func (p *mimicLedger) setCode(pl *payload.SetCode) []payload.Payload { panic("implement me") }
+func (p *mimicLedger) processGetCode(ctx context.Context, pl *payload.GetCode) []payload.Payload {
+	panic("implement me")
+}
+func (p *mimicLedger) processSetCode(ctx context.Context, pl *payload.SetCode) []payload.Payload {
+	panic("implement me")
+}
 
 func (p *mimicLedger) ProcessMessage(meta payload.Meta, pl payload.Payload) []payload.Payload {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	msgType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		panic(errors.Wrap(err, "unknown payload type"))
+	}
+
+	ctx, logger := inslogger.WithFields(p.ctx, map[string]interface{}{
+		"sender":      meta.Sender,
+		"receiver":    meta.Receiver,
+		"senderPulse": meta.Pulse,
+		"msgType":     msgType.String(),
+	})
+	logger.Debug("Processing message")
+
 	switch data := pl.(type) {
 	case *payload.GetPendings:
-		return p.processGetPendings(data)
+		return p.processGetPendings(ctx, data)
 	case *payload.GetRequest:
-		return p.processGetRequest(data)
+		return p.processGetRequest(ctx, data)
 	case *payload.SetIncomingRequest:
-		return p.setIncomingRequest(data)
+		return p.processSetIncomingRequest(ctx, data)
 	case *payload.SetOutgoingRequest:
-		return p.setOutgoingRequest(data)
+		return p.processSetOutgoingRequest(ctx, data)
 	case *payload.SetResult:
-		return p.setResult(data)
+		return p.processSetResult(ctx, data)
 	case *payload.Activate:
-		return p.activate(data)
+		return p.processActivate(ctx, data)
 	case *payload.Update:
-		return p.update(data)
+		return p.processUpdate(ctx, data)
 	case *payload.Deactivate:
-		return p.deactivate(data)
+		return p.processDeactivate(ctx, data)
 	case *payload.HasPendings:
-		return p.hasPendings(data)
+		return p.processHasPendings(ctx, data)
 	case *payload.GetObject:
-		return p.getObject(data)
+		return p.processGetObject(ctx, data)
 	case *payload.GetCode:
-		return p.getCode(data)
+		return p.processGetCode(ctx, data)
 	case *payload.SetCode:
-		return p.setCode(data)
+		return p.processSetCode(ctx, data)
 	default:
 		panic(fmt.Sprintf("unexpected message to light %T", pl))
 	}
