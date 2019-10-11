@@ -174,13 +174,14 @@ func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberR
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	if len(mA.MigrationAddressShards) < startWithIndex+10 {
+	const maxNumberOfElements = 10
+	if len(mA.MigrationAddressShards) < startWithIndex+maxNumberOfElements {
 		return nil, fmt.Errorf("incorrect start shard index: too big")
 	}
 
 	var res []*GetAddressCountResponse
 
-	for i := startWithIndex; i < startWithIndex+10; i++ {
+	for i := startWithIndex; i < startWithIndex+maxNumberOfElements; i++ {
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
 		count, err := s.GetMigrationAddressesAmount()
 		if err != nil {
