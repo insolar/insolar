@@ -78,6 +78,12 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 	require.True(t, isFound)
 }
 
+func TestGetFreeAddressCount_WithIndex_NotAllRange(t *testing.T) {
+	numLeftShards := 2
+	var migrationShards = getAddressCount(t, numShards-numLeftShards)
+	require.Len(t, migrationShards, numLeftShards)
+}
+
 func TestGetFreeAddressCount_StartIndexTooBig(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": numShards + 2})
