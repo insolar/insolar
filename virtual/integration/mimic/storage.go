@@ -34,21 +34,21 @@ type Storage interface {
 	store.DB
 
 	// Object
-	GetObject(object insolar.ID) (record.State, *record.Index, *insolar.ID, error)
-	SetObject(object insolar.ID, requestID insolar.ID, newState record.State) error
+	GetObject(ctx context.Context, objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error)
+	SetObject(ctx context.Context, requestID insolar.ID, newState record.State, object insolar.ID) error
 	// Request
-	GetRequest(request insolar.ID) (record.Request, error)
-	SetRequest(request record.Request) (*insolar.ID, []byte, []byte, error)
+	GetRequest(ctx context.Context, requestID insolar.ID) (record.Request, error)
+	SetRequest(ctx context.Context, request record.Request) (*insolar.ID, []byte, []byte, error)
 	// Result
-	GetResult(requestID insolar.ID) (*insolar.ID, []byte, error)
-	SetResult(result *record.Result) (*insolar.ID, error)
-	RollbackSetResult(result *record.Result)
+	GetResult(ctx context.Context, requestID insolar.ID) (*insolar.ID, []byte, error)
+	SetResult(ctx context.Context, result *record.Result) (*insolar.ID, error)
+	RollbackSetResult(ctx context.Context, result *record.Result)
 	// Code
-	SetCode(code record.Code) (insolar.ID, error)
-	GetCode(codeID insolar.ID) ([]byte, error)
+	SetCode(ctx context.Context, code record.Code) (insolar.ID, error)
+	GetCode(ctx context.Context, codeID insolar.ID) ([]byte, error)
 	// Pendings
-	GetPendings(object insolar.ID, limit uint32) ([]insolar.ID, error)
-	HasPendings(object insolar.ID) (bool, error)
+	GetPendings(ctx context.Context, objectID insolar.ID, limit uint32) ([]insolar.ID, error)
+	HasPendings(ctx context.Context, objectID insolar.ID) (bool, error)
 }
 
 type storage struct {
@@ -65,13 +65,15 @@ type storage struct {
 
 var (
 	// object related errors
+
 	ErrNotFound           = errors.New("object not found")
 	ErrAlreadyActivated   = errors.New("object already activated")
 	ErrAlreadyDeactivated = errors.New("object already deactivated")
 	ErrDeactivated        = errors.New("object is activated")
 	ErrNotActivated       = errors.New("object isn't activated")
 
-	// request related errors
+	// request/result related errors
+
 	ErrRequestParentNotFound = errors.New("parent request not found")
 	ErrRequestNotFound       = errors.New("request not found")
 	ErrRequestExists         = errors.New("request already exists")
@@ -79,6 +81,7 @@ var (
 	ErrResultNotFound        = errors.New("request result not found")
 
 	// code related errors
+
 	ErrCodeExists   = errors.New("code already exists")
 	ErrCodeNotFound = errors.New("code not found")
 )
@@ -107,7 +110,7 @@ func (s *storage) calculateSideEffectID(state *ObjectState) insolar.ID {
 	return s.calculateRecordID(resultID.Pulse(), state.State)
 }
 
-func (s *storage) GetObject(objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error) {
+func (s *storage) GetObject(_ context.Context, objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error) {
 	object, ok := s.Objects[objectID]
 	if !ok {
 		return nil, nil, nil, ErrNotFound
@@ -151,7 +154,7 @@ func (s *storage) GetObject(objectID insolar.ID) (record.State, *record.Index, *
 	return latestObjectState.State, index, nil, nil
 }
 
-func (s *storage) SetObject(objectID insolar.ID, requestID insolar.ID, newState record.State) error {
+func (s *storage) SetObject(_ context.Context, requestID insolar.ID, newState record.State, objectID insolar.ID) error {
 	switch newState.(type) {
 	case *record.Activate:
 		// TODO[bigbes]: take Objects lock
@@ -206,8 +209,8 @@ func (s *storage) SetObject(objectID insolar.ID, requestID insolar.ID, newState 
 	return nil
 }
 
-func (s *storage) GetPendings(object insolar.ID, limit uint32) ([]insolar.ID, error) {
-	state := s.Objects[object]
+func (s *storage) GetPendings(_ context.Context, objectID insolar.ID, limit uint32) ([]insolar.ID, error) {
+	state := s.Objects[objectID]
 	if state == nil {
 		return nil, ErrNotFound
 	}
@@ -227,22 +230,23 @@ func (s *storage) GetPendings(object insolar.ID, limit uint32) ([]insolar.ID, er
 	return rv, nil
 }
 
-func (s *storage) HasPendings(object insolar.ID) (bool, error) {
-	pendings, err := s.GetPendings(object, 1)
+func (s *storage) HasPendings(ctx context.Context, objectID insolar.ID) (bool, error) {
+	pendings, err := s.GetPendings(ctx, objectID, 1)
 	if err != nil {
 		return false, err
 	}
 	return len(pendings) != 0, nil
 }
 
-func (s *storage) GetRequest(request insolar.ID) (record.Request, error) {
-	if s.Requests[request] == nil {
+func (s *storage) GetRequest(_ context.Context, requestID insolar.ID) (record.Request, error) {
+	requestEntity, ok := s.Requests[requestID]
+	if !ok {
 		return nil, ErrRequestNotFound
 	}
-	return s.Requests[request].Request, nil
+	return requestEntity.Request, nil
 }
 
-func (s *storage) SetRequest(request record.Request) (*insolar.ID, []byte, []byte, error) {
+func (s *storage) SetRequest(_ context.Context, request record.Request) (*insolar.ID, []byte, []byte, error) {
 	isOutgoingRequest := false
 	if _, ok := request.(*record.OutgoingRequest); ok {
 		isOutgoingRequest = true
@@ -297,11 +301,12 @@ func (s *storage) SetRequest(request record.Request) (*insolar.ID, []byte, []byt
 
 	if objectID != nil {
 		state, ok := s.Objects[*objectID]
-		if !ok {
+		switch {
+		case !ok:
 			return nil, nil, nil, ErrNotFound
-		} else if len(state.ObjectChanges) == 0 {
+		case len(state.ObjectChanges) == 0:
 			return nil, nil, nil, ErrNotActivated
-		} else if state.isDeactivated() {
+		case state.isDeactivated():
 			return nil, nil, nil, ErrAlreadyDeactivated
 		}
 
@@ -319,7 +324,7 @@ func (s *storage) SetRequest(request record.Request) (*insolar.ID, []byte, []byt
 	return &requestID, nil, nil, nil
 }
 
-func (s *storage) GetResult(requestID insolar.ID) (*insolar.ID, []byte, error) {
+func (s *storage) GetResult(_ context.Context, requestID insolar.ID) (*insolar.ID, []byte, error) {
 	request, ok := s.Requests[requestID]
 	if !ok {
 		return nil, nil, ErrRequestNotFound
@@ -337,14 +342,16 @@ func (s *storage) GetResult(requestID insolar.ID) (*insolar.ID, []byte, error) {
 	return &materialRec.ID, request.Result, nil
 }
 
-func (s *storage) SetResult(result *record.Result) (*insolar.ID, error) {
+// TODO[bigbes]: check for non-closed outgoings
+func (s *storage) SetResult(_ context.Context, result *record.Result) (*insolar.ID, error) {
 	if !result.Object.IsEmpty() {
 		state, ok := s.Objects[result.Object]
-		if !ok {
+		switch {
+		case !ok:
 			return nil, ErrNotFound
-		} else if len(state.ObjectChanges) == 0 {
+		case len(state.ObjectChanges) == 0:
 			return nil, ErrNotActivated
-		} else if state.isDeactivated() {
+		case state.isDeactivated():
 			return nil, ErrAlreadyDeactivated
 		}
 	}
@@ -385,7 +392,7 @@ func (s *storage) SetResult(result *record.Result) (*insolar.ID, error) {
 	return &resultID, nil
 }
 
-func (s *storage) RollbackSetResult(result *record.Result) {
+func (s *storage) RollbackSetResult(_ context.Context, result *record.Result) {
 	request := s.Requests[*result.Request.GetLocal()]
 
 	request.Status = RequestRegistered
@@ -395,7 +402,7 @@ func (s *storage) RollbackSetResult(result *record.Result) {
 	request.ResultID = insolar.ID{}
 }
 
-func (s *storage) GetCode(codeID insolar.ID) ([]byte, error) {
+func (s *storage) GetCode(_ context.Context, codeID insolar.ID) ([]byte, error) {
 	code, ok := s.Code[codeID]
 	if !ok {
 		return nil, ErrCodeNotFound
@@ -404,7 +411,7 @@ func (s *storage) GetCode(codeID insolar.ID) ([]byte, error) {
 	return code.Code, nil
 }
 
-func (s *storage) SetCode(code record.Code) (insolar.ID, error) {
+func (s *storage) SetCode(_ context.Context, code record.Code) (insolar.ID, error) {
 	virtual := record.Wrap(&code)
 
 	latest, err := s.pa.Latest(context.Background())

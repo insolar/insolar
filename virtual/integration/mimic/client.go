@@ -36,7 +36,7 @@ func NewClient(storage Storage) artifact.Manager {
 
 func (c *client) GetObject(ctx context.Context, head insolar.Reference) (artifact.ObjectDescriptor, error) {
 	objectID := *head.GetLocal()
-	state, index, _, err := c.storage.GetObject(objectID)
+	state, index, _, err := c.storage.GetObject(ctx, objectID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +64,11 @@ func (c *client) ActivateObject(
 		Parent:      parent,
 	}
 
-	return c.storage.SetObject(*obj.GetLocal(), *obj.GetLocal(), &rec)
+	return c.storage.SetObject(ctx, *obj.GetLocal(), &rec, *obj.GetLocal())
 }
 
 func (c *client) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
-	id, _, _, err := c.storage.SetRequest(&req)
+	id, _, _, err := c.storage.SetRequest(ctx, &req)
 	return id, err
 }
 
@@ -108,7 +108,7 @@ func (c client) UpdateObject(ctx context.Context, domain, request insolar.Refere
 	}
 
 	objectID := *obj.HeadRef().GetLocal()
-	return c.storage.SetObject(objectID, insolar.ID{}, &rec)
+	return c.storage.SetObject(ctx, insolar.ID{}, &rec, objectID)
 }
 
 // NOT NEEDED
