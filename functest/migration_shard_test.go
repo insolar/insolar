@@ -44,11 +44,8 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 
 	trimmedPublicKey := foundation.TrimPublicKey(member.PubKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, numShards)
-	// it's because 'getAddressCount' return 10 addresses and we want shardIndex
-	// must be included in that range
-	idxShift := shardIndex - 5
 
-	var migrationShardsMapBefore = getAddressCount(t, idxShift)
+	var migrationShardsMapBefore = getAddressCount(t, shardIndex)
 
 	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -61,7 +58,7 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 		map[string]interface{}{"startWithIndex": 0})
 	require.NoError(t, err)
 
-	var migrationShardsMapAfter = getAddressCount(t, idxShift)
+	var migrationShardsMapAfter = getAddressCount(t, shardIndex)
 
 	isFound := false
 	for i, countBefore := range migrationShardsMapBefore {
