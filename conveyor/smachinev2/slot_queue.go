@@ -243,6 +243,14 @@ func (s *Slot) QueueNext() *Slot {
 	return next
 }
 
+func (s *Slot) _cutNext() *Slot {
+	next := s.nextInQueue
+	s.nextInQueue = nil
+	s.prevInQueue = nil
+	s.queue = nil
+	return next
+}
+
 func (s *Slot) QueuePrev() *Slot {
 	prev := s.prevInQueue
 	if prev == nil || prev.isQueueHead() {

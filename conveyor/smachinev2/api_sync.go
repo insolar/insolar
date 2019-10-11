@@ -16,16 +16,34 @@
 
 package smachine
 
-type SemaphoreLink interface {
-	CheckState(ExecutionContext) Decider
-	TryAcquireForThisStep(ExecutionContext) Decider
-	TryAcquire(ExecutionContext) SemaphoreReleaser
+type SynchronizationContext interface {
+	Check(SyncLink) Decision
+	AcquireForThisStep(SyncLink) Decision
+	Acquire(SyncLink) Decision
+	Release(SyncLink) bool
 }
 
-type SemaphoreReleaser interface {
-	Decider
-	Release(ExecutionContext)
+func NewSyncLink(controller DependencyController) SyncLink {
+	return SyncLink{controller}
 }
 
-//type SemaphoreController interface {
-//}
+type SyncLink struct {
+	controller DependencyController
+}
+
+func (v SyncLink) GetQueueCount() int {
+	return v.controller.GetWaitingCount()
+}
+
+type DependencyController interface {
+	CheckState() Decision
+	CheckDependency(dep SlotDependency) Decision
+	UseDependency(dep SlotDependency, oneStep bool) Decision
+	CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency)
+
+	GetLimit() (limit int, isAdjustable bool)
+	AdjustLimit(limit int) (deps []SlotLink, activate bool)
+
+	GetWaitingCount() int
+	GetName() string
+}

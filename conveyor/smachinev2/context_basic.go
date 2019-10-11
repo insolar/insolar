@@ -254,3 +254,60 @@ func (p *slotContext) BargeInThisStepOnly() BargeInRequester {
 	p.ensure(updCtxExec)
 	return &bargeInRequest{&p.contextTemplate, p.s.machine, p.s.NewStepLink()}
 }
+
+func (p *slotContext) Check(link SyncLink) Decision {
+	p.ensureAtLeast(updCtxInit)
+	dep := p.s.dependency
+	if dep != nil {
+		d := link.controller.CheckDependency(dep)
+		if d.IsValid() {
+			return d
+		}
+	}
+	return link.controller.CheckState()
+}
+
+func (p *slotContext) AcquireForThisStep(link SyncLink) Decision {
+	return p.acquire(link, true)
+}
+
+func (p *slotContext) Acquire(link SyncLink) Decision {
+	return p.acquire(link, false)
+}
+
+func (p *slotContext) acquire(link SyncLink, oneStep bool) Decision {
+	p.ensureAtLeast(updCtxInit)
+	dep := p.s.dependency
+	if dep != nil {
+		d := link.controller.UseDependency(dep, oneStep)
+		if d.IsValid() {
+			return d
+		}
+	}
+
+	d := Impossible
+	p.w.NonDetachableCall(func(worker FixedSlotWorker) {
+		p.s.releaseDependency(worker)
+		d, p.s.dependency = link.controller.CreateDependency(p.s, oneStep)
+	})
+	return d
+}
+
+func (p *slotContext) Release(link SyncLink) bool {
+	p.ensureAtLeast(updCtxInit)
+	dep := p.s.dependency
+	if dep == nil {
+		return false
+	}
+
+	if !p.w.NonDetachableCall(p.s.releaseDependency) {
+		m := p.s.machine
+		m.syncQueue.AddAsyncUpdate(p.s.NewLink(), func(link SlotLink, worker FixedSlotWorker) {
+			if !link.IsValid() || link.s.dependency != dep {
+				return
+			}
+			link.s.releaseDependency(worker)
+		})
+	}
+	return true
+}

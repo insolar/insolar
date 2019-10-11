@@ -43,6 +43,10 @@ func (*SimpleSlotWorker) IsDetached() bool {
 	return false
 }
 
+func (p *SimpleSlotWorker) OuterCall(*smachine.SlotMachine, smachine.NonDetachableFunc) (wasExecuted bool) {
+	panic("unsupported")
+}
+
 func (p *SimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
 	fn(&DetachableSimpleSlotWorker{p})
 	return false

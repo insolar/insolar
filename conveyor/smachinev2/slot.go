@@ -29,7 +29,7 @@ type Slot struct {
 	   Slot fields to support processing queues
 	   -----------------------------------
 	   SYNC: these portion of slot can be accessed:
-		- if queue is assigned - by the goroutine owning the queue
+		- if queue is assigned - by the goroutine owning the queue's head
 	    - if queue is unassigned - by the goroutine of the machine
 	*/
 	prevInQueue *Slot
@@ -70,15 +70,11 @@ type slotData struct {
 }
 
 type SlotDependency interface {
-	//GetKey() string
-	//GetWeight() int32
-	//OnBroadcast(payload interface{}) (accepted, wakeup bool)
-
 	IsReleaseOnWorking() bool
-	IsReleaseOnStep() bool
+	IsReleaseOnStepping() bool
+	Release(activateFn func(SlotLink))
 
-	ReleaseOnDisposed(activateFn func(*Slot))
-	Release(FixedSlotWorker)
+	ReleaseOnDisposed(activateFn func(SlotLink))
 }
 
 const (

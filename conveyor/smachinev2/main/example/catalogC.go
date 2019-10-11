@@ -31,6 +31,7 @@ type CatalogC = *catalogC
 
 type CustomSharedState struct {
 	key     longbits.ByteString
+	Mutex   smachine.SyncLink
 	Text    string
 	Counter int
 }
@@ -133,6 +134,8 @@ func (sm *catalogCSM) GetStateMachineDeclaration() smachine.StateMachineDeclarat
 
 func (sm *catalogCSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.Migrate)
+
+	sm.sharedState.Mutex = smachine.NewExclusive()
 
 	sdl := ctx.Share(&sm.sharedState, false)
 

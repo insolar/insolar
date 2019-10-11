@@ -25,3 +25,14 @@ func (p SlotLink) activateSlot(worker FixedSlotWorker) {
 		p.s.activateSlot(worker)
 	}
 }
+
+func (s *Slot) releaseDependency(worker FixedSlotWorker) {
+	dep := s.dependency
+	if dep == nil {
+		return
+	}
+	s.dependency = nil
+	dep.Release(func(link SlotLink) {
+		s.machine._activateDependantByLink(link, worker)
+	})
+}

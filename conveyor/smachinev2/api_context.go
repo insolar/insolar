@@ -46,6 +46,7 @@ type ConstructionContext interface {
 /* A context parent for all regular step contexts */
 type InOrderStepContext interface {
 	BasicContext
+	SynchronizationContext
 
 	SetDefaultMigration(fn MigrateFunc)
 	SetDefaultErrorHandler(fn ErrorHandlerFunc)
@@ -154,6 +155,7 @@ type ConditionalUpdate interface {
 
 type AsyncResultContext interface {
 	BasicContext
+	//SynchronizationContext
 
 	WakeUp()
 }
@@ -171,6 +173,7 @@ type BargeInRequester interface {
 
 type BargeInContext interface {
 	BasicContext
+	SynchronizationContext
 
 	GetBargeInParam() interface{}
 	IsAtOriginalStep() bool

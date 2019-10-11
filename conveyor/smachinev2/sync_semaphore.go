@@ -16,29 +16,7 @@
 
 package smachine
 
-import (
-	"sync"
-)
-
-type DetachableFunc func(DetachableSlotWorker)
-type NonDetachableFunc func(FixedSlotWorker)
-
-type SlotWorker interface {
-	HasSignal() bool
-	IsDetached() bool
-}
-
-type DetachableSlotWorker interface {
-	SlotWorker
-
-	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
-	GetCond() (bool, *sync.Cond)
-	// provides temporary protection from detach
-	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
-}
-
-type FixedSlotWorker interface {
-	SlotWorker
-	DetachableCall(DetachableFunc) (wasDetached bool)
-	OuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool)
-}
+//func NewFixedLimiter() SemaphoreLink {
+//
+//}
+//

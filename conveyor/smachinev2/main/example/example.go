@@ -30,6 +30,7 @@ type StateMachine1 struct {
 	serviceA *ServiceAdapterA
 	catalogC CatalogC
 
+	mutex   smachine.SyncLink
 	testKey longbits.ByteString
 	result  string
 	count   int
@@ -85,6 +86,7 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 			state.Counter++
 			state.Text = fmt.Sprintf("last-%v", ctx.SlotLink())
 			fmt.Printf("shared: accessed=%d %v -> %v\n", state.Counter, before, state.Text)
+			s.mutex = state.Mutex
 		}).TryUse(ctx), s.State2, s.State5)
 }
 
@@ -109,6 +111,11 @@ func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpda
 }
 
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	if ctx.AcquireForThisStep(s.mutex).IsNotPassed() {
+		fmt.Println("Mutex queue: ", s.mutex.GetQueueCount())
+		return ctx.Sleep().ThenRepeat()
+	}
+
 	s.count++
 	if s.count < 5 {
 		return ctx.Yield().ThenRepeat()
@@ -120,9 +127,9 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 }
 
 func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	//if ctx.GetPendingCallCount() > 0 {
-	//	return ctx.WaitAny().ThenRepeat()
-	//}
+	if ctx.GetPendingCallCount() > 0 {
+		return ctx.WaitAny().ThenRepeat()
+	}
 
 	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}

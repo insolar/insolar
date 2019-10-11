@@ -39,6 +39,10 @@ func (v Decision) IsPassed() bool {
 	return v == Passed
 }
 
+func (v Decision) IsNotPassed() bool {
+	return v == NotPassed
+}
+
 func (v Decision) IsValid() bool {
 	return v >= NotPassed
 }
