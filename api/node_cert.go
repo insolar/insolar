@@ -52,7 +52,7 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 
 // Get returns certificate for node with given reference.
 func (s *NodeCertService) get(ctx context.Context, _ *http.Request, args *NodeCertArgs, _ *rpc.RequestBody, reply *NodeCertReply) error {
-	nodeRef, err := insolar.NewReferenceFromBase58(args.Ref)
+	nodeRef, err := insolar.NewReferenceFromString(args.Ref)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse args.Ref")
 	}

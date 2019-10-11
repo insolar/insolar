@@ -174,13 +174,14 @@ func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberR
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	if len(mA.MigrationAddressShards) < startWithIndex+10 {
+	const maxNumberOfElements = 10
+	if len(mA.MigrationAddressShards) < startWithIndex+maxNumberOfElements {
 		return nil, fmt.Errorf("incorrect start shard index: too big")
 	}
 
 	var res []*GetAddressCountResponse
 
-	for i := startWithIndex; i < startWithIndex+10; i++ {
+	for i := startWithIndex; i < startWithIndex+maxNumberOfElements; i++ {
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
 		count, err := s.GetMigrationAddressesAmount()
 		if err != nil {
@@ -219,7 +220,7 @@ func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
 // ins:immutable
 func (mA *MigrationAdmin) GetMigrationDaemonByMemberRef(memberRef string) (insolar.Reference, error) {
 
-	migrationDaemonMemberRef, err := insolar.NewObjectReferenceFromBase58(memberRef)
+	migrationDaemonMemberRef, err := insolar.NewObjectReferenceFromString(memberRef)
 	if err != nil {
 		return insolar.Reference{}, fmt.Errorf(" failed to parse params.Reference")
 	}
@@ -247,7 +248,7 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get reference in shard")
 	}
-	ref, err := insolar.NewObjectReferenceFromBase58(refStr)
+	ref, err := insolar.NewObjectReferenceFromString(refStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "bad member reference for this migration address")
 	}

@@ -227,6 +227,8 @@ type Gateway interface {
 	Bootstrapper() Bootstrapper
 
 	EphemeralMode(nodes []insolar.NetworkNode) bool
+
+	FailState(ctx context.Context, reason string)
 }
 
 type Auther interface {

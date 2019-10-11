@@ -227,7 +227,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		return nil, fmt.Errorf("failed to get 'reference' param")
 	}
 
-	reference, err := insolar.NewObjectReferenceFromBase58(referenceStr)
+	reference, err := insolar.NewObjectReferenceFromString(referenceStr)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
@@ -278,7 +278,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		asset = XNS // set to default asset
 	}
 
-	recipientReference, err := insolar.NewObjectReferenceFromBase58(recipientReferenceStr)
+	recipientReference, err := insolar.NewObjectReferenceFromString(recipientReferenceStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse 'toMemberReference' param: %s", err.Error())
 	}

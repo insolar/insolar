@@ -27,7 +27,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromBase58("0111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -44,14 +44,15 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*RootDomain, error) {
-	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
 
+	var ref insolar.Reference
 	var constructorError *foundation.Error
 	resultContainer := foundation.Result{
-		Returns: []interface{}{&constructorError},
+		Returns: []interface{}{&ref, &constructorError},
 	}
 	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
 	if err != nil {
@@ -66,7 +67,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*RootDoma
 		return nil, constructorError
 	}
 
-	return &RootDomain{Reference: *ref}, nil
+	return &RootDomain{Reference: ref}, nil
 }
 
 // GetObject returns proxy object

@@ -124,7 +124,7 @@ type Base struct {
 	// Next request backoff.
 	backoff time.Duration // nolint
 
-	newPulseCh chan struct{}
+	pulseWatchdog *pulseWatchdog
 }
 
 // NewGateway creates new gateway on top of existing
@@ -156,6 +156,8 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 }
 
 func (g *Base) Init(ctx context.Context) error {
+	g.pulseWatchdog = newPulseWatchdog(ctx, g.Gatewayer.Gateway(), g.Options.PulseWatchdogTimeout)
+
 	g.HostNetwork.RegisterRequestHandler(
 		types.Authorize, g.discoveryMiddleware(g.announceMiddleware(g.HandleNodeAuthorizeRequest)), // validate cert
 	)
@@ -176,10 +178,7 @@ func (g *Base) Stop(ctx context.Context) error {
 		return errors.Wrap(err, "failed to stop datagram transport")
 	}
 
-	if g.newPulseCh != nil {
-		close(g.newPulseCh)
-	}
-
+	g.pulseWatchdog.Stop()
 	return nil
 }
 
@@ -272,13 +271,7 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
-	if g.newPulseCh != nil {
-		g.newPulseCh <- struct{}{}
-	} else {
-		g.newPulseCh = make(chan struct{})
-		newPulseWatchdog(ctx, g, g.Options.PulseWatchdogTimeout, g.newPulseCh)
-	}
-
+	g.pulseWatchdog.Reset()
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {

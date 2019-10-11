@@ -47,7 +47,7 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get reference in shard")
 	}
-	ref, err := insolar.NewObjectReferenceFromBase58(refStr)
+	ref, err := insolar.NewObjectReferenceFromString(refStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "bad member reference for this public key")
 	}

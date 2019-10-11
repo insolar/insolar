@@ -262,7 +262,7 @@ func stopInsolard() error {
 }
 
 func waitForNet() error {
-	numAttempts := 90
+	numAttempts := 270
 	// TODO: read ports from bootstrap config
 	ports := []string{
 		"19001",
