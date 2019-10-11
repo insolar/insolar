@@ -20,14 +20,14 @@ package integration
 import (
 	"context"
 	"flag"
-	"fmt"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 	"math"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -56,6 +56,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/virtual/integration/mimic"
 )
 
 func NodeLight() insolar.Reference {
@@ -65,16 +66,20 @@ func NodeLight() insolar.Reference {
 const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
-	ctx               context.Context
 	test              *testing.T
-	pm                insolar.PulseManager
+	ctx               context.Context
 	componentManager  *component.Manager
 	stopper           func()
-	pulse             insolar.Pulse
 	lock              sync.RWMutex
 	clientSender      bus.Sender
 	logicRunner       *logicrunner.LogicRunner
 	contractRequester *contractrequester.ContractRequester
+
+	pulse        insolar.Pulse
+	pulseStorage *pulse.StorageMem
+	pulseManager insolar.PulseManager
+
+	mimic mimic.Ledger
 
 	ExternalPubSub, IncomingPubSub *gochannel.GoChannel
 }
@@ -89,23 +94,6 @@ func DefaultVMConfig() configuration.Configuration {
 	cfg.Log.Level = insolar.DebugLevel.String()
 	cfg.Log.Formatter = insolar.TextFormat.String()
 	return cfg
-}
-
-func DefaultLightResponse(pl payload.Payload) []payload.Payload {
-	switch pl.(type) {
-	// getters
-	case *payload.GetFilament, *payload.GetCode, *payload.GetRequest, *payload.GetRequestInfo:
-		return nil
-	case *payload.SetIncomingRequest, *payload.SetOutgoingRequest:
-		return []payload.Payload{&payload.RequestInfo{}}
-	// setters
-	case *payload.SetResult, *payload.SetCode:
-		return []payload.Payload{&payload.ID{}}
-	case *payload.HasPendings:
-		return []payload.Payload{&payload.PendingsInfo{HasPendings: true}}
-	}
-
-	panic(fmt.Sprintf("unexpected message to lightt %T", pl))
 }
 
 func checkError(ctx context.Context, err error, message string) {
@@ -262,6 +250,13 @@ func NewServer(
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
 
+	var (
+		LedgerMimic mimic.Ledger
+	)
+	{
+		LedgerMimic = mimic.NewMimicLedger(ctx, CryptoScheme, Pulses)
+	}
+
 	// Start routers with handlers.
 	outHandler := func(msg *message.Message) error {
 		var err error
@@ -299,7 +294,7 @@ func NewServer(
 				if receiveCallback != nil {
 					replies = receiveCallback(msgMeta, pl)
 				} else {
-					replies = DefaultLightResponse(pl)
+					replies = LedgerMimic.ProcessMessage(msgMeta, pl)
 				}
 
 				for _, rep := range replies {
@@ -342,11 +337,13 @@ func NewServer(
 		ctx:               ctx,
 		contractRequester: contractRequester,
 		test:              t,
-		pm:                PulseManager,
+		pulseStorage:      Pulses,
+		pulseManager:      PulseManager,
 		componentManager:  &cm,
 		stopper:           stopper,
 		pulse:             *insolar.GenesisPulse,
 		clientSender:      ClientBus,
+		mimic:             LedgerMimic,
 	}
 	return s, nil
 }
@@ -356,14 +353,14 @@ func (s *Server) Stop(ctx context.Context) {
 	s.stopper()
 }
 
-func (s *Server) SetPulse(ctx context.Context) {
+func (s *Server) IncrementPulse(ctx context.Context) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.pulse = insolar.Pulse{
 		PulseNumber: s.pulse.PulseNumber + PulseStep,
 	}
-	err := s.pm.Set(ctx, s.pulse)
+	err := s.pulseManager.Set(ctx, s.pulse)
 	if err != nil {
 		panic(err)
 	}
@@ -376,13 +373,6 @@ func (s *Server) SendToSelf(ctx context.Context, pl payload.Payload) (<-chan *me
 	}
 	msg.Metadata.Set(meta.TraceID, s.test.Name())
 	return s.clientSender.SendTarget(ctx, msg, virtual.ID())
-}
-
-func (s *Server) Pulse() insolar.PulseNumber {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.pulse.PulseNumber
 }
 
 func startWatermill(

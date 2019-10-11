@@ -30,11 +30,19 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 // TODO[bigbes]: check for oldest mutable
 
+type DebugLedger interface {
+	AddCode(ctx context.Context, code []byte) (*insolar.ID, error)
+	AddObject(ctx context.Context, image insolar.ID, isPrototype bool, memory []byte) (*insolar.ID, error)
+}
+
 type Ledger interface {
+	DebugLedger
+
 	ProcessMessage(meta payload.Meta, pl payload.Payload) []payload.Payload
 }
 
@@ -66,14 +74,17 @@ func NewMimicLedger(
 
 func (p *mimicLedger) processGetPendings(ctx context.Context, pl *payload.GetPendings) []payload.Payload {
 	requests, err := p.storage.GetPendings(ctx, pl.ObjectID, pl.Count)
-	if err == ErrNotFound {
+	switch err {
+	case nil:
+		break
+	case ErrNotFound:
 		return []payload.Payload{
 			&payload.Error{
 				Text: insolar.ErrNoPendingRequest.Error(),
 				Code: payload.CodeNoPendings,
 			},
 		}
-	} else if err != nil {
+	default:
 		return []payload.Payload{
 			&payload.Error{
 				Code: payload.CodeUnknown,
@@ -308,10 +319,9 @@ func (p *mimicLedger) processActivate(ctx context.Context, pl *payload.Activate)
 		panic(fmt.Errorf("wrong result type: %T", rec))
 	}
 
-	objectID := result.Object
 	requestID := *result.Request.GetLocal()
 
-	err := p.storage.SetObject(ctx, requestID, activate, objectID)
+	err := p.storage.SetObject(ctx, requestID, activate, insolar.ID{})
 	if err != nil {
 		p.storage.RollbackSetResult(ctx, result)
 
@@ -450,15 +460,18 @@ func (p *mimicLedger) processDeactivate(ctx context.Context, pl *payload.Deactiv
 }
 
 func (p *mimicLedger) processHasPendings(ctx context.Context, pl *payload.HasPendings) []payload.Payload {
-	hasPendings, err := p.storage.HasPendings(ctx, pl.ObjectID)
-	if err == ErrNotFound {
+	_, err := p.storage.HasPendings(ctx, pl.ObjectID)
+	switch err {
+	case nil:
+		break
+	case ErrNotFound:
 		return []payload.Payload{
 			&payload.Error{
 				Text: insolar.ErrNoPendingRequest.Error(),
 				Code: payload.CodeNoPendings,
 			},
 		}
-	} else if err != nil {
+	default:
 		return []payload.Payload{
 			&payload.Error{
 				Code: payload.CodeUnknown,
@@ -469,7 +482,7 @@ func (p *mimicLedger) processHasPendings(ctx context.Context, pl *payload.HasPen
 
 	return []payload.Payload{
 		&payload.PendingsInfo{
-			HasPendings: hasPendings,
+			HasPendings: false,
 		},
 	}
 }
@@ -537,8 +550,33 @@ func (p *mimicLedger) processGetObject(ctx context.Context, pl *payload.GetObjec
 }
 
 func (p *mimicLedger) processGetCode(ctx context.Context, pl *payload.GetCode) []payload.Payload {
-	panic("implement me")
+	codeBuf, err := p.storage.GetCode(ctx, pl.CodeID)
+	switch err {
+	case nil:
+		break
+	case ErrCodeNotFound:
+		return []payload.Payload{
+			&payload.Error{
+				Code: payload.CodeNotFound,
+				Text: err.Error(),
+			},
+		}
+	default:
+		return []payload.Payload{
+			&payload.Error{
+				Code: payload.CodeUnknown,
+				Text: err.Error(),
+			},
+		}
+	}
+
+	return []payload.Payload{
+		&payload.Code{
+			Record: codeBuf,
+		},
+	}
 }
+
 func (p *mimicLedger) processSetCode(ctx context.Context, pl *payload.SetCode) []payload.Payload {
 	panic("implement me")
 }
@@ -588,4 +626,50 @@ func (p *mimicLedger) ProcessMessage(meta payload.Meta, pl payload.Payload) []pa
 	default:
 		panic(fmt.Sprintf("unexpected message to light %T", pl))
 	}
+}
+
+func (p *mimicLedger) AddObject(ctx context.Context, image insolar.ID, isPrototype bool, memory []byte) (*insolar.ID, error) {
+	id, _, _, err := p.storage.SetRequest(ctx, &record.IncomingRequest{
+		CallType: record.CTGenesis,
+		Method:   testutils.RandomString(),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set request")
+	}
+
+	requestRef := *insolar.NewRecordReference(*id)
+
+	result := &record.Result{
+		Object:  insolar.ID{},
+		Request: requestRef,
+		Payload: []byte{},
+	}
+	_, err = p.storage.SetResult(ctx, result)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to set result")
+	}
+
+	err = p.storage.SetObject(ctx, *id, &record.Activate{
+		Request:     requestRef,
+		Memory:      memory,
+		Image:       *insolar.NewReference(image),
+		IsPrototype: isPrototype,
+	}, insolar.ID{})
+	if err != nil {
+		p.storage.RollbackSetResult(ctx, result)
+		return nil, errors.Wrap(err, "failed to activate object")
+	}
+
+	return id, nil
+}
+
+func (p *mimicLedger) AddCode(ctx context.Context, code []byte) (*insolar.ID, error) {
+	id, err := p.storage.SetCode(ctx, record.Code{
+		Code:        code,
+		MachineType: insolar.MachineTypeGoPlugin,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &id, nil
 }
