@@ -52,78 +52,40 @@ package gateway
 
 import (
 	"context"
-	"fmt"
-	"github.com/insolar/insolar/network"
+	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
+	"testing"
 	"time"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.Pulse, done chan struct{}) {
-	logger := inslogger.FromContext(ctx)
+func TestPulseWatchdog(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Wait(time.Minute)
+	defer mc.Finish()
 
-	go func() {
-		select {
-		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			gateway.FailState(ctx, fmt.Sprintf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber))
-		case <-done:
-			logger.Debug("Resetting pulse processing watchdog")
-		}
-	}()
+	gw := network.NewGatewayMock(mc)
+
+	wd := newPulseWatchdog(context.Background(), gw, 300*time.Millisecond)
+	wd.Reset()
+	<-time.After(200 * time.Millisecond)
+	wd.Reset()
+	<-time.After(200 * time.Millisecond)
+	defer wd.Stop()
 }
 
-type pulseWatchdog struct {
-	ctx       context.Context
-	gateway   network.Gateway
-	timer     *time.Timer
-	timeout   time.Duration
-	stopChan  chan struct{}
-	resetChan chan struct{}
-	started   bool
-}
+func TestPulseWatchdog_timeout_exceeded(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Wait(time.Minute)
+	defer mc.Finish()
 
-func newPulseWatchdog(ctx context.Context, gateway network.Gateway, timeout time.Duration) *pulseWatchdog {
-	w := &pulseWatchdog{
-		ctx:       ctx,
-		gateway:   gateway,
-		timeout:   timeout,
-		stopChan:  make(chan struct{}, 1),
-		resetChan: make(chan struct{}, 1),
-		started:   false,
-	}
+	gw := network.NewGatewayMock(mc)
+	gw.FailStateMock.Set(func(ctx context.Context, reason string) {
+		assert.Equal(t, "New valid pulse timeout exceeded", reason)
+	})
 
-	return w
-}
-
-func (w *pulseWatchdog) start() {
-	go func(w *pulseWatchdog) {
-		w.timer = time.NewTimer(w.timeout)
-		for {
-			select {
-			case <-w.resetChan:
-				w.timer.Reset(w.timeout)
-			case <-w.stopChan:
-				w.timer.Stop()
-				return
-			case <-w.timer.C:
-				w.timer.Stop()
-				w.gateway.FailState(w.ctx, "New valid pulse timeout exceeded")
-			}
-		}
-	}(w)
-}
-
-func (w *pulseWatchdog) Stop() {
-	w.stopChan <- struct{}{}
-}
-
-func (w *pulseWatchdog) Reset() {
-	if !w.started {
-		w.start()
-		w.started = true
-	} else {
-		inslogger.FromContext(w.ctx).Warn("Resetting new pulse watchdog")
-		w.resetChan <- struct{}{}
-	}
+	wd := newPulseWatchdog(context.Background(), gw, 300*time.Millisecond)
+	wd.Reset()
+	<-time.After(400 * time.Millisecond)
+	defer wd.Stop()
 }
