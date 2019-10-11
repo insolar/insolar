@@ -19,22 +19,15 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -45,169 +38,55 @@ func TestVirtual_BasicOperations(t *testing.T) {
 	cfg := DefaultVMConfig()
 
 	t.Run("happy path", func(t *testing.T) {
-		objRef := gen.Reference()
-		reqRef := gen.RecordReference()
-		objID := objRef.GetLocal()
-
-		var requestID insolar.ID
-
 		expectedRes := struct {
 			blip string
 		}{
 			blip: "blop",
 		}
 
-		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-
-		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
-			lifeTime := &record.Lifeline{
-				LatestState: objID,
-			}
-			indexData, err := lifeTime.Marshal()
-			require.NoError(t, err)
-
-			codeRecord := &record.Material{
-				Virtual: record.Wrap(&record.Code{
-					Request: reqRef,
-					Code:    []byte("no code"),
-				}),
-			}
-			codeData, err := codeRecord.Marshal()
-			require.NoError(t, err)
-
-			call := 0
-
-			switch data := pl.(type) {
-			case *payload.GetPendings:
-				if call > 0 {
-					return []payload.Payload{
-						&payload.Error{
-							Code: payload.CodeNoPendings,
-							Text: "No pendings",
-						},
-					}
-				}
-				call++
-				return []payload.Payload{
-					&payload.IDs{IDs: []insolar.ID{requestID}},
-				}
-			case *payload.GetRequest:
-				req := &record.IncomingRequest{
-					Object:       &objRef,
-					Method:       "good.CallMethod",
-					Arguments:    nil,
-					APIRequestID: utils.TraceID(ctx),
-					APINode:      virtual.ref,
-					Reason:       api.MakeReason(insolar.GenesisPulse.PulseNumber, nil),
-					Immutable:    true,
-				}
-
-				virtReqRecord := record.Wrap(req)
-
-				return []payload.Payload{
-					&payload.Request{
-						RequestID: data.RequestID,
-						Request:   virtReqRecord,
-					},
-				}
-			// getters
-			case *payload.SetIncomingRequest:
-				buf, err := data.Request.Marshal()
-				if err != nil {
-					panic(errors.Wrap(err, "failed to marshal request"))
-				}
-				requestID = *insolar.NewID(gen.PulseNumber(), hasher.Hash(buf))
-				return []payload.Payload{&payload.RequestInfo{
-					ObjectID:  *objID,
-					RequestID: requestID,
-				}}
-			case *payload.SetOutgoingRequest:
-				return []payload.Payload{&payload.RequestInfo{
-					ObjectID:  *objID,
-					RequestID: requestID,
-				}}
-			// setters
-			case *payload.SetResult:
-				return []payload.Payload{&payload.ResultInfo{
-					ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
-				}}
-			case *payload.Activate:
-				return []payload.Payload{&payload.ResultInfo{}}
-			case *payload.HasPendings:
-				return []payload.Payload{&payload.PendingsInfo{HasPendings: false}}
-			case *payload.GetObject:
-				resRecord := &record.Activate{
-					Request: *insolar.NewReference(requestID),
-					Image:   walletRef,
-				}
-
-				if data.ObjectID == *walletRef.GetLocal() {
-					resRecord.IsPrototype = true
-				}
-
-				virtResRecord := record.Wrap(resRecord)
-				recMaterial := &record.Material{
-					Virtual:  virtResRecord,
-					ID:       gen.ID(),
-					ObjectID: gen.ID(),
-				}
-				recordData, err := recMaterial.Marshal()
-				require.NoError(t, err)
-
-				return []payload.Payload{
-					&payload.Index{
-						Index: indexData,
-					},
-					&payload.State{Record: recordData},
-				}
-			case *payload.GetCode:
-				return []payload.Payload{
-					&payload.Code{
-						Record: codeData,
-					},
-				}
-			case *payload.Update:
-				return []payload.Payload{
-					&payload.ResultInfo{
-						ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
-					},
-				}
-			}
-
-			panic(fmt.Sprintf("unexpected message to light %T", pl))
-		}, machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(func(_ insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
-			return testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(func(ctx context.Context, callContext *insolar.LogicCallContext, code insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
+		mle := testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(
+			func(_ context.Context, _ *insolar.LogicCallContext, _ insolar.Reference, _ []byte, _ string, _ insolar.Arguments) ([]byte, insolar.Arguments, error) {
 				return insolar.MustSerialize(expectedRes), insolar.MustSerialize(expectedRes), nil
-			}), nil
-		}).RegisterExecutorMock.Set(func(t insolar.MachineType, e insolar.MachineLogicExecutor) (err error) {
-			return nil
-		}))
+			},
+		)
 
+		mm := machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(
+			func(_ insolar.MachineType) (insolar.MachineLogicExecutor, error) {
+				return mle, nil
+			},
+		).RegisterExecutorMock.Set(
+			func(_ insolar.MachineType, _ insolar.MachineLogicExecutor) error {
+				return nil
+			},
+		)
+
+		s, err := NewServer(t, ctx, cfg, nil, mm)
 		require.NoError(t, err)
 		defer s.Stop(ctx)
 
 		// First pulse goes in storage then interrupts.
-		s.SetPulse(ctx)
+		s.IncrementPulse(ctx)
+
+		codeID, err := s.mimic.AddCode(ctx, []byte{})
+		require.NoError(t, err)
+
+		prototypeID, err := s.mimic.AddObject(ctx, *codeID, true, []byte{})
+		require.NoError(t, err)
+
+		objectID, err := s.mimic.AddObject(ctx, *prototypeID, false, []byte{})
+		require.NoError(t, err)
+
+		objectRef := insolar.NewReference(*objectID)
 
 		res, requestRef, err := CallContract(
-			s, &objRef, "good.CallMethod", nil, s.pulse.PulseNumber,
+			s, objectRef, "good.CallMethod", nil, s.pulse.PulseNumber,
 		)
-
 		require.NoError(t, err)
-		require.NotEmpty(t, requestRef)
-		require.Equal(t, &reply.CallMethod{
-			Object: &objRef,
+
+		assert.NotEmpty(t, requestRef)
+		assert.Equal(t, &reply.CallMethod{
+			Object: objectRef,
 			Result: insolar.MustSerialize(expectedRes),
 		}, res)
 	})
-}
-
-var walletRef = shouldLoadRef("insolar:0AAAAyANCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")
-
-func shouldLoadRef(strRef string) insolar.Reference {
-	ref, err := insolar.NewReferenceFromString(strRef)
-	if err != nil {
-		panic(errors.Wrap(err, "Unexpected error, bailing out"))
-	}
-	return *ref
 }

@@ -158,11 +158,11 @@ func (s *storage) SetObject(_ context.Context, requestID insolar.ID, newState re
 	switch newState.(type) {
 	case *record.Activate:
 		// TODO[bigbes]: take Objects lock
-		if s.Objects[objectID] != nil {
+		if s.Objects[requestID] != nil {
 			return ErrAlreadyActivated
 		}
 
-		s.Objects[objectID] = &ObjectEntity{
+		s.Objects[requestID] = &ObjectEntity{
 			ObjectChanges: []ObjectState{
 				{
 					State:     newState,
@@ -283,7 +283,7 @@ func (s *storage) SetRequest(_ context.Context, request record.Request) (*insola
 	}
 
 	parentRequestID := *request.ReasonRef().GetLocal()
-	if request.GetCallType() != record.CTGenesis {
+	if request.GetCallType() != record.CTGenesis && !request.IsAPIRequest() {
 		if parentRequestID.IsEmpty() {
 			return nil, nil, nil, errors.New("bad request: reason is empty")
 		}
