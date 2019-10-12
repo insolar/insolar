@@ -48,7 +48,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
-SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
+SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration/... ./application/api
 
 .PHONY: all
 all: clean submodule pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
