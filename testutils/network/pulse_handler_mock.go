@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
 )
@@ -128,15 +128,15 @@ func (mmHandlePulse *PulseHandlerMock) HandlePulse(ctx context.Context, pulse in
 		mmHandlePulse.inspectFuncHandlePulse(ctx, pulse, originalPacket)
 	}
 
-	params := &PulseHandlerMockHandlePulseParams{ctx, pulse, originalPacket}
+	mm_params := &PulseHandlerMockHandlePulseParams{ctx, pulse, originalPacket}
 
 	// Record call args
 	mmHandlePulse.HandlePulseMock.mutex.Lock()
-	mmHandlePulse.HandlePulseMock.callArgs = append(mmHandlePulse.HandlePulseMock.callArgs, params)
+	mmHandlePulse.HandlePulseMock.callArgs = append(mmHandlePulse.HandlePulseMock.callArgs, mm_params)
 	mmHandlePulse.HandlePulseMock.mutex.Unlock()
 
 	for _, e := range mmHandlePulse.HandlePulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -144,10 +144,10 @@ func (mmHandlePulse *PulseHandlerMock) HandlePulse(ctx context.Context, pulse in
 
 	if mmHandlePulse.HandlePulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHandlePulse.HandlePulseMock.defaultExpectation.Counter, 1)
-		want := mmHandlePulse.HandlePulseMock.defaultExpectation.params
-		got := PulseHandlerMockHandlePulseParams{ctx, pulse, originalPacket}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmHandlePulse.t.Errorf("PulseHandlerMock.HandlePulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmHandlePulse.HandlePulseMock.defaultExpectation.params
+		mm_got := PulseHandlerMockHandlePulseParams{ctx, pulse, originalPacket}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmHandlePulse.t.Errorf("PulseHandlerMock.HandlePulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
