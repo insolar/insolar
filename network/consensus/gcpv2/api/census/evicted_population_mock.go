@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
@@ -183,15 +183,15 @@ func (mmFindProfile *EvictedPopulationMock) FindProfile(nodeID insolar.ShortNode
 		mmFindProfile.inspectFuncFindProfile(nodeID)
 	}
 
-	params := &EvictedPopulationMockFindProfileParams{nodeID}
+	mm_params := &EvictedPopulationMockFindProfileParams{nodeID}
 
 	// Record call args
 	mmFindProfile.FindProfileMock.mutex.Lock()
-	mmFindProfile.FindProfileMock.callArgs = append(mmFindProfile.FindProfileMock.callArgs, params)
+	mmFindProfile.FindProfileMock.callArgs = append(mmFindProfile.FindProfileMock.callArgs, mm_params)
 	mmFindProfile.FindProfileMock.mutex.Unlock()
 
 	for _, e := range mmFindProfile.FindProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.e1
 		}
@@ -199,17 +199,17 @@ func (mmFindProfile *EvictedPopulationMock) FindProfile(nodeID insolar.ShortNode
 
 	if mmFindProfile.FindProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFindProfile.FindProfileMock.defaultExpectation.Counter, 1)
-		want := mmFindProfile.FindProfileMock.defaultExpectation.params
-		got := EvictedPopulationMockFindProfileParams{nodeID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFindProfile.t.Errorf("EvictedPopulationMock.FindProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFindProfile.FindProfileMock.defaultExpectation.params
+		mm_got := EvictedPopulationMockFindProfileParams{nodeID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFindProfile.t.Errorf("EvictedPopulationMock.FindProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFindProfile.FindProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFindProfile.FindProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFindProfile.t.Fatal("No results are set for the EvictedPopulationMock.FindProfile")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmFindProfile.funcFindProfile != nil {
 		return mmFindProfile.funcFindProfile(nodeID)
@@ -365,11 +365,11 @@ func (mmGetCount *EvictedPopulationMock) GetCount() (i1 int) {
 	if mmGetCount.GetCountMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCount.GetCountMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCount.GetCountMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCount.GetCountMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCount.t.Fatal("No results are set for the EvictedPopulationMock.GetCount")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmGetCount.funcGetCount != nil {
 		return mmGetCount.funcGetCount()
@@ -508,11 +508,11 @@ func (mmGetDetectedErrors *EvictedPopulationMock) GetDetectedErrors() (r1 Recove
 	if mmGetDetectedErrors.GetDetectedErrorsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDetectedErrors.GetDetectedErrorsMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDetectedErrors.GetDetectedErrorsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDetectedErrors.GetDetectedErrorsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDetectedErrors.t.Fatal("No results are set for the EvictedPopulationMock.GetDetectedErrors")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmGetDetectedErrors.funcGetDetectedErrors != nil {
 		return mmGetDetectedErrors.funcGetDetectedErrors()
@@ -651,11 +651,11 @@ func (mmGetProfiles *EvictedPopulationMock) GetProfiles() (ea1 []profiles.Evicte
 	if mmGetProfiles.GetProfilesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetProfiles.GetProfilesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetProfiles.GetProfilesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetProfiles.GetProfilesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetProfiles.t.Fatal("No results are set for the EvictedPopulationMock.GetProfiles")
 		}
-		return (*results).ea1
+		return (*mm_results).ea1
 	}
 	if mmGetProfiles.funcGetProfiles != nil {
 		return mmGetProfiles.funcGetProfiles()
@@ -794,11 +794,11 @@ func (mmIsValid *EvictedPopulationMock) IsValid() (b1 bool) {
 	if mmIsValid.IsValidMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsValid.IsValidMock.defaultExpectation.Counter, 1)
 
-		results := mmIsValid.IsValidMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsValid.IsValidMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsValid.t.Fatal("No results are set for the EvictedPopulationMock.IsValid")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsValid.funcIsValid != nil {
 		return mmIsValid.funcIsValid()
