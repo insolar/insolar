@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -115,11 +115,11 @@ func (mmGetOrigin *OriginProviderMock) GetOrigin() (n1 insolar.NetworkNode) {
 	if mmGetOrigin.GetOriginMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOrigin.GetOriginMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOrigin.GetOriginMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOrigin.GetOriginMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOrigin.t.Fatal("No results are set for the OriginProviderMock.GetOrigin")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetOrigin.funcGetOrigin != nil {
 		return mmGetOrigin.funcGetOrigin()
