@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // FlowMock implements Flow
@@ -151,15 +151,15 @@ func (mmContinue *FlowMock) Continue(ctx context.Context) {
 		mmContinue.inspectFuncContinue(ctx)
 	}
 
-	params := &FlowMockContinueParams{ctx}
+	mm_params := &FlowMockContinueParams{ctx}
 
 	// Record call args
 	mmContinue.ContinueMock.mutex.Lock()
-	mmContinue.ContinueMock.callArgs = append(mmContinue.ContinueMock.callArgs, params)
+	mmContinue.ContinueMock.callArgs = append(mmContinue.ContinueMock.callArgs, mm_params)
 	mmContinue.ContinueMock.mutex.Unlock()
 
 	for _, e := range mmContinue.ContinueMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -167,10 +167,10 @@ func (mmContinue *FlowMock) Continue(ctx context.Context) {
 
 	if mmContinue.ContinueMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmContinue.ContinueMock.defaultExpectation.Counter, 1)
-		want := mmContinue.ContinueMock.defaultExpectation.params
-		got := FlowMockContinueParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmContinue.t.Errorf("FlowMock.Continue got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmContinue.ContinueMock.defaultExpectation.params
+		mm_got := FlowMockContinueParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmContinue.t.Errorf("FlowMock.Continue got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -365,15 +365,15 @@ func (mmHandle *FlowMock) Handle(ctx context.Context, h1 Handle) (err error) {
 		mmHandle.inspectFuncHandle(ctx, h1)
 	}
 
-	params := &FlowMockHandleParams{ctx, h1}
+	mm_params := &FlowMockHandleParams{ctx, h1}
 
 	// Record call args
 	mmHandle.HandleMock.mutex.Lock()
-	mmHandle.HandleMock.callArgs = append(mmHandle.HandleMock.callArgs, params)
+	mmHandle.HandleMock.callArgs = append(mmHandle.HandleMock.callArgs, mm_params)
 	mmHandle.HandleMock.mutex.Unlock()
 
 	for _, e := range mmHandle.HandleMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -381,17 +381,17 @@ func (mmHandle *FlowMock) Handle(ctx context.Context, h1 Handle) (err error) {
 
 	if mmHandle.HandleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHandle.HandleMock.defaultExpectation.Counter, 1)
-		want := mmHandle.HandleMock.defaultExpectation.params
-		got := FlowMockHandleParams{ctx, h1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmHandle.t.Errorf("FlowMock.Handle got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmHandle.HandleMock.defaultExpectation.params
+		mm_got := FlowMockHandleParams{ctx, h1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmHandle.t.Errorf("FlowMock.Handle got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmHandle.HandleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHandle.HandleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHandle.t.Fatal("No results are set for the FlowMock.Handle")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmHandle.funcHandle != nil {
 		return mmHandle.funcHandle(ctx, h1)
@@ -581,15 +581,15 @@ func (mmMigrate *FlowMock) Migrate(ctx context.Context, h1 Handle) (err error) {
 		mmMigrate.inspectFuncMigrate(ctx, h1)
 	}
 
-	params := &FlowMockMigrateParams{ctx, h1}
+	mm_params := &FlowMockMigrateParams{ctx, h1}
 
 	// Record call args
 	mmMigrate.MigrateMock.mutex.Lock()
-	mmMigrate.MigrateMock.callArgs = append(mmMigrate.MigrateMock.callArgs, params)
+	mmMigrate.MigrateMock.callArgs = append(mmMigrate.MigrateMock.callArgs, mm_params)
 	mmMigrate.MigrateMock.mutex.Unlock()
 
 	for _, e := range mmMigrate.MigrateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -597,17 +597,17 @@ func (mmMigrate *FlowMock) Migrate(ctx context.Context, h1 Handle) (err error) {
 
 	if mmMigrate.MigrateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMigrate.MigrateMock.defaultExpectation.Counter, 1)
-		want := mmMigrate.MigrateMock.defaultExpectation.params
-		got := FlowMockMigrateParams{ctx, h1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmMigrate.t.Errorf("FlowMock.Migrate got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmMigrate.MigrateMock.defaultExpectation.params
+		mm_got := FlowMockMigrateParams{ctx, h1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMigrate.t.Errorf("FlowMock.Migrate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmMigrate.MigrateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMigrate.MigrateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMigrate.t.Fatal("No results are set for the FlowMock.Migrate")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmMigrate.funcMigrate != nil {
 		return mmMigrate.funcMigrate(ctx, h1)
@@ -798,15 +798,15 @@ func (mmProcedure *FlowMock) Procedure(ctx context.Context, proc Procedure, canc
 		mmProcedure.inspectFuncProcedure(ctx, proc, cancelable)
 	}
 
-	params := &FlowMockProcedureParams{ctx, proc, cancelable}
+	mm_params := &FlowMockProcedureParams{ctx, proc, cancelable}
 
 	// Record call args
 	mmProcedure.ProcedureMock.mutex.Lock()
-	mmProcedure.ProcedureMock.callArgs = append(mmProcedure.ProcedureMock.callArgs, params)
+	mmProcedure.ProcedureMock.callArgs = append(mmProcedure.ProcedureMock.callArgs, mm_params)
 	mmProcedure.ProcedureMock.mutex.Unlock()
 
 	for _, e := range mmProcedure.ProcedureMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -814,17 +814,17 @@ func (mmProcedure *FlowMock) Procedure(ctx context.Context, proc Procedure, canc
 
 	if mmProcedure.ProcedureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmProcedure.ProcedureMock.defaultExpectation.Counter, 1)
-		want := mmProcedure.ProcedureMock.defaultExpectation.params
-		got := FlowMockProcedureParams{ctx, proc, cancelable}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmProcedure.t.Errorf("FlowMock.Procedure got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmProcedure.ProcedureMock.defaultExpectation.params
+		mm_got := FlowMockProcedureParams{ctx, proc, cancelable}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmProcedure.t.Errorf("FlowMock.Procedure got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmProcedure.ProcedureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmProcedure.ProcedureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmProcedure.t.Fatal("No results are set for the FlowMock.Procedure")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmProcedure.funcProcedure != nil {
 		return mmProcedure.funcProcedure(ctx, proc, cancelable)
