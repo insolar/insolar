@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -154,15 +154,15 @@ func (mmForID *RecordAccessorMock) ForID(ctx context.Context, id insolar.ID) (m1
 		mmForID.inspectFuncForID(ctx, id)
 	}
 
-	params := &RecordAccessorMockForIDParams{ctx, id}
+	mm_params := &RecordAccessorMockForIDParams{ctx, id}
 
 	// Record call args
 	mmForID.ForIDMock.mutex.Lock()
-	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, params)
+	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, mm_params)
 	mmForID.ForIDMock.mutex.Unlock()
 
 	for _, e := range mmForID.ForIDMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.m1, e.results.err
 		}
@@ -170,17 +170,17 @@ func (mmForID *RecordAccessorMock) ForID(ctx context.Context, id insolar.ID) (m1
 
 	if mmForID.ForIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForID.ForIDMock.defaultExpectation.Counter, 1)
-		want := mmForID.ForIDMock.defaultExpectation.params
-		got := RecordAccessorMockForIDParams{ctx, id}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForID.t.Errorf("RecordAccessorMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForID.ForIDMock.defaultExpectation.params
+		mm_got := RecordAccessorMockForIDParams{ctx, id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForID.t.Errorf("RecordAccessorMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForID.ForIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForID.ForIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForID.t.Fatal("No results are set for the RecordAccessorMock.ForID")
 		}
-		return (*results).m1, (*results).err
+		return (*mm_results).m1, (*mm_results).err
 	}
 	if mmForID.funcForID != nil {
 		return mmForID.funcForID(ctx, id)
