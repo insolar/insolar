@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -161,15 +161,15 @@ func (mmGetLatestPulse *PulseAccessorMock) GetLatestPulse(ctx context.Context) (
 		mmGetLatestPulse.inspectFuncGetLatestPulse(ctx)
 	}
 
-	params := &PulseAccessorMockGetLatestPulseParams{ctx}
+	mm_params := &PulseAccessorMockGetLatestPulseParams{ctx}
 
 	// Record call args
 	mmGetLatestPulse.GetLatestPulseMock.mutex.Lock()
-	mmGetLatestPulse.GetLatestPulseMock.callArgs = append(mmGetLatestPulse.GetLatestPulseMock.callArgs, params)
+	mmGetLatestPulse.GetLatestPulseMock.callArgs = append(mmGetLatestPulse.GetLatestPulseMock.callArgs, mm_params)
 	mmGetLatestPulse.GetLatestPulseMock.mutex.Unlock()
 
 	for _, e := range mmGetLatestPulse.GetLatestPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -177,17 +177,17 @@ func (mmGetLatestPulse *PulseAccessorMock) GetLatestPulse(ctx context.Context) (
 
 	if mmGetLatestPulse.GetLatestPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetLatestPulse.GetLatestPulseMock.defaultExpectation.Counter, 1)
-		want := mmGetLatestPulse.GetLatestPulseMock.defaultExpectation.params
-		got := PulseAccessorMockGetLatestPulseParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetLatestPulse.t.Errorf("PulseAccessorMock.GetLatestPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetLatestPulse.GetLatestPulseMock.defaultExpectation.params
+		mm_got := PulseAccessorMockGetLatestPulseParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetLatestPulse.t.Errorf("PulseAccessorMock.GetLatestPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetLatestPulse.GetLatestPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetLatestPulse.GetLatestPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetLatestPulse.t.Fatal("No results are set for the PulseAccessorMock.GetLatestPulse")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmGetLatestPulse.funcGetLatestPulse != nil {
 		return mmGetLatestPulse.funcGetLatestPulse(ctx)
@@ -378,15 +378,15 @@ func (mmGetPulse *PulseAccessorMock) GetPulse(ctx context.Context, p1 insolar.Pu
 		mmGetPulse.inspectFuncGetPulse(ctx, p1)
 	}
 
-	params := &PulseAccessorMockGetPulseParams{ctx, p1}
+	mm_params := &PulseAccessorMockGetPulseParams{ctx, p1}
 
 	// Record call args
 	mmGetPulse.GetPulseMock.mutex.Lock()
-	mmGetPulse.GetPulseMock.callArgs = append(mmGetPulse.GetPulseMock.callArgs, params)
+	mmGetPulse.GetPulseMock.callArgs = append(mmGetPulse.GetPulseMock.callArgs, mm_params)
 	mmGetPulse.GetPulseMock.mutex.Unlock()
 
 	for _, e := range mmGetPulse.GetPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p2, e.results.err
 		}
@@ -394,17 +394,17 @@ func (mmGetPulse *PulseAccessorMock) GetPulse(ctx context.Context, p1 insolar.Pu
 
 	if mmGetPulse.GetPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPulse.GetPulseMock.defaultExpectation.Counter, 1)
-		want := mmGetPulse.GetPulseMock.defaultExpectation.params
-		got := PulseAccessorMockGetPulseParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetPulse.t.Errorf("PulseAccessorMock.GetPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetPulse.GetPulseMock.defaultExpectation.params
+		mm_got := PulseAccessorMockGetPulseParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetPulse.t.Errorf("PulseAccessorMock.GetPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetPulse.GetPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPulse.GetPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPulse.t.Fatal("No results are set for the PulseAccessorMock.GetPulse")
 		}
-		return (*results).p2, (*results).err
+		return (*mm_results).p2, (*mm_results).err
 	}
 	if mmGetPulse.funcGetPulse != nil {
 		return mmGetPulse.funcGetPulse(ctx, p1)
