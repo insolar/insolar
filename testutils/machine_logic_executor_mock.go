@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -166,15 +166,15 @@ func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.C
 		mmCallConstructor.inspectFuncCallConstructor(ctx, callContext, code, name, args)
 	}
 
-	params := &MachineLogicExecutorMockCallConstructorParams{ctx, callContext, code, name, args}
+	mm_params := &MachineLogicExecutorMockCallConstructorParams{ctx, callContext, code, name, args}
 
 	// Record call args
 	mmCallConstructor.CallConstructorMock.mutex.Lock()
-	mmCallConstructor.CallConstructorMock.callArgs = append(mmCallConstructor.CallConstructorMock.callArgs, params)
+	mmCallConstructor.CallConstructorMock.callArgs = append(mmCallConstructor.CallConstructorMock.callArgs, mm_params)
 	mmCallConstructor.CallConstructorMock.mutex.Unlock()
 
 	for _, e := range mmCallConstructor.CallConstructorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.objectState, e.results.result, e.results.err
 		}
@@ -182,17 +182,17 @@ func (mmCallConstructor *MachineLogicExecutorMock) CallConstructor(ctx context.C
 
 	if mmCallConstructor.CallConstructorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCallConstructor.CallConstructorMock.defaultExpectation.Counter, 1)
-		want := mmCallConstructor.CallConstructorMock.defaultExpectation.params
-		got := MachineLogicExecutorMockCallConstructorParams{ctx, callContext, code, name, args}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCallConstructor.t.Errorf("MachineLogicExecutorMock.CallConstructor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCallConstructor.CallConstructorMock.defaultExpectation.params
+		mm_got := MachineLogicExecutorMockCallConstructorParams{ctx, callContext, code, name, args}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCallConstructor.t.Errorf("MachineLogicExecutorMock.CallConstructor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCallConstructor.CallConstructorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCallConstructor.CallConstructorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCallConstructor.t.Fatal("No results are set for the MachineLogicExecutorMock.CallConstructor")
 		}
-		return (*results).objectState, (*results).result, (*results).err
+		return (*mm_results).objectState, (*mm_results).result, (*mm_results).err
 	}
 	if mmCallConstructor.funcCallConstructor != nil {
 		return mmCallConstructor.funcCallConstructor(ctx, callContext, code, name, args)
@@ -388,15 +388,15 @@ func (mmCallMethod *MachineLogicExecutorMock) CallMethod(ctx context.Context, ca
 		mmCallMethod.inspectFuncCallMethod(ctx, callContext, code, data, method, args)
 	}
 
-	params := &MachineLogicExecutorMockCallMethodParams{ctx, callContext, code, data, method, args}
+	mm_params := &MachineLogicExecutorMockCallMethodParams{ctx, callContext, code, data, method, args}
 
 	// Record call args
 	mmCallMethod.CallMethodMock.mutex.Lock()
-	mmCallMethod.CallMethodMock.callArgs = append(mmCallMethod.CallMethodMock.callArgs, params)
+	mmCallMethod.CallMethodMock.callArgs = append(mmCallMethod.CallMethodMock.callArgs, mm_params)
 	mmCallMethod.CallMethodMock.mutex.Unlock()
 
 	for _, e := range mmCallMethod.CallMethodMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.newObjectState, e.results.methodResults, e.results.err
 		}
@@ -404,17 +404,17 @@ func (mmCallMethod *MachineLogicExecutorMock) CallMethod(ctx context.Context, ca
 
 	if mmCallMethod.CallMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCallMethod.CallMethodMock.defaultExpectation.Counter, 1)
-		want := mmCallMethod.CallMethodMock.defaultExpectation.params
-		got := MachineLogicExecutorMockCallMethodParams{ctx, callContext, code, data, method, args}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCallMethod.t.Errorf("MachineLogicExecutorMock.CallMethod got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCallMethod.CallMethodMock.defaultExpectation.params
+		mm_got := MachineLogicExecutorMockCallMethodParams{ctx, callContext, code, data, method, args}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCallMethod.t.Errorf("MachineLogicExecutorMock.CallMethod got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCallMethod.CallMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCallMethod.CallMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCallMethod.t.Fatal("No results are set for the MachineLogicExecutorMock.CallMethod")
 		}
-		return (*results).newObjectState, (*results).methodResults, (*results).err
+		return (*mm_results).newObjectState, (*mm_results).methodResults, (*mm_results).err
 	}
 	if mmCallMethod.funcCallMethod != nil {
 		return mmCallMethod.funcCallMethod(ctx, callContext, code, data, method, args)
