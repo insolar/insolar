@@ -31,38 +31,37 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 )
 
-type HealthCheckSuite struct {
-	suite.Suite
-}
-
 var binaryPath string
 
-func (s *HealthCheckSuite) TestHealthCheck() {
+func TestHealthCheck(t *testing.T) {
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")
-	s.Require().NoError(err, "failed to build tmp dir")
-	defer os.RemoveAll(tmpDir)
+	tmpDir, err := ioutil.TempDir("/Users/bronin/go/src/github.com/insolar/insolar/.artifacts", "ginsidertest-")
+	require.NoError(t, err, "failed to build tmp dir")
+	// defer os.RemoveAll(tmpDir)
 
 	currentPath, err := os.Getwd()
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	insgoccPath := binaryPath + "/insgocc"
 	healthcheckPath := binaryPath + "/healthcheck"
+
+	fmt.Println(insgoccPath)
 	if _, err = os.Stat(healthcheckPath); err != nil {
-		s.Failf("Binary file %s is not found, please run make build", healthcheckPath)
+		assert.Failf(t, "Binary file %s is not found, please run make build", healthcheckPath)
 	}
 
 	if !strings.HasPrefix(tmpDir, "/") {
 		tmpDir, err = filepath.Rel(currentPath, tmpDir)
-		s.Require().NoError(err, "failed to compose relative path")
+		require.NoError(t, err, "failed to compose relative path")
 	}
 
 	args := []string{
@@ -78,20 +77,20 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	gocc.Stderr = os.Stderr
 	gocc.Stdout = os.Stdout
 	err = gocc.Run()
-	s.Require().NoError(err, "failed to compile contract")
+	require.NoError(t, err, "failed to compile contract")
 
 	// start GoInsider
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.17ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
 	ref, err := insolar.NewReferenceFromString(refString)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	healthcheckSoFile := path.Join(tmpDir, "healthcheck.so")
 	err = gi.AddPlugin(*ref, healthcheckSoFile)
-	s.Require().NoError(err, "failed to add plugin by path "+healthcheckSoFile)
+	require.NoError(t, err, "failed to add plugin by path "+healthcheckSoFile)
 
-	s.prepareGoInsider(gi, protocol, socket)
+	prepareGoInsider(t, gi, protocol, socket)
 
 	healthcheckArgs := []string{
 		"-a", socket,
@@ -104,19 +103,15 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 
-	s.NoError(err)
+	assert.NoError(t, err)
 }
 
-func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket string) {
+func prepareGoInsider(t *testing.T, gi *GoInsider, protocol, socket string) {
 	err := rpc.Register(&RPC{GI: gi})
-	s.Require().NoError(err, "can't register gi as rpc")
+	require.NoError(t, err, "can't register gi as rpc")
 	listener, err := net.Listen(protocol, socket)
-	s.Require().NoError(err, "can't start listener")
+	require.NoError(t, err, "can't start listener")
 	go rpc.Accept(listener)
-}
-
-func TestHealthCheck(t *testing.T) {
-	suite.Run(t, new(HealthCheckSuite))
 }
 
 func init() {
