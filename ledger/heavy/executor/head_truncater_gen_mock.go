@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmTruncateHead *HeadTruncaterMock) TruncateHead(ctx context.Context, from 
 		mmTruncateHead.inspectFuncTruncateHead(ctx, from)
 	}
 
-	params := &HeadTruncaterMockTruncateHeadParams{ctx, from}
+	mm_params := &HeadTruncaterMockTruncateHeadParams{ctx, from}
 
 	// Record call args
 	mmTruncateHead.TruncateHeadMock.mutex.Lock()
-	mmTruncateHead.TruncateHeadMock.callArgs = append(mmTruncateHead.TruncateHeadMock.callArgs, params)
+	mmTruncateHead.TruncateHeadMock.callArgs = append(mmTruncateHead.TruncateHeadMock.callArgs, mm_params)
 	mmTruncateHead.TruncateHeadMock.mutex.Unlock()
 
 	for _, e := range mmTruncateHead.TruncateHeadMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmTruncateHead *HeadTruncaterMock) TruncateHead(ctx context.Context, from 
 
 	if mmTruncateHead.TruncateHeadMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmTruncateHead.TruncateHeadMock.defaultExpectation.Counter, 1)
-		want := mmTruncateHead.TruncateHeadMock.defaultExpectation.params
-		got := HeadTruncaterMockTruncateHeadParams{ctx, from}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmTruncateHead.t.Errorf("HeadTruncaterMock.TruncateHead got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmTruncateHead.TruncateHeadMock.defaultExpectation.params
+		mm_got := HeadTruncaterMockTruncateHeadParams{ctx, from}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmTruncateHead.t.Errorf("HeadTruncaterMock.TruncateHead got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmTruncateHead.TruncateHeadMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmTruncateHead.TruncateHeadMock.defaultExpectation.results
+		if mm_results == nil {
 			mmTruncateHead.t.Fatal("No results are set for the HeadTruncaterMock.TruncateHead")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmTruncateHead.funcTruncateHead != nil {
 		return mmTruncateHead.funcTruncateHead(ctx, from)
