@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -135,15 +135,15 @@ func (mmRemoteProcedureRegister *RPCControllerMock) RemoteProcedureRegister(name
 		mmRemoteProcedureRegister.inspectFuncRemoteProcedureRegister(name, method)
 	}
 
-	params := &RPCControllerMockRemoteProcedureRegisterParams{name, method}
+	mm_params := &RPCControllerMockRemoteProcedureRegisterParams{name, method}
 
 	// Record call args
 	mmRemoteProcedureRegister.RemoteProcedureRegisterMock.mutex.Lock()
-	mmRemoteProcedureRegister.RemoteProcedureRegisterMock.callArgs = append(mmRemoteProcedureRegister.RemoteProcedureRegisterMock.callArgs, params)
+	mmRemoteProcedureRegister.RemoteProcedureRegisterMock.callArgs = append(mmRemoteProcedureRegister.RemoteProcedureRegisterMock.callArgs, mm_params)
 	mmRemoteProcedureRegister.RemoteProcedureRegisterMock.mutex.Unlock()
 
 	for _, e := range mmRemoteProcedureRegister.RemoteProcedureRegisterMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -151,10 +151,10 @@ func (mmRemoteProcedureRegister *RPCControllerMock) RemoteProcedureRegister(name
 
 	if mmRemoteProcedureRegister.RemoteProcedureRegisterMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRemoteProcedureRegister.RemoteProcedureRegisterMock.defaultExpectation.Counter, 1)
-		want := mmRemoteProcedureRegister.RemoteProcedureRegisterMock.defaultExpectation.params
-		got := RPCControllerMockRemoteProcedureRegisterParams{name, method}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRemoteProcedureRegister.t.Errorf("RPCControllerMock.RemoteProcedureRegister got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRemoteProcedureRegister.RemoteProcedureRegisterMock.defaultExpectation.params
+		mm_got := RPCControllerMockRemoteProcedureRegisterParams{name, method}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRemoteProcedureRegister.t.Errorf("RPCControllerMock.RemoteProcedureRegister got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -352,15 +352,15 @@ func (mmSendBytes *RPCControllerMock) SendBytes(ctx context.Context, nodeID inso
 		mmSendBytes.inspectFuncSendBytes(ctx, nodeID, name, msgBytes)
 	}
 
-	params := &RPCControllerMockSendBytesParams{ctx, nodeID, name, msgBytes}
+	mm_params := &RPCControllerMockSendBytesParams{ctx, nodeID, name, msgBytes}
 
 	// Record call args
 	mmSendBytes.SendBytesMock.mutex.Lock()
-	mmSendBytes.SendBytesMock.callArgs = append(mmSendBytes.SendBytesMock.callArgs, params)
+	mmSendBytes.SendBytesMock.callArgs = append(mmSendBytes.SendBytesMock.callArgs, mm_params)
 	mmSendBytes.SendBytesMock.mutex.Unlock()
 
 	for _, e := range mmSendBytes.SendBytesMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ba1, e.results.err
 		}
@@ -368,17 +368,17 @@ func (mmSendBytes *RPCControllerMock) SendBytes(ctx context.Context, nodeID inso
 
 	if mmSendBytes.SendBytesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendBytes.SendBytesMock.defaultExpectation.Counter, 1)
-		want := mmSendBytes.SendBytesMock.defaultExpectation.params
-		got := RPCControllerMockSendBytesParams{ctx, nodeID, name, msgBytes}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendBytes.t.Errorf("RPCControllerMock.SendBytes got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendBytes.SendBytesMock.defaultExpectation.params
+		mm_got := RPCControllerMockSendBytesParams{ctx, nodeID, name, msgBytes}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendBytes.t.Errorf("RPCControllerMock.SendBytes got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendBytes.SendBytesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendBytes.SendBytesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendBytes.t.Fatal("No results are set for the RPCControllerMock.SendBytes")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmSendBytes.funcSendBytes != nil {
 		return mmSendBytes.funcSendBytes(ctx, nodeID, name, msgBytes)
