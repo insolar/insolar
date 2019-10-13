@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -153,15 +153,15 @@ func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn in
 		mmMineForPulse.inspectFuncMineForPulse(ctx, pn)
 	}
 
-	params := &JetCalculatorMockMineForPulseParams{ctx, pn}
+	mm_params := &JetCalculatorMockMineForPulseParams{ctx, pn}
 
 	// Record call args
 	mmMineForPulse.MineForPulseMock.mutex.Lock()
-	mmMineForPulse.MineForPulseMock.callArgs = append(mmMineForPulse.MineForPulseMock.callArgs, params)
+	mmMineForPulse.MineForPulseMock.callArgs = append(mmMineForPulse.MineForPulseMock.callArgs, mm_params)
 	mmMineForPulse.MineForPulseMock.mutex.Unlock()
 
 	for _, e := range mmMineForPulse.MineForPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ja1, e.results.err
 		}
@@ -169,17 +169,17 @@ func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn in
 
 	if mmMineForPulse.MineForPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMineForPulse.MineForPulseMock.defaultExpectation.Counter, 1)
-		want := mmMineForPulse.MineForPulseMock.defaultExpectation.params
-		got := JetCalculatorMockMineForPulseParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmMineForPulse.t.Errorf("JetCalculatorMock.MineForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmMineForPulse.MineForPulseMock.defaultExpectation.params
+		mm_got := JetCalculatorMockMineForPulseParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMineForPulse.t.Errorf("JetCalculatorMock.MineForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmMineForPulse.MineForPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMineForPulse.MineForPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMineForPulse.t.Fatal("No results are set for the JetCalculatorMock.MineForPulse")
 		}
-		return (*results).ja1, (*results).err
+		return (*mm_results).ja1, (*mm_results).err
 	}
 	if mmMineForPulse.funcMineForPulse != nil {
 		return mmMineForPulse.funcMineForPulse(ctx, pn)
