@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // ModifierMock implements Modifier
@@ -151,15 +151,15 @@ func (mmSet *ModifierMock) Set(ctx context.Context, drop Drop) (err error) {
 		mmSet.inspectFuncSet(ctx, drop)
 	}
 
-	params := &ModifierMockSetParams{ctx, drop}
+	mm_params := &ModifierMockSetParams{ctx, drop}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -167,17 +167,17 @@ func (mmSet *ModifierMock) Set(ctx context.Context, drop Drop) (err error) {
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := ModifierMockSetParams{ctx, drop}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("ModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := ModifierMockSetParams{ctx, drop}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("ModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSet.SetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSet.SetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSet.t.Fatal("No results are set for the ModifierMock.Set")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSet.funcSet != nil {
 		return mmSet.funcSet(ctx, drop)
