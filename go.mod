@@ -22,6 +22,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 	github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
+	github.com/insolar/x-crypto v0.0.0-20191011101132-06687867f12b
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
