@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -188,15 +188,15 @@ func (mmAll *StorageMock) All(ctx context.Context, pulse insolar.PulseNumber) (j
 		mmAll.inspectFuncAll(ctx, pulse)
 	}
 
-	params := &StorageMockAllParams{ctx, pulse}
+	mm_params := &StorageMockAllParams{ctx, pulse}
 
 	// Record call args
 	mmAll.AllMock.mutex.Lock()
-	mmAll.AllMock.callArgs = append(mmAll.AllMock.callArgs, params)
+	mmAll.AllMock.callArgs = append(mmAll.AllMock.callArgs, mm_params)
 	mmAll.AllMock.mutex.Unlock()
 
 	for _, e := range mmAll.AllMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ja1
 		}
@@ -204,17 +204,17 @@ func (mmAll *StorageMock) All(ctx context.Context, pulse insolar.PulseNumber) (j
 
 	if mmAll.AllMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAll.AllMock.defaultExpectation.Counter, 1)
-		want := mmAll.AllMock.defaultExpectation.params
-		got := StorageMockAllParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAll.t.Errorf("StorageMock.All got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAll.AllMock.defaultExpectation.params
+		mm_got := StorageMockAllParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAll.t.Errorf("StorageMock.All got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAll.AllMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAll.AllMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAll.t.Fatal("No results are set for the StorageMock.All")
 		}
-		return (*results).ja1
+		return (*mm_results).ja1
 	}
 	if mmAll.funcAll != nil {
 		return mmAll.funcAll(ctx, pulse)
@@ -406,15 +406,15 @@ func (mmClone *StorageMock) Clone(ctx context.Context, from insolar.PulseNumber,
 		mmClone.inspectFuncClone(ctx, from, to, keepActual)
 	}
 
-	params := &StorageMockCloneParams{ctx, from, to, keepActual}
+	mm_params := &StorageMockCloneParams{ctx, from, to, keepActual}
 
 	// Record call args
 	mmClone.CloneMock.mutex.Lock()
-	mmClone.CloneMock.callArgs = append(mmClone.CloneMock.callArgs, params)
+	mmClone.CloneMock.callArgs = append(mmClone.CloneMock.callArgs, mm_params)
 	mmClone.CloneMock.mutex.Unlock()
 
 	for _, e := range mmClone.CloneMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -422,17 +422,17 @@ func (mmClone *StorageMock) Clone(ctx context.Context, from insolar.PulseNumber,
 
 	if mmClone.CloneMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClone.CloneMock.defaultExpectation.Counter, 1)
-		want := mmClone.CloneMock.defaultExpectation.params
-		got := StorageMockCloneParams{ctx, from, to, keepActual}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmClone.t.Errorf("StorageMock.Clone got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmClone.CloneMock.defaultExpectation.params
+		mm_got := StorageMockCloneParams{ctx, from, to, keepActual}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClone.t.Errorf("StorageMock.Clone got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmClone.CloneMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmClone.CloneMock.defaultExpectation.results
+		if mm_results == nil {
 			mmClone.t.Fatal("No results are set for the StorageMock.Clone")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmClone.funcClone != nil {
 		return mmClone.funcClone(ctx, from, to, keepActual)
@@ -624,15 +624,15 @@ func (mmForID *StorageMock) ForID(ctx context.Context, pulse insolar.PulseNumber
 		mmForID.inspectFuncForID(ctx, pulse, recordID)
 	}
 
-	params := &StorageMockForIDParams{ctx, pulse, recordID}
+	mm_params := &StorageMockForIDParams{ctx, pulse, recordID}
 
 	// Record call args
 	mmForID.ForIDMock.mutex.Lock()
-	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, params)
+	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, mm_params)
 	mmForID.ForIDMock.mutex.Unlock()
 
 	for _, e := range mmForID.ForIDMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.j1, e.results.b1
 		}
@@ -640,17 +640,17 @@ func (mmForID *StorageMock) ForID(ctx context.Context, pulse insolar.PulseNumber
 
 	if mmForID.ForIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForID.ForIDMock.defaultExpectation.Counter, 1)
-		want := mmForID.ForIDMock.defaultExpectation.params
-		got := StorageMockForIDParams{ctx, pulse, recordID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForID.t.Errorf("StorageMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForID.ForIDMock.defaultExpectation.params
+		mm_got := StorageMockForIDParams{ctx, pulse, recordID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForID.t.Errorf("StorageMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForID.ForIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForID.ForIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForID.t.Fatal("No results are set for the StorageMock.ForID")
 		}
-		return (*results).j1, (*results).b1
+		return (*mm_results).j1, (*mm_results).b1
 	}
 	if mmForID.funcForID != nil {
 		return mmForID.funcForID(ctx, pulse, recordID)
@@ -843,15 +843,15 @@ func (mmSplit *StorageMock) Split(ctx context.Context, pulse insolar.PulseNumber
 		mmSplit.inspectFuncSplit(ctx, pulse, id)
 	}
 
-	params := &StorageMockSplitParams{ctx, pulse, id}
+	mm_params := &StorageMockSplitParams{ctx, pulse, id}
 
 	// Record call args
 	mmSplit.SplitMock.mutex.Lock()
-	mmSplit.SplitMock.callArgs = append(mmSplit.SplitMock.callArgs, params)
+	mmSplit.SplitMock.callArgs = append(mmSplit.SplitMock.callArgs, mm_params)
 	mmSplit.SplitMock.mutex.Unlock()
 
 	for _, e := range mmSplit.SplitMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.j1, e.results.j2, e.results.err
 		}
@@ -859,17 +859,17 @@ func (mmSplit *StorageMock) Split(ctx context.Context, pulse insolar.PulseNumber
 
 	if mmSplit.SplitMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSplit.SplitMock.defaultExpectation.Counter, 1)
-		want := mmSplit.SplitMock.defaultExpectation.params
-		got := StorageMockSplitParams{ctx, pulse, id}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSplit.t.Errorf("StorageMock.Split got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSplit.SplitMock.defaultExpectation.params
+		mm_got := StorageMockSplitParams{ctx, pulse, id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSplit.t.Errorf("StorageMock.Split got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSplit.SplitMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSplit.SplitMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSplit.t.Fatal("No results are set for the StorageMock.Split")
 		}
-		return (*results).j1, (*results).j2, (*results).err
+		return (*mm_results).j1, (*mm_results).j2, (*mm_results).err
 	}
 	if mmSplit.funcSplit != nil {
 		return mmSplit.funcSplit(ctx, pulse, id)
@@ -1061,15 +1061,15 @@ func (mmUpdate *StorageMock) Update(ctx context.Context, pulse insolar.PulseNumb
 		mmUpdate.inspectFuncUpdate(ctx, pulse, actual, ids...)
 	}
 
-	params := &StorageMockUpdateParams{ctx, pulse, actual, ids}
+	mm_params := &StorageMockUpdateParams{ctx, pulse, actual, ids}
 
 	// Record call args
 	mmUpdate.UpdateMock.mutex.Lock()
-	mmUpdate.UpdateMock.callArgs = append(mmUpdate.UpdateMock.callArgs, params)
+	mmUpdate.UpdateMock.callArgs = append(mmUpdate.UpdateMock.callArgs, mm_params)
 	mmUpdate.UpdateMock.mutex.Unlock()
 
 	for _, e := range mmUpdate.UpdateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1077,17 +1077,17 @@ func (mmUpdate *StorageMock) Update(ctx context.Context, pulse insolar.PulseNumb
 
 	if mmUpdate.UpdateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpdate.UpdateMock.defaultExpectation.Counter, 1)
-		want := mmUpdate.UpdateMock.defaultExpectation.params
-		got := StorageMockUpdateParams{ctx, pulse, actual, ids}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpdate.t.Errorf("StorageMock.Update got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpdate.UpdateMock.defaultExpectation.params
+		mm_got := StorageMockUpdateParams{ctx, pulse, actual, ids}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdate.t.Errorf("StorageMock.Update got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUpdate.UpdateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUpdate.UpdateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUpdate.t.Fatal("No results are set for the StorageMock.Update")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmUpdate.funcUpdate != nil {
 		return mmUpdate.funcUpdate(ctx, pulse, actual, ids...)
