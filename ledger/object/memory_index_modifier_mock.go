@@ -10,7 +10,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -139,15 +139,15 @@ func (mmSet *MemoryIndexModifierMock) Set(ctx context.Context, pn insolar.PulseN
 		mmSet.inspectFuncSet(ctx, pn, index)
 	}
 
-	params := &MemoryIndexModifierMockSetParams{ctx, pn, index}
+	mm_params := &MemoryIndexModifierMockSetParams{ctx, pn, index}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -155,10 +155,10 @@ func (mmSet *MemoryIndexModifierMock) Set(ctx context.Context, pn insolar.PulseN
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := MemoryIndexModifierMockSetParams{ctx, pn, index}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("MemoryIndexModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := MemoryIndexModifierMockSetParams{ctx, pn, index}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("MemoryIndexModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -328,15 +328,15 @@ func (mmSetIfNone *MemoryIndexModifierMock) SetIfNone(ctx context.Context, pn in
 		mmSetIfNone.inspectFuncSetIfNone(ctx, pn, index)
 	}
 
-	params := &MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
+	mm_params := &MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
 
 	// Record call args
 	mmSetIfNone.SetIfNoneMock.mutex.Lock()
-	mmSetIfNone.SetIfNoneMock.callArgs = append(mmSetIfNone.SetIfNoneMock.callArgs, params)
+	mmSetIfNone.SetIfNoneMock.callArgs = append(mmSetIfNone.SetIfNoneMock.callArgs, mm_params)
 	mmSetIfNone.SetIfNoneMock.mutex.Unlock()
 
 	for _, e := range mmSetIfNone.SetIfNoneMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -344,10 +344,10 @@ func (mmSetIfNone *MemoryIndexModifierMock) SetIfNone(ctx context.Context, pn in
 
 	if mmSetIfNone.SetIfNoneMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetIfNone.SetIfNoneMock.defaultExpectation.Counter, 1)
-		want := mmSetIfNone.SetIfNoneMock.defaultExpectation.params
-		got := MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetIfNone.t.Errorf("MemoryIndexModifierMock.SetIfNone got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetIfNone.SetIfNoneMock.defaultExpectation.params
+		mm_got := MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetIfNone.t.Errorf("MemoryIndexModifierMock.SetIfNone got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
