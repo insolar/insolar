@@ -79,7 +79,7 @@ type ContractsBuilder struct {
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
 func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc jet.Coordinator) *ContractsBuilder {
-	tmpDir, err := ioutil.TempDir("", "test-")
+	tmpDir, err := ioutil.TempDir("/Users/bronin/go/src/github.com/insolar/insolar/.artifacts", "test-")
 	if err != nil {
 		return nil
 	}
@@ -230,6 +230,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
+	// todo path /Users/bronin/go/src/github.com/insolar/insolar/.artifacts
 	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
@@ -274,6 +275,8 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	cmd := exec.Command(
 		"go", "build",
 		"-buildmode=plugin",
+		// "-trimpath",
+		"-mod=vendor",
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
 	)
