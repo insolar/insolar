@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -160,15 +160,15 @@ func (mmGetRangeHash *PulseRangeHasherMock) GetRangeHash(p1 insolar.PulseRange) 
 		mmGetRangeHash.inspectFuncGetRangeHash(p1)
 	}
 
-	params := &PulseRangeHasherMockGetRangeHashParams{p1}
+	mm_params := &PulseRangeHasherMockGetRangeHashParams{p1}
 
 	// Record call args
 	mmGetRangeHash.GetRangeHashMock.mutex.Lock()
-	mmGetRangeHash.GetRangeHashMock.callArgs = append(mmGetRangeHash.GetRangeHashMock.callArgs, params)
+	mmGetRangeHash.GetRangeHashMock.callArgs = append(mmGetRangeHash.GetRangeHashMock.callArgs, mm_params)
 	mmGetRangeHash.GetRangeHashMock.mutex.Unlock()
 
 	for _, e := range mmGetRangeHash.GetRangeHashMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ba1, e.results.err
 		}
@@ -176,17 +176,17 @@ func (mmGetRangeHash *PulseRangeHasherMock) GetRangeHash(p1 insolar.PulseRange) 
 
 	if mmGetRangeHash.GetRangeHashMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRangeHash.GetRangeHashMock.defaultExpectation.Counter, 1)
-		want := mmGetRangeHash.GetRangeHashMock.defaultExpectation.params
-		got := PulseRangeHasherMockGetRangeHashParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetRangeHash.t.Errorf("PulseRangeHasherMock.GetRangeHash got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetRangeHash.GetRangeHashMock.defaultExpectation.params
+		mm_got := PulseRangeHasherMockGetRangeHashParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetRangeHash.t.Errorf("PulseRangeHasherMock.GetRangeHash got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetRangeHash.GetRangeHashMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetRangeHash.GetRangeHashMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetRangeHash.t.Fatal("No results are set for the PulseRangeHasherMock.GetRangeHash")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmGetRangeHash.funcGetRangeHash != nil {
 		return mmGetRangeHash.funcGetRangeHash(p1)
@@ -377,15 +377,15 @@ func (mmValidateRangeHash *PulseRangeHasherMock) ValidateRangeHash(p1 insolar.Pu
 		mmValidateRangeHash.inspectFuncValidateRangeHash(p1, ba1)
 	}
 
-	params := &PulseRangeHasherMockValidateRangeHashParams{p1, ba1}
+	mm_params := &PulseRangeHasherMockValidateRangeHashParams{p1, ba1}
 
 	// Record call args
 	mmValidateRangeHash.ValidateRangeHashMock.mutex.Lock()
-	mmValidateRangeHash.ValidateRangeHashMock.callArgs = append(mmValidateRangeHash.ValidateRangeHashMock.callArgs, params)
+	mmValidateRangeHash.ValidateRangeHashMock.callArgs = append(mmValidateRangeHash.ValidateRangeHashMock.callArgs, mm_params)
 	mmValidateRangeHash.ValidateRangeHashMock.mutex.Unlock()
 
 	for _, e := range mmValidateRangeHash.ValidateRangeHashMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1, e.results.err
 		}
@@ -393,17 +393,17 @@ func (mmValidateRangeHash *PulseRangeHasherMock) ValidateRangeHash(p1 insolar.Pu
 
 	if mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation.Counter, 1)
-		want := mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation.params
-		got := PulseRangeHasherMockValidateRangeHashParams{p1, ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmValidateRangeHash.t.Errorf("PulseRangeHasherMock.ValidateRangeHash got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation.params
+		mm_got := PulseRangeHasherMockValidateRangeHashParams{p1, ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmValidateRangeHash.t.Errorf("PulseRangeHasherMock.ValidateRangeHash got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmValidateRangeHash.ValidateRangeHashMock.defaultExpectation.results
+		if mm_results == nil {
 			mmValidateRangeHash.t.Fatal("No results are set for the PulseRangeHasherMock.ValidateRangeHash")
 		}
-		return (*results).b1, (*results).err
+		return (*mm_results).b1, (*mm_results).err
 	}
 	if mmValidateRangeHash.funcValidateRangeHash != nil {
 		return mmValidateRangeHash.funcValidateRangeHash(p1, ba1)
