@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -38,6 +39,7 @@ import (
 type DebugLedger interface {
 	AddCode(ctx context.Context, code []byte) (*insolar.ID, error)
 	AddObject(ctx context.Context, image insolar.ID, isPrototype bool, memory []byte) (*insolar.ID, error)
+	LoadGenesis(ctx context.Context, genesisDirectory string) error
 }
 
 type Ledger interface {
@@ -50,8 +52,9 @@ type mimicLedger struct {
 	lock sync.Mutex
 
 	// components
-	pcs insolar.PlatformCryptographyScheme
-	pa  pulse.Accessor
+	pcs       insolar.PlatformCryptographyScheme
+	pAccessor pulse.Accessor
+	pAppender pulse.Appender
 
 	ctx     context.Context
 	storage Storage
@@ -60,28 +63,30 @@ type mimicLedger struct {
 func NewMimicLedger(
 	ctx context.Context,
 	pcs insolar.PlatformCryptographyScheme,
-	pa pulse.Accessor,
+	pAccessor pulse.Accessor,
+	pAppender pulse.Appender,
 ) Ledger {
 	ctx, _ = inslogger.WithField(ctx, "component", "mimic")
 	return &mimicLedger{
-		pcs: pcs,
-		pa:  pa,
+		pcs:       pcs,
+		pAppender: pAppender,
+		pAccessor: pAccessor,
 
 		ctx:     ctx,
-		storage: NewStorage(pcs, pa),
+		storage: NewStorage(pcs, pAccessor),
 	}
 }
 
 func (p *mimicLedger) processGetPendings(ctx context.Context, pl *payload.GetPendings) []payload.Payload {
-	requests, err := p.storage.GetPendings(ctx, pl.ObjectID, pl.Count)
+	requests, err := p.storage.GetPendings(ctx, pl.ObjectID, pl.Count, pl.SkipRequestRefs)
 	switch err {
 	case nil:
 		break
 	case ErrNotFound:
 		return []payload.Payload{
 			&payload.Error{
-				Text: insolar.ErrNoPendingRequest.Error(),
-				Code: payload.CodeNoPendings,
+				Code: payload.CodeNotFound,
+				Text: err.Error(),
 			},
 		}
 	default:
@@ -108,8 +113,8 @@ func (p *mimicLedger) processGetRequest(ctx context.Context, pl *payload.GetRequ
 	case ErrRequestNotFound:
 		return []payload.Payload{
 			&payload.Error{
-				Text: err.Error(),
 				Code: payload.CodeNotFound,
+				Text: err.Error(),
 			},
 		}
 	}
@@ -161,10 +166,24 @@ func (p *mimicLedger) setRequestCommon(ctx context.Context, request record.Reque
 		panic("unexpected error: " + err.Error())
 	}
 
-	var objectID insolar.ID
-	if objectRef := request.AffinityRef(); objectRef != nil {
-		objectID = *objectRef.GetLocal()
+	pulseObject, err := p.pAccessor.Latest(context.Background())
+	if err != nil {
+		panic(errors.Wrap(err, "failed to obtained latest pulse"))
 	}
+	objectID := p.storage.CalculateRequestAffinityRef(request, pulseObject.PulseNumber)
+
+	var method string
+	if req, ok := request.(*record.IncomingRequest); ok {
+		method = req.Method
+	} else if req, ok := request.(*record.OutgoingRequest); ok {
+		method = req.Method
+	}
+
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"type":           request.GetCallType().String(),
+		"resultObjectID": objectID.String(),
+		"method":         method,
+	}).Info("Registering request")
 
 	if requestID == nil {
 		panic("requestID is nil, shouldn't be")
@@ -309,7 +328,7 @@ func (p *mimicLedger) processActivate(ctx context.Context, pl *payload.Activate)
 	// resultID := setResultResult[0].(*payload.ResultInfo).ResultID
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
-	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
+	if err := virtualActivateRec.Unmarshal(pl.Record); err != nil {
 		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
@@ -354,7 +373,7 @@ func (p *mimicLedger) processUpdate(ctx context.Context, pl *payload.Update) []p
 	}
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
-	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
+	if err := virtualActivateRec.Unmarshal(pl.Record); err != nil {
 		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
@@ -415,7 +434,7 @@ func (p *mimicLedger) processDeactivate(ctx context.Context, pl *payload.Deactiv
 	}
 
 	virtualActivateRec := record.Virtual{} // wrapped virtual record.Result
-	if err := virtualActivateRec.Unmarshal(pl.Result); err != nil {
+	if err := virtualActivateRec.Unmarshal(pl.Record); err != nil {
 		p.storage.RollbackSetResult(ctx, result)
 		panic(errors.Wrap(err, "failed to unmarshal Result record").Error())
 	}
@@ -467,8 +486,8 @@ func (p *mimicLedger) processHasPendings(ctx context.Context, pl *payload.HasPen
 	case ErrNotFound:
 		return []payload.Payload{
 			&payload.Error{
-				Text: insolar.ErrNoPendingRequest.Error(),
-				Code: payload.CodeNoPendings,
+				Code: payload.CodeNotFound,
+				Text: err.Error(),
 			},
 		}
 	default:
@@ -591,41 +610,49 @@ func (p *mimicLedger) ProcessMessage(meta payload.Meta, pl payload.Payload) []pa
 	}
 
 	ctx, logger := inslogger.WithFields(p.ctx, map[string]interface{}{
-		"sender":      meta.Sender,
-		"receiver":    meta.Receiver,
+		"sender":      meta.Sender.String(),
+		"receiver":    meta.Receiver.String(),
 		"senderPulse": meta.Pulse,
 		"msgType":     msgType.String(),
 	})
-	logger.Debug("Processing message")
+	logger.Info("Processing message")
+
+	var result []payload.Payload
 
 	switch data := pl.(type) {
 	case *payload.GetPendings:
-		return p.processGetPendings(ctx, data)
+		result = p.processGetPendings(ctx, data)
 	case *payload.GetRequest:
-		return p.processGetRequest(ctx, data)
+		result = p.processGetRequest(ctx, data)
 	case *payload.SetIncomingRequest:
-		return p.processSetIncomingRequest(ctx, data)
+		result = p.processSetIncomingRequest(ctx, data)
 	case *payload.SetOutgoingRequest:
-		return p.processSetOutgoingRequest(ctx, data)
+		result = p.processSetOutgoingRequest(ctx, data)
 	case *payload.SetResult:
-		return p.processSetResult(ctx, data)
+		result = p.processSetResult(ctx, data)
 	case *payload.Activate:
-		return p.processActivate(ctx, data)
+		result = p.processActivate(ctx, data)
 	case *payload.Update:
-		return p.processUpdate(ctx, data)
+		result = p.processUpdate(ctx, data)
 	case *payload.Deactivate:
-		return p.processDeactivate(ctx, data)
+		result = p.processDeactivate(ctx, data)
 	case *payload.HasPendings:
-		return p.processHasPendings(ctx, data)
+		result = p.processHasPendings(ctx, data)
 	case *payload.GetObject:
-		return p.processGetObject(ctx, data)
+		result = p.processGetObject(ctx, data)
 	case *payload.GetCode:
-		return p.processGetCode(ctx, data)
+		result = p.processGetCode(ctx, data)
 	case *payload.SetCode:
-		return p.processSetCode(ctx, data)
+		result = p.processSetCode(ctx, data)
 	default:
 		panic(fmt.Sprintf("unexpected message to light %T", pl))
 	}
+
+	if err, ok := result[0].(*payload.Error); ok {
+		logger.WithField("error", err.Text).Error("Failed to process message")
+	}
+
+	return result
 }
 
 func (p *mimicLedger) AddObject(ctx context.Context, image insolar.ID, isPrototype bool, memory []byte) (*insolar.ID, error) {
@@ -672,4 +699,31 @@ func (p *mimicLedger) AddCode(ctx context.Context, code []byte) (*insolar.ID, er
 		return nil, err
 	}
 	return &id, nil
+}
+
+func (p *mimicLedger) LoadGenesis(ctx context.Context, dirPath string) error {
+	genesisContractsConfig, err := ReadGenesisContractsConfig(dirPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load genesis config")
+	}
+
+	genesisObject := &genesis.Genesis{
+		ArtifactManager: NewClient(p.storage),
+		BaseRecord: &genesis.BaseRecord{
+			DB:             p.storage,
+			DropModifier:   &dropModifierMock{},
+			PulseAppender:  p.pAppender,
+			PulseAccessor:  p.pAccessor,
+			RecordModifier: &recordModifierMock{},
+			IndexModifier:  &indexModifierMock{},
+		},
+		DiscoveryNodes:  []insolar.DiscoveryNodeRegister{},
+		ContractsConfig: *genesisContractsConfig,
+	}
+
+	if err := genesisObject.Start(ctx); err != nil {
+		return errors.Wrap(err, "failed to load genesis")
+	}
+
+	return nil
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/artifact"
 )
@@ -53,34 +54,49 @@ func (c *client) GetObject(ctx context.Context, head insolar.Reference) (artifac
 
 func (c *client) ActivateObject(
 	ctx context.Context,
-	domain, obj, parent, prototype insolar.Reference,
+	domain, objectRef, parent, prototype insolar.Reference,
 	memory []byte,
 ) error {
+	objectID := *objectRef.GetLocal()
+
+	mimicStorage := c.storage.(*mimicStorage)
+	mimicStorage.Requests[objectID] = NewIncomingRequestEntity(objectID, &record.IncomingRequest{
+		CallType: record.CTGenesis,
+		Method:   objectRef.String(),
+	})
+	mimicStorage.Objects[objectID] = &ObjectEntity{
+		ObjectChanges: nil,
+		RequestsMap:   make(map[insolar.ID]*RequestEntity),
+		RequestsList:  nil,
+	}
+
 	rec := record.Activate{
-		Request:     obj,
+		Request:     objectRef,
 		Memory:      memory,
 		Image:       prototype,
 		IsPrototype: false,
 		Parent:      parent,
 	}
 
-	return c.storage.SetObject(ctx, *obj.GetLocal(), &rec, *obj.GetLocal())
+	_, err := c.storage.SetResult(ctx, &record.Result{
+		Request: objectRef,
+		Payload: []byte{},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to store result")
+	}
+
+	return c.storage.SetObject(ctx, *objectRef.GetLocal(), &rec, *objectRef.GetLocal())
 }
 
+// FORCEFULLY DISABLED
 func (c *client) RegisterRequest(ctx context.Context, req record.IncomingRequest) (*insolar.ID, error) {
-	id, _, _, err := c.storage.SetRequest(ctx, &req)
-	return id, err
+	requestID := gen.ID()
+	return &requestID, nil
 }
 
 // FORCEFULLY DISABLED
 func (c *client) RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error) {
-	// res := &record.Result{
-	// 	Object:  *obj.GetLocal(),
-	// 	Request: request,
-	// 	Payload: payload,
-	// }
-	// result, _, _, err := c.storage.SetResult(res)
-	// return result, err
 	return nil, nil
 }
 
