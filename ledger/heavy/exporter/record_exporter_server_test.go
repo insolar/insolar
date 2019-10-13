@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 func BadgerDefaultOptions(dir string) badger.Options {
@@ -106,7 +105,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
 
 			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, pulseCalculator)
@@ -122,7 +121,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
@@ -139,7 +138,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		t.Run("no data in the current. has more synced pulses. returns true", func(t *testing.T) {
 			pn := insolar.PulseNumber(99)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
@@ -163,7 +162,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
@@ -248,7 +247,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
 
 			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, pulseCalculator)
@@ -280,7 +279,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			recordsAccessor := object.NewRecordAccessorMock(t)
 			recordsAccessor.ForIDMock.Expect(ctx, id).Return(rec, nil)
 
-			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator := insolarPulse.NewCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
 
 			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, jetKeeper, pulseCalculator)
