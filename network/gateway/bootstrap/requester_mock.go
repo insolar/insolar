@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -183,15 +183,15 @@ func (mmAuthorize *RequesterMock) Authorize(ctx context.Context, c2 insolar.Cert
 		mmAuthorize.inspectFuncAuthorize(ctx, c2)
 	}
 
-	params := &RequesterMockAuthorizeParams{ctx, c2}
+	mm_params := &RequesterMockAuthorizeParams{ctx, c2}
 
 	// Record call args
 	mmAuthorize.AuthorizeMock.mutex.Lock()
-	mmAuthorize.AuthorizeMock.callArgs = append(mmAuthorize.AuthorizeMock.callArgs, params)
+	mmAuthorize.AuthorizeMock.callArgs = append(mmAuthorize.AuthorizeMock.callArgs, mm_params)
 	mmAuthorize.AuthorizeMock.mutex.Unlock()
 
 	for _, e := range mmAuthorize.AuthorizeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.pp1, e.results.err
 		}
@@ -199,17 +199,17 @@ func (mmAuthorize *RequesterMock) Authorize(ctx context.Context, c2 insolar.Cert
 
 	if mmAuthorize.AuthorizeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAuthorize.AuthorizeMock.defaultExpectation.Counter, 1)
-		want := mmAuthorize.AuthorizeMock.defaultExpectation.params
-		got := RequesterMockAuthorizeParams{ctx, c2}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAuthorize.t.Errorf("RequesterMock.Authorize got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAuthorize.AuthorizeMock.defaultExpectation.params
+		mm_got := RequesterMockAuthorizeParams{ctx, c2}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAuthorize.t.Errorf("RequesterMock.Authorize got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAuthorize.AuthorizeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAuthorize.AuthorizeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAuthorize.t.Fatal("No results are set for the RequesterMock.Authorize")
 		}
-		return (*results).pp1, (*results).err
+		return (*mm_results).pp1, (*mm_results).err
 	}
 	if mmAuthorize.funcAuthorize != nil {
 		return mmAuthorize.funcAuthorize(ctx, c2)
@@ -402,15 +402,15 @@ func (mmBootstrap *RequesterMock) Bootstrap(ctx context.Context, pp1 *packet.Per
 		mmBootstrap.inspectFuncBootstrap(ctx, pp1, c2, pp2)
 	}
 
-	params := &RequesterMockBootstrapParams{ctx, pp1, c2, pp2}
+	mm_params := &RequesterMockBootstrapParams{ctx, pp1, c2, pp2}
 
 	// Record call args
 	mmBootstrap.BootstrapMock.mutex.Lock()
-	mmBootstrap.BootstrapMock.callArgs = append(mmBootstrap.BootstrapMock.callArgs, params)
+	mmBootstrap.BootstrapMock.callArgs = append(mmBootstrap.BootstrapMock.callArgs, mm_params)
 	mmBootstrap.BootstrapMock.mutex.Unlock()
 
 	for _, e := range mmBootstrap.BootstrapMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.bp1, e.results.err
 		}
@@ -418,17 +418,17 @@ func (mmBootstrap *RequesterMock) Bootstrap(ctx context.Context, pp1 *packet.Per
 
 	if mmBootstrap.BootstrapMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBootstrap.BootstrapMock.defaultExpectation.Counter, 1)
-		want := mmBootstrap.BootstrapMock.defaultExpectation.params
-		got := RequesterMockBootstrapParams{ctx, pp1, c2, pp2}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBootstrap.t.Errorf("RequesterMock.Bootstrap got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBootstrap.BootstrapMock.defaultExpectation.params
+		mm_got := RequesterMockBootstrapParams{ctx, pp1, c2, pp2}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBootstrap.t.Errorf("RequesterMock.Bootstrap got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBootstrap.BootstrapMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBootstrap.BootstrapMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBootstrap.t.Fatal("No results are set for the RequesterMock.Bootstrap")
 		}
-		return (*results).bp1, (*results).err
+		return (*mm_results).bp1, (*mm_results).err
 	}
 	if mmBootstrap.funcBootstrap != nil {
 		return mmBootstrap.funcBootstrap(ctx, pp1, c2, pp2)
@@ -620,15 +620,15 @@ func (mmReconnect *RequesterMock) Reconnect(ctx context.Context, hp1 *host.Host,
 		mmReconnect.inspectFuncReconnect(ctx, hp1, pp1)
 	}
 
-	params := &RequesterMockReconnectParams{ctx, hp1, pp1}
+	mm_params := &RequesterMockReconnectParams{ctx, hp1, pp1}
 
 	// Record call args
 	mmReconnect.ReconnectMock.mutex.Lock()
-	mmReconnect.ReconnectMock.callArgs = append(mmReconnect.ReconnectMock.callArgs, params)
+	mmReconnect.ReconnectMock.callArgs = append(mmReconnect.ReconnectMock.callArgs, mm_params)
 	mmReconnect.ReconnectMock.mutex.Unlock()
 
 	for _, e := range mmReconnect.ReconnectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -636,17 +636,17 @@ func (mmReconnect *RequesterMock) Reconnect(ctx context.Context, hp1 *host.Host,
 
 	if mmReconnect.ReconnectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmReconnect.ReconnectMock.defaultExpectation.Counter, 1)
-		want := mmReconnect.ReconnectMock.defaultExpectation.params
-		got := RequesterMockReconnectParams{ctx, hp1, pp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmReconnect.t.Errorf("RequesterMock.Reconnect got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmReconnect.ReconnectMock.defaultExpectation.params
+		mm_got := RequesterMockReconnectParams{ctx, hp1, pp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmReconnect.t.Errorf("RequesterMock.Reconnect got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmReconnect.ReconnectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmReconnect.ReconnectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmReconnect.t.Fatal("No results are set for the RequesterMock.Reconnect")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmReconnect.funcReconnect != nil {
 		return mmReconnect.funcReconnect(ctx, hp1, pp1)
@@ -838,15 +838,15 @@ func (mmUpdateSchedule *RequesterMock) UpdateSchedule(ctx context.Context, pp1 *
 		mmUpdateSchedule.inspectFuncUpdateSchedule(ctx, pp1, p1)
 	}
 
-	params := &RequesterMockUpdateScheduleParams{ctx, pp1, p1}
+	mm_params := &RequesterMockUpdateScheduleParams{ctx, pp1, p1}
 
 	// Record call args
 	mmUpdateSchedule.UpdateScheduleMock.mutex.Lock()
-	mmUpdateSchedule.UpdateScheduleMock.callArgs = append(mmUpdateSchedule.UpdateScheduleMock.callArgs, params)
+	mmUpdateSchedule.UpdateScheduleMock.callArgs = append(mmUpdateSchedule.UpdateScheduleMock.callArgs, mm_params)
 	mmUpdateSchedule.UpdateScheduleMock.mutex.Unlock()
 
 	for _, e := range mmUpdateSchedule.UpdateScheduleMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.up1, e.results.err
 		}
@@ -854,17 +854,17 @@ func (mmUpdateSchedule *RequesterMock) UpdateSchedule(ctx context.Context, pp1 *
 
 	if mmUpdateSchedule.UpdateScheduleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpdateSchedule.UpdateScheduleMock.defaultExpectation.Counter, 1)
-		want := mmUpdateSchedule.UpdateScheduleMock.defaultExpectation.params
-		got := RequesterMockUpdateScheduleParams{ctx, pp1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpdateSchedule.t.Errorf("RequesterMock.UpdateSchedule got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpdateSchedule.UpdateScheduleMock.defaultExpectation.params
+		mm_got := RequesterMockUpdateScheduleParams{ctx, pp1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdateSchedule.t.Errorf("RequesterMock.UpdateSchedule got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUpdateSchedule.UpdateScheduleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUpdateSchedule.UpdateScheduleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUpdateSchedule.t.Fatal("No results are set for the RequesterMock.UpdateSchedule")
 		}
-		return (*results).up1, (*results).err
+		return (*mm_results).up1, (*mm_results).err
 	}
 	if mmUpdateSchedule.funcUpdateSchedule != nil {
 		return mmUpdateSchedule.funcUpdateSchedule(ctx, pp1, p1)
