@@ -34,10 +34,11 @@ import (
 func TestVirtual_BasicOperations(t *testing.T) {
 	t.Parallel()
 
-	ctx := inslogger.TestContext(t)
 	cfg := DefaultVMConfig()
 
 	t.Run("happy path", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+
 		expectedRes := struct {
 			blip string
 		}{
@@ -60,21 +61,23 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			},
 		)
 
-		s, err := NewServer(t, ctx, cfg, nil, mm)
+		s, err := NewVirtualServer(t, ctx, cfg).SetMachinesManager(mm).PrepareAndStart()
 		require.NoError(t, err)
 		defer s.Stop(ctx)
 
-		// First pulse goes in storage then interrupts.
-		s.IncrementPulse(ctx)
+		// Prepare environment (mimic) for first call
+		var objectID *insolar.ID
+		{
+			codeID, err := s.mimic.AddCode(ctx, []byte{})
+			require.NoError(t, err)
 
-		codeID, err := s.mimic.AddCode(ctx, []byte{})
-		require.NoError(t, err)
+			prototypeID, err := s.mimic.AddObject(ctx, *codeID, true, []byte{})
+			require.NoError(t, err)
 
-		prototypeID, err := s.mimic.AddObject(ctx, *codeID, true, []byte{})
-		require.NoError(t, err)
-
-		objectID, err := s.mimic.AddObject(ctx, *prototypeID, false, []byte{})
-		require.NoError(t, err)
+			objectID, err = s.mimic.AddObject(ctx, *prototypeID, false, []byte{})
+			require.NoError(t, err)
+		}
+		t.Logf("iniitialization done")
 
 		objectRef := insolar.NewReference(*objectID)
 
@@ -88,5 +91,36 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			Object: objectRef,
 			Result: insolar.MustSerialize(expectedRes),
 		}, res)
+	})
+
+	t.Run("builtin test", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+
+		s, err := NewVirtualServer(t, ctx, cfg).WithGenesis().PrepareAndStart()
+		require.NoError(t, err)
+		defer s.Stop(ctx)
+
+		user, err := NewUserWithKeys()
+		if err != nil {
+			panic("failed to create new user: " + err.Error())
+		}
+
+		rootDomainRef, err := insolar.NewReferenceFromString("11tJCjvL9bzK1HdmaFnvmHGMvNnHYJz2qrN83if4fEf")
+		if err != nil {
+			panic("failed to read reference from string: " + err.Error())
+		}
+
+		callMethodReply, _, err := s.BasicAPICall(ctx, "member.create", nil, *rootDomainRef, user)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		var result map[string]interface{}
+		if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+			panic(err.Error())
+		}
+
+		assert.Nil(t, result["Error"])
+		assert.NotNil(t, result["Returns"].([]interface{})[0].(map[string]interface{})["reference"])
 	})
 }

@@ -19,9 +19,12 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -33,6 +36,8 @@ import (
 	"github.com/insolar/component-manager"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -56,6 +61,8 @@ import (
 	"github.com/insolar/insolar/virtual/integration/mimic"
 )
 
+type flowCallbackType func(meta payload.Meta, pl payload.Payload) []payload.Payload
+
 func NodeLight() insolar.Reference {
 	return light.ref
 }
@@ -63,11 +70,19 @@ func NodeLight() insolar.Reference {
 const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
-	test              *testing.T
-	ctx               context.Context
+	t    *testing.T
+	ctx  context.Context
+	lock sync.RWMutex
+	cfg  configuration.Configuration
+
+	// configuration parameters
+	isPrepared          bool
+	stubMachinesManager machinesmanager.MachinesManager
+	stubFlowCallback    flowCallbackType
+	withGenesis         bool
+
 	componentManager  *component.Manager
 	stopper           func()
-	lock              sync.RWMutex
 	clientSender      bus.Sender
 	logicRunner       *logicrunner.LogicRunner
 	contractRequester *contractrequester.ContractRequester
@@ -86,10 +101,11 @@ func DefaultVMConfig() configuration.Configuration {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.Ledger.LightChainLimit = math.MaxInt32
 	cfg.LogicRunner = configuration.NewLogicRunner()
+	cfg.LogicRunner.BuiltIn = &configuration.BuiltIn{}
 	cfg.Bus.ReplyTimeout = 5 * time.Second
 	cfg.Log = configuration.NewLog()
-	cfg.Log.Level = insolar.DebugLevel.String()
-	cfg.Log.Formatter = insolar.TextFormat.String()
+	cfg.Log.Level = insolar.InfoLevel.String()      // insolar.DebugLevel.String()
+	cfg.Log.Formatter = insolar.JSONFormat.String() // insolar.TextFormat.String()
 	return cfg
 }
 
@@ -106,17 +122,60 @@ func init() {
 	flag.BoolVar(&verboseWM, "verbose-wm", false, "flag to enable watermill logging")
 }
 
-func NewServer(
-	t *testing.T,
-	ctx context.Context,
-	cfg configuration.Configuration,
-	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
-	mManager machinesmanager.MachinesManager) (*Server, error) {
+func NewVirtualServer(t *testing.T, ctx context.Context, cfg configuration.Configuration) *Server {
+	return &Server{
+		t:   t,
+		ctx: ctx,
+		cfg: cfg,
+	}
+}
 
-	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, "", "")
+func (s *Server) SetMachinesManager(machinesManager machinesmanager.MachinesManager) *Server {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	if mManager == nil {
-		mManager = machinesmanager.NewMachinesManager()
+	if s.isPrepared {
+		return nil
+	}
+
+	s.stubMachinesManager = machinesManager
+	return s
+}
+
+func (s *Server) SetLightCallbacks(flowCallback flowCallbackType) *Server {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.isPrepared {
+		return nil
+	}
+
+	s.stubFlowCallback = flowCallback
+	return s
+}
+
+func (s *Server) WithGenesis() *Server {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.isPrepared {
+		return nil
+	}
+
+	s.withGenesis = true
+	return s
+}
+
+func (s *Server) PrepareAndStart() (*Server, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	ctx, logger := inslogger.InitNodeLogger(s.ctx, s.cfg.Log, "", "virtual")
+	s.ctx = ctx
+
+	machinesManager := s.stubMachinesManager
+	if machinesManager == machinesmanager.MachinesManager(nil) {
+		machinesManager = machinesmanager.NewMachinesManager()
 	}
 
 	cm := component.NewManager(nil)
@@ -131,7 +190,7 @@ func NewServer(
 	{
 		var err error
 		// Private key storage.
-		KeyStore, err = keystore.NewKeyStore(cfg.KeysPath)
+		KeyStore, err = keystore.NewKeyStore(s.cfg.KeysPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to load KeyStore")
 		}
@@ -163,7 +222,7 @@ func NewServer(
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		Coordinator = jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		Coordinator = jetcoordinator.NewJetCoordinator(s.cfg.Ledger.LightChainLimit, virtual.ref)
 		Coordinator.PulseCalculator = Pulses
 		Coordinator.PulseAccessor = Pulses
 		Coordinator.JetAccessor = Jets
@@ -195,16 +254,16 @@ func NewServer(
 		ExternalPubSub = pubsub
 		IncomingPubSub = pubsub
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		c := jetcoordinator.NewJetCoordinator(s.cfg.Ledger.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
-		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
+		ClientBus = bus.NewBus(s.cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
 	}
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, ClientBus)
+	logicRunner, err := logicrunner.NewLogicRunner(&s.cfg.LogicRunner, ClientBus)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(
@@ -233,7 +292,6 @@ func NewServer(
 		Jets,
 		Nodes,
 
-		mManager,
 		NodeNetwork,
 		PulseManager)
 
@@ -247,7 +305,12 @@ func NewServer(
 		LedgerMimic mimic.Ledger
 	)
 	{
-		LedgerMimic = mimic.NewMimicLedger(ctx, CryptoScheme, Pulses)
+		LedgerMimic = mimic.NewMimicLedger(ctx, CryptoScheme, Pulses, Pulses)
+	}
+
+	flowCallback := s.stubFlowCallback
+	if flowCallback == nil {
+		flowCallback = LedgerMimic.ProcessMessage
 	}
 
 	// Start routers with handlers.
@@ -283,13 +346,7 @@ func NewServer(
 		}
 		if msgMeta.Receiver == NodeLight() {
 			go func() {
-				var replies []payload.Payload
-				if receiveCallback != nil {
-					replies = receiveCallback(msgMeta, pl)
-				} else {
-					replies = LedgerMimic.ProcessMessage(msgMeta, pl)
-				}
-
+				replies := flowCallback(msgMeta, pl)
 				for _, rep := range replies {
 					msg, err := payload.NewMessage(rep)
 					if err != nil {
@@ -326,37 +383,51 @@ func NewServer(
 		"virtual": virtual.ID().String(),
 	}).Info("started test server")
 
-	s := &Server{
-		ctx:               ctx,
-		contractRequester: contractRequester,
-		test:              t,
-		pulseStorage:      Pulses,
-		pulseManager:      PulseManager,
-		componentManager:  cm,
-		stopper:           stopper,
-		pulse:             *insolar.GenesisPulse,
-		clientSender:      ClientBus,
-		mimic:             LedgerMimic,
+	s.componentManager = cm
+	s.contractRequester = contractRequester
+	s.stopper = stopper
+	s.clientSender = ClientBus
+	s.mimic = LedgerMimic
+
+	s.pulseManager = PulseManager
+	s.pulseStorage = Pulses
+	s.pulse = *insolar.GenesisPulse
+
+	if s.withGenesis {
+		if err := s.LoadGenesis(ctx, ""); err != nil {
+			return nil, errors.Wrap(err, "failed to load genesis")
+		}
 	}
+
+	// First pulse goes in storage then interrupts.
+	s.incrementPulse(ctx)
+	s.isPrepared = true
+
 	return s, nil
 }
 
 func (s *Server) Stop(ctx context.Context) {
-	panicIfErr(s.componentManager.Stop(ctx))
+	if err := s.componentManager.Stop(ctx); err != nil {
+		panic(err)
+	}
 	s.stopper()
+}
+
+func (s *Server) incrementPulse(ctx context.Context) {
+	s.pulse = insolar.Pulse{
+		PulseNumber: s.pulse.PulseNumber + PulseStep,
+	}
+
+	if err := s.pulseManager.Set(ctx, s.pulse); err != nil {
+		panic(err)
+	}
 }
 
 func (s *Server) IncrementPulse(ctx context.Context) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + PulseStep,
-	}
-	err := s.pulseManager.Set(ctx, s.pulse)
-	if err != nil {
-		panic(err)
-	}
+	s.incrementPulse(ctx)
 }
 
 func (s *Server) SendToSelf(ctx context.Context, pl payload.Payload) (<-chan *message.Message, func()) {
@@ -364,7 +435,7 @@ func (s *Server) SendToSelf(ctx context.Context, pl payload.Payload) (<-chan *me
 	if err != nil {
 		panic(err)
 	}
-	msg.Metadata.Set(meta.TraceID, s.test.Name())
+	msg.Metadata.Set(meta.TraceID, s.t.Name())
 	return s.clientSender.SendTarget(ctx, msg, virtual.ID())
 }
 
@@ -442,7 +513,89 @@ func getIncomingTopic(msg *message.Message) string {
 	return topic
 }
 
+func (s *Server) BasicAPICall(
+	ctx context.Context,
+	callSite string,
+	callParams interface{},
+	objectRef insolar.Reference,
+	user *User,
+) (
+	insolar.Reply,
+	*insolar.Reference,
+	error,
+) {
+	seed, err := (&seedmanager.SeedGenerator{}).Next()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	privateKey, err := platformpolicy.NewKeyProcessor().ImportPrivateKeyPEM([]byte(user.PrivKey))
+	if err != nil {
+		panic(err.Error())
+	}
+
+	request := &requester.ContractRequest{
+		Request: requester.Request{
+			Version: requester.JSONRPCVersion,
+			ID:      uint64(rand.Int63()),
+			Method:  "contract.call",
+		},
+		Params: requester.Params{
+			Seed:       string(seed[:]),
+			CallSite:   callSite,
+			CallParams: callParams,
+			Reference:  objectRef.String(),
+			PublicKey:  user.PubKey,
+			LogLevel:   nil,
+			Test:       s.t.Name(),
+		},
+	}
+
+	jsonRequest, err := json.Marshal(request)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	signature, err := requester.Sign(privateKey, jsonRequest)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	requestArgs, err := insolar.Serialize([]interface{}{jsonRequest, signature})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to marshal arguments")
+	}
+
+	currentPulse, err := s.pulseStorage.Latest(ctx)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return s.contractRequester.Call(ctx, &objectRef, "Call", []interface{}{requestArgs}, currentPulse.PulseNumber)
+}
+
+func (s *Server) LoadGenesis(ctx context.Context, genesisDirectory string) error {
+	ctx = inslogger.WithLoggerLevel(ctx, insolar.ErrorLevel)
+
+	if genesisDirectory == "" {
+		genesisDirectory = GenesisDirectory
+	}
+	return s.mimic.LoadGenesis(ctx, genesisDirectory)
+}
+
+var (
+	GenesisDirectory string
+)
+
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	cleanup, directoryWithGenesis, err := mimic.GenerateBootstrap(true)
+	if err != nil {
+		fmt.Println("[ ERROR ] Failed to generate bootstrap files: ", err.Error())
+	}
+	defer cleanup()
+	GenesisDirectory = directoryWithGenesis
+
 	os.Exit(m.Run())
 }

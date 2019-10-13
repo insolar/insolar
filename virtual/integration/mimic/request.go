@@ -78,7 +78,7 @@ func NewOutgoingRequestEntity(requestID insolar.ID, request record.Request) *Req
 	return &RequestEntity{
 		Status:    RequestRegistered,
 		Result:    nil,
-		Request:   request.(*record.IncomingRequest),
+		Request:   request.(*record.OutgoingRequest),
 		ID:        requestID,
 		Outgoings: nil,
 	}

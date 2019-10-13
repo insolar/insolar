@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Storage interface {
@@ -47,11 +48,13 @@ type Storage interface {
 	SetCode(ctx context.Context, code record.Code) (insolar.ID, error)
 	GetCode(ctx context.Context, codeID insolar.ID) ([]byte, error)
 	// Pendings
-	GetPendings(ctx context.Context, objectID insolar.ID, limit uint32) ([]insolar.ID, error)
+	GetPendings(ctx context.Context, objectID insolar.ID, limit uint32, skipRequestRefs []insolar.ID) ([]insolar.ID, error)
 	HasPendings(ctx context.Context, objectID insolar.ID) (bool, error)
+
+	CalculateRequestAffinityRef(request record.Request, pulseNumber insolar.PulseNumber) insolar.ID
 }
 
-type storage struct {
+type mimicStorage struct {
 	// components
 	pcs insolar.PlatformCryptographyScheme
 	pa  pulse.Accessor
@@ -86,17 +89,17 @@ var (
 	ErrCodeNotFound = errors.New("code not found")
 )
 
-func (s *storage) calculateVirtualID(pulse insolar.PulseNumber, virtual record.Virtual) insolar.ID {
+func (s *mimicStorage) calculateVirtualID(pulse insolar.PulseNumber, virtual record.Virtual) insolar.ID {
 	hash := record.HashVirtual(s.pcs.ReferenceHasher(), virtual)
 	return *insolar.NewID(pulse, hash)
 }
 
-func (s *storage) calculateRecordID(pulse insolar.PulseNumber, rec record.Record) insolar.ID {
+func (s *mimicStorage) calculateRecordID(pulse insolar.PulseNumber, rec record.Record) insolar.ID {
 	virtual := record.Wrap(rec)
 	return s.calculateVirtualID(pulse, virtual)
 }
 
-func (s *storage) calculateSideEffectID(state *ObjectState) insolar.ID {
+func (s *mimicStorage) calculateSideEffectID(state *ObjectState) insolar.ID {
 	request, ok := s.Requests[state.RequestID]
 	if !ok {
 		panic("failed to find request")
@@ -110,7 +113,11 @@ func (s *storage) calculateSideEffectID(state *ObjectState) insolar.ID {
 	return s.calculateRecordID(resultID.Pulse(), state.State)
 }
 
-func (s *storage) GetObject(_ context.Context, objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error) {
+func (s *mimicStorage) CalculateRequestAffinityRef(request record.Request, pulseNumber insolar.PulseNumber) insolar.ID {
+	return *record.CalculateRequestAffinityRef(request, pulseNumber, s.pcs).GetLocal()
+}
+
+func (s *mimicStorage) GetObject(_ context.Context, objectID insolar.ID) (record.State, *record.Index, *insolar.ID, error) {
 	object, ok := s.Objects[objectID]
 	if !ok {
 		return nil, nil, nil, ErrNotFound
@@ -154,24 +161,28 @@ func (s *storage) GetObject(_ context.Context, objectID insolar.ID) (record.Stat
 	return latestObjectState.State, index, nil, nil
 }
 
-func (s *storage) SetObject(_ context.Context, requestID insolar.ID, newState record.State, objectID insolar.ID) error {
+func (s *mimicStorage) SetObject(ctx context.Context, requestID insolar.ID, newState record.State, objectID insolar.ID) error {
 	switch newState.(type) {
 	case *record.Activate:
 		// TODO[bigbes]: take Objects lock
-		if s.Objects[requestID] != nil {
+		if s.Objects[requestID] != nil && len(s.Objects[requestID].ObjectChanges) > 0 {
 			return ErrAlreadyActivated
 		}
 
-		s.Objects[requestID] = &ObjectEntity{
-			ObjectChanges: []ObjectState{
-				{
-					State:     newState,
-					RequestID: requestID,
-				},
-			},
-			RequestsMap:  make(map[insolar.ID]*RequestEntity),
-			RequestsList: nil,
+		if _, ok := s.Objects[requestID]; !ok {
+			inslogger.FromContext(ctx).Error("object is empty")
+			s.Objects[requestID] = &ObjectEntity{
+				ObjectChanges: nil,
+				RequestsMap:   make(map[insolar.ID]*RequestEntity),
+				RequestsList:  nil,
+			}
 		}
+		objectEntity := s.Objects[requestID]
+		objectEntity.ObjectChanges = append(objectEntity.ObjectChanges, ObjectState{
+			State:     newState,
+			RequestID: requestID,
+		})
+
 	case *record.Amend:
 		if s.Objects[objectID] == nil {
 			return ErrNotFound
@@ -209,17 +220,35 @@ func (s *storage) SetObject(_ context.Context, requestID insolar.ID, newState re
 	return nil
 }
 
-func (s *storage) GetPendings(_ context.Context, objectID insolar.ID, limit uint32) ([]insolar.ID, error) {
+func contains(a []insolar.ID, x insolar.ID) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *mimicStorage) GetPendings(ctx context.Context, objectID insolar.ID, limit uint32, skipRequestRefs []insolar.ID) ([]insolar.ID, error) {
 	state := s.Objects[objectID]
 	if state == nil {
 		return nil, ErrNotFound
 	}
 
+	// TODO[bigbes]: this logic should be rethought, probably we should add request to this not created object, anyway
+	// not yet activated object, return Request
+	if len(state.ObjectChanges) == 0 {
+		return []insolar.ID{objectID}, nil
+	}
+
 	rv := make([]insolar.ID, 0)
 	for _, request := range state.RequestsList {
-		if limit == 0 {
+		switch {
+		case limit == 0:
+			// we're done with our limit
 			break
-		} else if request.Status == RequestFinished {
+		case request.Status == RequestFinished, contains(skipRequestRefs, request.ID):
+			// we're ignoring finished requests or one that we were asked to ignore
 			continue
 		}
 
@@ -230,15 +259,15 @@ func (s *storage) GetPendings(_ context.Context, objectID insolar.ID, limit uint
 	return rv, nil
 }
 
-func (s *storage) HasPendings(ctx context.Context, objectID insolar.ID) (bool, error) {
-	pendings, err := s.GetPendings(ctx, objectID, 1)
+func (s *mimicStorage) HasPendings(ctx context.Context, objectID insolar.ID) (bool, error) {
+	pendings, err := s.GetPendings(ctx, objectID, 1, nil)
 	if err != nil {
 		return false, err
 	}
 	return len(pendings) != 0, nil
 }
 
-func (s *storage) GetRequest(_ context.Context, requestID insolar.ID) (record.Request, error) {
+func (s *mimicStorage) GetRequest(_ context.Context, requestID insolar.ID) (record.Request, error) {
 	requestEntity, ok := s.Requests[requestID]
 	if !ok {
 		return nil, ErrRequestNotFound
@@ -246,7 +275,7 @@ func (s *storage) GetRequest(_ context.Context, requestID insolar.ID) (record.Re
 	return requestEntity.Request, nil
 }
 
-func (s *storage) SetRequest(_ context.Context, request record.Request) (*insolar.ID, []byte, []byte, error) {
+func (s *mimicStorage) SetRequest(_ context.Context, request record.Request) (*insolar.ID, []byte, []byte, error) {
 	isOutgoingRequest := false
 	if _, ok := request.(*record.OutgoingRequest); ok {
 		isOutgoingRequest = true
@@ -321,10 +350,18 @@ func (s *storage) SetRequest(_ context.Context, request record.Request) (*insola
 
 	s.Requests[requestID] = re
 
+	if !isOutgoingRequest && (request.GetCallType() == record.CTSaveAsChild || request.GetCallType() == record.CTGenesis) {
+		s.Objects[requestID] = &ObjectEntity{
+			ObjectChanges: nil,
+			RequestsMap:   make(map[insolar.ID]*RequestEntity),
+			RequestsList:  nil,
+		}
+	}
+
 	return &requestID, nil, nil, nil
 }
 
-func (s *storage) GetResult(_ context.Context, requestID insolar.ID) (*insolar.ID, []byte, error) {
+func (s *mimicStorage) GetResult(_ context.Context, requestID insolar.ID) (*insolar.ID, []byte, error) {
 	request, ok := s.Requests[requestID]
 	if !ok {
 		return nil, nil, ErrRequestNotFound
@@ -343,14 +380,16 @@ func (s *storage) GetResult(_ context.Context, requestID insolar.ID) (*insolar.I
 }
 
 // TODO[bigbes]: check for non-closed outgoings
-func (s *storage) SetResult(_ context.Context, result *record.Result) (*insolar.ID, error) {
+func (s *mimicStorage) SetResult(_ context.Context, result *record.Result) (*insolar.ID, error) {
 	if !result.Object.IsEmpty() {
 		state, ok := s.Objects[result.Object]
 		switch {
 		case !ok:
 			return nil, ErrNotFound
-		case len(state.ObjectChanges) == 0:
-			return nil, ErrNotActivated
+		// TODO[bigbes]: this check needs to be returned (not in case when we're activating object)
+		// TODO[bigbes]: this logic should be rethought
+		// case len(state.ObjectChanges) == 0:
+		// 	return nil, ErrNotActivated
 		case state.isDeactivated():
 			return nil, ErrAlreadyDeactivated
 		}
@@ -392,7 +431,7 @@ func (s *storage) SetResult(_ context.Context, result *record.Result) (*insolar.
 	return &resultID, nil
 }
 
-func (s *storage) RollbackSetResult(_ context.Context, result *record.Result) {
+func (s *mimicStorage) RollbackSetResult(_ context.Context, result *record.Result) {
 	request := s.Requests[*result.Request.GetLocal()]
 
 	request.Status = RequestRegistered
@@ -402,7 +441,7 @@ func (s *storage) RollbackSetResult(_ context.Context, result *record.Result) {
 	request.ResultID = insolar.ID{}
 }
 
-func (s *storage) GetCode(_ context.Context, codeID insolar.ID) ([]byte, error) {
+func (s *mimicStorage) GetCode(_ context.Context, codeID insolar.ID) ([]byte, error) {
 	code, ok := s.Code[codeID]
 	if !ok {
 		return nil, ErrCodeNotFound
@@ -411,7 +450,7 @@ func (s *storage) GetCode(_ context.Context, codeID insolar.ID) ([]byte, error) 
 	return code.Code, nil
 }
 
-func (s *storage) SetCode(_ context.Context, code record.Code) (insolar.ID, error) {
+func (s *mimicStorage) SetCode(_ context.Context, code record.Code) (insolar.ID, error) {
 	virtual := record.Wrap(&code)
 
 	latest, err := s.pa.Latest(context.Background())
@@ -441,7 +480,7 @@ func (s *storage) SetCode(_ context.Context, code record.Code) (insolar.ID, erro
 	return codeID, nil
 }
 
-func (s *storage) Get(key store.Key) ([]byte, error) {
+func (s *mimicStorage) Get(key store.Key) ([]byte, error) {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	value, ok := s.MiscStorage[string(fullKey)]
@@ -451,22 +490,24 @@ func (s *storage) Get(key store.Key) ([]byte, error) {
 	return value, nil
 }
 
-func (s *storage) Set(key store.Key, value []byte) error {
+func (s *mimicStorage) Set(key store.Key, value []byte) error {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	s.MiscStorage[string(fullKey)] = value
 	return nil
 }
 
-func (s *storage) Delete(key store.Key) error                               { panic("not implemented") } // NOT NEEDED
-func (s *storage) Backend() *badger.DB                                      { panic("not implemented") } // NOT NEEDED
-func (s *storage) NewIterator(pivot store.Key, reverse bool) store.Iterator { panic("not implemented") } // NOT NEEDED
+func (s *mimicStorage) Delete(key store.Key) error { panic("not implemented") } // NOT NEEDED
+func (s *mimicStorage) Backend() *badger.DB        { panic("not implemented") } // NOT NEEDED
+func (s *mimicStorage) NewIterator(pivot store.Key, reverse bool) store.Iterator {
+	panic("not implemented")
+} // NOT NEEDED
 
 func NewStorage(
 	pcs insolar.PlatformCryptographyScheme,
 	pa pulse.Accessor,
 ) Storage {
-	return &storage{
+	return &mimicStorage{
 		pcs: pcs,
 		pa:  pa,
 
