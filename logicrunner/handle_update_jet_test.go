@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -85,7 +85,7 @@ func TestHandleUpdateJet_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleUpdateJet, flow.Flow) {
 				h := &HandleUpdateJet{
 					meta: payload.Meta{
-						Payload: []byte{3,2,1},
+						Payload: []byte{3, 2, 1},
 					},
 				}
 

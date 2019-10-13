@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -73,8 +73,8 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 			name: "error unmarshaling",
 			mocks: func(t minimock.Tester) (*HandleAbandonedRequestsNotification, flow.Flow) {
 				h := &HandleAbandonedRequestsNotification{
-					dep: &Dependencies{},
-					meta: payload.Meta{Payload: []byte{3,2,1}},
+					dep:  &Dependencies{},
+					meta: payload.Meta{Payload: []byte{3, 2, 1}},
 				}
 				return h, flow.NewFlowMock(t)
 			},

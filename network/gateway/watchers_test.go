@@ -52,7 +52,7 @@ package gateway
 
 import (
 	"context"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"testing"
