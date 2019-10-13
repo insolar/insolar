@@ -18,7 +18,9 @@ HEAVY_BADGER_TOOL= heavy-badger
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
-GOBUILD ?= go build
+GOBUILD ?= GO111MODULE=on go build -mod=vendor
+GOTEST ?= GO111MODULE=on go test -mod=vendor
+
 FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
@@ -156,11 +158,11 @@ $(HEAVY_BADGER_TOOL):
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
-	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags "functest bloattest" ./functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -173,7 +175,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest $(SLOW_PKGS)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest $(SLOW_PKGS)
 
 .PHONY: test
 test: test_unit ## alias for test_unit
