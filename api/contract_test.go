@@ -26,13 +26,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
