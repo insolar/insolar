@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
@@ -188,15 +188,15 @@ func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistry(ref insolar
 		mmGetExecutionRegistry.inspectFuncGetExecutionRegistry(ref)
 	}
 
-	params := &StateStorageMockGetExecutionRegistryParams{ref}
+	mm_params := &StateStorageMockGetExecutionRegistryParams{ref}
 
 	// Record call args
 	mmGetExecutionRegistry.GetExecutionRegistryMock.mutex.Lock()
-	mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs = append(mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs, params)
+	mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs = append(mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs, mm_params)
 	mmGetExecutionRegistry.GetExecutionRegistryMock.mutex.Unlock()
 
 	for _, e := range mmGetExecutionRegistry.GetExecutionRegistryMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.e1
 		}
@@ -204,17 +204,17 @@ func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistry(ref insolar
 
 	if mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.Counter, 1)
-		want := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.params
-		got := StateStorageMockGetExecutionRegistryParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetExecutionRegistry.t.Errorf("StateStorageMock.GetExecutionRegistry got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.params
+		mm_got := StateStorageMockGetExecutionRegistryParams{ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetExecutionRegistry.t.Errorf("StateStorageMock.GetExecutionRegistry got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExecutionRegistry.t.Fatal("No results are set for the StateStorageMock.GetExecutionRegistry")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmGetExecutionRegistry.funcGetExecutionRegistry != nil {
 		return mmGetExecutionRegistry.funcGetExecutionRegistry(ref)
@@ -403,15 +403,15 @@ func (mmGetExecutionState *StateStorageMock) GetExecutionState(ref insolar.Refer
 		mmGetExecutionState.inspectFuncGetExecutionState(ref)
 	}
 
-	params := &StateStorageMockGetExecutionStateParams{ref}
+	mm_params := &StateStorageMockGetExecutionStateParams{ref}
 
 	// Record call args
 	mmGetExecutionState.GetExecutionStateMock.mutex.Lock()
-	mmGetExecutionState.GetExecutionStateMock.callArgs = append(mmGetExecutionState.GetExecutionStateMock.callArgs, params)
+	mmGetExecutionState.GetExecutionStateMock.callArgs = append(mmGetExecutionState.GetExecutionStateMock.callArgs, mm_params)
 	mmGetExecutionState.GetExecutionStateMock.mutex.Unlock()
 
 	for _, e := range mmGetExecutionState.GetExecutionStateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.e1
 		}
@@ -419,17 +419,17 @@ func (mmGetExecutionState *StateStorageMock) GetExecutionState(ref insolar.Refer
 
 	if mmGetExecutionState.GetExecutionStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExecutionState.GetExecutionStateMock.defaultExpectation.Counter, 1)
-		want := mmGetExecutionState.GetExecutionStateMock.defaultExpectation.params
-		got := StateStorageMockGetExecutionStateParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetExecutionState.t.Errorf("StateStorageMock.GetExecutionState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetExecutionState.GetExecutionStateMock.defaultExpectation.params
+		mm_got := StateStorageMockGetExecutionStateParams{ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetExecutionState.t.Errorf("StateStorageMock.GetExecutionState got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetExecutionState.GetExecutionStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExecutionState.GetExecutionStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExecutionState.t.Fatal("No results are set for the StateStorageMock.GetExecutionState")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmGetExecutionState.funcGetExecutionState != nil {
 		return mmGetExecutionState.funcGetExecutionState(ref)
@@ -585,11 +585,11 @@ func (mmIsEmpty *StateStorageMock) IsEmpty() (b1 bool) {
 	if mmIsEmpty.IsEmptyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsEmpty.IsEmptyMock.defaultExpectation.Counter, 1)
 
-		results := mmIsEmpty.IsEmptyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsEmpty.IsEmptyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsEmpty.t.Fatal("No results are set for the StateStorageMock.IsEmpty")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsEmpty.funcIsEmpty != nil {
 		return mmIsEmpty.funcIsEmpty()
@@ -762,15 +762,15 @@ func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pu
 		mmOnPulse.inspectFuncOnPulse(ctx, pulse)
 	}
 
-	params := &StateStorageMockOnPulseParams{ctx, pulse}
+	mm_params := &StateStorageMockOnPulseParams{ctx, pulse}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
-	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, params)
+	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, mm_params)
 	mmOnPulse.OnPulseMock.mutex.Unlock()
 
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.m1
 		}
@@ -778,17 +778,17 @@ func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pu
 
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
-		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := StateStorageMockOnPulseParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOnPulse.t.Errorf("StateStorageMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOnPulse.OnPulseMock.defaultExpectation.params
+		mm_got := StateStorageMockOnPulseParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOnPulse.t.Errorf("StateStorageMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOnPulse.OnPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOnPulse.OnPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOnPulse.t.Fatal("No results are set for the StateStorageMock.OnPulse")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx, pulse)
@@ -977,15 +977,15 @@ func (mmUpsertExecutionState *StateStorageMock) UpsertExecutionState(ref insolar
 		mmUpsertExecutionState.inspectFuncUpsertExecutionState(ref)
 	}
 
-	params := &StateStorageMockUpsertExecutionStateParams{ref}
+	mm_params := &StateStorageMockUpsertExecutionStateParams{ref}
 
 	// Record call args
 	mmUpsertExecutionState.UpsertExecutionStateMock.mutex.Lock()
-	mmUpsertExecutionState.UpsertExecutionStateMock.callArgs = append(mmUpsertExecutionState.UpsertExecutionStateMock.callArgs, params)
+	mmUpsertExecutionState.UpsertExecutionStateMock.callArgs = append(mmUpsertExecutionState.UpsertExecutionStateMock.callArgs, mm_params)
 	mmUpsertExecutionState.UpsertExecutionStateMock.mutex.Unlock()
 
 	for _, e := range mmUpsertExecutionState.UpsertExecutionStateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.e1
 		}
@@ -993,17 +993,17 @@ func (mmUpsertExecutionState *StateStorageMock) UpsertExecutionState(ref insolar
 
 	if mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation.Counter, 1)
-		want := mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation.params
-		got := StateStorageMockUpsertExecutionStateParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpsertExecutionState.t.Errorf("StateStorageMock.UpsertExecutionState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation.params
+		mm_got := StateStorageMockUpsertExecutionStateParams{ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpsertExecutionState.t.Errorf("StateStorageMock.UpsertExecutionState got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUpsertExecutionState.UpsertExecutionStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUpsertExecutionState.t.Fatal("No results are set for the StateStorageMock.UpsertExecutionState")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmUpsertExecutionState.funcUpsertExecutionState != nil {
 		return mmUpsertExecutionState.funcUpsertExecutionState(ref)
