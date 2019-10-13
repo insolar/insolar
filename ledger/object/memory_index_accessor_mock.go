@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -164,15 +164,15 @@ func (mmForID *MemoryIndexAccessorMock) ForID(ctx context.Context, pn insolar.Pu
 		mmForID.inspectFuncForID(ctx, pn, objID)
 	}
 
-	params := &MemoryIndexAccessorMockForIDParams{ctx, pn, objID}
+	mm_params := &MemoryIndexAccessorMockForIDParams{ctx, pn, objID}
 
 	// Record call args
 	mmForID.ForIDMock.mutex.Lock()
-	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, params)
+	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, mm_params)
 	mmForID.ForIDMock.mutex.Unlock()
 
 	for _, e := range mmForID.ForIDMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.i1, e.results.err
 		}
@@ -180,17 +180,17 @@ func (mmForID *MemoryIndexAccessorMock) ForID(ctx context.Context, pn insolar.Pu
 
 	if mmForID.ForIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForID.ForIDMock.defaultExpectation.Counter, 1)
-		want := mmForID.ForIDMock.defaultExpectation.params
-		got := MemoryIndexAccessorMockForIDParams{ctx, pn, objID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForID.t.Errorf("MemoryIndexAccessorMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForID.ForIDMock.defaultExpectation.params
+		mm_got := MemoryIndexAccessorMockForIDParams{ctx, pn, objID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForID.t.Errorf("MemoryIndexAccessorMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForID.ForIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForID.ForIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForID.t.Fatal("No results are set for the MemoryIndexAccessorMock.ForID")
 		}
-		return (*results).i1, (*results).err
+		return (*mm_results).i1, (*mm_results).err
 	}
 	if mmForID.funcForID != nil {
 		return mmForID.funcForID(ctx, pn, objID)
@@ -381,15 +381,15 @@ func (mmForPulse *MemoryIndexAccessorMock) ForPulse(ctx context.Context, pn inso
 		mmForPulse.inspectFuncForPulse(ctx, pn)
 	}
 
-	params := &MemoryIndexAccessorMockForPulseParams{ctx, pn}
+	mm_params := &MemoryIndexAccessorMockForPulseParams{ctx, pn}
 
 	// Record call args
 	mmForPulse.ForPulseMock.mutex.Lock()
-	mmForPulse.ForPulseMock.callArgs = append(mmForPulse.ForPulseMock.callArgs, params)
+	mmForPulse.ForPulseMock.callArgs = append(mmForPulse.ForPulseMock.callArgs, mm_params)
 	mmForPulse.ForPulseMock.mutex.Unlock()
 
 	for _, e := range mmForPulse.ForPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ia1, e.results.err
 		}
@@ -397,17 +397,17 @@ func (mmForPulse *MemoryIndexAccessorMock) ForPulse(ctx context.Context, pn inso
 
 	if mmForPulse.ForPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForPulse.ForPulseMock.defaultExpectation.Counter, 1)
-		want := mmForPulse.ForPulseMock.defaultExpectation.params
-		got := MemoryIndexAccessorMockForPulseParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForPulse.t.Errorf("MemoryIndexAccessorMock.ForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForPulse.ForPulseMock.defaultExpectation.params
+		mm_got := MemoryIndexAccessorMockForPulseParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForPulse.t.Errorf("MemoryIndexAccessorMock.ForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForPulse.ForPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForPulse.ForPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForPulse.t.Fatal("No results are set for the MemoryIndexAccessorMock.ForPulse")
 		}
-		return (*results).ia1, (*results).err
+		return (*mm_results).ia1, (*mm_results).err
 	}
 	if mmForPulse.funcForPulse != nil {
 		return mmForPulse.funcForPulse(ctx, pn)
