@@ -26,13 +26,14 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDBRollback_TruncateReturnError(t *testing.T) {
@@ -48,7 +49,7 @@ func TestDBRollback_TruncateReturnError(t *testing.T) {
 	})
 
 	testError := errors.New("Hello")
-	drops := NewdropTruncaterMock(t)
+	drops := NewHeadTruncaterMock(t)
 	drops.TruncateHeadMock.Return(testError)
 	rollback := NewDBRollback(jetKeeper, drops)
 	err := rollback.Start(context.Background())
