@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -161,15 +161,15 @@ func (mmCloseAndWait *WriteManagerMock) CloseAndWait(ctx context.Context, p1 ins
 		mmCloseAndWait.inspectFuncCloseAndWait(ctx, p1)
 	}
 
-	params := &WriteManagerMockCloseAndWaitParams{ctx, p1}
+	mm_params := &WriteManagerMockCloseAndWaitParams{ctx, p1}
 
 	// Record call args
 	mmCloseAndWait.CloseAndWaitMock.mutex.Lock()
-	mmCloseAndWait.CloseAndWaitMock.callArgs = append(mmCloseAndWait.CloseAndWaitMock.callArgs, params)
+	mmCloseAndWait.CloseAndWaitMock.callArgs = append(mmCloseAndWait.CloseAndWaitMock.callArgs, mm_params)
 	mmCloseAndWait.CloseAndWaitMock.mutex.Unlock()
 
 	for _, e := range mmCloseAndWait.CloseAndWaitMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -177,17 +177,17 @@ func (mmCloseAndWait *WriteManagerMock) CloseAndWait(ctx context.Context, p1 ins
 
 	if mmCloseAndWait.CloseAndWaitMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCloseAndWait.CloseAndWaitMock.defaultExpectation.Counter, 1)
-		want := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.params
-		got := WriteManagerMockCloseAndWaitParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCloseAndWait.t.Errorf("WriteManagerMock.CloseAndWait got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.params
+		mm_got := WriteManagerMockCloseAndWaitParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCloseAndWait.t.Errorf("WriteManagerMock.CloseAndWait got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCloseAndWait.t.Fatal("No results are set for the WriteManagerMock.CloseAndWait")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmCloseAndWait.funcCloseAndWait != nil {
 		return mmCloseAndWait.funcCloseAndWait(ctx, p1)
@@ -377,15 +377,15 @@ func (mmOpen *WriteManagerMock) Open(ctx context.Context, p1 insolar.PulseNumber
 		mmOpen.inspectFuncOpen(ctx, p1)
 	}
 
-	params := &WriteManagerMockOpenParams{ctx, p1}
+	mm_params := &WriteManagerMockOpenParams{ctx, p1}
 
 	// Record call args
 	mmOpen.OpenMock.mutex.Lock()
-	mmOpen.OpenMock.callArgs = append(mmOpen.OpenMock.callArgs, params)
+	mmOpen.OpenMock.callArgs = append(mmOpen.OpenMock.callArgs, mm_params)
 	mmOpen.OpenMock.mutex.Unlock()
 
 	for _, e := range mmOpen.OpenMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -393,17 +393,17 @@ func (mmOpen *WriteManagerMock) Open(ctx context.Context, p1 insolar.PulseNumber
 
 	if mmOpen.OpenMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOpen.OpenMock.defaultExpectation.Counter, 1)
-		want := mmOpen.OpenMock.defaultExpectation.params
-		got := WriteManagerMockOpenParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOpen.t.Errorf("WriteManagerMock.Open got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOpen.OpenMock.defaultExpectation.params
+		mm_got := WriteManagerMockOpenParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOpen.t.Errorf("WriteManagerMock.Open got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOpen.OpenMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOpen.OpenMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOpen.t.Fatal("No results are set for the WriteManagerMock.Open")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmOpen.funcOpen != nil {
 		return mmOpen.funcOpen(ctx, p1)
