@@ -17,8 +17,17 @@
 package insolar
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/insolar/insolar/reference"
 )
 
 func TestStub(t *testing.T) {
+	str := "11tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.11111111111111111111111111111111"
+
+	dec := reference.NewDefaultDecoder(reference.AllowLegacy | reference.AllowRecords)
+	ref, err := dec.Decode(str)
+	fmt.Println(ref)
+	fmt.Println(err)
 }

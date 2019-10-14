@@ -113,7 +113,7 @@ func NewID(p PulseNumber, hash []byte) *ID {
 	return &local
 }
 
-// NewIDFromString deserializes ID from base58 encoded string
+// NewIDFromString deserializes ID from base64 encoded string
 func NewIDFromString(input string) (*ID, error) {
 	global, err := reference.DefaultDecoder().Decode(input)
 	if err != nil {

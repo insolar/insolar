@@ -17,6 +17,7 @@
 package reference
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -24,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/longbits"
@@ -323,5 +323,5 @@ func (v *Local) DebugString() string {
 		return v.debugStringJet()
 	}
 
-	return fmt.Sprintf("%s [%d | %d | %s]", v.String(), v.Pulse(), v.getScope(), base58.Encode(v.Hash()))
+	return fmt.Sprintf("%s [%d | %d | %s]", v.String(), v.Pulse(), v.getScope(), base64.RawURLEncoding.EncodeToString(v.Hash()))
 }

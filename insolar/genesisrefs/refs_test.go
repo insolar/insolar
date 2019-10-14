@@ -43,55 +43,55 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "11tJDjojfnTYn2YqF6kxCQimgYhRHuL82ep8NzqrEeE",
+			expect: "insolar:1AAEAAciWtcmPVgAcaIvICkgnSsJmp4Clp650xOHjYks",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "11tJCQmJvVAEzDUartxvGk2t2U2S642nnHAHSCDNdPa",
+			expect: "insolar:1AAEAAUdxJyWoY-IjQatMYpOk51MZx9tEThkqd1dSB1U",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "11tJBoja1SMYWkw8xHdJJCu5fdjQAJZ6XfMx8YcrBq5",
+			expect: "insolar:1AAEAAQy4dc1JKDJGNd5YfU7ow3DFrW_9j7v772siVMQ",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "11tJCjvL9bzK1HdmaFnvmHGMvNnHYJz2qrN83if4fEf",
+			expect: "insolar:1AAEAAWeNhA_NwKaH6E36IJ-2PLvXnJRxiTTNWq1giOg",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "11tJCWaEGnNwk97PS5RbKDErnopfH9wx5r2N1tJnqwc",
+			expect: "insolar:1AAEAAVEt_2mipoVG73cbK-v33ne0krJWXkZibayYKJc",
 		},
 		insolar.GenesisNameRootAccount: {
 			got:    ContractRootAccount,
-			expect: "11tJD3c7peF6Yd7VimufekgnFJg6QvtJBf643JW76L9",
+			expect: "insolar:1AAEAAYUzPb6A9YCwdhstSMjq8g4dV_059cFrscpHemo",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "11tJCbm34yHNdh91AsgmbUBpqAyjeMgy45jZD3kjGa8",
+			expect: "insolar:1AAEAAVnfpSe6gLpJptcggYUNNGIu0-_kxjnef5G-nR0",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "11tJC1eCWVFJ6digscGgBs2TdrgWntNHCYYAdaAoWEH",
+			expect: "insolar:1AAEAASCuYBHyztkBdO3b5lDXgDsrk12PKOTixEW6kvY",
 		},
 		insolar.GenesisNameFeeAccount: {
 			got:    ContractFeeAccount,
-			expect: "11tJDMf8Y83BKeEyn9qjjtgAskhRa5mzVbxdVB7Pjez",
+			expect: "insolar:1AAEAAaN2AfiHUl4HxtCcMV-KhWirOx2MA69ndZVAIpM",
 		},
 		insolar.GenesisNameFeeWallet: {
 			got:    ContractFeeWallet,
-			expect: "11tJCcTZXZY7zBBsNMtimx1iceLkYCED85Anu1D9R3p",
+			expect: "insolar:1AAEAAVsLfNjPCXS5hsvt1WHuo0RZIYCs1H3oFC2jxIM",
 		},
 		insolar.GenesisNamePKShard: {
 			got:    ContractPublicKeyShards(10)[0],
-			expect: "11tJCXnQ9AAiHGYpSee8jD9AbYu9wTJv8rbbX3kAAza",
+			expect: "insolar:1AAEAAVM1LnFXwPa92gplaRhMroFeWi-gxznLptCtPCc",
 		},
 		insolar.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards(10)[0],
-			expect: "11tJCcyeLGqpzYLa3doKn4gmCdtvTSVCGav6sHcbEZ2",
+			expect: "insolar:1AAEAAVvqEYcaRInGWx75iJWNLUSuWXU5XA3L8Qh0fpU",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {
 			got:    ContractMigrationAccount,
-			expect: "11tJD1cMXNkRUY1yYNtNwse2KBB59nZmUNUHq1vrXLD",
+			expect: "insolar:1AAEAAYHatrmIZwsoJ3Fy78F9Q1zZ9bEuxRrZasAcYYo",
 		},
 	}
 
@@ -111,7 +111,7 @@ func TestRootDomain(t *testing.T) {
 func TestGenesisRef(t *testing.T) {
 	var (
 		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "11tJDfNqT8mgcjmsbdaRUr8v6j39zLC4nDnGdupKUGu"
+		pubKeyRef = "insolar:1AAEAAcEp7HwQByGOr6rZwkyiRA3wR2POYCrDIhqBJyY"
 	)
 	genesisRef := GenesisRef(pubKey)
 	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
