@@ -19,7 +19,12 @@ package executor
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+	"os"
 	"testing"
+
+	"github.com/dgraph-io/badger"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -56,9 +61,19 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
 		return testPulse
 	})
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	badger, err := badger.Open(BadgerDefaultOptions(tmpdir))
+	assert.NoError(t, err)
+	defer badger.Close()
+
 	db := store.NewDBMock(t)
 	hits := make(map[store.Scope]int)
 	db.SetMock.Return(nil)
+	db.BackendMock.Return(badger)
 
 	db.GetMock.Return([]byte{}, nil)
 
@@ -110,8 +125,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	})
 
 	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses, nodes)
-	err := rollback.Start(context.Background())
-	require.Len(t, hits, 6) // drops, record, jets, indexes, pulses, nodes
+	err = rollback.Start(context.Background())
 	expectedScopes := []struct {
 		scope   store.Scope
 		numHits int
@@ -120,13 +134,12 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		{store.ScopeRecord, 1},
 		{store.ScopeIndex, 2},
 		{store.ScopeJetTree, 1},
-		{store.ScopeNodeHistory, 1},
-		{store.ScopePulse, 1}}
+		{store.ScopeNodeHistory, 1}}
 	for _, s := range expectedScopes {
 		actualNum, ok := hits[s.scope]
 		require.True(t, ok, "Scope: ", s.scope)
 		require.Equal(t, s.numHits, actualNum, "Scope: ", s.scope)
 	}
-
+	require.Len(t, hits, 5) // drops, record, jets, indexes, nodes
 	require.NoError(t, err)
 }

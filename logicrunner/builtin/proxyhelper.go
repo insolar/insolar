@@ -84,17 +84,17 @@ func (h *ProxyHelper) SaveAsChild(
 	parentRef, classRef insolar.Reference,
 	constructorName string, argsSerialized []byte,
 ) (
-	*insolar.Reference, []byte, error,
+	[]byte, error,
 ) {
 	if !parentRef.IsObjectReference() {
-		return nil, nil, errors.Errorf("Failed to save AsChild: objRef should be ObjectReference; ref=%s", parentRef.String())
+		return nil, errors.Errorf("Failed to save AsChild: objRef should be ObjectReference; ref=%s", parentRef.String())
 	}
 
 	if h.GetSystemError() != nil {
 		// There was a system error during execution of the contract.
 		// Immediately return this error to the calling contract - any
 		// results will not be registered on LME anyway.
-		return nil, nil, h.GetSystemError()
+		return nil, h.GetSystemError()
 	}
 
 	res := rpctypes.UpSaveAsChildResp{}
@@ -110,10 +110,10 @@ func (h *ProxyHelper) SaveAsChild(
 	err := h.methods.SaveAsChild(req, &res)
 	if err != nil {
 		h.SetSystemError(err)
-		return nil, nil, err
+		return nil, err
 	}
 
-	return res.Reference, res.Result, nil
+	return res.Result, nil
 }
 
 func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {

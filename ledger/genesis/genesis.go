@@ -60,35 +60,29 @@ func (Key) Scope() store.Scope {
 const (
 	XNS                        = "XNS"
 	FundsDepositName           = "genesis_deposit"
-	MigrationDaemonLockup      = 1604102400
-	MigrationDaemonVesting     = 1735689600
-	MigrationDaemonVestingStep = 2629746
-	MigrationDaemonMaturePulse = 1635638400
+	MigrationDaemonLockup      = 1578700800 // 11.01.2020
+	MigrationDaemonVesting     = 31622400   // 1 year
+	MigrationDaemonVestingStep = 2629746    // 1 month
 
 	EnterpriseLockup      = 0
 	EnterpriseVesting     = 10
 	EnterpriseVestingStep = 10
-	EnterpriseMaturePulse = 0
 
 	FundsLockup      = 0
 	FundsVesting     = 10
 	FundsVestingStep = 10
-	FundsMaturePulse = 0
 
-	NetworkIncentivesLockup      = 1593475200
-	NetworkIncentivesVesting     = 315569520
-	NetworkIncentivesVestingStep = 2629746
-	NetworkIncentivesMaturePulse = 1909008000
+	NetworkIncentivesLockup      = 1593561600 // 01.07.2020
+	NetworkIncentivesVesting     = 315569520  // 10 years
+	NetworkIncentivesVestingStep = 2629746    // 1 month
 
-	ApplicationIncentivesLockup      = 1593475200
-	ApplicationIncentivesVesting     = 315569520
-	ApplicationIncentivesVestingStep = 2629746
-	ApplicationIncentivesMaturePulse = 1909008000
+	ApplicationIncentivesLockup      = 1593561600 // 01.07.2020
+	ApplicationIncentivesVesting     = 315569520  // 10 years
+	ApplicationIncentivesVestingStep = 2629746    // 1 month
 
-	FoundationLockup      = 1672444800
+	FoundationLockup      = 1672444800 // 31.12.2022
 	FoundationVesting     = 10
 	FoundationVestingStep = 10
-	FoundationMaturePulse = 1672444800
 )
 
 // IsGenesisRequired checks if genesis record already exists.
@@ -262,10 +256,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetDepositGenesisContractState(
 			"0",
 			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
-			int64(pulse.OfUnixTime(MigrationDaemonVesting)),
+			MigrationDaemonVesting,
 			MigrationDaemonVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(MigrationDaemonMaturePulse),
 			0,
 			insolar.GenesisNameMigrationAdminDeposit,
 			insolar.GenesisNameRootDomain,
@@ -323,10 +316,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(NetworkIncentivesLockup)),
-			int64(pulse.OfUnixTime(NetworkIncentivesVesting)),
+			NetworkIncentivesVesting,
 			NetworkIncentivesVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(NetworkIncentivesMaturePulse),
 			0,
 			insolar.GenesisNameNetworkIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -337,10 +329,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(ApplicationIncentivesLockup)),
-			int64(pulse.OfUnixTime(ApplicationIncentivesVesting)),
+			ApplicationIncentivesVesting,
 			ApplicationIncentivesVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(ApplicationIncentivesMaturePulse),
 			0,
 			insolar.GenesisNameApplicationIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -351,10 +342,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(FoundationLockup)),
-			int64(pulse.OfUnixTime(FoundationVesting)),
+			FoundationVesting,
 			FoundationVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(FoundationMaturePulse),
 			0,
 			insolar.GenesisNameFoundationDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -364,11 +354,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.FundsPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FundsLockup)),
-			int64(pulse.OfUnixTime(FundsVesting)),
+			FundsLockup,
+			FundsVesting,
 			FundsVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(FundsMaturePulse),
 			0,
 			insolar.GenesisNameFundsDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -378,11 +367,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.EnterprisePublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(EnterpriseLockup)),
-			int64(pulse.OfUnixTime(EnterpriseVesting)),
+			EnterpriseLockup,
+			EnterpriseVesting,
 			EnterpriseVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(EnterpriseMaturePulse),
 			0,
 			insolar.GenesisNameEnterpriseDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -399,7 +387,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameApplicationIncentivesWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractApplicationIncentivesWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -415,7 +402,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameNetworkIncentivesWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractNetworkIncentivesWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -431,7 +417,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFoundationWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractFoundationWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -447,7 +432,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameFundsWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractFundsWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))
@@ -463,7 +447,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			insolar.GenesisNameEnterpriseWallets[i],
 			insolar.GenesisNameRootDomain,
-			genesisrefs.ContractEnterpriseWallets[i],
 			membersAccounts,
 			membersDeposits,
 		))

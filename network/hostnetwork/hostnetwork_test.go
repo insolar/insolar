@@ -117,7 +117,7 @@ func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
 
 func (m *MockResolver) addMapping(key, value string) error {
-	k, err := insolar.NewReferenceFromBase58(key)
+	k, err := insolar.NewReferenceFromString(key)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func TestNewHostNetwork(t *testing.T) {
 	s.Start()
 
 	for i := 0; i < count; i++ {
-		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 		require.NoError(t, err)
 		f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 		require.NoError(t, err)
@@ -266,7 +266,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	unknownID, err := insolar.NewReferenceFromBase58(IDUNKNOWN + DOMAIN)
+	unknownID, err := insolar.NewReferenceFromString(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
@@ -279,7 +279,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	err = m.addMapping(ID3+DOMAIN, "127.0.0.1:7654")
 	require.NoError(t, err)
 
-	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
 	f, err = n1.SendRequest(ctx, types.Pulse, &packet.PulseRequest{}, *ref)
@@ -297,7 +297,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
-		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, s.n1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -309,7 +309,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 	require.NoError(t, err)
@@ -331,7 +331,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	s.Start()
 
 	request := &packet.PulseRequest{}
-	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
 	require.NoError(t, err)
@@ -365,7 +365,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 	require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, &packet.PulseRequest{}, *ref)
 	require.NoError(t, err)
@@ -427,7 +427,7 @@ func TestStartStopSend(t *testing.T) {
 	s.Start()
 
 	send := func() {
-		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
 		require.NoError(t, err)
 		f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 		require.NoError(t, err)

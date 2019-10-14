@@ -43,6 +43,11 @@ var (
 		"dropped results in pulse",
 		stats.UnitDimensionless,
 	)
+	ResultMatcherLoopDetected = stats.Int64(
+		"vm_results_matcher_loop_detected",
+		"unwanted results that loops between node/nodes",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -69,6 +74,12 @@ func init() {
 			Name:        ResultsMatcherDroppedResults.Name(),
 			Description: ResultsMatcherDroppedResults.Description(),
 			Measure:     ResultsMatcherDroppedResults,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ResultMatcherLoopDetected.Name(),
+			Description: ResultMatcherLoopDetected.Description(),
+			Measure:     ResultMatcherLoopDetected,
 			Aggregation: view.Sum(),
 		},
 	)

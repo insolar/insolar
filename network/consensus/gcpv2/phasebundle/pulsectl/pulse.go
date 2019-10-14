@@ -52,6 +52,7 @@ package pulsectl
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -80,7 +81,8 @@ func (p *PulsePrepController) DispatchHostPacket(ctx context.Context, packet tra
 	if err != nil || !ok {
 		return err
 	}
-	return p.R.ApplyPulseData(ctx, pp, true, from)
+	startedAt := time.Now() // TODO get packet's receive time
+	return p.R.ApplyPulseData(ctx, startedAt, pp, true, from)
 }
 
 func (p *PulseController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,

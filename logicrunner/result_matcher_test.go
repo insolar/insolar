@@ -148,6 +148,29 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 				return rm, msg
 			},
 		},
+		{
+			name: "loop detected",
+			mocks: func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.ReturnResults) {
+				reqRef := gen.Reference()
+				nodeRef := gen.Reference()
+
+				pa := pulse.NewAccessorMock(t)
+
+				rm := newResultsMatcher(
+					bus.NewSenderMock(t), pa,
+				)
+
+				rm.AddStillExecution(ctx, payload.StillExecuting{
+					Executor:    nodeRef,
+					RequestRefs: []insolar.Reference{reqRef},
+				})
+				msg := payload.ReturnResults{
+					Reason:      reqRef,
+					ResendCount: 2,
+				}
+				return rm, msg
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

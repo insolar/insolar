@@ -23,9 +23,6 @@ import (
 {{- range $import, $i := .Imports }}
 	{{ $import }}
 {{- end }}
-{{ if $.GenerateInitialize -}}
-    XXX_insolar "github.com/insolar/insolar/insolar"
-{{- end }}
 )
 
 func INS_META_INFO() ([] map[string]string) {
@@ -154,7 +151,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 
 {{ range $f := .Functions }}
-func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
+func INSCONSTRUCTOR_{{ $f.Name }}(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	{{ $f.ArgumentsZeroList }}
@@ -176,7 +173,7 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 
 	result := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns:[]interface{}{ ret1 }},
+		foundation.Result{Returns:[]interface{}{ ref, ret1 }},
 		&result,
 	)
 	if err != nil {
@@ -199,16 +196,16 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() XXX_insolar.ContractWrapper {
-    return XXX_insolar.ContractWrapper{
+func Initialize() insolar.ContractWrapper {
+    return insolar.ContractWrapper{
         GetCode: INSMETHOD_GetCode,
         GetPrototype: INSMETHOD_GetPrototype,
-        Methods: XXX_insolar.ContractMethods{
+        Methods: insolar.ContractMethods{
             {{ range $method := .Methods -}}
                     "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
             {{ end }}
         },
-        Constructors: XXX_insolar.ContractConstructors{
+        Constructors: insolar.ContractConstructors{
             {{ range $f := .Functions -}}
                     "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
             {{ end }}

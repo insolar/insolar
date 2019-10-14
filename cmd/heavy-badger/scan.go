@@ -353,6 +353,7 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 	pulsePrinter := func() {}
 
 	var graphImpl Grapher = StubDrawer{}
+	statGraphAdd := func() {}
 	if dbs.statGraph {
 		graphImpl = &webGraph{
 			Title:       "Heavy Storage Consumption",
@@ -376,6 +377,11 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 		if dbs.statGraph || dbs.perPulseStat {
 			valuesH = newHistogram("Per Pulse Sizes")
 			iters = append(iters, valuesH.iter)
+			if dbs.statGraph {
+				statGraphAdd = func() {
+					graphImpl.Add(pulse, float64(valuesH.values.sum)/mb)
+				}
+			}
 		}
 		if dbs.perPulseStat {
 			pulsePrinter = func() {
@@ -393,7 +399,7 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 			nil,
 			iters...,
 		)
-		graphImpl.Add(pulse, float64(valuesH.values.sum)/mb)
+		statGraphAdd()
 		pulsePrinter()
 	}
 	bar.Finish()

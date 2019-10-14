@@ -21,7 +21,6 @@ package migrationdaemon
 
 import (
 	"github.com/insolar/insolar/insolar"
-	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -286,16 +285,16 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) ([]byte, []b
 	return state, ret, err
 }
 
-func Initialize() XXX_insolar.ContractWrapper {
-	return XXX_insolar.ContractWrapper{
+func Initialize() insolar.ContractWrapper {
+	return insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_insolar.ContractMethods{
+		Methods: insolar.ContractMethods{
 			"DepositMigrationCall":     INSMETHOD_DepositMigrationCall,
 			"SetActivationStatus":      INSMETHOD_SetActivationStatus,
 			"GetActivationStatus":      INSMETHOD_GetActivationStatus,
 			"GetMigrationDaemonMember": INSMETHOD_GetMigrationDaemonMember,
 		},
-		Constructors: XXX_insolar.ContractConstructors{},
+		Constructors: insolar.ContractConstructors{},
 	}
 }

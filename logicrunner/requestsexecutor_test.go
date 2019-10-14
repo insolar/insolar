@@ -313,7 +313,6 @@ func TestRequestsExecutor_Save(t *testing.T) {
 }
 
 func TestRequestsExecutor_SendReply(t *testing.T) {
-
 	reqRef := gen.Reference()
 
 	replyMessage := func(msg *message.Message) *message.Message {
@@ -343,9 +342,11 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		reply   insolar.Reply
 		request record.IncomingRequest
 		err     error
+		reqRef  insolar.Reference
 	}{
 		{
-			name: "success, reply to caller",
+			reqRef: reqRef,
+			name:   "success, reply to caller",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				pa := pulse.NewAccessorMock(t)
 				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
@@ -363,7 +364,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			reply: &reply.CallMethod{Object: &reqRef},
 		},
 		{
-			name: "success, reply to API",
+			reqRef: reqRef,
+			name:   "success, reply to API",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				pa := pulse.NewAccessorMock(t)
 				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
@@ -381,7 +383,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			reply: &reply.CallMethod{Object: &reqRef},
 		},
 		{
-			name: "success, reply with error",
+			reqRef: reqRef,
+			name:   "success, reply with error",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				pa := pulse.NewAccessorMock(t)
 				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
@@ -399,7 +402,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			err: errors.New("some"),
 		},
 		{
-			name: "return mode saga, no reply required",
+			reqRef: reqRef,
+			name:   "return mode saga, no reply required",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				return &requestsExecutor{}
 			},
@@ -408,11 +412,21 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			},
 		},
 		{
-			name: "empty reply and no error",
+			reqRef: reqRef,
+			name:   "empty reply and no error",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				return &requestsExecutor{}
 			},
 			request: record.IncomingRequest{},
+		},
+		{
+			reqRef: insolar.Reference{},
+			name:   "empty reqRef",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				return &requestsExecutor{}
+			},
+			request: record.IncomingRequest{},
+			reply:   &reply.CallMethod{Object: &reqRef},
 		},
 	}
 
@@ -423,7 +437,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			re := test.mocks(ctx, mc)
-			re.SendReply(ctx, reqRef, test.request, test.reply, test.err)
+			re.SendReply(ctx, test.reqRef, test.request, test.reply, test.err)
 
 			mc.Wait(time.Minute)
 			mc.Finish()

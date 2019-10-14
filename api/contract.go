@@ -86,7 +86,7 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 	ctx, span := instracer.StartSpan(ctx, "Call "+method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromString(params.Reference)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse params.Reference")
 	}
