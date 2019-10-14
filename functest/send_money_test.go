@@ -122,8 +122,16 @@ func TestTransferMoneyToNotSelfScopedRef(t *testing.T) {
 
 	amountStr := "10"
 
-	_, _, err = makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
-		map[string]interface{}{"amount": amountStr, "toMemberReference": secondMember.Ref + "." + firstMember.Ref})
+	sepIdx := strings.Index(firstMember.Ref, ":")
+	_, _, err = makeSignedRequest(
+		launchnet.TestRPCUrlPublic,
+		firstMember,
+		"member.transfer",
+		map[string]interface{}{
+			"amount":            amountStr,
+			"toMemberReference": secondMember.Ref + "." + firstMember.Ref[sepIdx+1:],
+		},
+	)
 	require.Error(t, err)
 	require.Contains(t, strings.Join(err.(*requester.Error).Data.Trace, ": "), "provided reference is not self-scoped")
 

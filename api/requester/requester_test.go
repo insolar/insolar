@@ -40,7 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const TESTREFERENCE = "14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.14FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"
+const TESTREFERENCE = "insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI"
 const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
