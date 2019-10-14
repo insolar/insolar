@@ -21,10 +21,12 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -40,6 +42,7 @@ type DebugLedger interface {
 	AddCode(ctx context.Context, code []byte) (*insolar.ID, error)
 	AddObject(ctx context.Context, image insolar.ID, isPrototype bool, memory []byte) (*insolar.ID, error)
 	LoadGenesis(ctx context.Context, genesisDirectory string) error
+	WaitAllRequestsAreClosed(ctx context.Context, objectID insolar.ID) error
 }
 
 type Ledger interface {
@@ -53,6 +56,7 @@ type mimicLedger struct {
 
 	// components
 	pcs       insolar.PlatformCryptographyScheme
+	sender    bus.Sender
 	pAccessor pulse.Accessor
 	pAppender pulse.Appender
 
@@ -65,12 +69,15 @@ func NewMimicLedger(
 	pcs insolar.PlatformCryptographyScheme,
 	pAccessor pulse.Accessor,
 	pAppender pulse.Appender,
+
+	sender bus.Sender,
 ) Ledger {
 	ctx, _ = inslogger.WithField(ctx, "component", "mimic")
 	return &mimicLedger{
 		pcs:       pcs,
 		pAppender: pAppender,
 		pAccessor: pAccessor,
+		sender:    sender,
 
 		ctx:     ctx,
 		storage: NewStorage(pcs, pAccessor),
@@ -94,6 +101,15 @@ func (p *mimicLedger) processGetPendings(ctx context.Context, pl *payload.GetPen
 			&payload.Error{
 				Code: payload.CodeUnknown,
 				Text: err.Error(),
+			},
+		}
+	}
+
+	if len(requests) == 0 {
+		return []payload.Payload{
+			&payload.Error{
+				Code: payload.CodeNoPendings,
+				Text: ErrNoPendings.Error(),
 			},
 		}
 	}
@@ -172,17 +188,10 @@ func (p *mimicLedger) setRequestCommon(ctx context.Context, request record.Reque
 	}
 	objectID := p.storage.CalculateRequestAffinityRef(request, pulseObject.PulseNumber)
 
-	var method string
-	if req, ok := request.(*record.IncomingRequest); ok {
-		method = req.Method
-	} else if req, ok := request.(*record.OutgoingRequest); ok {
-		method = req.Method
-	}
-
 	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"type":           request.GetCallType().String(),
 		"resultObjectID": objectID.String(),
-		"method":         method,
+		"method":         request.GetMethod(),
 	}).Info("Registering request")
 
 	if requestID == nil {
@@ -219,13 +228,44 @@ func (p *mimicLedger) processSetOutgoingRequest(ctx context.Context, pl *payload
 	return p.setRequestCommon(ctx, request)
 }
 
+func (p *mimicLedger) sendSagaCallAcceptNotification(ctx context.Context, requestID insolar.ID, request record.Request, objectID insolar.ID) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("Sending SagaCallAcceptNotification")
+
+	virtual := record.Wrap(request)
+	virtualBuf, err := virtual.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal virtual record")
+	}
+
+	sagaCallAcceptNotificationPayload := &payload.SagaCallAcceptNotification{
+		ObjectID:          objectID,
+		DetachedRequestID: requestID,
+		Request:           virtualBuf,
+	}
+
+	sagaCallAcceptNotificationMessage, err := payload.NewMessage(sagaCallAcceptNotificationPayload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create new message for SagaCallAcceptNotification")
+	}
+
+	objectRef := insolar.NewReference(objectID)
+
+	_, done := p.sender.SendRole(ctx, sagaCallAcceptNotificationMessage, insolar.DynamicRoleVirtualExecutor, *objectRef)
+	done()
+
+	return nil
+}
+
 func (p *mimicLedger) setResultCommon(ctx context.Context, result *record.Result) ([]payload.Payload, bool) {
+	requestID := *result.Request.GetLocal()
+
 	resultID, err := p.storage.SetResult(ctx, result)
 	switch err {
 	case nil:
 		break
 	case ErrResultExists: // duplicate result already exists
-		id, resultBuf, err := p.storage.GetResult(ctx, *result.Request.GetLocal())
+		id, resultBuf, err := p.storage.GetResult(ctx, requestID)
 		if err != nil {
 			panic("unexpected error: " + err.Error())
 		}
@@ -282,6 +322,20 @@ func (p *mimicLedger) setResultCommon(ctx context.Context, result *record.Result
 		}, false
 	default:
 		panic("unexpected error: " + err.Error())
+	}
+
+	logger := inslogger.FromContext(ctx)
+
+	outgoings, err := p.storage.GetOutgoingSagas(ctx, requestID)
+	if err != nil {
+		logger.Error("Failed to obtain outgoing sagas: ", err.Error())
+	} else {
+		for _, sagaInfo := range outgoings {
+			err = p.sendSagaCallAcceptNotification(ctx, sagaInfo.requestID, sagaInfo.request, result.Object)
+			if err != nil {
+				logger.Error("failed to send message: ", err.Error())
+			}
+		}
 	}
 
 	return []payload.Payload{
@@ -725,5 +779,22 @@ func (p *mimicLedger) LoadGenesis(ctx context.Context, dirPath string) error {
 		return errors.Wrap(err, "failed to load genesis")
 	}
 
+	return nil
+}
+
+func (p *mimicLedger) WaitAllRequestsAreClosed(ctx context.Context, objectID insolar.ID) error {
+	for {
+		p.lock.Lock()
+		closed, err := p.storage.ObjectRequestsAreClosed(ctx, objectID)
+		p.lock.Unlock()
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if closed {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 	return nil
 }

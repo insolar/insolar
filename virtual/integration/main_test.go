@@ -21,11 +21,11 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
 	"os"
+	"path"
 	"sync"
 	"testing"
 	"time"
@@ -38,6 +38,7 @@ import (
 
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/api/seedmanager"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -305,7 +306,7 @@ func (s *Server) PrepareAndStart() (*Server, error) {
 		LedgerMimic mimic.Ledger
 	)
 	{
-		LedgerMimic = mimic.NewMimicLedger(ctx, CryptoScheme, Pulses, Pulses)
+		LedgerMimic = mimic.NewMimicLedger(ctx, CryptoScheme, Pulses, Pulses, ClientBus)
 	}
 
 	flowCallback := s.stubFlowCallback
@@ -397,6 +398,7 @@ func (s *Server) PrepareAndStart() (*Server, error) {
 		if err := s.LoadGenesis(ctx, ""); err != nil {
 			return nil, errors.Wrap(err, "failed to load genesis")
 		}
+
 	}
 
 	// First pulse goes in storage then interrupts.
@@ -529,7 +531,7 @@ func (s *Server) BasicAPICall(
 		panic(err.Error())
 	}
 
-	privateKey, err := platformpolicy.NewKeyProcessor().ImportPrivateKeyPEM([]byte(user.PrivKey))
+	privateKey, err := platformpolicy.NewKeyProcessor().ImportPrivateKeyPEM([]byte(user.PrivateKey))
 	if err != nil {
 		panic(err.Error())
 	}
@@ -545,7 +547,7 @@ func (s *Server) BasicAPICall(
 			CallSite:   callSite,
 			CallParams: callParams,
 			Reference:  objectRef.String(),
-			PublicKey:  user.PubKey,
+			PublicKey:  user.PublicKey,
 			LogLevel:   nil,
 			Test:       s.t.Name(),
 		},
@@ -585,6 +587,7 @@ func (s *Server) LoadGenesis(ctx context.Context, genesisDirectory string) error
 
 var (
 	GenesisDirectory string
+	FeeWalletUser    *User
 )
 
 func TestMain(m *testing.M) {
@@ -592,10 +595,17 @@ func TestMain(m *testing.M) {
 
 	cleanup, directoryWithGenesis, err := mimic.GenerateBootstrap(true)
 	if err != nil {
-		fmt.Println("[ ERROR ] Failed to generate bootstrap files: ", err.Error())
+		panic("[ ERROR ] Failed to generate bootstrap files: " + err.Error())
+
 	}
 	defer cleanup()
 	GenesisDirectory = directoryWithGenesis
+
+	FeeWalletUser, err = loadMemberKeys(path.Join(directoryWithGenesis, "launchnet/configs/fee_member_keys.json"))
+	if err != nil {
+		panic("[ ERROR ] Failed to load Fee Member key: " + err.Error())
+	}
+	FeeWalletUser.Reference = genesisrefs.ContractFeeMember
 
 	os.Exit(m.Run())
 }

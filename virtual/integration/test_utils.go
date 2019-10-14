@@ -17,13 +17,40 @@
 package integration
 
 import (
+	"encoding/json"
+	"io/ioutil"
+
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
+func loadMemberKeys(keysPath string) (*User, error) {
+	text, err := ioutil.ReadFile(keysPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
+	}
+
+	var data map[string]string
+	err = json.Unmarshal(text, &data)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ loadMemberKeys ] could't unmarshal member keys")
+	}
+	if data["private_key"] == "" || data["public_key"] == "" {
+		return nil, errors.New("[ loadMemberKeys ] could't find any keys")
+	}
+
+	return &User{
+		PrivateKey: data["private_key"],
+		PublicKey:  data["public_key"],
+	}, nil
+}
+
 type User struct {
-	Ref              string
-	PrivKey          string
-	PubKey           string
+	Reference        insolar.Reference
+	PrivateKey       string
+	PublicKey        string
 	MigrationAddress string
 }
 
@@ -34,18 +61,19 @@ func NewUserWithKeys() (*User, error) {
 	if err != nil {
 		return nil, err
 	}
+	privateKeyString, err := ks.ExportPrivateKeyPEM(privateKey)
+	if err != nil {
+		return nil, err
+	}
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
-	if err != nil {
-		return nil, err
-	}
 	publicKey := ks.ExtractPublicKey(privateKey)
-	pubKeyStr, err := ks.ExportPublicKeyPEM(publicKey)
+	publicKeyString, err := ks.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, err
 	}
+
 	return &User{
-		PrivKey: string(privKeyStr),
-		PubKey:  string(pubKeyStr),
+		PrivateKey: string(privateKeyString),
+		PublicKey:  string(publicKeyString),
 	}, nil
 }

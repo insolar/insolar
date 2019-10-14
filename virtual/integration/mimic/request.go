@@ -37,19 +37,41 @@ type RequestEntity struct {
 	ResultID  insolar.ID
 }
 
+type outgoingInfo struct {
+	requestID insolar.ID
+	request   record.Request
+}
+
 // TODO[bigbes]: support deduplication here
 func (e *RequestEntity) appendOutgoing(outgoingEntity *RequestEntity) {
+	if _, ok := outgoingEntity.Request.(*record.OutgoingRequest); !ok {
+		panic("Outgoing is not outgoing")
+	}
 	e.Outgoings[outgoingEntity.ID] = outgoingEntity
 }
 
 func (e RequestEntity) hasOpenedOutgoings() bool { //nolint: unused
 	for _, req := range e.Outgoings {
-		if req.Status != RequestFinished {
+		if req.Status != RequestFinished && req.Request.GetReturnMode() != record.ReturnSaga {
 			return true
 		}
 	}
 
 	return false
+}
+
+func (e RequestEntity) getSagaOutgoingRequestIDs() []*outgoingInfo {
+	var rv []*outgoingInfo
+	for _, req := range e.Outgoings {
+		if req.Status != RequestFinished && req.Request.GetReturnMode() == record.ReturnSaga {
+			rv = append(rv, &outgoingInfo{
+				requestID: req.ID,
+				request:   req.Request,
+			})
+		}
+	}
+
+	return rv
 }
 
 func (e *RequestEntity) getPulse() insolar.PulseNumber {
