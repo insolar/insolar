@@ -267,6 +267,39 @@ func (p *slotContext) GetPublished(key interface{}) interface{} {
 	return nil
 }
 
+// Provides external access to published data.
+// But SharedDataLink can only be accessed when is unbound.
+// The bool value indicates presence of a valid key, but value can be nil when access is not allowed.
+func (m *SlotMachine) GetPublished(key interface{}) (interface{}, bool) {
+	switch key.(type) {
+	case nil:
+		return nil, false
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		return nil, false
+	}
+	if v, ok := m.localRegistry.Load(key); ok {
+		// unwrap unbound values
+		// but slot-bound values can NOT be accessed outside of a slot machine
+		switch sdl := v.(type) {
+		case dependencyKey, *slotAliases, *uniqueAlias:
+			return nil, false
+		case SharedDataLink:
+			if sdl.IsUnbound() {
+				return sdl.getData(), true
+			}
+			return nil, true
+		case *SharedDataLink:
+			if sdl.IsUnbound() {
+				return sdl.getData(), true
+			}
+			return nil, true
+		default:
+			return v, true
+		}
+	}
+	return nil, false
+}
+
 func (p *slotContext) GetPublishedLink(key interface{}) SharedDataLink {
 	v := p.GetPublished(key)
 	switch d := v.(type) {
