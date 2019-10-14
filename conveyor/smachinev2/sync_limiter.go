@@ -16,18 +16,22 @@
 
 package smachine
 
-func NewFixedLimiter(initial int, name string) SyncLink {
-	if initial == 0 {
-		return NewInfiniteLock(name)
-	}
-	if initial < 0 {
+func NewFixedLimiter(initialLimit int, name string) SyncLink {
+	if initialLimit < 0 {
 		panic("illegal value")
 	}
-	return NewSyncLink(newLimiter(initial, false, name))
+	switch initialLimit {
+	case 0:
+		return NewInfiniteLock(name)
+	case 1:
+		return NewExclusive(name)
+	default:
+		return NewSyncLink(newLimiter(initialLimit, false, name))
+	}
 }
 
-func NewLimiter(initial int, name string) LimiterLink {
-	return LimiterLink{newLimiter(initial, true, name)}
+func NewLimiter(initialLimit int, name string) LimiterLink {
+	return LimiterLink{newLimiter(initialLimit, true, name)}
 }
 
 type LimiterLink struct {
@@ -56,10 +60,10 @@ func (v LimiterLink) SyncLink() SyncLink {
 	return NewSyncLink(v.ctl)
 }
 
-func newLimiter(initial int, isAdjustable bool, name string) *limiterSync {
+func newLimiter(initialLimit int, isAdjustable bool, name string) *limiterSync {
 	ctl := &limiterSync{isAdjustable: true}
 	ctl.controller.Init(name)
-	deps, _ := ctl.AdjustLimit(initial)
+	deps, _ := ctl.AdjustLimit(initialLimit)
 	if len(deps) != 0 {
 		panic("illegal state")
 	}
