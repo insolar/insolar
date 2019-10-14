@@ -57,8 +57,6 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/insolar/insolar/network"
-
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,20 +64,23 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 )
 
-const (
-	ID1       = "14K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
-	ID2       = "14NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
-	ID3       = "14Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
-	IDUNKNOWN = "14K3Mi2hyZ6QKgynGv33sR5n3zWmSzdo8zv5Em7X26r1w"
-	DOMAIN    = ".14F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
-)
+var id1, id2, id3, idunknown string
+
+func init() {
+	id1 = gen.Reference().String()
+	id2 = gen.Reference().String()
+	id3 = gen.Reference().String()
+	idunknown = gen.Reference().String()
+}
 
 type MockResolver struct {
 	mu       sync.RWMutex
@@ -167,8 +168,6 @@ func newHostSuite(t *testing.T) *hostSuite {
 	ctx1 := inslogger.ContextWithTrace(context.Background(), "AAA")
 	ctx2 := inslogger.ContextWithTrace(context.Background(), "BBB")
 	resolver := newMockResolver()
-	id1 := ID1 + DOMAIN
-	id2 := ID2 + DOMAIN
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
@@ -236,7 +235,7 @@ func TestNewHostNetwork(t *testing.T) {
 	s.Start()
 
 	for i := 0; i < count; i++ {
-		ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(id2)
 		require.NoError(t, err)
 		f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 		require.NoError(t, err)
@@ -250,7 +249,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	n1, err := NewHostNetwork(ID1 + DOMAIN)
+	n1, err := NewHostNetwork(id1)
 	require.NoError(t, err)
 
 	cm := component.NewManager(nil)
@@ -266,7 +265,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	unknownID, err := insolar.NewReferenceFromString(IDUNKNOWN + DOMAIN)
+	unknownID, err := insolar.NewReferenceFromString(idunknown)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
@@ -274,12 +273,12 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, f)
 
-	err = m.addMapping(ID2+DOMAIN, "abirvalg")
+	err = m.addMapping(id2, "abirvalg")
 	require.Error(t, err)
-	err = m.addMapping(ID3+DOMAIN, "127.0.0.1:7654")
+	err = m.addMapping(id3, "127.0.0.1:7654")
 	require.NoError(t, err)
 
-	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(id3)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
 	f, err = n1.SendRequest(ctx, types.Pulse, &packet.PulseRequest{}, *ref)
@@ -297,7 +296,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
 		inslogger.FromContext(ctx).Info("handler triggered")
-		ref, err := insolar.NewReferenceFromString(ID1 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(id1)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, s.n1.PublicAddress(), r.GetSenderHost().Address.String())
@@ -309,7 +308,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(id2)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 	require.NoError(t, err)
@@ -331,7 +330,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	s.Start()
 
 	request := &packet.PulseRequest{}
-	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(id2)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, request, *ref)
 	require.NoError(t, err)
@@ -365,7 +364,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(id2)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 	require.NoError(t, err)
@@ -397,7 +396,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 
 	s.Start()
 
-	ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+	ref, err := insolar.NewReferenceFromString(id2)
 	require.NoError(t, err)
 	f, err := s.n1.SendRequest(s.ctx1, types.Pulse, &packet.PulseRequest{}, *ref)
 	require.NoError(t, err)
@@ -427,7 +426,7 @@ func TestStartStopSend(t *testing.T) {
 	s.Start()
 
 	send := func() {
-		ref, err := insolar.NewReferenceFromString(ID2 + DOMAIN)
+		ref, err := insolar.NewReferenceFromString(id2)
 		require.NoError(t, err)
 		f, err := s.n1.SendRequest(s.ctx1, types.RPC, &packet.RPCRequest{}, *ref)
 		require.NoError(t, err)
@@ -452,7 +451,7 @@ func TestStartStopSend(t *testing.T) {
 func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	hn, err := NewHostNetwork(ID1 + DOMAIN)
+	hn, err := NewHostNetwork(id1)
 	require.NoError(t, err)
 
 	f, err := hn.SendRequestToHost(context.Background(), types.Unknown, nil, nil)
