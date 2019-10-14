@@ -19,11 +19,12 @@ package conveyor
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/conveyor/injector"
-	"github.com/insolar/insolar/conveyor/smachine/tools"
-	"github.com/insolar/insolar/conveyor/smachinev2"
-	"github.com/insolar/insolar/pulse"
 	"sync"
+
+	"github.com/insolar/insolar/conveyor/injector"
+	"github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/conveyor/tools"
+	"github.com/insolar/insolar/pulse"
 )
 
 type PreparedState = struct{}

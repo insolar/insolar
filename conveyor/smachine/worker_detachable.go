@@ -18,9 +18,10 @@ package smachine
 
 import (
 	"context"
-	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"sync"
 	"sync/atomic"
+
+	tools2 "github.com/insolar/insolar/conveyor/tools"
 )
 
 type slotWorkerState = uint32
@@ -38,11 +39,11 @@ type DetachableSlotWorker struct {
 	state slotWorkerState
 
 	mutex        sync.Mutex
-	outerSignal  tools.SignalVersion
+	outerSignal  tools2.SignalVersion
 	innerBreaker chan struct{}
 }
 
-func (p *DetachableSlotWorker) activate(outerSignal tools.SignalVersion) {
+func (p *DetachableSlotWorker) activate(outerSignal tools2.SignalVersion) {
 	//if outerSignal == nil {
 	//	panic("illegal value")
 	//}

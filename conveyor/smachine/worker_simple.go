@@ -18,18 +18,19 @@ package smachine
 
 import (
 	"context"
-	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"sync"
+
+	tools2 "github.com/insolar/insolar/conveyor/tools"
 )
 
-func NewSimpleSlotWorker(outerSignal tools.SignalVersion) *SimpleSlotWorker {
+func NewSimpleSlotWorker(outerSignal tools2.SignalVersion) *SimpleSlotWorker {
 	return &SimpleSlotWorker{outerSignal: outerSignal}
 }
 
 var _ SlotWorker = &SimpleSlotWorker{}
 
 type SimpleSlotWorker struct {
-	outerSignal tools.SignalVersion
+	outerSignal tools2.SignalVersion
 	innerSignal func()
 	cond        *sync.Cond
 }

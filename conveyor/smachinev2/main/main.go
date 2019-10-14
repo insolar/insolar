@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/conveyor/smachine/tools"
 	smachine "github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/conveyor/smachinev2/main/example"
+	"github.com/insolar/insolar/conveyor/tools"
 )
 
 func main() {

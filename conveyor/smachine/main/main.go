@@ -19,11 +19,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
-	"github.com/insolar/insolar/conveyor/smachine/tools"
+	tools2 "github.com/insolar/insolar/conveyor/tools"
 	"github.com/insolar/insolar/network/consensus/common/rwlock"
-	"time"
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 
 	sm.AddNew(context.Background(), smachine.NoLink(), &example.StateMachine1{})
 
-	signal := tools.NewVersionedSignal()
+	signal := tools2.NewVersionedSignal()
 	worker := smachine.NewSimpleSlotWorker(signal.Mark())
 
 	for i := 0; ; i++ {

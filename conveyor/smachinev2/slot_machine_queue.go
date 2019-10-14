@@ -17,8 +17,9 @@
 package smachine
 
 import (
-	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"sync"
+
+	"github.com/insolar/insolar/conveyor/tools"
 )
 
 func NewSlotMachineSync(signalCallback func()) SlotMachineSync {

@@ -17,8 +17,8 @@
 package example
 
 import (
-	"github.com/insolar/insolar/conveyor/smachine/tools"
 	smachine "github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/conveyor/tools"
 
 	"sync"
 )

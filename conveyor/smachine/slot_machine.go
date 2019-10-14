@@ -19,12 +19,14 @@ package smachine
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/conveyor/smachine/tools"
-	"github.com/pkg/errors"
 	"math"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	tools2 "github.com/insolar/insolar/conveyor/tools"
+
+	"github.com/pkg/errors"
 )
 
 type SlotMachineConfig struct {
@@ -54,7 +56,7 @@ func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, adapt
 		activeSlots:   NewSlotQueue(ActiveSlots),
 		prioritySlots: NewSlotQueue(ActiveSlots),
 		workingSlots:  NewSlotQueue(WorkingSlots),
-		syncQueue:     tools.NewSignalFuncQueue(&sync.Mutex{}, config.SyncStrategy.GetInternalSignalCallback()),
+		syncQueue:     tools2.NewSignalFuncQueue(&sync.Mutex{}, config.SyncStrategy.GetInternalSignalCallback()),
 	}
 }
 
@@ -82,8 +84,8 @@ type SlotMachine struct {
 	prioritySlots SlotQueue    //they are are moved to workingSlots on every partial or full Scan
 	pollingSlots  PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
 
-	syncQueue    tools.SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
-	detachQueues map[SlotID]*tools.SyncQueue
+	syncQueue    tools2.SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
+	detachQueues map[SlotID]*tools2.SyncQueue
 
 	stepSync StepSyncCatalog
 }
@@ -478,12 +480,12 @@ func (m *SlotMachine) applyAsyncStateUpdate(link SlotLink, resultFn AsyncResultF
 		}
 		/* this is an async result for a handler that was detached - we have to postpone it until reattachment */
 		if m.detachQueues == nil {
-			m.detachQueues = make(map[SlotID]*tools.SyncQueue)
+			m.detachQueues = make(map[SlotID]*tools2.SyncQueue)
 		}
 
 		dq := m.detachQueues[link.SlotID()]
 		if dq == nil {
-			dqs := tools.NewNoSyncQueue()
+			dqs := tools2.NewNoSyncQueue()
 			dq = &dqs
 		}
 
@@ -496,7 +498,7 @@ func (m *SlotMachine) applyAsyncStateUpdate(link SlotLink, resultFn AsyncResultF
 	})
 }
 
-func (m *SlotMachine) pullDetachQueue(slotID SlotID) tools.SyncFuncList {
+func (m *SlotMachine) pullDetachQueue(slotID SlotID) tools2.SyncFuncList {
 	dq := m.detachQueues[slotID]
 	if dq == nil {
 		return nil
@@ -868,7 +870,7 @@ func (m *SlotMachine) _reactivateDependencies(current *Slot, activeWait bool) {
 	}
 }
 
-func (m *SlotMachine) _handleMissedSlotCallback(link SlotLink, missed func(*Slot), detached tools.SyncFuncList) {
+func (m *SlotMachine) _handleMissedSlotCallback(link SlotLink, missed func(*Slot), detached tools2.SyncFuncList) {
 	// TODO logging
 
 	if missed == nil {
