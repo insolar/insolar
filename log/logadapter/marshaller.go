@@ -161,7 +161,7 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		fd.reportFn = getReporterFn(fd.Type)
 		tagType, fmtStr := singleTag(fd.Tag)
 
-		if tf.Anonymous && tagType == `txt` {
+		if tagType == `txt` && (tf.Anonymous || fieldName == "_") {
 			// a special case - we can take `txt` of an anonymous as a message text
 			fieldName = "Message"
 		} else if fd.reportFn == nil && (tf.Anonymous || fieldName == "" || fieldName[0] == '_') {
