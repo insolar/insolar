@@ -84,7 +84,7 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 
 func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "Call "+method)
-	defer span.End()
+	defer span.Finish()
 
 	reference, err := insolar.NewReferenceFromString(params.Reference)
 	if err != nil {

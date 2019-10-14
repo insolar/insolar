@@ -22,7 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
@@ -98,13 +97,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	defer m.setLock.Unlock()
 
 	logger.Debug("behind set lock")
-	ctx, span := instracer.StartSpan(
-		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
-	)
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
-	)
-	defer span.End()
+	ctx, span := instracer.StartAlwaysSamplingSpan(
+		ctx, "PulseManager.Set")
+	span.SetTag("pulse.PulseNumber", int64(newPulse.PulseNumber))
+	defer span.Finish()
 
 	// Dealing with node lists.
 	logger.Debug("dealing with node lists.")

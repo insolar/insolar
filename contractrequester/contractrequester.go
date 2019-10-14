@@ -119,7 +119,7 @@ func (cr *ContractRequester) Call(
 ) (insolar.Reply, *insolar.Reference, error) {
 
 	ctx, span := instracer.StartSpan(ctx, "Call "+method)
-	defer span.End()
+	defer span.Finish()
 
 	args, err := insolar.Serialize(argsIn)
 	if err != nil {
@@ -210,7 +210,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payl
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.SendMessageTiming.M(float64(time.Since(sendingStarted).Nanoseconds())/1e6))
-		span.End()
+		span.Finish()
 	}(ctx)
 
 	async := msg.Request.ReturnMode == record.ReturnSaga
@@ -436,7 +436,7 @@ func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *pay
 	}
 
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
-	defer span.End()
+	defer span.Finish()
 
 	err = cr.result(ctx, &res)
 	if err != nil {

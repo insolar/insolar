@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.opencensus.io/trace"
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
@@ -88,9 +88,9 @@ func (t *Transcript) AddOutgoingRequest(
 	ctx context.Context, request record.IncomingRequest, result []byte, err error,
 ) {
 	rec := OutgoingRequest{
-		Request:   request,
-		Response:  result,
-		Error:     err,
+		Request:  request,
+		Response: result,
+		Error:    err,
 	}
 	t.OutgoingRequests = append(t.OutgoingRequests, rec)
 }
@@ -136,8 +136,8 @@ func freshContextFromContext(ctx context.Context, reqID string) context.Context 
 		res = instracer.WithParentSpan(res, parentSpan)
 	}
 
-	if pctx := trace.FromContext(ctx); pctx != nil {
-		res = trace.NewContext(res, pctx)
+	if pctx := opentracing.SpanFromContext(ctx); pctx != nil {
+		res = opentracing.ContextWithSpan(res, pctx)
 	}
 
 	return res

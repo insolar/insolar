@@ -23,9 +23,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -136,12 +136,8 @@ func (b *Bus) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 ) (<-chan *message.Message, func()) {
 	ctx, span := instracer.StartSpan(ctx, "Bus.SendRole")
-	span.AddAttributes(
-		trace.StringAttribute("type", "bus"),
-		trace.StringAttribute("role", role.String()),
-		trace.StringAttribute("object", object.String()),
-	)
-	defer span.End()
+	span.SetTag("type", "bus").SetTag("role", role.String()).SetTag("object", object.String())
+	defer span.Finish()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -187,11 +183,8 @@ func (b *Bus) sendTarget(
 ) (<-chan *message.Message, func()) {
 	start := time.Now()
 	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
-	span.AddAttributes(
-		trace.StringAttribute("type", "bus"),
-		trace.StringAttribute("target", target.String()),
-	)
-	defer span.End()
+	span.SetTag("type", "bus").SetTag("target", target.String())
+	defer span.Finish()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -212,9 +205,7 @@ func (b *Bus) sendTarget(
 	// configure logger
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
 	ctx, logger := inslogger.WithField(ctx, "sending_uuid", msg.UUID)
-	span.AddAttributes(
-		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
-	)
+	span.SetTag("sending_type", msgType)
 
 	// tracing setup
 	msg.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
@@ -311,11 +302,8 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	logger := inslogger.FromContext(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "Bus.Reply")
-	span.AddAttributes(
-		trace.StringAttribute("type", "bus"),
-		trace.StringAttribute("sender", origin.Sender.String()),
-	)
-	defer span.End()
+	span.SetTag("type", "bus").SetTag("sender", origin.Sender.String())
+	defer span.Finish()
 
 	msgType := messagePayloadTypeName(reply)
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
@@ -386,17 +374,16 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 		if err == nil {
 			ctx = instracer.WithParentSpan(ctx, parentSpan)
+			inslogger.FromContext(ctx).Info("Got parentSpanCtx", parentSpan)
 		} else {
 			inslogger.FromContext(ctx).Error(err)
 		}
 
-		var span *trace.Span
+		var span opentracing.Span
 		reply := func() *lockedReply {
 			ctx, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
-			span.AddAttributes(
-				trace.StringAttribute("type", "bus"),
-			)
-			defer span.End()
+			span.SetTag("type", "bus")
+			defer span.Finish()
 
 			meta := payload.Meta{}
 			err = meta.Unmarshal(msg.Payload)
@@ -456,10 +443,8 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		}
 
 		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
-		span.AddAttributes(
-			trace.StringAttribute("type", "bus"),
-		)
-		defer span.End()
+		span.SetTag("type", "bus")
+		defer span.Finish()
 
 		select {
 		case reply.messages <- msg:

@@ -20,13 +20,14 @@ import (
 	"context"
 	"time"
 
+	"github.com/opentracing/opentracing-go/log"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/opentracing/opentracing-go"
 )
 
 type methodInstrumenterKey struct{}
@@ -38,7 +39,7 @@ type MethodInstrumenter struct {
 	startTime     time.Time
 	errorLink     *error
 	errorShort    string
-	span          *trace.Span
+	span          opentracing.Span
 	traceID       string
 }
 
@@ -46,6 +47,7 @@ func NewMethodInstrument(methodName string) (context.Context, *MethodInstrumente
 	traceID := utils.RandTraceID()
 	ctx, _ := inslogger.WithTraceField(context.Background(), traceID)
 	ctx, span := instracer.StartSpan(ctx, methodName)
+	ctx, _ = inslogger.WithTraceField(ctx, instracer.ExtractTraceID(ctx, span))
 
 	ctx = insmetrics.InsertTag(ctx, tagMethod, methodName)
 	stats.Record(ctx, incomingRequests.M(1))
@@ -63,6 +65,7 @@ func NewMethodInstrument(methodName string) (context.Context, *MethodInstrumente
 }
 
 func (mi *MethodInstrumenter) SetCallSite(callSite string) {
+	mi.span.SetTag("callSite", callSite)
 	mi.subMethodName = &callSite
 }
 
@@ -76,7 +79,7 @@ func (mi MethodInstrumenter) TraceID() string {
 }
 
 func (mi MethodInstrumenter) Annotate(text string) {
-	mi.span.Annotate(nil, text)
+	mi.span.LogFields(log.String("message", text))
 }
 
 func (mi *MethodInstrumenter) End() {
@@ -97,7 +100,7 @@ func (mi *MethodInstrumenter) End() {
 
 	stats.Record(ctx, statLatency.M(latency.Nanoseconds()/1e6))
 
-	mi.span.End()
+	mi.span.Finish()
 }
 
 func GetInstrumenter(ctx context.Context) *MethodInstrumenter {

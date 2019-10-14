@@ -62,7 +62,6 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
 
@@ -225,10 +224,8 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 
 	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
-	)
-	defer span.End()
+	span.SetTag("pulse.PulseNumber", int64(pulse.PulseNumber))
+	defer span.Finish()
 
 	err := g.PulseManager.Set(ctx, pulse)
 	if err != nil {

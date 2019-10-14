@@ -176,7 +176,7 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	ctx, span := instracer.StartSpan(ctx, payloadType.String())
-	defer span.End()
+	defer span.Finish()
 
 	switch payloadType {
 	case payload.TypeGetRequest:

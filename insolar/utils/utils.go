@@ -18,9 +18,11 @@ package utils
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
 type traceIDKey struct{}
@@ -44,11 +46,10 @@ func SetInsTraceID(ctx context.Context, traceid string) (context.Context, error)
 
 // RandTraceID returns random traceID in uuid format.
 func RandTraceID() string {
-	traceID, err := uuid.NewV4()
-	if err != nil {
-		return "createRandomTraceIDFailed:" + err.Error()
-	}
-	return traceID.String()
+	buf := make([]byte, 16)
+	rand.Read(buf)
+	hi, low := binary.LittleEndian.Uint64(buf[:8]), binary.LittleEndian.Uint64(buf[8:])
+	return fmt.Sprintf("%x%016x", hi, low)
 }
 
 // CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.

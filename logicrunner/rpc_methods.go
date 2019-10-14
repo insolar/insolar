@@ -153,7 +153,7 @@ func (m *executionProxyImplementation) GetCode(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
-	defer span.End()
+	defer span.Finish()
 
 	codeDescriptor, err := m.dc.GetCode(ctx, req.Code)
 	if err != nil {
@@ -241,7 +241,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 		" on prototype ", req.Prototype.String(),
 	)
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
-	defer span.End()
+	defer span.Finish()
 
 	logger = logger.WithFields(map[string]interface{}{
 		"call_to":   req.ConstructorName,

@@ -65,7 +65,7 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *common.Transcr
 
 func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "logicExecutor.ExecuteMethod")
-	defer span.End()
+	defer span.Finish()
 
 	inslogger.FromContext(ctx).Debug("Executing method")
 
@@ -132,7 +132,7 @@ func (le *logicExecutor) ExecuteConstructor(
 	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
-	defer span.End()
+	defer span.Finish()
 
 	inslogger.FromContext(ctx).Debug("Executing constructor")
 
