@@ -144,6 +144,7 @@ func (Genesis) GetIsPrototype() bool {
 // Request is a common request interface.
 type Request interface {
 	Record
+
 	// AffinityRef returns a pointer to the reference of the object the
 	// Request is affine to. The result can be nil, e.g. in case of creating
 	// a new object.
@@ -165,6 +166,12 @@ type Request interface {
 	// IsTemporaryUploadCode tells us that that request is temporary hack
 	// for uploading code.
 	IsTemporaryUploadCode() bool
+	// Take method name that was called
+	GetMethod() string
+	// Take ReturnMode (usual or saga)
+	GetReturnMode() ReturnMode
+	// Take Object Reference
+	GetObject() *insolar.Reference
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {

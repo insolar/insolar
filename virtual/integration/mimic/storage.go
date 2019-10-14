@@ -50,6 +50,9 @@ type Storage interface {
 	// Pendings
 	GetPendings(ctx context.Context, objectID insolar.ID, limit uint32, skipRequestRefs []insolar.ID) ([]insolar.ID, error)
 	HasPendings(ctx context.Context, objectID insolar.ID) (bool, error)
+	GetOutgoingSagas(ctx context.Context, requestID insolar.ID) ([]*outgoingInfo, error)
+
+	ObjectRequestsAreClosed(ctx context.Context, objectID insolar.ID) (bool, error)
 
 	CalculateRequestAffinityRef(request record.Request, pulseNumber insolar.PulseNumber) insolar.ID
 }
@@ -66,6 +69,10 @@ type mimicStorage struct {
 	MiscStorage map[string][]byte
 }
 
+func (s *mimicStorage) GetOutgoingSagas(ctx context.Context, requestID insolar.ID) ([]*outgoingInfo, error) {
+	return s.Requests[requestID].getSagaOutgoingRequestIDs(), nil
+}
+
 var (
 	// object related errors
 
@@ -77,11 +84,13 @@ var (
 
 	// request/result related errors
 
-	ErrRequestParentNotFound = errors.New("parent request not found")
-	ErrRequestNotFound       = errors.New("request not found")
-	ErrRequestExists         = errors.New("request already exists")
-	ErrResultExists          = errors.New("request result exists")
-	ErrResultNotFound        = errors.New("request result not found")
+	ErrRequestParentNotFound     = errors.New("parent request not found")
+	ErrRequestNotFound           = errors.New("request not found")
+	ErrRequestExists             = errors.New("request already exists")
+	ErrRequestHasOpenedOutgoings = errors.New("request is reason for non closed outgoing request")
+	ErrResultExists              = errors.New("request result exists")
+	ErrResultNotFound            = errors.New("request result not found")
+	ErrNoPendings                = errors.New("no pending requests are available")
 
 	// code related errors
 
@@ -411,6 +420,10 @@ func (s *mimicStorage) SetResult(_ context.Context, result *record.Result) (*ins
 		return nil, ErrResultExists
 	}
 
+	if request.hasOpenedOutgoings() {
+		return nil, ErrRequestHasOpenedOutgoings
+	}
+
 	materialRec := record.Material{
 		Virtual:  virtual,
 		ID:       resultID,
@@ -478,6 +491,14 @@ func (s *mimicStorage) SetCode(_ context.Context, code record.Code) (insolar.ID,
 	}
 
 	return codeID, nil
+}
+
+func (s *mimicStorage) ObjectRequestsAreClosed(ctx context.Context, objectID insolar.ID) (bool, error) {
+	pendings, err := s.GetPendings(ctx, objectID, 1, []insolar.ID{})
+	if err != nil {
+		return false, err
+	}
+	return len(pendings) == 0, nil
 }
 
 func (s *mimicStorage) Get(key store.Key) ([]byte, error) {

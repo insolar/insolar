@@ -19,12 +19,15 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
@@ -93,7 +96,7 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		}, res)
 	})
 
-	t.Run("builtin test", func(t *testing.T) {
+	t.Run("create user test", func(t *testing.T) {
 		ctx := inslogger.TestContext(t)
 
 		s, err := NewVirtualServer(t, ctx, cfg).WithGenesis().PrepareAndStart()
@@ -105,12 +108,7 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			panic("failed to create new user: " + err.Error())
 		}
 
-		rootDomainRef, err := insolar.NewReferenceFromString("11tJCjvL9bzK1HdmaFnvmHGMvNnHYJz2qrN83if4fEf")
-		if err != nil {
-			panic("failed to read reference from string: " + err.Error())
-		}
-
-		callMethodReply, _, err := s.BasicAPICall(ctx, "member.create", nil, *rootDomainRef, user)
+		callMethodReply, _, err := s.BasicAPICall(ctx, "member.create", nil, genesisrefs.ContractRootMember, user)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -122,5 +120,132 @@ func TestVirtual_BasicOperations(t *testing.T) {
 
 		assert.Nil(t, result["Error"])
 		assert.NotNil(t, result["Returns"].([]interface{})[0].(map[string]interface{})["reference"])
+	})
+
+	t.Run("create and transfer test", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+
+		s, err := NewVirtualServer(t, ctx, cfg).WithGenesis().PrepareAndStart()
+		require.NoError(t, err)
+		defer s.Stop(ctx)
+
+		user1, err := NewUserWithKeys()
+		if err != nil {
+			panic("failed to create new user: " + err.Error())
+		}
+		user2, err := NewUserWithKeys()
+		if err != nil {
+			panic("failed to create new user: " + err.Error())
+		}
+
+		var walletReference1 insolar.Reference
+		{
+			callMethodReply, _, err := s.BasicAPICall(ctx, "member.create", nil, genesisrefs.ContractRootMember, user1)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			var result map[string]interface{}
+			if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+				panic(err.Error())
+			}
+
+			assert.Nil(t, result["Error"])
+
+			walletReferenceString := result["Returns"].([]interface{})[0].(map[string]interface{})["reference"]
+			assert.NotNil(t, walletReferenceString)
+			assert.IsType(t, "", walletReferenceString)
+
+			walletReference, err := insolar.NewReferenceFromString(walletReferenceString.(string))
+			assert.NoError(t, err)
+
+			walletReference1 = *walletReference
+		}
+
+		var walletReference2 insolar.Reference
+		{
+			callMethodReply, _, err := s.BasicAPICall(ctx, "member.create", nil, genesisrefs.ContractRootMember, user2)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			var result map[string]interface{}
+			if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+				panic(err.Error())
+			}
+
+			assert.Nil(t, result["Error"])
+			assert.NotNil(t, result["Returns"].([]interface{})[0].(map[string]interface{})["reference"])
+
+			walletReferenceString := result["Returns"].([]interface{})[0].(map[string]interface{})["reference"]
+			assert.NotNil(t, walletReferenceString)
+			assert.IsType(t, "", walletReferenceString)
+
+			walletReference, err := insolar.NewReferenceFromString(walletReferenceString.(string))
+			assert.NoError(t, err)
+
+			walletReference2 = *walletReference
+		}
+
+		var feeWalletBalance string
+		{
+			callParams := map[string]interface{}{"reference": FeeWalletUser.Reference.String()}
+			callMethodReply, _, err := s.BasicAPICall(ctx, "member.getBalance", callParams, FeeWalletUser.Reference, FeeWalletUser)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			var result map[string]interface{}
+			if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+				panic(err.Error())
+			}
+			require.Nil(t, result["Error"])
+
+			fmt.Printf("%#v\n", result)
+			feeWalletBalance = result["Returns"].([]interface{})[0].(map[string]interface{})["balance"].(string)
+		}
+
+		{
+			callParams := map[string]interface{}{"amount": "10000", "toMemberReference": walletReference2.String()}
+			callMethodReply, _, err := s.BasicAPICall(ctx, "member.transfer", callParams, walletReference1, user1)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			var result map[string]interface{}
+			if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+				panic(err.Error())
+			}
+
+			assert.Nil(t, result["Error"])
+		}
+
+		{
+			for i := 1; i < 30; i++ {
+				callParams := map[string]interface{}{"reference": FeeWalletUser.Reference.String()}
+				callMethodReply, _, err := s.BasicAPICall(ctx, "member.getBalance", callParams, FeeWalletUser.Reference, FeeWalletUser)
+				if err != nil {
+					panic(err.Error())
+				}
+
+				var result map[string]interface{}
+				if err := insolar.Deserialize(callMethodReply.(*reply.CallMethod).Result, &result); err != nil {
+					panic(err.Error())
+				}
+				require.Nil(t, result["Error"])
+
+				fmt.Printf("%#v\n", result)
+				newBalance := result["Returns"].([]interface{})[0].(map[string]interface{})["balance"].(string)
+
+				if newBalance != feeWalletBalance {
+					break
+				}
+
+				time.Sleep(100 * time.Millisecond)
+				if i == 29 {
+					assert.FailNow(t, "failed to wait money in feeWallet")
+				}
+			}
+		}
 	})
 }

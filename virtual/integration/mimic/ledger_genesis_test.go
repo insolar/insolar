@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -37,6 +38,8 @@ func TestMimicLedger_Genesis(t *testing.T) {
 	cleanup, bootstrapDir, err := GenerateBootstrap(true)
 	require.NoError(t, err)
 	defer cleanup()
+
+	senderMock := bus.NewSenderMock(t)
 
 	t.Run("WithMocks", func(t *testing.T) {
 		// t.Parallel()
@@ -52,7 +55,7 @@ func TestMimicLedger_Genesis(t *testing.T) {
 			UpdateLastKnownPulseMock.Return(nil)
 		rmm := object.NewRecordModifierMock(mc).SetMock.Return(nil)
 
-		mimicLedgerInstance := NewMimicLedger(ctx, pcs, pulseStorage, pulseStorage)
+		mimicLedgerInstance := NewMimicLedger(ctx, pcs, pulseStorage, pulseStorage, senderMock)
 		mimicStorage := mimicLedgerInstance.(*mimicLedger).storage
 
 		mimicClient := NewClient(mimicStorage)
@@ -85,7 +88,7 @@ func TestMimicLedger_Genesis(t *testing.T) {
 		pcs := platformpolicy.NewPlatformCryptographyScheme()
 		pulseStorage := pulse.NewStorageMem()
 
-		mimicLedgerInstance := NewMimicLedger(ctx, pcs, pulseStorage, pulseStorage)
+		mimicLedgerInstance := NewMimicLedger(ctx, pcs, pulseStorage, pulseStorage, senderMock)
 
 		err := mimicLedgerInstance.LoadGenesis(ctx, bootstrapDir)
 		assert.NoError(t, err)
