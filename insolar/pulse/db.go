@@ -18,7 +18,8 @@ package pulse
 
 import (
 	"context"
-	"sync"
+
+	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
@@ -28,10 +29,7 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	lock sync.RWMutex
-	db   store.DB
-
-	latest *insolar.Pulse
+	db *badger.DB
 }
 
 type pulseKey insolar.PulseNumber
@@ -56,60 +54,107 @@ type dbNode struct {
 
 // NewDB creates new DB storage instance.
 func NewDB(db store.DB) *DB {
-	return &DB{db: db}
+	return &DB{db: db.Backend()}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
-func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
-	nd, err := s.get(pn)
-	if err != nil {
-		return
+func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
+	for {
+		err := s.db.View(func(txn *badger.Txn) error {
+			node, err := get(txn, pulseKey(pn))
+			if err != nil {
+				retErr = err
+				return nil
+			}
+
+			retPulse = node.Pulse
+			return nil
+		})
+
+		if err == nil {
+			break
+		}
+
+		inslogger.FromContext(ctx).Debugf("DB.ForPulseNumber -  s.db.Backend().View returned an error, retrying: %s", err.Error())
 	}
-	return nd.Pulse, nil
+	return
 }
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
-func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
+	for {
+		err := s.db.View(func(txn *badger.Txn) error {
+			head, err := head(txn)
+			if err != nil {
+				retErr = err
+				return nil
+			}
 
-	if s.latest != nil {
-		return *s.latest, nil
-	}
+			node, err := get(txn, pulseKey(head))
+			if err != nil {
+				retErr = err
+				return nil
+			}
 
-	head, err := s.head()
-	if err != nil {
-		return
+			retPulse = node.Pulse
+			return nil
+		})
+
+		if err == nil {
+			break
+		}
+
+		inslogger.FromContext(ctx).Debugf("DB.Latest -  s.db.Backend().View returned an error, retrying: %s", err.Error())
 	}
-	nd, err := s.get(head)
-	if err != nil {
-		return
-	}
-	return nd.Pulse, nil
+	return
 }
 
 // TruncateHead remove all records after lastPulse
 func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	it := s.db.NewIterator(pulseKey(from), false)
-	defer it.Close()
-
-	s.lock.Lock()
-	s.latest = nil
-	s.lock.Unlock()
-
 	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newPulseKey(it.Key())
-		err := s.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
+	for {
+		hasKeys = false
+		err := s.db.Update(func(txn *badger.Txn) error {
+			it := txn.NewIterator(badger.DefaultIteratorOptions)
+			defer it.Close()
+
+			pivot := pulseKey(from)
+			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+			scope := pivot.Scope().Bytes()
+			it.Seek(prefix)
+			for {
+				if !it.ValidForPrefix(scope) {
+					break
+				}
+
+				hasKeys = true
+				k := it.Item().KeyCopy(nil)
+				loggedKey := newPulseKey(k[len(scope):])
+				it.Next()
+
+				err := txn.Delete(k)
+				if err != nil {
+					txn.Discard()
+					return errors.Wrapf(err, "can't delete key: %+v", loggedKey)
+				}
+
+				// It's not very good to write logs from inside of the transaction, but since
+				// TruncateHead() is not called often it's OK in this case.
+				inslogger.FromContext(ctx).Debugf("DB.TruncateHead - Erased key with pulse number: %s", insolar.PulseNumber(loggedKey))
+			}
+
+			return nil
+		})
+
+		if err == nil {
+			break
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
+		inslogger.FromContext(ctx).Debugf("DB.TruncateHead - s.db.Backend().Update returned an error, retrying: %s", err.Error())
 	}
+
 	if !hasKeys {
-		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())
+		inslogger.FromContext(ctx).Debug("DB.TruncateHead - No records to delete from pulse number: " + from.String())
 	}
 
 	return nil
@@ -118,131 +163,177 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	var retErr error
+	for {
+		err := s.db.Update(func(txn *badger.Txn) error {
+			var insertWithHead = func(head insolar.PulseNumber) error {
+				oldHead, err := get(txn, pulseKey(head))
+				if err != nil {
+					return err
+				}
+				oldHead.Next = &pulse.PulseNumber
 
-	var insertWithHead = func(head insolar.PulseNumber) error {
-		oldHead, err := s.get(head)
-		if err != nil {
+				// Set new pulse.
+				err = set(txn, pulse.PulseNumber, dbNode{
+					Prev:  &oldHead.Pulse.PulseNumber,
+					Pulse: pulse,
+				})
+				if err != nil {
+					return err
+				}
+				// Set old updated tail.
+				return set(txn, oldHead.Pulse.PulseNumber, oldHead)
+			}
+			var insertWithoutHead = func() error {
+				// Set new pulse.
+				return set(txn, pulse.PulseNumber, dbNode{
+					Pulse: pulse,
+				})
+			}
+
+			head, err := head(txn)
+			if err == ErrNotFound {
+				err = insertWithoutHead()
+				if err != nil {
+					txn.Discard()
+				}
+				return err
+			}
+
+			if pulse.PulseNumber <= head {
+				retErr = ErrBadPulse
+				return nil
+			}
+
+			err = insertWithHead(head)
+			if err != nil {
+				txn.Discard()
+			}
 			return err
-		}
-		oldHead.Next = &pulse.PulseNumber
-
-		// Set new pulse.
-		err = s.set(pulse.PulseNumber, dbNode{
-			Prev:  &oldHead.Pulse.PulseNumber,
-			Pulse: pulse,
 		})
-		if err != nil {
-			return err
-		}
-		// Set old updated tail.
-		return s.set(oldHead.Pulse.PulseNumber, oldHead)
-	}
-	var insertWithoutHead = func() error {
-		// Set new pulse.
-		return s.set(pulse.PulseNumber, dbNode{
-			Pulse: pulse,
-		})
-	}
 
-	head, err := s.head()
-	if err == ErrNotFound {
-		err := insertWithoutHead()
 		if err == nil {
-			s.latest = &pulse
+			break
 		}
-		return err
-	}
 
-	if pulse.PulseNumber <= head {
-		return ErrBadPulse
+		inslogger.FromContext(ctx).Debugf("DB.Append -  s.db.Backend().Update returned an error, retrying: %s", err.Error())
 	}
-	err = insertWithHead(head)
-	if err == nil {
-		s.latest = &pulse
-	}
-	return err
+	return retErr
 }
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	_, err := s.db.Get(pulseKey(pn))
-	if err != nil {
-		return *insolar.GenesisPulse, err
-	}
-
-	it := s.db.NewIterator(pulseKey(pn), false)
-	defer it.Close()
-	for i := 0; it.Next(); i++ {
-		if i == steps {
-			buf, err := it.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
-			}
-			nd := deserialize(buf)
-			return nd.Pulse, nil
-		}
-	}
-	return *insolar.GenesisPulse, ErrNotFound
+	return s.traverse(ctx, pn, steps, false)
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	_, err := s.db.Get(pulseKey(pn))
-	if err != nil {
-		return *insolar.GenesisPulse, err
-	}
-
-	rit := s.db.NewIterator(pulseKey(pn), true)
-	defer rit.Close()
-	for i := 0; rit.Next(); i++ {
-		if i == steps {
-			buf, err := rit.Value()
-			if err != nil {
-				return *insolar.GenesisPulse, err
-			}
-			nd := deserialize(buf)
-			return nd.Pulse, nil
-		}
-	}
-	return *insolar.GenesisPulse, ErrNotFound
+	return s.traverse(ctx, pn, steps, true)
 }
 
-func (s *DB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
-	buf, err := s.db.Get(pulseKey(pn))
-	if err == store.ErrNotFound {
-		err = ErrNotFound
-		return
+func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
+	if steps < 0 {
+		return *insolar.GenesisPulse, errors.New("DB.traverse - `steps` argument should be not negative")
 	}
+
+	var (
+		retPulse insolar.Pulse
+		retErr   error
+	)
+	for {
+		err := s.db.View(func(txn *badger.Txn) error {
+			opts := badger.DefaultIteratorOptions
+			opts.Reverse = reverse
+			it := txn.NewIterator(opts)
+			defer it.Close()
+
+			pivot := pulseKey(pn)
+			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+			scope := pivot.Scope().Bytes()
+			it.Seek(prefix)
+			i := 0
+			for {
+				if !it.ValidForPrefix(scope) {
+					break
+				}
+
+				if i == steps {
+					buf, err := it.Item().ValueCopy(nil)
+					if err != nil {
+						retPulse = *insolar.GenesisPulse
+						retErr = err
+						return nil
+					}
+					node := deserialize(buf)
+					retPulse = node.Pulse
+					retErr = nil
+					return nil
+				}
+
+				it.Next()
+				i++
+			}
+
+			// not found
+			retPulse = *insolar.GenesisPulse
+			retErr = ErrNotFound
+			return nil
+		})
+
+		if err == nil {
+			break
+		}
+
+		inslogger.FromContext(ctx).Debugf("DB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
+	}
+
+	return retPulse, retErr
+}
+
+func head(txn *badger.Txn) (insolar.PulseNumber, error) {
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = true
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
+	scope := pivot.Scope().Bytes()
+	prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+	it.Seek(prefix)
+	if !it.ValidForPrefix(scope) {
+		return insolar.GenesisPulse.PulseNumber, ErrNotFound
+	}
+
+	k := it.Item().KeyCopy(nil)
+	return insolar.NewPulseNumber(k[len(scope):]), nil
+}
+
+func get(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	item, err := txn.Get(fullKey)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			err = ErrNotFound
+		}
+		retErr = err
 		return
 	}
-	nd = deserialize(buf)
+	buf, err := item.ValueCopy(nil)
+	if err != nil {
+		retErr = err
+		return
+	}
+
+	retNode = deserialize(buf)
 	return
 }
 
-func (s *DB) set(pn insolar.PulseNumber, nd dbNode) error {
-	return s.db.Set(pulseKey(pn), serialize(nd))
-}
-
-func (s *DB) head() (pn insolar.PulseNumber, err error) {
-
-	rit := s.db.NewIterator(pulseKey(insolar.PulseNumber(0xFFFFFFFF)), true)
-	defer rit.Close()
-
-	if !rit.Next() {
-		return insolar.GenesisPulse.PulseNumber, ErrNotFound
-	}
-	return insolar.NewPulseNumber(rit.Key()), nil
+func set(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
+	key := pulseKey(pn)
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	return txn.Set(fullKey, serialize(node))
 }
 
 func serialize(nd dbNode) []byte {

@@ -60,6 +60,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 )
 
 func TestConsensusMain(t *testing.T) {
@@ -67,11 +68,13 @@ func TestConsensusMain(t *testing.T) {
 	startedAt := time.Now()
 
 	ctx := context.Background()
-	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
-	logger, _ = logger.WithFormat(insolar.TextFormat)
-
-	ctx = inslogger.SetLogger(ctx, logger)
+	logger := inslogger.FromContext(ctx) //.WithCaller(false)
+	//logger, _ = logger.WithLevelNumber(insolar.DebugLevel)
+	//logger, _ = logger.WithFormat(insolar.TextFormat)
+	logger = logger.Level(insolar.DebugLevel)
+	log.SetGlobalLogger(logger)
+	ctx = inslogger.SetLogger(ctx, log.GlobalLogger())
+	_ = log.SetGlobalLevelFilter(insolar.DebugLevel)
 
 	netStrategy := NewDelayNetStrategy(DelayStrategyConf{
 		MinDelay:         10 * time.Millisecond,

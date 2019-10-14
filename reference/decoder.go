@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 )
 
 type ByteDecodeFunc func(s string, target io.ByteWriter) (stringRead int, err error)
@@ -37,14 +36,8 @@ const (
 	IgnoreParity
 )
 
-var defaultDecoderOnce sync.Once
-var defaultDecoder GlobalDecoder
-
 func DefaultDecoder() GlobalDecoder {
-	defaultDecoderOnce.Do(func() {
-		defaultDecoder = NewDefaultDecoder(AllowLegacy | AllowRecords)
-	})
-	return defaultDecoder
+	return NewDefaultDecoder(AllowLegacy | AllowRecords)
 }
 
 type GlobalDecoder interface {

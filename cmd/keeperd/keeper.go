@@ -25,6 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -76,6 +78,7 @@ func (k *Keeper) checkMetrics(ctx context.Context) {
 		}
 	}
 	atomic.StoreUint32(&k.isAvailable, isOK)
+	stats.Record(ctx, IsAvailable.M(int64(isOK)))
 }
 
 func (k *Keeper) checkMetric(ctx context.Context, query string) bool {

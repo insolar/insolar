@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
@@ -34,11 +35,18 @@ func TestGetFreeAddressCount(t *testing.T) {
 	}
 }
 
+const numShards = 1000
+
 func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
-	var migrationShardsMapBefore = getAddressCount(t, 0)
 
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
+
+	trimmedPublicKey := foundation.TrimPublicKey(member.PubKey)
+	shardIndex := foundation.GetShardIndex(trimmedPublicKey, numShards)
+
+	var migrationShardsMapBefore = getAddressCount(t, shardIndex)
+
 	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
@@ -50,7 +58,8 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 		map[string]interface{}{"startWithIndex": 0})
 	require.NoError(t, err)
 
-	var migrationShardsMapAfter = getAddressCount(t, 0)
+	var migrationShardsMapAfter = getAddressCount(t, shardIndex)
+
 	isFound := false
 	for i, countBefore := range migrationShardsMapBefore {
 		countAfter := migrationShardsMapAfter[i]
@@ -69,9 +78,15 @@ func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 	require.True(t, isFound)
 }
 
+func TestGetFreeAddressCount_WithIndex_NotAllRange(t *testing.T) {
+	numLeftShards := 2
+	var migrationShards = getAddressCount(t, numShards-numLeftShards)
+	require.Len(t, migrationShards, numLeftShards)
+}
+
 func TestGetFreeAddressCount_StartIndexTooBig(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithIndex": 1})
+		map[string]interface{}{"startWithIndex": numShards + 2})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data

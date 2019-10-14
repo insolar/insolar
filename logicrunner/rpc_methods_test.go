@@ -510,11 +510,10 @@ func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	// Make sure the result of the outgoing request was sent
 	var sentReq *record.OutgoingRequest
 	os.SendOutgoingRequestMock.Set(func(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (
-		*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
+		insolar.Arguments, *record.IncomingRequest, error) {
 		require.Nil(t, sentReq)
 		sentReq = req
-		var newObjectRef = gen.Reference()
-		return &newObjectRef, []byte{3, 2, 1}, &record.IncomingRequest{}, nil
+		return []byte{3, 2, 1}, &record.IncomingRequest{}, nil
 	})
 
 	err := rpcm.SaveAsChild(ctx, transcript, req, resp)

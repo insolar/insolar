@@ -92,6 +92,12 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.R
 		return
 	}
 
+	if msg.ResendCount >= 1 {
+		stats.Record(ctx, metrics.ResultMatcherLoopDetected.M(1))
+		logger.Error("resending result more then once")
+		return
+	}
+
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
 		go rm.send(ctx, msg, node)
 		return
@@ -126,6 +132,8 @@ func (rm *resultsMatcher) send(ctx context.Context, msg payload.ReturnResults, r
 		"receiver": receiver.String(),
 		"request":  msg.RequestRef.String(),
 	}).Debug("resending result of request")
+
+	msg.ResendCount++
 
 	msgData, err := payload.NewResultMessage(&msg)
 	if err != nil {

@@ -91,7 +91,7 @@ func GetWalletGenesisContractState(name string, parent string, accountRef insola
 	}
 }
 
-func GetPreWalletGenesisContractState(name string, parent string, accountRef insolar.Reference, accounts foundation.StableMap, deposits foundation.StableMap) insolar.GenesisContractState {
+func GetPreWalletGenesisContractState(name string, parent string, accounts foundation.StableMap, deposits foundation.StableMap) insolar.GenesisContractState {
 	return insolar.GenesisContractState{
 		Name:       name,
 		Prototype:  insolar.GenesisNameWallet,
@@ -182,7 +182,6 @@ func GetDepositGenesisContractState(
 	vesting int64,
 	vestingStep int64,
 	vestingType foundation.VestingType,
-	maturePulse insolar.PulseNumber,
 	pulseDepositUnHold insolar.PulseNumber,
 	name string, parent string,
 ) insolar.GenesisContractState {
@@ -195,7 +194,6 @@ func GetDepositGenesisContractState(
 			Amount:             amount,
 			PulseDepositUnHold: pulseDepositUnHold,
 			VestingType:        vestingType,
-			MaturePulse:        maturePulse,
 			Lockup:             lockup,
 			Vesting:            vesting,
 			VestingStep:        vestingStep,

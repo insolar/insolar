@@ -319,6 +319,12 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	imports := pf.generateImports(true)
+	if pf.machineType == insolar.MachineTypeBuiltin ||
+		len(functionsInfo) > 0 {
+		imports[fmt.Sprintf(`"%s"`, corePath)] = true
+	}
+
 	data := map[string]interface{}{
 		"Package":            packageName,
 		"ContractType":       pf.contract,
@@ -326,7 +332,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		"Functions":          functionsInfo,
 		"ParsedCode":         pf.code,
 		"FoundationPath":     foundationPath,
-		"Imports":            pf.generateImports(true),
+		"Imports":            imports,
 		"GenerateInitialize": pf.machineType == insolar.MachineTypeBuiltin,
 	}
 
@@ -472,7 +478,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		classReference = genesisrefs.GenerateProtoReferenceFromCode(0, pf.code).String()
 	}
 
-	_, err = insolar.NewReferenceFromBase58(classReference)
+	_, err = insolar.NewReferenceFromString(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}

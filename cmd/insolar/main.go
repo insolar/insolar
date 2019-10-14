@@ -123,7 +123,6 @@ func main() {
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
-	rootCmd.AddCommand(sendRequestCmd)
 	sendRequestCmd.Flags().BoolVarP(
 		&maAsCaller, "migration-admin-caller", "m", false, "use migration admin member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
@@ -369,7 +368,7 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
 	check("[ sendRequest ]", err)
 
-	if !insolar.IsReferenceInBase58(userCfg.Caller) && insolar.IsReferenceInBase58(reqCfg.Reference) {
+	if !insolar.IsObjectReferenceString(userCfg.Caller) && insolar.IsObjectReferenceString(reqCfg.Reference) {
 		userCfg.Caller = reqCfg.Reference
 	}
 

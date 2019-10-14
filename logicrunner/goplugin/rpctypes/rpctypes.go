@@ -105,7 +105,6 @@ type UpSaveAsChildReq struct {
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference *insolar.Reference
 	Result    insolar.Arguments
 }
 

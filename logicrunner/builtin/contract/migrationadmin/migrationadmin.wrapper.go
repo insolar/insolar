@@ -21,7 +21,6 @@ package migrationadmin
 
 import (
 	"github.com/insolar/insolar/insolar"
-	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -394,11 +393,11 @@ func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) ([]byte,
 	return state, ret, err
 }
 
-func Initialize() XXX_insolar.ContractWrapper {
-	return XXX_insolar.ContractWrapper{
+func Initialize() insolar.ContractWrapper {
+	return insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
-		Methods: XXX_insolar.ContractMethods{
+		Methods: insolar.ContractMethods{
 			"MigrationAdminCall":            INSMETHOD_MigrationAdminCall,
 			"GetDepositParameters":          INSMETHOD_GetDepositParameters,
 			"GetMigrationDaemonByMemberRef": INSMETHOD_GetMigrationDaemonByMemberRef,
@@ -406,6 +405,6 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetFreeMigrationAddress":       INSMETHOD_GetFreeMigrationAddress,
 			"AddNewMigrationAddressToMaps":  INSMETHOD_AddNewMigrationAddressToMaps,
 		},
-		Constructors: XXX_insolar.ContractConstructors{},
+		Constructors: insolar.ContractConstructors{},
 	}
 }

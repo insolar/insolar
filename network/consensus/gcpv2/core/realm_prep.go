@@ -82,7 +82,7 @@ type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
 	*coreRealm // points the core part realms, it is shared between of all Realms of a Round
 
-	completeFn func(successful bool) // MUST be called under lock, consequent calls are ignored
+	completeFn func(successful bool, startedAt time.Time) // MUST be called under lock, consequent calls are ignored
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []population.PacketDispatcher
@@ -98,7 +98,7 @@ type PrepRealm struct {
 	prepSelf           *population.NodeAppearance /* local copy to avoid race */
 }
 
-func (p *PrepRealm) init(completeFn func(successful bool)) {
+func (p *PrepRealm) init(completeFn func(successful bool, startedAt time.Time)) {
 	p.completeFn = completeFn
 	if p.coreRealm.self == nil {
 		panic("illegal state")
@@ -287,7 +287,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	}
 
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
-	ok, pn := p._applyPulseData(ctx, pde, false)
+	ok, pn := p._applyPulseData(ctx, time.Now(), pde, false)
 	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
@@ -318,7 +318,7 @@ func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
 	return p.initialCensus.GetMandateRegistry()
 }
 
-func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
+func (p *PrepRealm) ApplyPulseData(ctx context.Context, startedAt time.Time, pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
 
 	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
@@ -333,7 +333,7 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	p.Lock()
 	defer p.Unlock()
 
-	ok, epn := p._applyPulseData(ctx, pde, fromPulsar)
+	ok, epn := p._applyPulseData(ctx, startedAt, pde, fromPulsar)
 	if ok || !epn.IsUnknown() && epn == pn {
 		return nil
 	}
@@ -344,7 +344,7 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from, "prep:ApplyPulseData")
 }
 
-func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
+func (p *PrepRealm) _applyPulseData(_ context.Context, startedAt time.Time, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
 
 	pd := pdp.GetPulseData()
 
@@ -393,7 +393,7 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 	p.originalPulse = pdp
 	p.pulseData = pd
 
-	p.completeFn(true)
+	p.completeFn(true, startedAt)
 
 	return true, pd.PulseNumber
 }
