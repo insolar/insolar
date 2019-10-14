@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	PrototypeType   = "prototype"
-	PrototypeSuffix = "_proto"
+	PrototypeType    = "prototype"
+	PrototypeSuffix  = "_proto"
+	FundsDepositName = "genesis_deposit"
 )
 
 var PredefinedPrototypes = map[string]insolar.Reference{
@@ -48,6 +49,7 @@ var PredefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameMigrationAdmin + PrototypeSuffix:        *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationAdmin, 0),
 	insolar.GenesisNameMigrationAdminWallet + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 	insolar.GenesisNameMigrationAdminAccount + PrototypeSuffix: *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
+	insolar.GenesisNameMigrationAdminDeposit + PrototypeSuffix: *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
 	insolar.GenesisNameWallet + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 }
 
@@ -82,6 +84,8 @@ var (
 	ContractMigrationWallet = GenesisRef(insolar.GenesisNameMigrationAdminWallet)
 	// ContractMigrationAccount is the migration account contract reference.
 	ContractMigrationAccount = GenesisRef(insolar.GenesisNameMigrationAdminAccount)
+	// ContractMigrationDeposit is the migration deposit contract reference.
+	ContractMigrationDeposit = GenesisRef(insolar.GenesisNameMigrationAdminDeposit)
 	// ContractDeposit is the deposit contract reference.
 	ContractDeposit = GenesisRef(insolar.GenesisNameDeposit)
 	// ContractCostCenter is the cost center contract reference.
