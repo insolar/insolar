@@ -16,19 +16,24 @@
 
 package smachine
 
+import "github.com/insolar/insolar/conveyor/injector"
+
 type StateMachine interface {
 	//GetStateMachineName() string
 	GetStateMachineDeclaration() StateMachineDeclaration
 }
 
-type DependencyRegistry interface {
-	FindDependency(id string) interface{}
-}
-
 type StateMachineDeclaration interface {
 	IsConsecutive(cur, next StateFunc) bool
 	GetInitStateFor(StateMachine) InitFunc
-	InjectDependencies(StateMachine, SlotLink, DependencyRegistry) bool
+	GetShadowMigrateFor(StateMachine) ShadowMigrateFunc
+	InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector)
+}
+
+type ShadowMigrateFunc func(start, delta uint32)
+
+type ShadowMigrator interface {
+	ShadowMigrate(start, delta uint32)
 }
 
 type StateMachineDeclTemplate struct {
@@ -44,10 +49,9 @@ func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
 	return false
 }
 
-func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
+func (s *StateMachineDeclTemplate) GetShadowMigrateFor(StateMachine) ShadowMigrateFunc {
 	return nil
 }
 
-func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *SlotMachine, DependencyRegistry) bool {
-	return false
+func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector) {
 }

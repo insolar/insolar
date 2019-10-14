@@ -49,10 +49,10 @@ type AsyncCallRequester interface {
 	Start()
 
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
-	DelayedStart() CallConditionalUpdate
+	DelayedStart() CallConditionalBuilder
 }
 
-type AdapterCallbackFunc func(fn AsyncResultFunc, recovered interface{})
+type AdapterCallbackFunc func(AsyncResultFunc, error)
 type AdapterCallFunc func() AsyncResultFunc
 type AdapterNestedEventFunc func(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
 
@@ -70,8 +70,8 @@ type AdapterExecutor interface {
 	StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc
 
 	/*
-	    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
-		Panics are handled by caller.
+		    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
+			Panics are handled by caller.
 	*/
 	TrySyncCall(fn AdapterCallFunc) (bool, AsyncResultFunc)
 	//Migrate(slotMachineState SlotMachineState, migrationCount uint16)

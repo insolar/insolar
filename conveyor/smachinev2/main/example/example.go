@@ -18,6 +18,7 @@ package example
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/longbits"
 	"time"
 
@@ -42,19 +43,17 @@ var declarationStateMachine1 smachine.StateMachineDeclaration = stateMachine1Dec
 
 type stateMachine1Declaration struct{}
 
-func (stateMachine1Declaration) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, deps smachine.DependencyRegistry) bool {
+func (stateMachine1Declaration) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	s := sm.(*StateMachine1)
-	smachine.Inject(deps.FindDependency, &s.serviceA)
-	smachine.Inject(deps.FindDependency, &s.catalogC)
-
-	return false
+	injector.MustInject(&s.serviceA)
+	injector.MustInject(&s.catalogC)
 }
 
 func (stateMachine1Declaration) IsConsecutive(cur, next smachine.StateFunc) bool {
 	return false
 }
 
-func (stateMachine1Declaration) GetMigrateFor(smachine.StateFunc) smachine.MigrateFunc {
+func (stateMachine1Declaration) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
 	return nil
 }
 
@@ -93,6 +92,10 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	s.serviceA.PrepareAsync(ctx, func(svc ServiceA) smachine.AsyncResultFunc {
 		result := svc.DoSomething("y")
+
+		//if result != "" {
+		//	panic("test panic")
+		//}
 
 		return func(ctx smachine.AsyncResultContext) {
 			fmt.Printf("state1 async: %v %v\n", ctx.SlotLink(), result)

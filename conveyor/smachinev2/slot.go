@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"github.com/insolar/insolar/conveyor/injector"
 	"sync/atomic"
 )
 
@@ -44,9 +45,12 @@ type Slot struct {
 }
 
 type slotCreateData struct {
-	parent          SlotLink
-	ctx             context.Context
-	declaration     StateMachineDeclaration
+	parent      SlotLink
+	ctx         context.Context
+	declaration StateMachineDeclaration
+	injected    injector.LocalDependencyRegistry // TODO replace with struct ptr
+
+	shadowMigrate   ShadowMigrateFunc
 	defMigrate      MigrateFunc
 	defErrorHandler ErrorHandlerFunc
 	defFlags        StepFlags
@@ -58,16 +62,24 @@ func (v slotCreateData) takeOutForReplace() slotCreateData {
 
 type slotData struct {
 	slotCreateData
-	lastWorkScan uint8
 
-	bargeInCount   uint8  //no overflow, capped by max
-	asyncCallCount uint16 // pending calls
-	migrationCount uint16 // can be wrapped by overflow
+	slotFlags      slotFlags
+	lastWorkScan   uint8
+	asyncCallCount uint16 // pending calls, overflow panics
+	migrationCount uint32 // can be wrapped by overflow
 
 	step SlotStep
 
 	dependency SlotDependency
 }
+
+type slotFlags uint8
+
+const (
+	slotWokenUp slotFlags = 1 << iota
+	slotHasBargeIn
+	slotHasAliases
+)
 
 type SlotDependency interface {
 	IsReleaseOnWorking() bool
@@ -121,22 +133,6 @@ func (s *Slot) isInitializing() bool {
 
 func (s *Slot) ensureInitializing() {
 	if !s.isInitializing() {
-		panic("illegal state")
-	}
-}
-
-func (s *Slot) ensureWorking() {
-	if atomic.LoadUint64(&s.idAndStep)&slotFlagBusy == 0 {
-		panic("illegal state")
-	}
-}
-
-func (s *Slot) ensureWorkingMachine() {
-	v := atomic.LoadUint64(&s.idAndStep)
-	if SlotID(v) == 0 {
-		panic("illegal state")
-	}
-	if v&slotFlagBusy == 0 || v < slotFlagBusy {
 		panic("illegal state")
 	}
 }
@@ -235,23 +231,29 @@ func (s *Slot) NewStepLink() StepLink {
 	return StepLink{SlotLink{id, s}, step}
 }
 
-func (s *Slot) _tryCall(fn func(*Slot)) bool {
-	ok, _ := s._trySetFlag(slotFlagBusy)
-	if !ok {
-		return false
-	}
-
-	defer s._unsetFlag(slotFlagBusy)
-
-	fn(s)
-	return true
-}
-
 func (s *Slot) _tryStart(minStepNo uint32) (isEmpty, isStarted bool, prevStepNo uint32) {
 	for {
 		v := atomic.LoadUint64(&s.idAndStep)
 		if v == 0 /* isEmpty() */ {
 			return true, false, 0
+		}
+
+		prevStepNo = uint32(v >> stepIncrementShift)
+		if v&slotFlagBusy != 0 /* isWorking() */ || prevStepNo < minStepNo {
+			return false, false, prevStepNo
+		}
+
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
+			return false, true, prevStepNo
+		}
+	}
+}
+
+func (s *Slot) _tryStartWithId(slotId SlotID, minStepNo uint32) (isValid, isStarted bool, prevStepNo uint32) {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if v == 0 /* isEmpty() */ || SlotID(v) != slotId {
+			return false, false, 0
 		}
 
 		prevStepNo = uint32(v >> stepIncrementShift)
@@ -283,13 +285,8 @@ func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
 	return
 }
 
-func (s *Slot) tryStartWorking() (isStarted bool, prevStepNo uint32) {
-	_, isStarted, prevStepNo = s._tryStart(1)
-	return
-}
-
 func (s *Slot) startWorking(scanNo uint32) uint32 {
-	if isStarted, prevStepNo := s.tryStartWorking(); isStarted {
+	if _, isStarted, prevStepNo := s._tryStart(1); isStarted {
 		s.lastWorkScan = uint8(scanNo)
 		return prevStepNo
 	}
@@ -359,7 +356,7 @@ func (s *Slot) getErrorHandler() ErrorHandlerFunc {
 }
 
 func (s *Slot) hasAsyncOrBargeIn() bool {
-	return s.asyncCallCount > 0 || s.bargeInCount > 0
+	return s.asyncCallCount > 0 || s.slotFlags&slotHasBargeIn != 0
 }
 
 func (s *Slot) addAsyncCount(asyncCnt uint16) {
@@ -368,4 +365,11 @@ func (s *Slot) addAsyncCount(asyncCnt uint16) {
 		panic("overflow")
 	}
 	s.asyncCallCount = asyncCnt
+}
+
+func (s *Slot) decAsyncCount() {
+	if s.asyncCallCount == 0 {
+		panic("underflow")
+	}
+	s.asyncCallCount--
 }

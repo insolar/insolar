@@ -72,11 +72,11 @@ func _sendResult(result AsyncResultFunc, callback AdapterCallbackFunc, cancel *s
 	}, nil)
 }
 
-func (c AdapterCallback) SendPanic(recovered interface{}) {
+func (c AdapterCallback) SendPanic(err error) {
 	if c.IsZero() {
 		panic("illegal state")
 	}
-	c.callback(nil, recovered)
+	c.callback(nil, err)
 }
 
 func (c AdapterCallback) SendCancel() {

@@ -85,7 +85,7 @@ func (m *SlotMachineSync) _addAsyncCallback(q *tools.SyncQueue, link SlotLink, f
 	})
 }
 
-func (m *SlotMachineSync) ProcessCallbacks(worker FixedSlotWorker) (hasUpdates, hasSignal, wasDetached bool) {
+func (m *SlotMachineSync) ProcessCallbacks(worker AttachedSlotWorker) (hasUpdates, hasSignal, wasDetached bool) {
 
 	if worker.HasSignal() {
 		return true, true, false

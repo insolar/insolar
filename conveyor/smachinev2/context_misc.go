@@ -16,39 +16,57 @@
 
 package smachine
 
-import "context"
+import (
+	"context"
+)
 
 var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
 	contextTemplate
-	s *Slot
+	s       *Slot
+	injects map[string]interface{}
+	inherit bool
+}
+
+func (p *constructionContext) InheritDependencies(b bool) {
+	p.ensure(updCtxConstruction)
+	p.inherit = b
+}
+
+func (p *constructionContext) OverrideDependency(id string, v interface{}) {
+	p.ensure(updCtxConstruction)
+	if p.injects == nil {
+		p.injects = make(map[string]interface{})
+	}
+	p.injects[id] = v
 }
 
 func (p *constructionContext) SlotLink() SlotLink {
+	p.ensure(updCtxConstruction)
 	return p.s.NewLink()
 }
 
 func (p *constructionContext) GetContext() context.Context {
+	p.ensure(updCtxConstruction)
 	return p.s.ctx
 }
 
 func (p *constructionContext) SetContext(ctx context.Context) {
+	p.ensure(updCtxConstruction)
 	if ctx == nil {
 		panic("illegal value")
 	}
 	p.s.ctx = ctx
 }
 
-//func (p *constructionContext) GetContainer() SlotMachineState {
-//	return p.machine.containerState
-//}
-
 func (p *constructionContext) ParentLink() SlotLink {
+	p.ensure(updCtxConstruction)
 	return p.s.parent
 }
 
-func (p *constructionContext) SetParent(parent SlotLink) {
+func (p *constructionContext) SetParentLink(parent SlotLink) {
+	p.ensure(updCtxConstruction)
 	p.s.parent = parent
 }
 
@@ -99,9 +117,10 @@ var _ FailureContext = &failureContext{}
 
 type failureContext struct {
 	slotContext
-	isPanic, isAsync bool
-	isIgnoreDefault  bool
-	err              error
+	isPanic    bool
+	isAsync    bool
+	canRecover bool
+	err        error
 }
 
 func (p *failureContext) GetError() error {
@@ -114,19 +133,16 @@ func (p *failureContext) IsPanic() bool {
 	return p.isPanic
 }
 
-func (p *failureContext) IgnoreDefaultHandler() {
-	p.isIgnoreDefault = true
+func (p *failureContext) CanRecover() bool {
+	p.ensure(updCtxFail)
+	return p.canRecover
 }
 
-func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (err error) {
+func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (result ErrorHandlerResult, err error) {
 	p.setMode(updCtxFail)
 	defer func() {
 		p.discardAndCapture("failure handler", recover(), &err)
 	}()
 	err = p.err // ensure it will be included on panic
-	fn(p)
-	if p.isIgnoreDefault {
-		return nil
-	}
-	return err
+	return fn(p), err
 }

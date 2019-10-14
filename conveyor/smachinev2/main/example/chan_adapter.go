@@ -158,9 +158,9 @@ func (c ChannelRecord) RunAndSendResult() bool {
 		return false
 	}
 
-	result, recovered := c.safeCall()
-	if recovered != nil {
-		c.callback.SendPanic(recovered)
+	result, err := c.safeCall()
+	if err != nil {
+		c.callback.SendPanic(err)
 		return false
 	}
 
@@ -168,9 +168,9 @@ func (c ChannelRecord) RunAndSendResult() bool {
 	return true
 }
 
-func (c ChannelRecord) safeCall() (result smachine.AsyncResultFunc, recovered interface{}) {
+func (c ChannelRecord) safeCall() (result smachine.AsyncResultFunc, err error) {
 	defer func() {
-		recovered = recover()
+		err = smachine.RecoverAsyncSlotPanicWithStack("async call", recover(), err)
 	}()
 	return c.callFunc(), nil
 }

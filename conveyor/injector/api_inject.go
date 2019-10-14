@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,35 +12,25 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
-package smachine
+package injector
 
-type ContextMarker = uintptr
-
-type StateUpdate struct {
-	marker  ContextMarker
-	link    *Slot
-	param0  uint32
-	param1  interface{}
-	step    SlotStep
-	updKind uint8
+type DependencyRegistry interface {
+	FindDependency(id string) (interface{}, bool)
 }
 
-func (u StateUpdate) IsZero() bool {
-	return u.marker == 0 && u.updKind == 0
+type LocalDependencyRegistry interface {
+	DependencyRegistry
+	FindLocalDependency(id string) (interface{}, bool)
 }
 
-func (u StateUpdate) getLink() SlotLink {
-	if u.link == nil {
-		return NoLink()
-	}
-	return SlotLink{SlotID(u.param0), u.link}
+type DependencyRegistryFunc func(id string) (interface{}, bool)
+
+type DependencyContainer interface {
+	DependencyRegistry
+	PutDependency(id string, v interface{})
+	TryPutDependency(id string, v interface{}) bool
 }
 
-func (u StateUpdate) ensureMarker(marker ContextMarker) StateUpdate {
-	if u.marker != marker {
-		panic("illegal state")
-	}
-	return u
-}
+type DependencyProviderFunc func(target interface{}, id string, registry DependencyRegistry) interface{}

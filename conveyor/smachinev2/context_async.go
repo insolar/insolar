@@ -18,55 +18,37 @@ package smachine
 
 import "context"
 
-type bargeInRequest struct {
-	p    *contextTemplate
-	m    *SlotMachine
-	link StepLink
+type bargeInBuilder struct {
+	c      slotContext
+	parent *slotContext
+	link   StepLink
 }
 
-func (b bargeInRequest) WithStop() BargeInFunc {
-	b.p.ensureAny2(updCtxExec, updCtxInit)
-	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
-		return ctx.Stop()
-	})
-	return func() bool {
-		return bfn(nil)
-	}
+func (b bargeInBuilder) with(stateUpdate StateUpdate) BargeInFunc {
+	b.parent.ensureValid()
+	defer b.c.setDiscarded()
+	return b.c.s.machine.createLightBargeIn(b.link,
+		b.c.ensureAndPrepare(b.c.s, stateUpdate))
 }
 
-func (b bargeInRequest) WithWakeUp() BargeInFunc {
-	b.p.ensureAny2(updCtxExec, updCtxInit)
-	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
-		return ctx.WakeUp()
-	})
-	return func() bool {
-		return bfn(nil)
-	}
+func (b bargeInBuilder) WithError(err error) BargeInFunc {
+	return b.with(b.c.Error(err))
 }
 
-func (b bargeInRequest) WithJumpExt(step SlotStep) BargeInFunc {
-	b.p.ensureAny2(updCtxExec, updCtxInit)
-	step.ensureTransition()
-
-	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
-		return ctx.JumpExt(step)
-	})
-	return func() bool {
-		return bfn(nil)
-	}
+func (b bargeInBuilder) WithStop() BargeInFunc {
+	return b.with(b.c.Stop())
 }
 
-func (b bargeInRequest) WithJump(fn StateFunc) BargeInFunc {
-	b.p.ensureAny2(updCtxExec, updCtxInit)
-	if fn == nil {
-		panic("illegal value")
-	}
-	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
-		return ctx.Jump(fn)
-	})
-	return func() bool {
-		return bfn(nil)
-	}
+func (b bargeInBuilder) WithWakeUp() BargeInFunc {
+	return b.with(b.c.WakeUp())
+}
+
+func (b bargeInBuilder) WithJumpExt(step SlotStep) BargeInFunc {
+	return b.with(b.c.JumpExt(step))
+}
+
+func (b bargeInBuilder) WithJump(fn StateFunc) BargeInFunc {
+	return b.with(b.c.Jump(fn))
 }
 
 /* ========================================================================= */
@@ -79,7 +61,7 @@ type bargingInContext struct {
 	atOriginal bool
 }
 
-func (p *bargingInContext) GetBargeInParam() interface{} {
+func (p *bargingInContext) BargeInParam() interface{} {
 	p.ensure(updCtxBargeIn)
 	return p.param
 }
@@ -87,13 +69,6 @@ func (p *bargingInContext) GetBargeInParam() interface{} {
 func (p *bargingInContext) IsAtOriginalStep() bool {
 	p.ensure(updCtxBargeIn)
 	return p.atOriginal
-}
-
-func (p *bargingInContext) AffectedStep() SlotStep {
-	p.ensure(updCtxBargeIn)
-	r := p.s.step
-	r.Flags |= StepResetAllFlags
-	return p.s.step
 }
 
 func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) (stateUpdate StateUpdate) {

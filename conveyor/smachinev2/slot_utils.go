@@ -16,6 +16,8 @@
 
 package smachine
 
+import "github.com/insolar/insolar/conveyor/injector"
+
 func (s *Slot) activateSlot(worker FixedSlotWorker) {
 	s.machine.updateSlotQueue(s, worker, activateSlot)
 }
@@ -35,4 +37,48 @@ func (s *Slot) releaseDependency(worker FixedSlotWorker) {
 	dep.Release(func(link SlotLink) {
 		s.machine.activateDependantByLink(link, worker)
 	})
+}
+
+// MUST be a busy-holder to use
+func (s *Slot) wakeUpSlot(worker DetachableSlotWorker) bool {
+	if s.slotFlags&slotWokenUp != 0 || s.QueueType().IsActiveOrPolling() {
+		return false
+	}
+	s.slotFlags |= slotWokenUp
+
+	if !worker.NonDetachableCall(s.activateSlot) {
+		s.machine.syncQueue.AddAsyncUpdate(s.NewLink(), SlotLink.activateSlot)
+	}
+	return true
+}
+
+func buildShadowMigrator(c injector.ReadOnlyContainer, defFn ShadowMigrateFunc) ShadowMigrateFunc {
+	count := c.Count()
+	if defFn != nil {
+		count++
+	}
+	shadowMigrates := make([]ShadowMigrateFunc, 0, count)
+
+	c.FilterLocalDependencies(func(id string, v interface{}) bool {
+		if smFn, ok := v.(ShadowMigrator); ok {
+			shadowMigrates = append(shadowMigrates, smFn.ShadowMigrate)
+		}
+		return false
+	})
+
+	switch {
+	case len(shadowMigrates) == 0:
+		return defFn
+	case defFn != nil:
+		shadowMigrates = append(shadowMigrates, defFn)
+	}
+	if len(shadowMigrates)+1 < cap(shadowMigrates) { // allow only a minimal oversize
+		shadowMigrates = append([]ShadowMigrateFunc(nil), shadowMigrates...)
+	}
+
+	return func(start, delta uint32) {
+		for _, fn := range shadowMigrates {
+			fn(start, delta)
+		}
+	}
 }

@@ -19,6 +19,7 @@ package smachine
 import (
 	"context"
 	"math"
+	"reflect"
 	"unsafe"
 )
 
@@ -26,14 +27,16 @@ type contextTemplate struct {
 	mode updCtxMode
 }
 
+// protects from taking a copy of a context
 func (p *contextTemplate) getMarker() ContextMarker {
-	return ContextMarker(uintptr(unsafe.Pointer(p))) // TODO replace with getting an atomic counter?
+	return ContextMarker(unsafe.Pointer(p))
+	// ContextMarker(unsafe.Pointer(p)) ^ atomicCounter.AddUint32(1) << 16
 }
 
 func (p *contextTemplate) ensureAndPrepare(s *Slot, stateUpdate StateUpdate) StateUpdate {
 	stateUpdate.ensureMarker(p.getMarker())
 
-	sut := typeOfStateUpdateForMode(p.mode, stateUpdate)
+	sut := typeOfStateUpdateForPrepare(p.mode, stateUpdate)
 	sut.Prepare(s, &stateUpdate)
 
 	return stateUpdate
@@ -92,7 +95,7 @@ func (p *contextTemplate) discardAndCapture(msg string, recovered interface{}, e
 	if recovered == nil {
 		return
 	}
-	*err = recoverSlotPanic(msg, recovered, *err)
+	*err = RecoverSlotPanic(msg, recovered, *err)
 }
 
 func (p *contextTemplate) discardAndUpdate(msg string, recovered interface{}, update *StateUpdate) {
@@ -108,9 +111,9 @@ type slotContext struct {
 	w DetachableSlotWorker
 }
 
-func (p *slotContext) clone() slotContext {
+func (p *slotContext) clone(mode updCtxMode) slotContext {
 	p.ensureValid()
-	return slotContext{s: p.s, w: p.w}
+	return slotContext{s: p.s, w: p.w, contextTemplate: contextTemplate{mode: mode}}
 }
 
 func (p *slotContext) SlotLink() SlotLink {
@@ -197,12 +200,83 @@ func (p *slotContext) WakeUp() StateUpdate {
 	return p.template(stateUpdWakeup).newUint(0)
 }
 
-func (p *slotContext) Share(data interface{}, wakeUpAfterUse bool) SharedDataLink {
+// this structure provides isolation of shared data to avoid SM being retained via SharedDataLink
+type uniqueAlias struct {
+	valueType reflect.Type
+}
+
+func (p *slotContext) Share(data interface{}, flags ShareDataFlags) SharedDataLink {
 	p.ensureAtLeast(updCtxInit)
-	if data == nil {
+	switch data.(type) {
+	case nil:
+		panic("illegal value")
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		panic("illegal value")
+	case SharedDataLink, *SharedDataLink:
+		panic("illegal value - SharedDataLink can't be shared")
+	}
+
+	switch {
+	case flags&ShareDataUnbound != 0: // ShareDataDirect is irrelevant
+		return SharedDataLink{SlotLink{}, data, flags}
+	case flags&ShareDataDirect != 0:
+		return SharedDataLink{p.s.NewLink(), data, flags}
+	default:
+		alias := &uniqueAlias{reflect.TypeOf(data)}
+		if !p.s.registerBoundAlias(alias, data) {
+			panic("impossible")
+		}
+		return SharedDataLink{p.s.NewLink(), alias, flags}
+	}
+}
+
+func (p *slotContext) Publish(key, data interface{}) bool {
+	p.ensureAtLeast(updCtxInit)
+	switch key.(type) {
+	case nil:
+		panic("illegal value")
+	case dependencyKey, *slotAliases, *uniqueAlias:
 		panic("illegal value")
 	}
-	return SharedDataLink{p.s.NewLink(), wakeUpAfterUse, data}
+
+	switch data.(type) {
+	case nil:
+		panic("illegal value")
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		panic("illegal value")
+	}
+	return p.s.registerBoundAlias(key, data)
+}
+
+func (p *slotContext) Unpublish(key interface{}) bool {
+	p.ensureAtLeast(updCtxInit)
+	return p.s.unregisterBoundAlias(key)
+}
+
+func (p *slotContext) GetPublished(key interface{}) interface{} {
+	p.ensureAtLeast(updCtxInit)
+	switch key.(type) {
+	case nil:
+		return nil
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		return nil
+	}
+	if v, ok := p.s.machine.localRegistry.Load(key); ok {
+		return v
+	}
+	return nil
+}
+
+func (p *slotContext) GetPublishedLink(key interface{}) SharedDataLink {
+	v := p.GetPublished(key)
+	switch d := v.(type) {
+	case SharedDataLink:
+		return d
+	case *SharedDataLink:
+		return *d
+	default:
+		return SharedDataLink{}
+	}
 }
 
 func (p *slotContext) AffectedStep() SlotStep {
@@ -221,7 +295,7 @@ func (p *slotContext) InitChild(ctx context.Context, fn CreateFunc) SlotLink {
 }
 
 func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool) SlotLink {
-	p.ensureAny2(updCtxExec, updCtxFail)
+	p.ensure(updCtxExec)
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -235,24 +309,24 @@ func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool
 	newSlot.parent = p.s.NewLink()
 	link := newSlot.NewLink()
 
-	m.prepareNewSlot(newSlot, p.s, fn, nil)
+	m.prepareNewSlot(newSlot, p.s, fn, nil, false)
 	m.startNewSlotByDetachable(newSlot, runInit, p.w)
 	return link
 }
 
 func (p *slotContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
-	p.ensureAny2(updCtxExec, updCtxInit)
+	p.ensureAtLeast(updCtxInit)
 	return p.s.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
 }
 
-func (p *slotContext) BargeIn() BargeInRequester {
-	p.ensureAny2(updCtxExec, updCtxInit)
-	return &bargeInRequest{&p.contextTemplate, p.s.machine, p.s.NewStepLink().AnyStep()}
+func (p *slotContext) BargeIn() BargeInBuilder {
+	p.ensureAtLeast(updCtxInit)
+	return &bargeInBuilder{p.clone(updCtxBargeIn), p, p.s.NewStepLink().AnyStep()}
 }
 
-func (p *slotContext) BargeInThisStepOnly() BargeInRequester {
-	p.ensure(updCtxExec)
-	return &bargeInRequest{&p.contextTemplate, p.s.machine, p.s.NewStepLink()}
+func (p *slotContext) BargeInThisStepOnly() BargeInBuilder {
+	p.ensureAtLeast(updCtxExec)
+	return &bargeInBuilder{p.clone(updCtxBargeIn), p, p.s.NewStepLink()}
 }
 
 func (p *slotContext) Check(link SyncLink) Decision {

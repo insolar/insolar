@@ -20,6 +20,7 @@ import (
 	"sync"
 )
 
+type AttachedFunc func(AttachedSlotWorker)
 type DetachableFunc func(DetachableSlotWorker)
 type NonDetachableFunc func(FixedSlotWorker)
 
@@ -33,12 +34,24 @@ type DetachableSlotWorker interface {
 
 	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
 	GetCond() (bool, *sync.Cond)
-	// provides temporary protection from detach
+	// provides a temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
+
+	//NestedAttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }
 
 type FixedSlotWorker interface {
 	SlotWorker
-	DetachableCall(DetachableFunc) (wasDetached bool)
 	OuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool)
+	//CanWorkOn(*SlotMachine) bool
+}
+
+type AttachedSlotWorker interface {
+	FixedSlotWorker
+	DetachableCall(DetachableFunc) (wasDetached bool)
+}
+
+type AttachableSlotWorker interface {
+	SlotWorker
+	AttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }

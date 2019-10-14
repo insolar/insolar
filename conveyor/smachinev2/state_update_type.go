@@ -33,12 +33,20 @@ func typeOfStateUpdate(stateUpdate StateUpdate) StateUpdateType {
 	return stateUpdateTypes[stateUpdate.updKind].get()
 }
 
-func typeOfStateUpdateForMode(contextMode updCtxMode, stateUpdate StateUpdate) StateUpdateType {
-	return stateUpdateTypes[stateUpdate.updKind].getForMode(contextMode)
+func typeOfStateUpdateForPrepare(contextMode updCtxMode, stateUpdate StateUpdate) StateUpdateType {
+	return stateUpdateTypes[stateUpdate.updKind].getForPrepare(contextMode)
 }
 
 func newPanicStateUpdate(err error) StateUpdate {
 	return StateUpdateTemplate{t: &stateUpdateTypes[stateUpdPanic]}.newError(err)
+}
+
+func recoverSlotPanicAsUpdate(update *StateUpdate, msg string, recovered interface{}, prev error) {
+	if recovered != nil {
+		*update = newPanicStateUpdate(RecoverSlotPanicWithStack(msg, recovered, prev))
+	} else if prev != nil {
+		*update = newPanicStateUpdate(prev)
+	}
 }
 
 func getStateUpdateKind(stateUpdate StateUpdate) stateUpdKind {
@@ -83,15 +91,15 @@ const updCtxInactive updCtxMode = 0
 
 const (
 	updCtxDiscarded updCtxMode = 1 << iota
-	updCtxConstruction
+	updCtxInternal             // special mode - updates can't be accessed via template() call, but getForXXX() allows any valid context
+	updCtxFail
 	updCtxBargeIn
 	updCtxAsyncCallback
-	updCtxFail
+
+	updCtxConstruction
 	updCtxInit
 	updCtxExec
 	updCtxMigrate
-
-	updCtxInternal
 )
 
 const (
@@ -101,17 +109,20 @@ const (
 	updParamVar
 )
 
-func (v StateUpdateType) verify(ctxType updCtxMode) {
-	if ctxType <= updCtxDiscarded {
+func (v StateUpdateType) verify(ctxType updCtxMode, allowInternal bool) {
+	switch {
+	case ctxType <= updCtxDiscarded:
 		panic(v.panicText(ctxType, "illegal value"))
-	}
-	if v.updKind == 0 {
+	case v.updKind == 0:
 		panic(v.panicText(ctxType, "unknown type"))
-	}
-	if v.apply == nil {
+	case v.apply == nil:
 		panic(v.panicText(ctxType, "not implemented"))
-	}
-	if ctxType&v.filter != ctxType {
+
+	case ctxType&v.filter == ctxType:
+		return
+	case allowInternal && v.filter&updCtxInternal != 0:
+		return
+	default:
 		panic(v.panicText(ctxType, "not allowed"))
 	}
 }
@@ -121,12 +132,12 @@ func (v StateUpdateType) panicText(ctxType updCtxMode, msg string) string {
 }
 
 func (v StateUpdateType) template(marker ContextMarker, ctxType updCtxMode) StateUpdateTemplate {
-	v.verify(ctxType)
+	v.verify(ctxType, false)
 	return StateUpdateTemplate{&v, marker, ctxType}
 }
 
-func (v StateUpdateType) getForMode(ctxType updCtxMode) StateUpdateType {
-	v.verify(ctxType)
+func (v StateUpdateType) getForPrepare(ctxType updCtxMode) StateUpdateType {
+	v.verify(ctxType, true)
 	return v
 }
 

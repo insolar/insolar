@@ -1,0 +1,91 @@
+//
+//    Copyright 2019 Insolar Technologies
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+//
+
+package smachine
+
+/* ------- Slot-dependant aliases and mappings ------------- */
+
+type slotAliases struct {
+	//owner *Slot
+	keys []interface{}
+}
+
+// ONLY to be used by a holder of a slot
+func (s *Slot) registerBoundAlias(k, v interface{}) bool {
+	if k == nil {
+		panic("illegal value")
+	}
+
+	m := &s.machine.localRegistry
+	if _, loaded := m.LoadOrStore(k, v); loaded {
+		return false
+	}
+	isa, _ := m.LoadOrStore(s.GetSlotID(), &slotAliases{ /* owner:s */ })
+	sa := isa.(*slotAliases)
+	sa.keys = append(sa.keys, k)
+	s.slotFlags |= slotHasAliases
+
+	return true
+}
+
+// ONLY to be used by a holder of a slot
+func (s *Slot) unregisterBoundAlias(k interface{}) bool {
+	if k == nil {
+		panic("illegal value")
+	}
+
+	m := &s.machine.localRegistry
+	if _, ok := m.Load(k); !ok {
+		return false
+	}
+
+	var key interface{} = s.GetSlotID()
+	if isa, loaded := m.Load(key); loaded {
+		sa := isa.(*slotAliases)
+
+		for i, kk := range sa.keys {
+			if k == kk {
+				m.Delete(k)
+				switch last := len(sa.keys) - 1; {
+				case last == 0:
+					m.Delete(key)
+				case i < last:
+					copy(sa.keys[i:], sa.keys[i+1:])
+					fallthrough
+				default:
+					sa.keys = sa.keys[:last]
+				}
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ONLY to be used by a holder of a slot
+func (s *Slot) unregisterBoundAliases() {
+	m := &s.machine.localRegistry
+	var key interface{} = s.GetSlotID()
+
+	if isa, ok := m.Load(key); ok {
+		sa := isa.(*slotAliases)
+		m.Delete(key)
+
+		for _, k := range sa.keys {
+			m.Delete(k)
+		}
+	}
+}

@@ -19,6 +19,7 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/pulse"
@@ -30,17 +31,26 @@ type InputEvent = interface{}
 type StateMachineFactoryFn = func(InputEvent, PulseSlotState) smachine.StateMachine
 
 func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryFn StateMachineFactoryFn,
-	slotMachineConfig smachine.SlotMachineConfig, injector smachine.DependencyInjector) *PulseConveyor {
+	slotMachineConfig smachine.SlotMachineConfig, registry injector.DependencyRegistry) *PulseConveyor {
 
 	r := &PulseConveyor{
-		past:       make(map[pulse.Number]*PulseSlot),
-		antique:    PulseSlot{isPast: true},
-		slotConfig: slotMachineConfig,
-		factoryFn:  factoryFn,
-		injector:   injector,
+		slotConfig: PulseSlotConfig{
+			config: slotMachineConfig,
+		},
+		past:      make(map[pulse.Number]*PulseSlotMachine),
+		factoryFn: factoryFn,
 	}
 	r.signalQueue = tools.NewSignalFuncQueue(&r.mutex, r.externalSignal.NextBroadcast)
-	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, nil)
+	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, registry)
+
+	r.slotConfig.signalCallback = r.internalSignal.NextBroadcast
+	r.slotConfig.parentRegistry = &r.slotMachine
+
+	r.antique.isAntique = true
+	r.antique.SlotMachine = smachine.NewSlotMachine(
+		r.slotConfig.config,
+		r.slotConfig.signalCallback,
+		r.slotConfig.parentRegistry)
 
 	return r
 }
@@ -48,10 +58,12 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 type PulseConveyor struct {
 	mutex sync.RWMutex
 
-	future  *PulseSlot
-	present *PulseSlot
-	past    map[pulse.Number]*PulseSlot
-	antique PulseSlot
+	slotConfig PulseSlotConfig
+
+	future  *PulseSlotMachine
+	present *PulseSlotMachine
+	past    map[pulse.Number]*PulseSlotMachine
+	antique PulseSlotMachine
 
 	workerCtx      context.Context
 	signalQueue    tools.SyncQueue
@@ -60,50 +72,56 @@ type PulseConveyor struct {
 
 	slotMachine smachine.SlotMachine
 
-	slotConfig   smachine.SlotMachineConfig
+	//slotConfig   smachine.SlotMachineConfig
 	factoryFn    StateMachineFactoryFn
 	pulseService PulseServiceAdapter
 }
 
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
 
-	pulseSlot, err := p.getPulseSlot(ctx, pn)
+	pulseSlotMachine, err := p.getPulseSlotMachine(ctx, pn)
 	if err != nil {
 		return err
 	}
 
-	pulseSlot.slots.AddAsyncNew(ctx, smachine.NoLink(), &inputEventSM{ps: pulseSlot, event: event, factoryFn: p.factoryFn})
+	pulseSlotMachine.AddNew(ctx, smachine.NoLink(),
+		&inputEventSM{
+			ps:        &pulseSlotMachine.pulseSlot,
+			event:     event,
+			factoryFn: p.factoryFn,
+		})
 	return nil
 }
 
-func (p *PulseConveyor) getPulseSlot(ctx context.Context, pn pulse.Number) (*PulseSlot, error) {
+func (p *PulseConveyor) getPulseSlotMachine(ctx context.Context, pn pulse.Number) (*PulseSlotMachine, error) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	pulseSlot := p.present
-	if pulseSlot == nil {
+	if p.present == nil {
 		return nil, fmt.Errorf("uninitialized present pulse: pn=%v", pn)
 	}
 
-	presentPulse := p.present.pd.PulseNumber
+	presentPulseData := p.present.pulseSlot.PulseData()
+	presentPulse := presentPulseData.PulseNumber
+	npn := presentPulseData.GetNextPulseNumber()
 
 	switch {
-	case pn < presentPulse:
-		pulseSlot = p.past[pn]
+	case pn == presentPulse:
+		return p.present, nil
+	case pn >= presentPulseData.GetNextPulseNumber():
+		if p.future == nil {
+			return nil, fmt.Errorf("uninitialized future pulse: pn=%v", pn)
+		}
+		return p.future, nil
+	case pn <= presentPulse:
+		pulseSlot := p.past[pn]
 		if pulseSlot == nil {
 			pulseSlot = &p.antique
 		}
-	case pn == presentPulse:
-		// pulseSlot = p.present
-	case pn < p.present.pd.GetNextPulseNumber():
-		return nil, fmt.Errorf("invalid pulse: pn=%v expected=%v", pn, p.present.pd.GetNextPulseNumber())
+		return pulseSlot, nil
 	default:
-		pulseSlot = p.future
-		if pulseSlot == nil {
-			return nil, fmt.Errorf("uninitialized future pulse: pn=%v", pn)
-		}
+		return nil, fmt.Errorf("invalid pulse: pn=%v expected=%v", pn, npn)
 	}
-	return pulseSlot, nil
 }
 
 func (p *PulseConveyor) PreparePulseChange(out chan<- PreparedState) {
@@ -123,29 +141,26 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 
 	p.signalQueue.Add(func(interface{}) {
 		if p.present != nil {
-			p.present.isPast = true
+			p.present.pulseSlot.pulseData.MakePast()
 			p.present = nil
 		}
 
-		if p.future != nil {
-			p.future.pd = pd
+		if p.future != nil && !p.future.IsEmpty() {
+			p.future.pulseSlot.pulseData.MakePresent(pd)
 			p.present = p.future
 			p.future = nil
 		} else {
-			p.present = newPulseSlot(pd,
-				p.slotConfig, p.injector, p.GetAdapters())
-
+			p.present = newPresentPulseSlot(pd, p.slotConfig)
 			p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
 				&PresentPulseSM{pulseSMTemplate{ps: p.present, psa: &p.pulseService}})
 		}
 
-		p.future = newPulseSlot(pd.CreateNextExpected(),
-			p.slotConfig, p.injector, p.GetAdapters())
+		futurePD := pd.CreateNextExpected()
+		p.future = newFuturePulseSlot(futurePD, p.slotConfig)
 
 		p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
-			&FuturePulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
-
-		p.past[p.future.pd.PulseNumber] = p.future
+			&PulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
+		p.past[futurePD.PulseNumber] = p.future
 
 		p.pulseService.svc.onCommitPulseChange(pd)
 		p.slotMachine.Migrate(true)
@@ -192,43 +207,5 @@ func (p *PulseConveyor) workerConveyor() {
 				// TODO we need a Yield to indicate "no work done"
 			}
 		}
-	}
-}
-
-type PulseSlotState uint8
-
-const (
-	Uninitialized PulseSlotState = iota
-	Future
-	Present
-	Past
-)
-
-func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig) *PulseSlot {
-
-	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, adapters)}
-	r.slots.SetContainerState(r)
-	return r
-}
-
-type PulseSlot struct {
-	pd     pulse.Data
-	isPast bool
-	slots  smachine.SlotMachine
-}
-
-func (p *PulseSlot) SlotMachineState() {
-}
-
-func (p *PulseSlot) State() PulseSlotState {
-	switch {
-	case p.isPast:
-		return Past
-	case p.pd.IsEmpty():
-		return Uninitialized
-	case p.pd.IsExpectedPulse():
-		return Future
-	default:
-		return Present
 	}
 }

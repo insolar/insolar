@@ -17,17 +17,17 @@
 package conveyor
 
 import (
-	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/pulse"
 )
 
 type PulseService struct {
-	preparePulse    smachine.BargeInFunc
-	cancelPulse     smachine.BargeInFunc
+	preparePulse    func(chan<- PreparedState) bool
+	cancelPulse     func() bool
 	preparePulseOut chan<- PreparedState
 }
 
-func (p *PulseService) subscribe(preparePulse smachine.BargeInFunc, cancelPulse smachine.BargeInFunc) {
+func (p *PulseService) subscribe(preparePulse func(chan<- PreparedState) bool, cancelPulse func() bool) {
 	if p.preparePulse != nil || p.cancelPulse != nil {
 		panic("illegal state")
 	}
@@ -36,9 +36,8 @@ func (p *PulseService) subscribe(preparePulse smachine.BargeInFunc, cancelPulse 
 }
 
 func (p PulseService) onPreparePulseChange(out chan<- PreparedState) {
-	p.preparePulseOut = out
 	if p.preparePulse != nil {
-		p.preparePulse()
+		p.preparePulse(out)
 	}
 }
 

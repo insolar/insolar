@@ -70,8 +70,16 @@ func (p *DetachableSimpleSlotWorker) CanLoopOrHasSignal(loopCount int) (canLoop,
 }
 
 func (p *DetachableSimpleSlotWorker) NonDetachableCall(fn smachine.NonDetachableFunc) (wasExecuted bool) {
-	fn(p.SimpleSlotWorker)
+	fn(&NonDetachableSimpleSlotWorker{p.SimpleSlotWorker})
 	return true
+}
+
+type NonDetachableSimpleSlotWorker struct {
+	*SimpleSlotWorker
+}
+
+func (p *NonDetachableSimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
+	panic("not allowed")
 }
 
 //func (p *SimpleSlotWorker) FinishNested(state SlotMachineState) {

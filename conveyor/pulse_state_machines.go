@@ -16,13 +16,16 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/conveyor/smachine"
+import (
+	"github.com/insolar/insolar/conveyor/smachinev2"
+	"runtime"
+)
 
 const presentSlotCycleBoost = 1
 
 type pulseSMTemplate struct {
 	smachine.StateMachineDeclTemplate
-	ps  *PulseSlot
+	ps  *PulseSlotMachine
 	psa *PulseServiceAdapter
 }
 
@@ -31,98 +34,85 @@ type pulseSMTemplate struct {
 	It will additionally handle PulsePrepare and PulseCancel.
 */
 
-type FuturePulseSM struct {
+type PulseSM struct {
 	pulseSMTemplate
 }
 
-func (sm *FuturePulseSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
+func (sm *PulseSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
 	return sm
 }
 
-func (sm *FuturePulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.InitFunc {
+func (sm *PulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.InitFunc {
 	if sm != machine {
 		panic("illegal value")
 	}
 	return sm.stepInit
 }
 
-func (sm *FuturePulseSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
+func (sm *PulseSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.pulseCommitted)
-	return ctx.Jump(sm.stepWorking)
-}
-
-func (sm *FuturePulseSM) pulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
-	if sm.ps.State() != Present {
+	switch sm.ps.pulseSlot.State() {
+	case Future:
+		return ctx.Jump(sm.stepFutureWorking)
+	case Present:
+		return ctx.Jump(sm.stepPresentWorking)
+	case Past:
+		ctx.SetDefaultMigration(sm.stepPastPulseCommitted)
+		return ctx.Jump(sm.stepPastWorking)
+	default:
 		panic("unexpected state")
 	}
-	sm.ps.slots.Migrate(false)
-	return ctx.Replace(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &PresentPulseSM{sm.pulseSMTemplate}
-	})
 }
 
-func (sm *FuturePulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	sm.ps.slots.ScanEventsOnly()
+func (sm *PulseSM) pulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
+	// update state ?
+	sm.ps.Migrate(false)
+	switch sm.ps.pulseSlot.State() {
+	case Present:
+		return ctx.Jump(sm.stepPresentPrepare)
+	case Past:
+		ctx.SetDefaultMigration(sm.stepPastPulseCommitted)
+		return ctx.Jump(sm.stepPastWorking)
+	default:
+		panic("unexpected state")
+	}
+}
+
+/* ----------  Future  ------------ */
+
+func (sm *PulseSM) stepFutureWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	sm.ps.ScanEventsOnly()
 	return ctx.Poll().ThenRepeat()
 }
 
-/*
-	State Machine for PRESENT pulse slot. Must be the only one.
-	It will additionally handle PulsePrepare and PulseCancel.
-*/
+/* ----------  Present  ------------ */
 
-type PresentPulseSM struct {
-	pulseSMTemplate
-}
+func (sm *PulseSM) stepPresentPrepare(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	stepPrepare := ctx.BargeInWithParam(func(ctx smachine.BargeInContext) smachine.StateUpdate {
+		if out, ok := ctx.BargeInParam().(chan<- PreparedState); ok {
+			// TODO initiate calculation of state
+			runtime.KeepAlive(out)
+			return ctx.JumpExt(smachine.SlotStep{Transition: sm.stepPresentSuspending, Flags: smachine.StepPriority})
+		}
 
-func (sm *PresentPulseSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
-	return sm
-}
-
-func (sm *PresentPulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.InitFunc {
-	if sm != machine {
-		panic("illegal value")
-	}
-	return sm.stepInit
-}
-
-func (sm *PresentPulseSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetDefaultMigration(sm.stepPulseCommitted)
-
-	stepPrepare := ctx.BargeIn().WithJumpExt(
-		smachine.SlotStep{Transition: sm.stepPulsePrepare, Flags: smachine.StepPriority})
-
-	stepCancel := ctx.BargeIn().WithJumpExt(
-		smachine.SlotStep{Transition: sm.stepPulseCancel, Flags: smachine.StepPriority})
-
-	sm.psa.svc.subscribe(stepPrepare, stepCancel)
-
-	return ctx.Jump(sm.stepWorking)
-}
-
-func (sm *PresentPulseSM) stepPulsePrepare(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	// TODO initiate calculation of state
-	return ctx.Jump(sm.stepSuspending)
-}
-
-func (sm *PresentPulseSM) stepPulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
-	if sm.ps.State() != Past {
-		// state has to be changed already?
-		panic("unexpected state")
-	}
-	sm.ps.slots.Migrate(false)
-
-	return ctx.Replace(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &PastPulseSM{sm.pulseSMTemplate}
+		return ctx.JumpExt(smachine.SlotStep{Transition: sm.stepPresentPulseCancel, Flags: smachine.StepPriority})
 	})
+
+	sm.psa.svc.subscribe(func(out chan<- PreparedState) bool {
+		return stepPrepare(out)
+	}, func() bool {
+		return stepPrepare(nil)
+	})
+
+	return ctx.Jump(sm.stepPresentWorking)
 }
 
-func (sm *PresentPulseSM) stepPulseCancel(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	return ctx.Jump(sm.stepWorking)
+func (sm *PulseSM) stepPresentPulseCancel(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	return ctx.Jump(sm.stepPresentWorking)
 }
 
-func (sm *PresentPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	repeatNow, nextPollTime := sm.ps.slots.ScanOnceAsNested(ctx)
+func (sm *PulseSM) stepPresentWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	repeatNow, nextPollTime := sm.ps.ScanOnceAsNested(ctx)
 
 	if repeatNow {
 		return ctx.Repeat(presentSlotCycleBoost)
@@ -130,47 +120,24 @@ func (sm *PresentPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.St
 	return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
 }
 
-func (sm *PresentPulseSM) stepSuspending(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	sm.ps.slots.ScanEventsOnly()
-	return ctx.Yield().ThenRepeat()
+func (sm *PulseSM) stepPresentSuspending(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	sm.ps.ScanEventsOnly()
+	return ctx.WaitAny().ThenRepeat()
 }
 
-/*
-	State Machine for PAST and ANTIQUE pulse slots.
-	It will stop when there are no active machines.
-*/
+/* ----------  Past  ------------ */
 
-type PastPulseSM struct {
-	pulseSMTemplate
-}
+func (sm *PulseSM) stepPastPulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
 
-func (sm *PastPulseSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
-	return sm
-}
-
-func (sm *PastPulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.InitFunc {
-	if sm != machine {
-		panic("illegal value")
-	}
-	return sm.stepInit
-}
-
-func (sm *PastPulseSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetDefaultMigration(sm.stepPulseCommitted)
-	return ctx.Jump(sm.stepWorking)
-}
-
-func (sm *PastPulseSM) stepPulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
-
-	sm.ps.slots.Migrate(true)
-	if sm.ps.slots.IsEmpty() {
+	sm.ps.Migrate(true)
+	if sm.ps.IsEmpty() {
 		return ctx.Stop()
 	}
 	return ctx.Stay()
 }
 
-func (sm *PastPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	repeatNow, nextPollTime := sm.ps.slots.ScanOnceAsNested(ctx)
+func (sm *PulseSM) stepPastWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	repeatNow, nextPollTime := sm.ps.ScanOnceAsNested(ctx)
 
 	switch {
 	case repeatNow:

@@ -30,27 +30,27 @@ func (p *executionContext) GetPendingCallCount() int {
 	return int(p.s.asyncCallCount) + int(p.countAsyncCalls)
 }
 
-func (p *executionContext) Yield() StateConditionalUpdate {
+func (p *executionContext) Yield() StateConditionalBuilder {
 	ncu := p.newConditionalUpdate(stateUpdNext)
 	return &ncu
 }
 
-func (p *executionContext) Poll() StateConditionalUpdate {
+func (p *executionContext) Poll() StateConditionalBuilder {
 	ncu := p.newConditionalUpdate(stateUpdPoll)
 	return &ncu
 }
 
-func (p *executionContext) Sleep() StateConditionalUpdate {
+func (p *executionContext) Sleep() StateConditionalBuilder {
 	ncu := p.newConditionalUpdate(stateUpdSleep)
 	return &ncu
 }
 
-func (p *executionContext) WaitAny() StateConditionalUpdate {
+func (p *executionContext) WaitAny() StateConditionalBuilder {
 	ncu := p.newConditionalUpdate(stateUpdWaitForEvent)
 	return &ncu
 }
 
-func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalUpdate {
+func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalBuilder {
 	ncu := p.newConditionalUpdate(stateUpdWaitForEvent)
 
 	ncu.until = p.s.machine.toRelativeTime(until)
@@ -66,7 +66,7 @@ func (p *executionContext) newConditionalUpdate(updType stateUpdKind) conditiona
 	return conditionalUpdate{template: newStateUpdateTemplate(p.mode, p.getMarker(), updType)}
 }
 
-func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateConditionalUpdate {
+func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateConditionalBuilder {
 	p.ensure(updCtxExec)
 	if link.IsEmpty() {
 		panic("illegal value")
@@ -90,22 +90,23 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateCon
 	}
 }
 
-func (p *executionContext) WaitActivation(link SlotLink) StateConditionalUpdate {
+func (p *executionContext) WaitActivation(link SlotLink) StateConditionalBuilder {
 	return p.waitFor(link, stateUpdWaitForActive)
 }
 
-func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdate {
+func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalBuilder {
 	return p.waitFor(link.link, stateUpdWaitForShared)
 }
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	p.ensure(updCtxExec)
 
-	if p.s == a.link.link.s {
-		a.accessFn(a.link.data)
+	switch a.accessLocal(p.s) {
+	case Passed:
 		return SharedSlotAvailableAlways
+	case Impossible:
+		return SharedSlotAbsent
 	}
-
 	return p.s.machine.useSlotAsShared(a.link, a.accessFn, p.w)
 }
 
@@ -118,7 +119,7 @@ func (p *executionContext) executeNextStep() (stateUpdate StateUpdate, sut State
 	current := p.s.step
 
 	stateUpdate = current.Transition(p).ensureMarker(p.getMarker())
-	sut = typeOfStateUpdateForMode(p.mode, stateUpdate)
+	sut = typeOfStateUpdateForPrepare(p.mode, stateUpdate)
 	sut.Prepare(p.s, &stateUpdate)
 
 	return stateUpdate, sut, p.countAsyncCalls
@@ -126,8 +127,8 @@ func (p *executionContext) executeNextStep() (stateUpdate StateUpdate, sut State
 
 /* ========================================================================= */
 
-var _ ConditionalUpdate = &conditionalUpdate{}
-var _ StateConditionalUpdate = &conditionalUpdate{}
+var _ ConditionalBuilder = &conditionalUpdate{}
+var _ StateConditionalBuilder = &conditionalUpdate{}
 
 type conditionalUpdate struct {
 	template   StateUpdateTemplate

@@ -16,7 +16,7 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/conveyor/smachine"
+import "github.com/insolar/insolar/conveyor/smachinev2"
 
 type inputEventSM struct {
 	smachine.StateMachineDeclTemplate

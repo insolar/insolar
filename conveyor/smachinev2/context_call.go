@@ -106,7 +106,7 @@ func (c *adapterCallRequest) Start() {
 	c._startAsync()
 }
 
-func (c *adapterCallRequest) DelayedStart() CallConditionalUpdate {
+func (c *adapterCallRequest) DelayedStart() CallConditionalBuilder {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
@@ -143,6 +143,9 @@ func (c *adapterCallRequest) _startAsync() {
 	}
 
 	c.ctx.countAsyncCalls++
+	if c.ctx.countAsyncCalls == 0 {
+		panic("overflow")
+	}
 	cancelFn := c.executor.StartCall(stepLink, c.fn, _asyncCallback(stepLink), c.cancel != nil)
 
 	if c.cancel != nil {
@@ -153,7 +156,7 @@ func (c *adapterCallRequest) _startAsync() {
 func _asyncCallback(stepLink StepLink) AdapterCallbackFunc {
 	callbackGuard := uint32(0)
 
-	return func(resultFn AsyncResultFunc, recovered interface{}) {
+	return func(resultFn AsyncResultFunc, err error) {
 		if atomic.SwapUint32(&callbackGuard, 1) != 0 {
 			panic("repeated callback")
 		}
@@ -163,9 +166,9 @@ func _asyncCallback(stepLink StepLink) AdapterCallbackFunc {
 		}
 
 		stepLink.s.machine.queueAsyncCallback(stepLink.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
-			slot.asyncCallCount--
+			slot.decAsyncCount()
 
-			if recovered == nil && resultFn != nil {
+			if err == nil && resultFn != nil {
 				rc := asyncResultContext{slot: slot}
 				if wakeup := rc.executeResult(resultFn); wakeup {
 					return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
@@ -173,7 +176,7 @@ func _asyncCallback(stepLink StepLink) AdapterCallbackFunc {
 			}
 
 			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdNoChange).newNoArg()
-		}, recovered)
+		}, err)
 	}
 }
 
@@ -201,16 +204,16 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 	}
 
 	var resultFn AsyncResultFunc
-	var resultRecovered interface{}
+	var resultErr error
 	var callState int
 
 	stepLink := c.ctx.s.NewStepLink()
-	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
+	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, err error) {
 		wc.L.Lock()
 		switch callState {
 		case 0:
 			resultFn = fn
-			resultRecovered = recovered
+			resultErr = err
 			callState = 1
 			wc.Broadcast()
 		case 1:
@@ -238,8 +241,8 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 	}
 	wc.L.Unlock()
 
-	if resultRecovered != nil {
-		panic(resultRecovered)
+	if resultErr != nil {
+		panic(resultErr)
 	}
 	return resultFn
 }

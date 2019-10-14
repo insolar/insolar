@@ -20,7 +20,9 @@ import (
 	"sync"
 )
 
-func NewSlotPool(pageSize uint16) SlotPool {
+// SlotPool by default recycles deallocated pages to mitigate possible memory leak through SlotLink references
+// When flow of slots varies a lot and there is no long-living links then deallocateOnCleanup can be enabled.
+func NewSlotPool(pageSize uint16, deallocateOnCleanup bool) SlotPool {
 	//if locker == nil {
 	//	panic("illegal value")
 	//}
@@ -28,40 +30,42 @@ func NewSlotPool(pageSize uint16) SlotPool {
 		panic("illegal value")
 	}
 	return SlotPool{
-		slots:       [][]Slot{make([]Slot, pageSize)},
+		slotPages:   [][]Slot{make([]Slot, pageSize)},
 		unusedSlots: NewSlotQueue(UnusedSlots),
+		deallocate:  deallocateOnCleanup,
 	}
 }
 
 type SlotPool struct {
 	mutex sync.RWMutex
 
-	slots     [][]Slot
-	slotPgPos uint16
-
 	unusedSlots SlotQueue
+	slotPages   [][]Slot
+	emptyPages  [][]Slot
+	slotPgPos   uint16
+	deallocate  bool
 }
 
 func (p *SlotPool) Count() int {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	n := len(p.slots)
+	n := len(p.slotPages)
 	if n == 0 {
 		return 0
 	}
-	return (n-1)*int(len(p.slots[0])) + int(p.slotPgPos) - p.unusedSlots.Count()
+	return (n-1)*int(len(p.slotPages[0])) + int(p.slotPgPos) - p.unusedSlots.Count()
 }
 
 func (p *SlotPool) Capacity() int {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
-	n := len(p.slots)
+	n := len(p.slotPages)
 	if n == 0 {
 		return 0
 	}
-	return len(p.slots) * len(p.slots[0])
+	return len(p.slotPages) * len(p.slotPages[0])
 }
 
 func (p *SlotPool) IsEmpty() bool {
@@ -80,16 +84,16 @@ func (p *SlotPool) AllocateSlot(m *SlotMachine, id SlotID) (slot *Slot) {
 		if slot.machine != m {
 			panic("illegal state")
 		}
-	case p.slots == nil:
+	case p.slotPages == nil:
 		panic("illegal state")
 	default:
-		lenSlots := len(p.slots[0])
+		lenSlots := len(p.slotPages[0])
 		if int(p.slotPgPos) == lenSlots {
-			p.slots = append(p.slots, p.slots[0])
-			p.slots[0] = make([]Slot, lenSlots)
+			p.slotPages = append(p.slotPages, p.slotPages[0])
+			p.slotPages[0] = p.allocatePage(lenSlots)
 			p.slotPgPos = 0
 		}
-		slot = &p.slots[0][p.slotPgPos]
+		slot = &p.slotPages[0][p.slotPgPos]
 		slot.machine = m
 		p.slotPgPos++
 	}
@@ -111,35 +115,36 @@ type SlotDisposeFunc func(*Slot, FixedSlotWorker)
 func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 	disposeFn SlotDisposeFunc, scanPageFn SlotPageScanFunc,
 ) {
-	if len(p.slots) == 0 || len(p.slots) == 1 && p.slotPgPos == 0 {
+	if len(p.slotPages) == 0 || len(p.slotPages) == 1 && p.slotPgPos == 0 {
 		return
 	}
 
-	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slots[0][:p.slotPgPos], w)
+	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slotPages[0][:p.slotPgPos], w)
 
 	j := 1
-	for i, slotPage := range p.slots[1:] {
+	for i, slotPage := range p.slotPages[1:] {
 		isPageEmptyOrWeak, hasWeakSlots := scanPageFn(slotPage, w)
 		switch {
 		case !isPageEmptyOrWeak:
 			isAllEmptyOrWeak = false
 		case !hasWeakSlots:
 			cleanupEmptyPage(slotPage)
-			p.slots[i+1] = nil
+			p.recyclePage(slotPage)
+			p.slotPages[i+1] = nil
 			continue
 		default:
 			hasSomeWeakSlots = true
 		}
 
 		if j != i+1 {
-			p.slots[j] = slotPage
-			p.slots[i+1] = nil
+			p.slotPages[j] = slotPage
+			p.slotPages[i+1] = nil
 		}
 		j++
 	}
 
 	if isAllEmptyOrWeak && (cleanupWeak || !hasSomeWeakSlots) {
-		for i, slotPage := range p.slots {
+		for i, slotPage := range p.slotPages {
 			if slotPage == nil {
 				break
 			}
@@ -162,13 +167,13 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 		if p.unusedSlots.Count() != 0 {
 			panic("illegal state")
 		}
-		p.slots = p.slots[:1]
+		p.slotPages = p.slotPages[:1]
 		p.slotPgPos = 0
 		return
 	}
 
-	if len(p.slots) > j {
-		p.slots = p.slots[:j]
+	if len(p.slotPages) > j {
+		p.slotPages = p.slotPages[:j]
 	}
 }
 
@@ -179,5 +184,26 @@ func cleanupEmptyPage(slotPage []Slot) {
 			panic("illegal state")
 		}
 		slot.removeFromQueue()
+	}
+}
+
+func (p *SlotPool) allocatePage(lenSlots int) []Slot {
+	n := len(p.emptyPages)
+	if n > 0 {
+		n--
+		pg := p.emptyPages[n]
+		p.emptyPages[n] = nil
+		p.emptyPages = p.emptyPages[:n]
+
+		if len(pg) == lenSlots {
+			return pg
+		}
+	}
+	return make([]Slot, lenSlots)
+}
+
+func (p *SlotPool) recyclePage(pg []Slot) {
+	if !p.deallocate {
+		p.emptyPages = append(p.emptyPages, pg)
 	}
 }

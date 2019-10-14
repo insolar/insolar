@@ -101,7 +101,7 @@ func (p *exclusiveSync) AdjustLimit(limit int) (deps []SlotLink, activate bool) 
 var _ DependencyQueueController = &exclusiveQueueController{}
 
 const (
-	syncForOneStep = 1 << iota
+	syncForOneStep DependencyQueueEntryFlags = 1 << iota
 )
 
 type exclusiveQueueController struct {

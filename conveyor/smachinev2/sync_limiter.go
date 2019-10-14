@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +12,59 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
-func NewFixedLimiter(limit int, name string) SyncLink {
-	if limit <= 0 {
+func NewFixedLimiter(initial int, name string) SyncLink {
+	if initial == 0 {
+		return NewInfiniteLock(name)
+	}
+	if initial < 0 {
 		panic("illegal value")
 	}
-	return newLimiter(limit, false, name)
+	return NewSyncLink(newLimiter(initial, false, name))
 }
 
-func NewLimiter(limit int, name string) SyncLink {
-	return newLimiter(limit, true, name)
+func NewLimiter(initial int, name string) LimiterLink {
+	return LimiterLink{newLimiter(initial, true, name)}
 }
 
-func newLimiter(limit int, isAdjustable bool, name string) SyncLink {
+type LimiterLink struct {
+	ctl *limiterSync
+}
+
+func (v LimiterLink) IsZero() bool {
+	return v.ctl == nil
+}
+
+func (v LimiterLink) NewDelta(delta int) SyncAdjustment {
+	if v.ctl == nil {
+		panic("illegal state")
+	}
+	return SyncAdjustment{controller: v.ctl, adjustment: delta, isAbsolute: false}
+}
+
+func (v LimiterLink) NewValue(value int) SyncAdjustment {
+	if v.ctl == nil {
+		panic("illegal state")
+	}
+	return SyncAdjustment{controller: v.ctl, adjustment: value, isAbsolute: true}
+}
+
+func (v LimiterLink) SyncLink() SyncLink {
+	return NewSyncLink(v.ctl)
+}
+
+func newLimiter(initial int, isAdjustable bool, name string) *limiterSync {
 	ctl := &limiterSync{isAdjustable: true}
 	ctl.controller.Init(name)
-	deps, _ := ctl.AdjustLimit(limit)
+	deps, _ := ctl.AdjustLimit(initial)
 	if len(deps) != 0 {
 		panic("illegal state")
 	}
 	ctl.isAdjustable = isAdjustable
-	return NewSyncLink(ctl)
+	return ctl
 }
 
 type limiterSync struct {

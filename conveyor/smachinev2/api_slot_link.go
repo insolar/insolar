@@ -16,7 +16,9 @@
 
 package smachine
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const UnknownSlotID SlotID = 0
 
@@ -82,6 +84,15 @@ func (p SlotLink) getIsValidAndBusy() (isValid, isBusy bool) {
 	return p.id == id, isBusy
 }
 
+func (p SlotLink) tryStartWorking() (s *Slot, isStarted bool, prevStepNo uint32) {
+	if p.s != nil {
+		if _, isStarted, prevStepNo = p.s._tryStartWithId(p.id, 1); isStarted {
+			return p.s, true, prevStepNo
+		}
+	}
+	return nil, false, 0
+}
+
 type StepLink struct {
 	SlotLink
 	step uint32
@@ -123,83 +134,4 @@ func (p StepLink) getIsValidBusyAndAtStep() (isValid, isBusy, atExactStep bool) 
 	}
 	id, step, isBusy := p.s.GetState()
 	return p.id == id, isBusy, p.step == 0 || p.step == step
-}
-
-type SharedDataFunc func(interface{})
-
-type SharedDataLink struct {
-	link   SlotLink
-	wakeup bool
-	data   interface{}
-}
-
-func (v SharedDataLink) IsZero() bool {
-	return v.data == nil
-}
-
-func (v SharedDataLink) IsValid() bool {
-	return v.link.s == nil || v.link.IsValid()
-}
-
-func (v SharedDataLink) IsUnbound() bool {
-	return v.link.s == nil
-}
-
-func (v SharedDataLink) PrepareAccess(fn SharedDataFunc) SharedDataAccessor {
-	if v.IsZero() {
-		panic("illegal state")
-	}
-	if fn == nil {
-		panic("illegal value")
-	}
-	return SharedDataAccessor{v, fn}
-}
-
-type SharedDataAccessor struct {
-	link     SharedDataLink
-	accessFn SharedDataFunc
-}
-
-func (v SharedDataAccessor) TryUse(ctx ExecutionContext) SharedAccessReport {
-	return ctx.UseShared(v)
-}
-
-var _ Decider = SharedAccessReport(0)
-
-type SharedAccessReport uint8
-
-const (
-	SharedSlotAbsent SharedAccessReport = iota
-	SharedSlotLocalBusy
-	SharedSlotRemoteBusy
-	SharedSlotAvailableAlways
-	SharedSlotLocalAvailable
-	SharedSlotRemoteAvailable
-)
-
-func (v SharedAccessReport) IsAvailable() bool {
-	return v >= SharedSlotAvailableAlways
-}
-
-func (v SharedAccessReport) IsRemote() bool {
-	return v == SharedSlotRemoteBusy || v == SharedSlotRemoteAvailable
-}
-
-func (v SharedAccessReport) IsAbsent() bool {
-	return v == SharedSlotAbsent
-}
-
-func (v SharedAccessReport) IsBusy() bool {
-	return v == SharedSlotLocalBusy || v == SharedSlotRemoteBusy
-}
-
-func (v SharedAccessReport) GetDecision() Decision {
-	switch {
-	case v.IsAvailable():
-		return Passed
-	case v.IsAbsent():
-		return Impossible
-	default:
-		return NotPassed
-	}
 }

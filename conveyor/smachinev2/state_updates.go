@@ -26,13 +26,12 @@ const (
 
 	stateUpdNoChange
 	stateUpdStop
-	stateUpdError // external handler, cant be detached
-	stateUpdPanic // external handler, cant be detached
-	//	stateUpdExpired
-	stateUpdReplace // external handler, cant be detached
+	stateUpdError
+	stateUpdPanic
+	stateUpdReplace
 	stateUpdReplaceWith
 
-	stateUpdInternalRepeatNow // this is a special op
+	stateUpdInternalRepeatNow // this is a special op. MUST NOT be used anywhere else.
 
 	stateUpdRepeat   // supports short-loop
 	stateUpdNextLoop // supports short-loop
@@ -63,7 +62,7 @@ func init() {
 		},
 
 		stateUpdInternalRepeatNow: {
-			filter: 0, // this can't be created by a template
+			filter: updCtxInternal, // can't be created by a template
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				if slot.isInQueue() {
 					return false, errors.New("unexpected internal repeat")
@@ -80,22 +79,28 @@ func init() {
 		},
 
 		stateUpdError: {
-			filter:    updCtxExec | updCtxInit | updCtxMigrate,
+			filter:    updCtxExec | updCtxInit | updCtxMigrate | updCtxBargeIn,
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
 			apply:     stateUpdateDefaultError,
 		},
 
 		stateUpdPanic: {
-			filter:    ^updCtxMode(0),
+			filter:    updCtxInternal, // can't be created by a template
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
 			apply:     stateUpdateDefaultError,
 		},
 
 		stateUpdReplaceWith: {
-			filter: updCtxExec | updCtxMigrate,
+			filter: updCtxExec | updCtxMigrate | updCtxFail,
 			params: updParamVar,
+			varVerify: func(v interface{}) {
+				sm := v.(StateMachine)
+				if sm == nil {
+					panic("illegal value")
+				}
+			},
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {
 				m := slot.machine
@@ -107,7 +112,7 @@ func init() {
 
 				newSlot := m.allocateSlot()
 				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
-				m.prepareNewSlot(newSlot, slot, nil, sm)
+				m.prepareNewSlot(newSlot, slot, nil, sm, true)
 
 				stateUpdate.param1 = nil
 				stateUpdate.link = newSlot
@@ -117,7 +122,7 @@ func init() {
 		},
 
 		stateUpdReplace: {
-			filter: updCtxExec | updCtxMigrate,
+			filter: updCtxExec | updCtxMigrate | updCtxFail,
 			params: updParamVar,
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {
@@ -129,7 +134,7 @@ func init() {
 				}
 				newSlot := m.allocateSlot()
 				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
-				m.prepareNewSlot(newSlot, slot, fn, nil)
+				m.prepareNewSlot(newSlot, slot, fn, nil, true)
 
 				stateUpdate.param1 = nil
 				stateUpdate.link = newSlot
@@ -322,7 +327,7 @@ func stateUpdateDefaultError(slot *Slot, stateUpdate StateUpdate, w FixedSlotWor
 	}
 
 	return slot.machine.handleSlotUpdateError(slot, w,
-		getStateUpdateKind(stateUpdate) == stateUpdPanic, false, err), nil
+		getStateUpdateKind(stateUpdate) == stateUpdPanic, err), nil
 }
 
 func stateUpdateDefaultJump(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {

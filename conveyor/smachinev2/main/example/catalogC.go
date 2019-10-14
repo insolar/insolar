@@ -20,7 +20,6 @@ import (
 	"fmt"
 	smachine "github.com/insolar/insolar/conveyor/smachinev2"
 	"github.com/insolar/insolar/longbits"
-	"sync"
 )
 
 func CreateCatalogC() CatalogC {
@@ -45,117 +44,66 @@ type CustomSharedStateAccessor struct {
 }
 
 func (v CustomSharedStateAccessor) Prepare(fn func(*CustomSharedState)) smachine.SharedDataAccessor {
-	return v.link.PrepareAccess(func(data interface{}) {
+	return v.link.PrepareAccess(func(data interface{}) bool {
 		fn(data.(*CustomSharedState))
+		return false
 	})
 }
 
 type catalogC struct {
-	mutex   sync.RWMutex
-	entries map[longbits.ByteString]smachine.SharedDataLink
 }
 
-func (p *catalogC) Get(key longbits.ByteString) CustomSharedStateAccessor {
-	if v, ok := p.TryGet(key); ok {
+func (p *catalogC) Get(ctx smachine.ExecutionContext, key longbits.ByteString) CustomSharedStateAccessor {
+	if v, ok := p.TryGet(ctx, key); ok {
 		return v
 	}
 	panic(fmt.Sprintf("missing entry: %s", key))
 }
 
-func (p *catalogC) TryGet(key longbits.ByteString) (CustomSharedStateAccessor, bool) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-	return p._get(key)
-}
+func (p *catalogC) TryGet(ctx smachine.ExecutionContext, key longbits.ByteString) (CustomSharedStateAccessor, bool) {
 
-func (p *catalogC) _get(key longbits.ByteString) (CustomSharedStateAccessor, bool) {
-	if v, ok := p.entries[key]; ok && !v.IsZero() {
+	if v := ctx.GetPublishedLink(key); v.IsAssignableTo((*CustomSharedState)(nil)) {
 		return CustomSharedStateAccessor{v}, true
 	}
 	return CustomSharedStateAccessor{}, false
 }
 
-func (p *catalogC) tryPut(key longbits.ByteString, link smachine.SharedDataLink) bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if v, ok := p.entries[key]; ok && !v.IsZero() {
-		return false
-	}
-	if p.entries == nil {
-		p.entries = make(map[longbits.ByteString]smachine.SharedDataLink)
-	}
-	p.entries[key] = link
-	return true
-}
-
 func (p *catalogC) GetOrCreate(ctx smachine.ExecutionContext, key longbits.ByteString) CustomSharedStateAccessor {
-	if v, ok := p.TryGet(key); ok {
+	if v, ok := p.TryGet(ctx, key); ok {
 		return v
 	}
 
 	ctx.InitChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &catalogCSM{catalog: p, sharedState: CustomSharedState{key: key}}
+		return &catalogEntryCSM{sharedState: CustomSharedState{
+			key:   key,
+			Mutex: smachine.NewExclusive(""),
+		}}
 	})
 
-	return p.Get(key)
+	return p.Get(ctx, key)
 }
 
-func (p *catalogC) cleanup() bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if p.entries == nil {
-		return true
-	}
-	for k, v := range p.entries {
-		if !v.IsValid() {
-			delete(p.entries, k)
-		}
-	}
-	return len(p.entries) == 0
-}
-
-type catalogCSM struct {
+type catalogEntryCSM struct {
 	smachine.StateMachineDeclTemplate
-	catalog     *catalogC
 	sharedState CustomSharedState
 }
 
-func (sm *catalogCSM) GetInitStateFor(smachine.StateMachine) smachine.InitFunc {
+func (sm *catalogEntryCSM) GetInitStateFor(smachine.StateMachine) smachine.InitFunc {
 	return sm.Init
 }
 
-func (sm *catalogCSM) InjectDependencies(smachine.StateMachine, smachine.SlotLink, smachine.DependencyRegistry) bool {
-	return true
-}
-
-func (sm *catalogCSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
+func (sm *catalogEntryCSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
 	return sm
 }
 
-func (sm *catalogCSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetDefaultMigration(sm.Migrate)
-
-	sm.sharedState.Mutex = smachine.NewExclusive()
-
-	sdl := ctx.Share(&sm.sharedState, false)
-
-	if sm.catalog == nil || !sm.catalog.tryPut(sm.sharedState.key, sdl) {
+func (sm *catalogEntryCSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	sdl := ctx.Share(&sm.sharedState, 0)
+	if !ctx.Publish(sm.sharedState.key, sdl) {
 		return ctx.Stop()
 	}
-	return ctx.Jump(sm.State1)
+	return ctx.JumpExt(smachine.SlotStep{Transition: sm.State1, Flags: smachine.StepWeak})
 }
 
-func (sm *catalogCSM) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (sm *catalogEntryCSM) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	return ctx.Sleep().ThenRepeat()
-}
-
-func (sm *catalogCSM) Migrate(ctx smachine.MigrationContext) smachine.StateUpdate {
-	return ctx.Jump(sm.Cleanup)
-}
-
-func (sm *catalogCSM) Cleanup(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if sm.catalog.cleanup() {
-		return ctx.Stop()
-	}
-	return ctx.Jump(sm.State1)
 }
