@@ -31,7 +31,7 @@ func main() {
 		SlotPageSize:    1000,
 		PollingPeriod:   1000 * time.Millisecond,
 		PollingTruncate: 100 * time.Millisecond,
-		ScanCountLimit:  1000,
+		ScanCountLimit:  100,
 	}, nil, nil)
 
 	sm.PutDependency("example.ServiceAdapterA", example.CreateServiceAdapterA())
