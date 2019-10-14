@@ -61,7 +61,7 @@ type TransferResponse struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAAAyLZDDJnAoTN3EvlpVIvuANsDK7eBid_XU-qbZSU")
 
 // Member holds proxy type
 type Member struct {

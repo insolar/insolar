@@ -78,7 +78,7 @@ func (f *byteDecoderFactory) GetByteDecoder(encodingName string) ByteDecodeFunc 
 }
 
 func (f *byteDecoderFactory) DefaultDecoder() ByteDecodeFunc {
-	return f.decoders["base58"]
+	return f.decoders["base64"]
 }
 
 func (f *byteDecoderFactory) LegacyDecoder() ByteDecodeFunc {

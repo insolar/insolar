@@ -31,7 +31,7 @@ type destination interface {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAAAyCjqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")
 
 // Account holds proxy type
 type Account struct {

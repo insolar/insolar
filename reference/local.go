@@ -173,13 +173,18 @@ func (p *byteWriter) isFull() bool {
 	return int(p.o) >= p.v.len()
 }
 
-// String implements stringer on ID and returns base58 encoded value
-func (v Local) String() string {
-	repr, err := DefaultEncoder().EncodeRecord(&v)
+// Encoder encodes Local to string with chosen encoder.
+func (v Local) Encode(enc Encoder) string {
+	repr, err := enc.EncodeRecord(&v)
 	if err != nil {
 		return ""
 	}
 	return repr
+}
+
+// String implements stringer on ID and returns base64 encoded value
+func (v Local) String() string {
+	return v.Encode(DefaultEncoder())
 }
 
 // Bytes returns byte slice of ID.

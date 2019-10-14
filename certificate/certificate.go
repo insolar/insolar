@@ -58,7 +58,7 @@ func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef, role st
 func (bn *BootstrapNode) GetNodeRef() *insolar.Reference {
 	ref, err := insolar.NewReferenceFromString(bn.NodeRef)
 	if err != nil {
-		log.Errorf("Invalid bootstrap node reference: %s\n", bn.NodeRef)
+		log.Errorf("Invalid bootstrap node reference: %s. Error: %s", bn.NodeRef, err.Error())
 		return nil
 	}
 	return ref
