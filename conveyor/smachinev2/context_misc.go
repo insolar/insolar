@@ -100,15 +100,21 @@ var _ MigrationContext = &migrationContext{}
 
 type migrationContext struct {
 	slotContext
+	skipMultiple bool
 }
 
-func (p *migrationContext) executeMigration(fn MigrateFunc) (stateUpdate StateUpdate) {
+func (p *migrationContext) SkipMultipleMigrations() {
+	p.skipMultiple = true
+}
+
+func (p *migrationContext) executeMigration(fn MigrateFunc) (stateUpdate StateUpdate, skipMultiple bool) {
 	p.setMode(updCtxMigrate)
 	defer func() {
 		p.discardAndUpdate("migration", recover(), &stateUpdate)
 	}()
 
-	return p.ensureAndPrepare(p.s, fn(p))
+	su := p.ensureAndPrepare(p.s, fn(p))
+	return su, p.skipMultiple
 }
 
 /* ========================================================================= */

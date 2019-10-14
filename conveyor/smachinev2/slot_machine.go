@@ -413,14 +413,19 @@ func (m *SlotMachine) _migrateSlot(slot *Slot, worker FixedSlotWorker) (isEmptyO
 			break
 		}
 
-		mc := migrationContext{slotContext{s: slot}}
-		stateUpdate := mc.executeMigration(migrateFn)
+		mc := migrationContext{slotContext: slotContext{s: slot}}
+		stateUpdate, skipMultiple := mc.executeMigration(migrateFn)
 
 		slotLink := slot.NewLink() // MUST be taken BEFORE any slot updates
 
 		if !m.applyStateUpdate(slot, stateUpdate, worker) {
 			m._flushMissingSlotQueue(slotLink)
 			return true, false
+		}
+
+		if skipMultiple {
+			slot.migrationCount = m.migrationCount
+			break
 		}
 		slot.migrationCount++
 	}

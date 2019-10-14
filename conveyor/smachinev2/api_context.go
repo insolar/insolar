@@ -200,6 +200,9 @@ type MigrationContext interface {
 	/* A step this SM is at during migration */
 	AffectedStep() SlotStep
 
+	// Indicates that multiple pending migrations can be skipped / do not need to be applied individually
+	SkipMultipleMigrations()
+
 	/* Keeps the last state */
 	Stay() StateUpdate
 	/* Makes SM active if it was waiting or polling */
