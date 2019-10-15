@@ -18,11 +18,13 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/api/requester"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/insolar/insolar/application/api/requester"
+
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestActivateDaemonDoubleCall(t *testing.T) {

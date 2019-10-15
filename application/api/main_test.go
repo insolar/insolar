@@ -21,10 +21,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/suite"
 )
 
 type MainAPISuite struct {

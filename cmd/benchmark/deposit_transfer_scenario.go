@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/application/api/sdk"
 )
 
 type depositTransferScenario struct {

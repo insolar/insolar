@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/application/api/sdk"
 )
 
 type walletToWalletTwoSidesScenario struct {

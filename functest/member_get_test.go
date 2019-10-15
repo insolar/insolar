@@ -20,8 +20,9 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api/requester"
 	"testing"
+
+	"github.com/insolar/insolar/application/api/requester"
 
 	"github.com/insolar/insolar/testutils/launchnet"
 

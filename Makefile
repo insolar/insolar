@@ -173,7 +173,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest $(SLOW_PKGS)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./...
 
 .PHONY: test
 test: test_unit ## alias for test_unit

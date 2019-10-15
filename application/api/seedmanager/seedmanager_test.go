@@ -21,8 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestSeedFromBytes_BadInputSize(t *testing.T) {

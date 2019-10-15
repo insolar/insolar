@@ -26,9 +26,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/application/api"
+	"github.com/insolar/insolar/configuration"
 )
 
 func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {

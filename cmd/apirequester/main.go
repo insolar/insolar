@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
+
+	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/log"
 )
 
 const defaultAdminURL = "http://localhost:19001/admin-api/rpc"

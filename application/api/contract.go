@@ -24,17 +24,18 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/insolar/insolar/api/instrumenter"
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/rpc/v2"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application/api/instrumenter"
+	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/rpc/v2"
-	"github.com/pkg/errors"
 )
 
 // ContractService is a service that provides API for working with smart contracts.

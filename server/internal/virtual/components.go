@@ -18,14 +18,15 @@ package virtual
 
 import (
 	"context"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io"
+
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"

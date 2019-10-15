@@ -35,6 +35,7 @@ import (
 	"gonum.org/v1/gonum/stat"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logoutput"
 )
 
 func Test_BackpressureBuffer_Deviations(t *testing.T) {
@@ -198,8 +199,19 @@ type logOutput struct {
 }
 
 func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize int, fair bool) insolar.LoggerOutput {
+	adapter := logoutput.NewAdapter(
+		w,
+		false,
+		func() error {
+			return nil
+		},
+		func() error {
+			return nil
+		},
+	)
+
 	if parWrites == 0 {
-		return NewFatalDirectWriter(w)
+		return NewFatalDirectWriter(adapter)
 	}
 	flags := BufferWriteDelayFairness | BufferTrackWriteDuration
 	if !fair {
@@ -208,9 +220,9 @@ func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize in
 
 	var bp *BackpressureBuffer
 	if bufSize == 0 {
-		bp = NewBackpressureBufferWithBypass(w, 100, parWrites, flags, nil)
+		bp = NewBackpressureBufferWithBypass(adapter, 100, parWrites, flags, nil)
 	} else {
-		bp = NewBackpressureBuffer(w, bufSize, parWrites, flags, nil)
+		bp = NewBackpressureBuffer(adapter, bufSize, parWrites, flags, nil)
 	}
 
 	bp.StartWorker(ctx)

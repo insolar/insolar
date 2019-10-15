@@ -19,8 +19,9 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/api/requester"
 	"testing"
+
+	"github.com/insolar/insolar/application/api/requester"
 
 	"github.com/insolar/insolar/testutils/launchnet"
 

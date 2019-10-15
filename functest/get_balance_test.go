@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/application/api/requester"
 
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"

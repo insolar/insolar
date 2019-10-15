@@ -34,12 +34,13 @@ import (
 	"syscall"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
-	"github.com/insolar/insolar/api/requester"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
-	"github.com/pkg/errors"
 )
 
 const HOST = "http://localhost:"

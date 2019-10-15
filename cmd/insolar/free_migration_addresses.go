@@ -19,8 +19,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/api/sdk"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application/api/sdk"
 )
 
 var shardsAtOneTime = 10

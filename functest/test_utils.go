@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -34,8 +33,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar/genesisrefs"
+
+	"github.com/insolar/insolar/application/api"
+	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/launchnet"

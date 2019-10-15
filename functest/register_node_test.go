@@ -20,14 +20,16 @@ package functest
 
 import (
 	"encoding/json"
-	"github.com/insolar/insolar/api/requester"
 	"testing"
+
+	"github.com/insolar/insolar/application/api/requester"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/launchnet"
-	"github.com/stretchr/testify/require"
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
