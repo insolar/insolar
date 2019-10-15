@@ -19,9 +19,10 @@ package genesis
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/bootstrap/contracts"
+	"github.com/insolar/insolar/application/bootstrap/contracts"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"

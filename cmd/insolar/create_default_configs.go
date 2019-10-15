@@ -20,11 +20,12 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/insolar/insolar/bootstrap"
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/insolar/insolar/application/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {

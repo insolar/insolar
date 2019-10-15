@@ -24,10 +24,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 func keysToNodeInfo(kp *secrets.KeyPair) nodeInfo {

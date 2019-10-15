@@ -19,8 +19,9 @@ package main
 import (
 	"context"
 
-	"github.com/insolar/insolar/bootstrap"
 	"github.com/spf13/cobra"
+
+	"github.com/insolar/insolar/application/bootstrap"
 )
 
 func bootstrapCommand() *cobra.Command {
