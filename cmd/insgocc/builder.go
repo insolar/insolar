@@ -203,7 +203,7 @@ func (cb *contractsBuilder) plugin(ctx context.Context, name string) (string, er
 	inslogger.FromContext(ctx).Infof("exec: go %v", strings.Join(args, " "))
 
 	env := make([]string, 0, len(os.Environ()))
-	// env = append(env, "GO111MODULE=on")
+	env = append(env, "GO111MODULE=on")
 	for _, pair := range os.Environ() {
 		if strings.HasPrefix(pair, "GOPATH=") {
 			continue
