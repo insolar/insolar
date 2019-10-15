@@ -33,13 +33,14 @@ const (
 
 type PulseSlotConfig struct {
 	config         smachine.SlotMachineConfig
+	eventCallback  func()
 	signalCallback func()
 	parentRegistry injector.DependencyRegistry
 }
 
 func newFuturePulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachine {
 	return &PulseSlotMachine{
-		SlotMachine: smachine.NewSlotMachine(config.config, config.signalCallback, config.parentRegistry),
+		SlotMachine: smachine.NewSlotMachine(config.config, config.eventCallback, config.signalCallback, config.parentRegistry),
 		pulseSlot: PulseSlot{&futurePulseDataHolder{
 			pd: pd,
 		}},
@@ -48,7 +49,7 @@ func newFuturePulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachine
 
 func newPresentPulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachine {
 	return &PulseSlotMachine{
-		SlotMachine: smachine.NewSlotMachine(config.config, config.signalCallback, config.parentRegistry),
+		SlotMachine: smachine.NewSlotMachine(config.config, config.eventCallback, config.signalCallback, config.parentRegistry),
 		pulseSlot: PulseSlot{&presentPulseDataHolder{
 			pd: pd,
 		}},
@@ -57,7 +58,7 @@ func newPresentPulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachin
 
 func newPastPulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachine {
 	return &PulseSlotMachine{
-		SlotMachine: smachine.NewSlotMachine(config.config, config.signalCallback, config.parentRegistry),
+		SlotMachine: smachine.NewSlotMachine(config.config, config.eventCallback, config.signalCallback, config.parentRegistry),
 		pulseSlot: PulseSlot{&pastPulseDataHolder{
 			pd: pd,
 		}},

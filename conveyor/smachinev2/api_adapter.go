@@ -52,6 +52,20 @@ type AsyncCallRequester interface {
 	DelayedStart() CallConditionalBuilder
 }
 
+type NestedEventContext interface {
+	NewChild()
+	InitChild()
+}
+
+type NestedEventFunc func(precursor StepLink, ctx NestedEventContext)
+
+type AdapterCallbackHandler interface {
+	SendResult(AsyncResultFunc, error)
+	// can be called ONLY until SendResult
+	// TODO send from adapter?
+	SendNestedEvent(NestedEventFunc)
+}
+
 type AdapterCallbackFunc func(AsyncResultFunc, error)
 type AdapterCallFunc func() AsyncResultFunc
 type AdapterNestedEventFunc func(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc

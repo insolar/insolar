@@ -295,6 +295,9 @@ type FailureContext interface {
 	GetError() error
 	// False when the error was initiated by ctx.Error()
 	IsPanic() bool
+	// True when the error can be recovered by returning ErrorHandlerRecover from the handler
+	// An error thrown by ctx.Error() method or a panic inside async call can be recovered.
+	CanRecover() bool
 
 	// After completion of the current SM's step it will be stopped and the new SM created/started.
 	// The new SM will by default inherit parent, context and injected dependencies.

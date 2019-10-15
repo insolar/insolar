@@ -16,11 +16,15 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/conveyor/smachinev2"
+import (
+	"github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/pulse"
+)
 
 type inputEventSM struct {
 	smachine.StateMachineDeclTemplate
 
+	pn        pulse.Number
 	ps        *PulseSlot
 	event     InputEvent
 	factoryFn StateMachineFactoryFn

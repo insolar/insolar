@@ -92,6 +92,7 @@ const updCtxInactive updCtxMode = 0
 const (
 	updCtxDiscarded updCtxMode = 1 << iota
 	updCtxInternal             // special mode - updates can't be accessed via template() call, but getForXXX() allows any valid context
+	updCtxMachineCall
 	updCtxFail
 	updCtxBargeIn
 	updCtxAsyncCallback

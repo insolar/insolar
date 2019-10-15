@@ -113,10 +113,10 @@ type SlotPageScanFunc func([]Slot, FixedSlotWorker) (isPageEmptyOrWeak, hasWeakS
 type SlotDisposeFunc func(*Slot, FixedSlotWorker)
 
 func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
-	disposeFn SlotDisposeFunc, scanPageFn SlotPageScanFunc,
-) {
+	disposeWeakFn SlotDisposeFunc, scanPageFn SlotPageScanFunc,
+) bool {
 	if len(p.slotPages) == 0 || len(p.slotPages) == 1 && p.slotPgPos == 0 {
-		return
+		return true
 	}
 
 	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slotPages[0][:p.slotPgPos], w)
@@ -151,7 +151,7 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 			for j := range slotPage {
 				slot := &slotPage[j]
 				if !slot.isEmpty() {
-					disposeFn(slot, w)
+					disposeWeakFn(slot, w)
 				}
 				qt := slot.QueueType()
 				if qt == UnusedSlots {
@@ -169,12 +169,13 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 		}
 		p.slotPages = p.slotPages[:1]
 		p.slotPgPos = 0
-		return
+		return true
 	}
 
 	if len(p.slotPages) > j {
 		p.slotPages = p.slotPages[:j]
 	}
+	return false
 }
 
 func cleanupEmptyPage(slotPage []Slot) {

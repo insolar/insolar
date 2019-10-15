@@ -48,6 +48,7 @@ const stateUpdWakeup = stateUpdRepeat
 
 var stateUpdateTypes []StateUpdateType
 
+// init() is used instead of variable initializer to avoid "initialization loop" error
 func init() {
 	stateUpdateTypes = []StateUpdateType{
 		stateUpdNoChange: {
@@ -152,8 +153,7 @@ func init() {
 			},
 
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
-				m := slot.machine
-				m.updateSlotQueue(slot, worker, activateSlot)
+				slot.activateSlot(worker)
 				return true, nil
 			},
 		},

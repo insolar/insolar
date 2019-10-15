@@ -36,7 +36,7 @@ type DetachableSlotWorker interface {
 	GetCond() (bool, *sync.Cond)
 	// provides a temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
-
+	NonDetachableOuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool)
 	//NestedAttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }
 

@@ -21,7 +21,8 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
-func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, nested AdapterNestedEventFunc, cancel *syncrun.ChainedCancel) AdapterCallback {
+func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, nested AdapterNestedEventFunc,
+	cancel *syncrun.ChainedCancel) AdapterCallback {
 	return AdapterCallback{stepLink, callback, nested, cancel}
 }
 

@@ -32,7 +32,7 @@ func main() {
 		PollingPeriod:   1000 * time.Millisecond,
 		PollingTruncate: 100 * time.Millisecond,
 		ScanCountLimit:  100,
-	}, nil, nil)
+	}, nil, nil, nil)
 
 	sm.PutDependency("example.ServiceAdapterA", example.CreateServiceAdapterA())
 	sm.PutDependency("example.catalogC", example.CreateCatalogC())

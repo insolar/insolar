@@ -80,6 +80,13 @@ func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) (stateUpdate Stat
 	return p.ensureAndPrepare(p.s, fn(p))
 }
 
+func (p *bargingInContext) executeBargeInNow(fn BargeInApplyFunc) (stateUpdate StateUpdate) {
+	p.setMode(updCtxBargeIn)
+	defer p.setDiscarded()
+
+	return p.ensureAndPrepare(p.s, fn(p))
+}
+
 /* ========================================================================= */
 
 var _ AsyncResultContext = &asyncResultContext{}

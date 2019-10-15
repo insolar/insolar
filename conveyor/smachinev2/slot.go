@@ -79,6 +79,7 @@ const (
 	slotWokenUp slotFlags = 1 << iota
 	slotHasBargeIn
 	slotHasAliases
+	slotHadAsync
 )
 
 type SlotDependency interface {
@@ -360,6 +361,10 @@ func (s *Slot) hasAsyncOrBargeIn() bool {
 }
 
 func (s *Slot) addAsyncCount(asyncCnt uint16) {
+	if asyncCnt == 0 {
+		return
+	}
+	s.slotFlags |= slotHadAsync
 	asyncCnt += s.asyncCallCount
 	if asyncCnt <= s.asyncCallCount {
 		panic("overflow")

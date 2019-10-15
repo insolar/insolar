@@ -93,6 +93,10 @@ func (p SlotLink) tryStartWorking() (s *Slot, isStarted bool, prevStepNo uint32)
 	return nil, false, 0
 }
 
+func (p SlotLink) isMachine(m *SlotMachine) bool {
+	return p.s != nil && p.s.machine == m
+}
+
 type StepLink struct {
 	SlotLink
 	step uint32

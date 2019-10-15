@@ -65,6 +65,11 @@ type DetachableSimpleSlotWorker struct {
 	*SimpleSlotWorker
 }
 
+func (p *DetachableSimpleSlotWorker) NonDetachableOuterCall(_ *smachine.SlotMachine, fn smachine.NonDetachableFunc) (wasExecuted bool) {
+	fn(&NonDetachableSimpleSlotWorker{p.SimpleSlotWorker})
+	return true
+}
+
 func (p *DetachableSimpleSlotWorker) CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool) {
 	return loopCount < 100, false
 }
