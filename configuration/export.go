@@ -28,6 +28,8 @@ type Exporter struct {
 	Addr string
 	// DurationBetweenRequests specifies time limit between requests to exporter
 	DurationBetweenRequests time.Duration
+	// Number of pulses after which client can see finalized pulse
+	ExportDelay int
 }
 
 // NewExporter creates new default configuration for export.
