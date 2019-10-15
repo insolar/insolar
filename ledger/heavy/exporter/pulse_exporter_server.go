@@ -37,13 +37,16 @@ type PulseServer struct {
 	pulses    insolarPulse.Calculator
 	jetKeeper executor.JetKeeper
 	nodes     node.Accessor
+	// Number of pulses after which client can see finalized pulse
+	exportDelay int
 }
 
-func NewPulseServer(pulses insolarPulse.Calculator, jetKeeper executor.JetKeeper, nodeAccessor node.Accessor) *PulseServer {
+func NewPulseServer(pulses insolarPulse.Calculator, jetKeeper executor.JetKeeper, nodeAccessor node.Accessor, exportDelay int) *PulseServer {
 	return &PulseServer{
-		pulses:    pulses,
-		jetKeeper: jetKeeper,
-		nodes:     nodeAccessor,
+		pulses:      pulses,
+		jetKeeper:   jetKeeper,
+		nodes:       nodeAccessor,
+		exportDelay: exportDelay,
 	}
 }
 
@@ -80,8 +83,12 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 	}
 	currentPN := getPulses.PulseNumber
 	for read < getPulses.Count {
-		topPulse := p.jetKeeper.TopSyncPulse()
-		if currentPN >= topPulse {
+		lastPossiblePulseToExport, err := p.pulses.Backwards(ctx, p.jetKeeper.TopSyncPulse(), p.exportDelay)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		if currentPN >= lastPossiblePulseToExport.PulseNumber {
 			return nil
 		}
 
