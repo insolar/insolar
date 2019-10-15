@@ -166,11 +166,6 @@ type NodeKeeper interface {
 	MoveSyncToActive(context.Context, insolar.PulseNumber)
 }
 
-// PartitionPolicy contains all rules how to initiate globule resharding.
-type PartitionPolicy interface {
-	ShardsCount() int
-}
-
 //go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go -g
 
 // RoutingTable contains all routing information of the network.
