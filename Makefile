@@ -15,7 +15,7 @@ KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
 
-
+GO111MODULE=on
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 GOBUILD ?= GO111MODULE=on go build -mod=vendor

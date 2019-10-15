@@ -29,7 +29,6 @@ require (
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
-	github.com/mmcloughlin/avo v0.0.0-20190731014047-bb615f61ce85 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/onrik/gomerkle v1.0.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
@@ -47,13 +46,13 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
 	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
+	github.com/tylerb/is v2.1.4+incompatible // indirect
 	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
-	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a // indirect
-	gonum.org/v1/gonum v0.0.0-20190923210107-40fa6a493b3d
+	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
 	google.golang.org/api v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0
