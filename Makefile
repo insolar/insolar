@@ -81,7 +81,8 @@ pre-build: ensure generate regen-builtin ## install dependencies, (re)generates 
 
 .PHONY: generate
 generate: ## run go generate
-	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+	echo "skip generate step"
+	#GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
 .PHONY: test_git_no_changes
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
