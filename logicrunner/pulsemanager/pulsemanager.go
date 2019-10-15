@@ -78,9 +78,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	ctx, logger := inslogger.WithField(ctx, "new_pulse", newPulse.PulseNumber.String())
 	logger.Debug("received pulse")
 
-	ctx, span := instracer.StartAlwaysSamplingSpan(
-		ctx, "PulseManager.Set",
-	)
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.Set")
 	span.SetTag("pulse.PulseNumber", int64(newPulse.PulseNumber))
 
 	onPulseStart := time.Now()

@@ -97,8 +97,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	defer m.setLock.Unlock()
 
 	logger.Debug("behind set lock")
-	ctx, span := instracer.StartAlwaysSamplingSpan(
-		ctx, "PulseManager.Set")
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.Set")
 	span.SetTag("pulse.PulseNumber", int64(newPulse.PulseNumber))
 	defer span.Finish()
 

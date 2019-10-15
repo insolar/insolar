@@ -156,7 +156,7 @@ func (b *Bus) SendRole(
 		return handleError(errors.Wrap(err, "failed to calculate role"))
 	}
 
-	return b.sendTarget(ctx, msg, nodes[0], latestPulse.PulseNumber)
+	return b.sendTarget(ctx, span, msg, nodes[0], latestPulse.PulseNumber)
 }
 
 // SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
@@ -165,6 +165,10 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
+	span.SetTag("type", "bus").SetTag("target", target.String())
+	defer span.Finish()
+
 	var pn insolar.PulseNumber
 	latestPulse, err := b.pulses.Latest(context.Background())
 	if err == nil {
@@ -175,16 +179,14 @@ func (b *Bus) SendTarget(
 		// but this is not the error
 		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "failed to fetch pulse"))
 	}
-	return b.sendTarget(ctx, msg, target, pn)
+	return b.sendTarget(ctx, span, msg, target, pn)
 }
 
 func (b *Bus) sendTarget(
-	ctx context.Context, msg *message.Message, target insolar.Reference, pulse insolar.PulseNumber,
+	ctx context.Context, span opentracing.Span,
+	msg *message.Message, target insolar.Reference, pulse insolar.PulseNumber,
 ) (<-chan *message.Message, func()) {
 	start := time.Now()
-	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
-	span.SetTag("type", "bus").SetTag("target", target.String())
-	defer span.Finish()
 
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
@@ -374,17 +376,15 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 		if err == nil {
 			ctx = instracer.WithParentSpan(ctx, parentSpan)
-			inslogger.FromContext(ctx).Info("Got parentSpanCtx", parentSpan)
 		} else {
 			inslogger.FromContext(ctx).Error(err)
 		}
 
-		var span opentracing.Span
-		reply := func() *lockedReply {
-			ctx, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
-			span.SetTag("type", "bus")
-			defer span.Finish()
+		ctx, span := instracer.StartSpan(ctx, "Bus.IncomingMessageRouter")
+		span.SetTag("type", "bus")
+		defer span.Finish()
 
+		reply := func() *lockedReply {
 			meta := payload.Meta{}
 			err = meta.Unmarshal(msg.Payload)
 			if err != nil {
@@ -395,6 +395,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 			receivedType, err := payload.UnmarshalType(meta.Payload)
 			if err == nil {
+				span.SetTag("msg_type", receivedType.String())
 				if receivedType == payload.TypeError {
 					stats.Record(ctx, statReplyError.M(1))
 				}
@@ -406,8 +407,10 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 				logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
 				return nil
 			}
-			msg.Metadata.Set("msg_hash", msgHash.String())
-			logger = logger.WithField("msg_hash", msgHash.String())
+			msgHashStr := msgHash.String()
+			msg.Metadata.Set("msg_hash", msgHashStr)
+			span.SetTag("msg_hash", msgHashStr)
+			logger = logger.WithField("msg_hash", msgHashStr)
 
 			msg.Metadata.Set("pulse", meta.Pulse.String())
 
@@ -422,8 +425,10 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 				return nil
 			}
 
-			msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
-			logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
+			orgHashStr := meta.OriginHash.String()
+			msg.Metadata.Set("msg_hash_origin", orgHashStr)
+			span.SetTag("msg_hash_origin", orgHashStr)
+			logger = logger.WithField("msg_hash_origin", orgHashStr)
 
 			b.repliesMutex.RLock()
 			defer b.repliesMutex.RUnlock()
@@ -441,10 +446,6 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		if reply == nil {
 			return nil, nil
 		}
-
-		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
-		span.SetTag("type", "bus")
-		defer span.Finish()
 
 		select {
 		case reply.messages <- msg:

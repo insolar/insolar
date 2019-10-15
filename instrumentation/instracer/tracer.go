@@ -70,35 +70,9 @@ func StartSpan(ctx context.Context, name string, o ...opentracing.StartSpanOptio
 func ExtractTraceID(ctx context.Context, span opentracing.Span) string {
 	if sc, ok := span.Context().(jaeger.SpanContext); ok && sc.IsValid() {
 		return sc.TraceID().String()
-	} else {
-		return inslogger.TraceID(ctx)
-	}
-}
-
-// StartSpan starts span that will be sampled with stored baggage and with parent span if find in context.
-func StartAlwaysSamplingSpan(ctx context.Context, name string, o ...opentracing.StartSpanOption) (context.Context, opentracing.Span) {
-	parentCtx := ParentSpanCtx(ctx)
-
-	var (
-		traceID  jaeger.TraceID
-		parentID jaeger.SpanID
-		spanID   jaeger.SpanID
-	)
-
-	if parentCtx.IsValid() {
-		traceID = parentCtx.TraceID()
-		parentID = parentCtx.SpanID()
 	}
 
-	newCtx := jaeger.NewSpanContext(traceID, spanID, parentID, true, nil)
-
-	o = append(o, opentracing.ChildOf(newCtx))
-
-	span, ctx := opentracing.StartSpanFromContext(ctx, name, o...)
-
-	span.SetTag("insTraceID", inslogger.TraceID(ctx))
-
-	return ctx, InitWrapper(ctx, span, name)
+	return inslogger.TraceID(ctx)
 }
 
 func StartSpanWithSpanID(ctx context.Context, name string, spanID jaeger.SpanID, o ...opentracing.StartSpanOption) (context.Context, opentracing.Span) {
