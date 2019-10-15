@@ -97,7 +97,7 @@ ensure: ## install all dependencies
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(BADGER) $(HEAVY_BADGER_TOOL)
+build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -155,7 +155,7 @@ $(KEEPERD):
 .PHONY: $(BADGER)
 $(BADGER):
 	export GO111MODULE=on
-	GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
+	# GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
