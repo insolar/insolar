@@ -71,8 +71,7 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	echo ""
-	#./scripts/build/install_build_tools.sh
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
 install-deps: install-build-tools ## install dep and codegen tools
