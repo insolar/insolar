@@ -65,6 +65,14 @@ func TestContractsBuilder_Build(t *testing.T) {
 		rp1 = &payload.RequestInfo{RequestID: gen.ID()}
 		return
 	})
+	am.DeployCodeMock.Set(func(ctx context.Context, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error) {
+		assert.Equal(t, insolar.MachineTypeGoPlugin, machineType)
+		id := gen.ID()
+		return &id, nil
+	})
+	am.ActivatePrototypeMock.Set(func(ctx context.Context, request insolar.Reference, parent insolar.Reference, code insolar.Reference, memory []byte) (err error) {
+		return nil
+	})
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(func(ctx context.Context) (p1 insolar.Pulse, err error) {
@@ -79,12 +87,12 @@ func TestContractsBuilder_Build(t *testing.T) {
 	cb := NewContractBuilder(insgocc, am, pa, j)
 
 	contractMap := make(map[string]string)
-	contractMap["testContract"] = contractOneCode
+	contractMap["recursive_call_one"] = contractOneCode
 
 	err = cb.Build(context.Background(), contractMap)
 	assert.NoError(t, err)
 
-	reference := cb.Prototypes["testContract"]
+	reference := cb.Prototypes["recursive_call_one"]
 	PrototypeRef := reference.String()
 	assert.NotEmpty(t, PrototypeRef)
 }

@@ -227,8 +227,8 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	// todo path /Users/bronin/go/src/github.com/insolar/insolar/.artifacts
-	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name)
+	root := insolar.RootModuleDir()
+	dstDir := filepath.Join(root, "application/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
@@ -272,7 +272,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	cmd := exec.Command(
 		"go", "build",
 		"-buildmode=plugin",
-		// "-trimpath",
+		// "-trimpath", // if enable this option, the plugin will not load
 		"-mod=vendor",
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
