@@ -116,6 +116,5 @@ func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		depositReference, _ := insolar.NewObjectReferenceFromString(depositReferenceStr)
 		return true, depositReference, nil
 	}
-
 	return false, nil, nil
 }

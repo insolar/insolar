@@ -575,6 +575,84 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonRef string, txHash string, a
 	return nil
 }
 
+// TransferToDeposit is proxy generated method
+func (r *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToDepositAsImmutable is proxy generated method
+func (r *Deposit) TransferToDepositAsImmutable(amountStr string, toDeposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
 // Transfer is proxy generated method
 func (r *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
