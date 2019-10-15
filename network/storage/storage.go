@@ -51,11 +51,6 @@
 package storage
 
 import (
-	"context"
-	"path/filepath"
-
-	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
@@ -101,78 +96,3 @@ const (
 	// ScopePulse is the scope for pulse storage.
 	ScopePulse Scope = 1
 )
-
-type BadgerDB struct {
-	db *badger.DB
-}
-
-// NewBadgerDB creates new badger DB instance. Configuration should contain DataDirectory option. Badger will create
-// files there.
-func NewBadgerDB(conf configuration.ServiceNetwork) (*BadgerDB, error) {
-	dir, err := filepath.Abs(conf.CacheDirectory)
-	if err != nil {
-		return nil, err
-	}
-
-	ops := badger.DefaultOptions(dir)
-	bdb, err := badger.Open(ops)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open badger")
-	}
-
-	db := &BadgerDB{
-		db: bdb,
-	}
-	return db, nil
-}
-
-// Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be
-// long).
-func (b *BadgerDB) Get(key Key) (value []byte, err error) {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	err = b.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(fullKey)
-		if err != nil {
-			return err
-		}
-		value, err = item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-
-	return
-}
-
-// Set stores value for a key.
-func (b *BadgerDB) Set(key Key, value []byte) error {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	err := b.db.Update(func(txn *badger.Txn) error {
-		err := txn.Set(fullKey, value)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
-func (b *BadgerDB) Stop(ctx context.Context) error {
-	return b.db.Close()
-}

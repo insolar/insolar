@@ -23,7 +23,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
@@ -67,14 +66,14 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	badger, err := badger.Open(BadgerDefaultOptions(tmpdir))
-	assert.NoError(t, err)
-	defer badger.Close()
+	ops := BadgerDefaultOptions(tmpdir)
+	badger, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer badger.Stop(context.Background())
 
 	db := store.NewDBMock(t)
 	hits := make(map[store.Scope]int)
 	db.SetMock.Return(nil)
-	db.BackendMock.Return(badger)
 
 	db.GetMock.Return([]byte{}, nil)
 
@@ -112,7 +111,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	indexes := object.NewIndexDB(db, nil)
 
 	jets := jet.NewDBStore(db)
-	pulses := pulse.NewDB(db)
+	pulses := pulse.NewDB(badger)
 
 	nodes := NewHeadTruncaterMock(t)
 	nodes.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
