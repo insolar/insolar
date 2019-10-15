@@ -34,16 +34,37 @@ import (
 
 type LoggingSpan struct {
 	opentracing.Span
-	ctx  context.Context
-	name string
+	ctx     context.Context
+	name    string
+	spanID  jaeger.SpanID
+	traceID jaeger.TraceID
 }
 
 func (ls *LoggingSpan) Finish() {
-	inslogger.FromContext(ls.ctx).Infof("span finished %s", ls.name)
+	if ls.spanID != 0 && ls.traceID.IsValid() {
+		inslogger.FromContext(ls.ctx).Infof("span finished [%s] {SpanID: %s, TraceID: %s}",
+			ls.name, ls.spanID.String(), ls.traceID.String())
+	} else {
+		inslogger.FromContext(ls.ctx).Infof("span finished %s", ls.name)
+	}
 	ls.Span.Finish()
 }
 
 func InitWrapper(ctx context.Context, span opentracing.Span, name string) *LoggingSpan {
+	spanCtx, isJaegerCtx := span.Context().(jaeger.SpanContext)
+	if isJaegerCtx {
+		inslogger.FromContext(ctx).Infof("span started [%s] {SpanID: %s, TraceID: %s}",
+			name, spanCtx.SpanID().String(), spanCtx.TraceID().String())
+
+		return &LoggingSpan{
+			Span:    span,
+			name:    name,
+			ctx:     ctx,
+			spanID:  spanCtx.SpanID(),
+			traceID: spanCtx.TraceID(),
+		}
+	}
+
 	inslogger.FromContext(ctx).Infof("span started %s", name)
 	return &LoggingSpan{
 		Span: span,
