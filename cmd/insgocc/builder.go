@@ -20,18 +20,18 @@ import (
 	"context"
 	"fmt"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/preprocessor"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -74,13 +74,8 @@ func (cb *contractsBuilder) outputDir() string {
 }
 
 func newContractBuilder(tmpDir string, skipProxy bool) *contractsBuilder {
-	var err error
 	if tmpDir == "" {
-		// todo make file inside .artifacts
-		tmpDir, err = ioutil.TempDir("/Users/bronin/go/src/github.com/insolar/insolar/.artifacts", "insgocc-")
-		if err != nil {
-			panic(err)
-		}
+		tmpDir = insolar.ContractBuildTmpDir("insgocc-")
 	}
 
 	cb := &contractsBuilder{

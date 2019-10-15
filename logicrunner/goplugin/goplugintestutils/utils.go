@@ -79,10 +79,7 @@ type ContractsBuilder struct {
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
 func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc jet.Coordinator) *ContractsBuilder {
-	tmpDir, err := ioutil.TempDir("/Users/bronin/go/src/github.com/insolar/insolar/.artifacts", "test-")
-	if err != nil {
-		return nil
-	}
+	tmpDir := insolar.ContractBuildTmpDir("test-")
 
 	cb := &ContractsBuilder{
 		root:    tmpDir,

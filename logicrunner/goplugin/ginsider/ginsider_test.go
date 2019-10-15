@@ -21,7 +21,6 @@ package ginsider
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/rpc"
 	"os"
@@ -44,9 +43,8 @@ func TestHealthCheck(t *testing.T) {
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
-	tmpDir, err := ioutil.TempDir("/Users/bronin/go/src/github.com/insolar/insolar/.artifacts", "ginsidertest-")
-	require.NoError(t, err, "failed to build tmp dir")
-	// defer os.RemoveAll(tmpDir)
+	tmpDir := insolar.ContractBuildTmpDir("ginsidertest-")
+	defer os.RemoveAll(tmpDir)
 
 	currentPath, err := os.Getwd()
 	require.NoError(t, err)
