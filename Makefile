@@ -71,7 +71,8 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/install_build_tools.sh
+	echo ""
+	#./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
 install-deps: install-build-tools ## install dep and codegen tools
@@ -89,7 +90,9 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	dep ensure
+	export GO111MODULE=on
+	GO111MODULE=on go mod vendor
+
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
