@@ -50,10 +50,20 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 
 // FinalizePulse starts backup process if needed
 func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) {
+	finPulse := &newPulse
+	for {
+		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse)
+		if finPulse == nil {
+			break
+		}
+	}
+}
+
+func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx)
 	if !shouldStartFinalization(ctx, jetKeeper, pulses, newPulse) {
 		logger.Info("Skip finalization")
-		return
+		return nil
 	}
 
 	// record all jets count
@@ -67,7 +77,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 
 	if bkpError == ErrAlreadyDone {
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
-		return
+		return nil
 	}
 
 	err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
@@ -93,9 +103,10 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	}
 	if err == pulse.ErrNotFound {
 		logger.Info("Stop propagating of backups")
-		return
+		return nil
 	}
 	logger.Info("Propagating finalization to next pulse: ", nextTop.PulseNumber)
 
-	FinalizePulse(ctx, pulses, backuper, jetKeeper, indexes, nextTop.PulseNumber)
+	pulseCopy := nextTop.PulseNumber
+	return &pulseCopy
 }
