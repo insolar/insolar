@@ -34,16 +34,15 @@ import (
 
 type LoggingSpan struct {
 	opentracing.Span
-	ctx     context.Context
-	name    string
-	spanID  jaeger.SpanID
-	traceID jaeger.TraceID
+	ctx    context.Context
+	name   string
+	spanID jaeger.SpanID
 }
 
 func (ls *LoggingSpan) Finish() {
-	if ls.spanID != 0 && ls.traceID.IsValid() {
-		inslogger.FromContext(ls.ctx).Infof("span finished [%s] {SpanID: %s, TraceID: %s}",
-			ls.name, ls.spanID.String(), ls.traceID.String())
+	if ls.spanID != 0 {
+		inslogger.FromContext(ls.ctx).Infof("span finished [%s] {SpanID: %s}",
+			ls.name, ls.spanID.String())
 	} else {
 		inslogger.FromContext(ls.ctx).Infof("span finished %s", ls.name)
 	}
@@ -53,15 +52,14 @@ func (ls *LoggingSpan) Finish() {
 func InitWrapper(ctx context.Context, span opentracing.Span, name string) *LoggingSpan {
 	spanCtx, isJaegerCtx := span.Context().(jaeger.SpanContext)
 	if isJaegerCtx {
-		inslogger.FromContext(ctx).Infof("span started [%s] {SpanID: %s, TraceID: %s}",
-			name, spanCtx.SpanID().String(), spanCtx.TraceID().String())
+		inslogger.FromContext(ctx).Infof("span started [%s] {SpanID: %s, TraceID: %s, ParentID: %s}",
+			name, spanCtx.SpanID().String(), spanCtx.TraceID().String(), spanCtx.ParentID())
 
 		return &LoggingSpan{
-			Span:    span,
-			name:    name,
-			ctx:     ctx,
-			spanID:  spanCtx.SpanID(),
-			traceID: spanCtx.TraceID(),
+			Span:   span,
+			name:   name,
+			ctx:    ctx,
+			spanID: spanCtx.SpanID(),
 		}
 	}
 
@@ -75,7 +73,7 @@ func InitWrapper(ctx context.Context, span opentracing.Span, name string) *Loggi
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
 func StartSpan(ctx context.Context, name string, o ...opentracing.StartSpanOption) (context.Context, opentracing.Span) {
-	parentCtx := ParentSpanCtx(ctx)
+	parentCtx, ctx := ParentSpanCtx(ctx)
 
 	if parentCtx.IsValid() {
 		o = append(o, opentracing.ChildOf(parentCtx))
@@ -88,38 +86,38 @@ func StartSpan(ctx context.Context, name string, o ...opentracing.StartSpanOptio
 	return ctx, InitWrapper(ctx, span, name)
 }
 
-func ExtractTraceID(ctx context.Context, span opentracing.Span) string {
-	if sc, ok := span.Context().(jaeger.SpanContext); ok && sc.IsValid() {
-		return sc.TraceID().String()
-	}
-
-	return inslogger.TraceID(ctx)
-}
-
-func StartSpanWithSpanID(ctx context.Context, name string, spanID jaeger.SpanID, o ...opentracing.StartSpanOption) (context.Context, opentracing.Span) {
+func StartSpanWithSpanID(ctx context.Context, name string, spanID uint64, o ...opentracing.StartSpanOption) (context.Context, opentracing.Span) {
 	var (
 		traceID  jaeger.TraceID
 		parentID jaeger.SpanID
 	)
 
 	span := opentracing.SpanFromContext(ctx)
-
 	if span != nil {
 		if sc, ok := span.Context().(jaeger.SpanContext); ok && sc.IsValid() {
 			traceID = sc.TraceID()
 			parentID = sc.SpanID()
 		}
+	} else if traceStr := inslogger.TraceID(ctx); traceStr != "" {
+		var err error
+		if len(traceStr) > 32 {
+			traceStr = traceStr[:32]
+		}
+		traceID, err = jaeger.TraceIDFromString(traceStr)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to parse tracespan traceID"))
+		}
 	}
 
-	newCtx := jaeger.NewSpanContext(traceID, spanID, parentID, true, nil)
+	newCtx := jaeger.NewSpanContext(traceID, jaeger.SpanID(spanID), parentID, true, nil)
 
 	o = append(o, jaeger.SelfRef(newCtx))
 
-	span, ctx = opentracing.StartSpanFromContext(ctx, name, o...)
+	span = opentracing.StartSpan(name, o...)
 
 	span.SetTag("insTraceID", inslogger.TraceID(ctx))
 
-	return ctx, InitWrapper(ctx, span, name)
+	return opentracing.ContextWithSpan(ctx, span), InitWrapper(ctx, span, name)
 }
 
 type parentSpanKey struct{}
@@ -151,24 +149,19 @@ func MakeUintSpan(input []byte) uint64 {
 	return crc64.Checksum(input, crc64Table)
 }
 
-func MakeBinarySpan(spanID uint64) []byte {
+func MakeBinarySpan(input []byte) []byte {
+	spanUint := crc64.Checksum(input, crc64Table)
 	binarySpanID := make([]byte, 8)
-	binary.LittleEndian.PutUint64(binarySpanID, spanID)
+	binary.LittleEndian.PutUint64(binarySpanID, spanUint)
 	return binarySpanID
 }
 
-func ParentSpanCtx(ctx context.Context) jaeger.SpanContext {
+func ParentSpanCtx(ctx context.Context) (jaeger.SpanContext, context.Context) {
 	traceSpan, ok := ParentSpan(ctx)
 	if !ok {
-		return emptyContext
+		return emptyContext, ctx
 	}
-
-	span := opentracing.SpanFromContext(ctx)
-	if span != nil {
-		if sc, ok := span.Context().(jaeger.SpanContext); ok && sc.IsValid() {
-			return jaeger.NewSpanContext(sc.TraceID(), sc.SpanID(), 0, true, nil)
-		}
-	}
+	ctx = context.WithValue(ctx, parentSpanKey{}, nil)
 
 	var (
 		traceID jaeger.TraceID
@@ -183,13 +176,13 @@ func ParentSpanCtx(ctx context.Context) jaeger.SpanContext {
 		traceID, err = jaeger.TraceIDFromString(string(traceSpan.TraceID))
 		if err != nil {
 			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to parse tracespan traceID"))
-			return emptyContext
+			return emptyContext, ctx
 		}
 	} else {
 		traceID, err = jaeger.TraceIDFromString(inslogger.TraceID(ctx))
 		if err != nil {
 			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to parse tracespan traceID"))
-			return emptyContext
+			return emptyContext, ctx
 		}
 	}
 
@@ -197,7 +190,7 @@ func ParentSpanCtx(ctx context.Context) jaeger.SpanContext {
 		spanID = jaeger.SpanID(binary.LittleEndian.Uint64(traceSpan.SpanID))
 	}
 
-	return jaeger.NewSpanContext(traceID, spanID, 0, true, nil)
+	return jaeger.NewSpanContext(traceID, spanID, 0, true, nil), ctx
 }
 
 // ErrJaegerConfigEmpty is returned if jaeger configuration has empty endpoint values.
@@ -262,7 +255,7 @@ func ShouldRegisterJaeger(
 	agentEndpoint string,
 	collectorEndpoint string,
 	probabilityRate float64,
-) (flusher func()) {
+) func() {
 	tracer, closer, regerr := NewJaegerTracer(
 		ctx,
 		serviceName,
@@ -274,19 +267,19 @@ func ShouldRegisterJaeger(
 	opentracing.SetGlobalTracer(tracer)
 	inslog := inslogger.FromContext(ctx)
 	if regerr == nil {
-		flusher = func() {
+		return func() {
 			inslog.Debugf("Flush jaeger for %v\n", serviceName)
 			closer.Close()
 		}
-	} else {
-		if regerr == ErrJaegerConfigEmpty {
-			inslog.Info("registerJaeger skipped: config is not provided")
-		} else {
-			inslog.Warn("registerJaeger error:", regerr)
-		}
-		flusher = func() {}
 	}
-	return
+
+	if regerr == ErrJaegerConfigEmpty {
+		inslog.Info("registerJaeger skipped: config is not provided")
+	} else {
+		inslog.Warn("registerJaeger error:", regerr)
+	}
+
+	return func() {}
 }
 
 // AddError add error info to span and mark span as errored

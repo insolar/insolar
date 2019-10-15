@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/uber/jaeger-client-go"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/platformpolicy"
@@ -167,9 +165,6 @@ func (h *HandleCall) handleActual(
 	)
 
 	logger.Debug("registered incoming request")
-
-	ctx, span := instracer.StartSpanWithSpanID(ctx, "IncomingRequest", jaeger.SpanID(instracer.MakeUintSpan(requestRef.GetLocal().Hash())))
-	defer span.Finish()
 
 	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
 		logger.Debug("incoming request invalid object reference")

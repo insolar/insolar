@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/opentracing/opentracing-go"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -134,10 +132,6 @@ func freshContextFromContext(ctx context.Context, reqID string) context.Context 
 	parentSpan, ok := instracer.ParentSpan(ctx)
 	if ok {
 		res = instracer.WithParentSpan(res, parentSpan)
-	}
-
-	if pctx := opentracing.SpanFromContext(ctx); pctx != nil {
-		res = opentracing.ContextWithSpan(res, pctx)
 	}
 
 	return res

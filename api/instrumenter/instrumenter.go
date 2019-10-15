@@ -46,8 +46,9 @@ type MethodInstrumenter struct {
 func NewMethodInstrument(methodName string) (context.Context, *MethodInstrumenter) {
 	traceID := utils.RandTraceID()
 	ctx, _ := inslogger.WithTraceField(context.Background(), traceID)
-	ctx, span := instracer.StartSpan(ctx, methodName)
-	ctx, _ = inslogger.WithTraceField(ctx, instracer.ExtractTraceID(ctx, span))
+	ctx, span := instracer.StartSpanWithSpanID(ctx, methodName, instracer.MakeUintSpan([]byte(utils.RandTraceID())))
+
+	utils.RandTraceID()
 
 	ctx = insmetrics.InsertTag(ctx, tagMethod, methodName)
 	stats.Record(ctx, incomingRequests.M(1))

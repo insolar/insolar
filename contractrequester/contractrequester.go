@@ -117,14 +117,16 @@ func randomUint64() uint64 {
 func (cr *ContractRequester) Call(
 	ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber,
 ) (insolar.Reply, *insolar.Reference, error) {
-
-	ctx, span := instracer.StartSpan(ctx, "Call "+method)
-	defer span.Finish()
-
 	args, err := insolar.Serialize(argsIn)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ ContractRequester::Call ] Can't marshal")
 	}
+
+	reasonRef := api.MakeReason(pulse, args)
+
+	ctx, span := instracer.StartSpanWithSpanID(ctx, "ContractRequester Call", instracer.MakeUintSpan(reasonRef.Bytes()))
+	span.SetTag("method", method)
+	defer span.Finish()
 
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
@@ -133,7 +135,7 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
-			Reason:       api.MakeReason(pulse, args),
+			Reason:       reasonRef,
 			Immutable:    true,
 		},
 	}
@@ -206,7 +208,10 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payl
 	sendingStarted := time.Now()
 	ctx = insmetrics.InsertTag(ctx, metrics.CallMethodName, msg.Request.Method)
 	ctx = insmetrics.InsertTag(ctx, metrics.CallReturnMode, msg.Request.ReturnMode.String())
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
+
+	ctx, span := instracer.StartSpanWithSpanID(ctx, "ContractRequester.SendRequest", instracer.MakeUintSpan(msg.Request.Reason.Bytes()))
+	span.SetTag("method", msg.Request.Method)
+
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.SendMessageTiming.M(float64(time.Since(sendingStarted).Nanoseconds())/1e6))

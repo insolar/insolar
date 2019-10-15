@@ -22,7 +22,6 @@ import (
 	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -268,14 +267,12 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
 
-	var span opentracing.Span
-	spanID := instracer.MakeUintSpan(transcript.RequestRef.GetLocal().Hash())
 	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
 		TraceID: []byte(inslogger.TraceID(ctx)),
-		SpanID:  instracer.MakeBinarySpan(spanID),
+		SpanID:  instracer.MakeBinarySpan(transcript.Request.Reason.Bytes()),
 	})
 
-	ctx, span = instracer.StartSpan(ctx, "IncomingRequest processing")
+	ctx, span := instracer.StartSpan(ctx, "IncomingRequest processing")
 	defer span.Finish()
 
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{

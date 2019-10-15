@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/rpc/v2"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
@@ -171,7 +172,11 @@ type CallMethodReply struct {
 
 // CallConstructor make an object from its prototype
 func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodArgs, requestBody *rpc.RequestBody, re *CallMethodReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, instr := instrumenter.NewMethodInstrument("AdminContractService.call")
+	defer instr.End()
+
+	inslog := inslogger.FromContext(ctx)
+
 	re.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ FuncTestContractService.CallMethod ] Incoming request: %s", r.RequestURI)
