@@ -26,7 +26,6 @@ require (
 	github.com/insolar/x-crypto v0.0.0-20191011101132-06687867f12b
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
