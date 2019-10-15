@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"go/build"
 	"os"
 	"os/exec"
@@ -220,12 +219,7 @@ func (cb *contractsBuilder) plugin(ctx context.Context, name string) (string, er
 	cmd.Stderr = os.Stderr
 	cmdVendor.Stdout = os.Stdout
 	cmdVendor.Stderr = os.Stderr
-	// err = cmdVendor.Run()
-	// if err != nil {
-	// 	return "", errors.Wrap(err, "can't run go mod vendor")
-	// }
 
-	fmt.Printf("RUN:  %s", cmd.String())
 	err = cmd.Run()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build plugin: %v", soFile)
