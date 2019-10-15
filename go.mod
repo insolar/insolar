@@ -7,6 +7,7 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/ThreeDotsLabs/watermill v1.0.0
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/dgraph-io/badger v1.6.0
 	github.com/dustin/go-humanize v1.0.0
@@ -14,7 +15,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gogo/protobuf v1.2.1
 	github.com/gojuno/minimock/v3 v3.0.5
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.1
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
 	github.com/gorilla/mux v1.7.3
@@ -25,6 +26,7 @@ require (
 	github.com/insolar/x-crypto v0.0.0-20191011101132-06687867f12b
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
+	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
@@ -32,8 +34,9 @@ require (
 	github.com/onrik/gomerkle v1.0.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.1.0
+	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
+	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
@@ -52,7 +55,7 @@ require (
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
 	gonum.org/v1/gonum v0.0.0-20191013112747-a2e99c9265e9
 	google.golang.org/api v0.9.0 // indirect
-	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
-	google.golang.org/grpc v1.24.0
+	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873
+	google.golang.org/grpc v1.23.1
 	gopkg.in/yaml.v2 v2.2.2
 )

@@ -71,7 +71,8 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/install_build_tools.sh
+	echo "skip install-build-tools"
+	#./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
 install-deps: install-build-tools ## install dep and codegen tools
@@ -153,6 +154,7 @@ $(KEEPERD):
 
 .PHONY: $(BADGER)
 $(BADGER):
+	export GO111MODULE=on
 	GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
@@ -244,11 +246,11 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
-		protoc -I/usr/local/include -I./ \
+	protoc -I./vendor -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
     		ledger/heavy/exporter/record_exporter.proto
-		protoc -I/usr/local/include -I./ \
+	protoc -I./vendor -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
     		ledger/heavy/exporter/pulse_exporter.proto
