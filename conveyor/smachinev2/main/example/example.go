@@ -26,8 +26,6 @@ import (
 )
 
 type StateMachine1 struct {
-	smachine.StateMachineDeclTemplate
-
 	serviceA *ServiceAdapterA
 	catalogC CatalogC
 
@@ -122,7 +120,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 	s.count++
 	if s.count < 5 {
 		return ctx.Yield().ThenRepeat()
-		//return ctx.Repeat(0)
+		//return ctx.Repeat(10)
 		//return ctx.Poll().ThenRepeat()
 	}
 
@@ -140,6 +138,7 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	fmt.Printf("wait: %d %v result:%v\n", ctx.SlotLink().SlotID(), time.Now(), s.result)
 	s.count = 0
+
 	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
 }
 

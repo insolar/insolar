@@ -280,6 +280,7 @@ func (p *slotContext) acquire(link SyncLink, oneStep bool) Decision {
 	}
 
 	d := Impossible
+	// TODO need backup when NonDetachableCall didn't get in
 	p.w.NonDetachableCall(func(worker FixedSlotWorker) {
 		p.s.releaseDependency(worker)
 		d, p.s.dependency = link.controller.CreateDependency(p.s, oneStep)

@@ -70,15 +70,3 @@ type PulseSlotMachine struct {
 	pulseSlot PulseSlot
 	isAntique bool
 }
-
-type PulseSlot struct {
-	pulseData pulseDataHolder
-}
-
-func (p *PulseSlot) State() PulseSlotState {
-	return p.pulseData.State()
-}
-
-func (p *PulseSlot) PulseData() pulse.Data {
-	return p.pulseData.PulseData()
-}

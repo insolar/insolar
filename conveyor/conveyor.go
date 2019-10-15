@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachinev2"
@@ -60,6 +61,8 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 }
 
 type PulseConveyor struct {
+	presentPulse pulse.Number //atomic
+
 	mutex sync.RWMutex
 
 	slotConfig PulseSlotConfig
@@ -78,6 +81,30 @@ type PulseConveyor struct {
 	//slotConfig   smachine.SlotMachineConfig
 	factoryFn    StateMachineFactoryFn
 	pulseService PulseServiceAdapter
+}
+
+func (p *PulseConveyor) GetPresentPulse() pulse.Number {
+	return pulse.Number(atomic.LoadUint32((*uint32)(&p.presentPulse)))
+}
+
+func (p *PulseConveyor) GetPulseData(pn pulse.Number) pulse.Data {
+	panic("unsupported")
+}
+
+func (p *PulseConveyor) getPulseSlot(pn pulse.Number) *PulseSlot {
+	ps, ok := p.slotMachine.GetPublished(pn)
+	if ok && ps == nil {
+		panic("illegal state")
+	}
+	return ps.(*PulseSlot)
+}
+
+func (p *PulseConveyor) GetPulseSlot(pn pulse.Number) *PulseSlot {
+	ips, ok := p.slotMachine.GetPublished(pn)
+	if ok && ps == nil {
+		panic("illegal state")
+	}
+
 }
 
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {

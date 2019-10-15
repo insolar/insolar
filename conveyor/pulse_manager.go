@@ -14,25 +14,23 @@
 //    limitations under the License.
 //
 
-package smachine
+package conveyor
 
-import "context"
+import "github.com/insolar/insolar/pulse"
 
-type MachineCallFunc func(MachineCallContext)
-type MachineCallContext interface {
-	SlotMachine() *SlotMachine
+type PulseManager struct {
+	present pulse.Number //atomic
 
-	AddNow(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink
+}
 
-	BargeInNow(SlotLink, interface{}, BargeInApplyFunc) bool
+type PulseSlot struct {
+	pulseData pulseDataHolder
+}
 
-	GetPublished(key interface{}) interface{}
-	GetPublishedLink(key interface{}) SharedDataLink
-	//UseShared(SharedDataAccessor) SharedAccessReport
+func (p *PulseSlot) State() PulseSlotState {
+	return p.pulseData.State()
+}
 
-	Migrate()
-	AddMigrationCallback(fn MigrationFunc)
-
-	Cleanup()
-	Stop()
+func (p *PulseSlot) PulseData() pulse.Data {
+	return p.pulseData.PulseData()
 }

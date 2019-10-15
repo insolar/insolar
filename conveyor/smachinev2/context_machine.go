@@ -41,6 +41,11 @@ func (p *machineCallContext) Cleanup() {
 	p.m.Cleanup(p.w)
 }
 
+func (p *machineCallContext) Stop() {
+	p.ensureValid()
+	p.m.Stop()
+}
+
 func (p *machineCallContext) AddNow(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
 	p.ensureValid()
 	link, ok := p.m._addNew(ctx, parent, sm)
