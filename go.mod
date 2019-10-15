@@ -6,7 +6,7 @@ require (
 	contrib.go.opencensus.io/exporter/jaeger v0.1.0
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
-	github.com/ThreeDotsLabs/watermill v1.0.0-rc.1
+	github.com/ThreeDotsLabs/watermill v1.0.0
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/dgraph-io/badger v1.6.0
