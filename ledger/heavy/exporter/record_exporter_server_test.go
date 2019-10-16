@@ -301,10 +301,16 @@ func TestRecordIterator_Next(t *testing.T) {
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
 
+			topSyncPulse := pn + 10
+
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
+			pulseCalculator.BackwardsMock.Expect(ctx, topSyncPulse, 0).Return(insolar.Pulse{PulseNumber: topSyncPulse}, nil)
 
-			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, pulseCalculator, 0)
+			jetKeeper := executor.NewJetKeeperMock(t)
+			jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, jetKeeper, pulseCalculator, 0)
 
 			_, err := iter.Next(ctx)
 
@@ -335,6 +341,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
+			pulseCalculator.BackwardsMock.Expect(ctx, nextPN, 0).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
 
 			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, jetKeeper, pulseCalculator, 0)
 
@@ -396,15 +403,95 @@ func TestRecordServer_Export(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("PulseNumber can't be more than TopSyncPulseNumber", func(t *testing.T) {
+	t.Run("failed to backward", func(t *testing.T) {
+		topSyncPulse := insolar.PulseNumber(0)
+
 		jetKeeper := executor.NewJetKeeperMock(t)
-		jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(0))
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+		stream := &streamMock{}
+
+		testError := errors.New("Test Error")
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.Expect(stream.Context(), topSyncPulse, 0).Return(insolar.Pulse{}, testError)
+
 		server := &RecordServer{
-			jetKeeper: jetKeeper,
-			limiter:   NewOneRequestLimiter(time.Microsecond),
+			jetKeeper:       jetKeeper,
+			limiter:         NewOneRequestLimiter(time.Microsecond),
+			pulseCalculator: pulseCalculator,
 		}
 
-		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, stream)
+
+		require.Contains(t, err.Error(), testError.Error())
+	})
+
+	t.Run("no enough pulses to backward", func(t *testing.T) {
+		topSyncPulse := insolar.PulseNumber(0)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+		stream := &streamMock{}
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.Expect(stream.Context(), topSyncPulse, 0).Return(insolar.Pulse{}, insolarPulse.ErrNotFound)
+
+		server := &RecordServer{
+			jetKeeper:       jetKeeper,
+			limiter:         NewOneRequestLimiter(time.Microsecond),
+			pulseCalculator: pulseCalculator,
+		}
+
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, stream)
+
+		require.Contains(t, err.Error(), insolarPulse.ErrNotFound.Error())
+	})
+
+	t.Run("PulseNumber can't be more than TopSyncPulseNumber", func(t *testing.T) {
+		topSyncPulse := insolar.PulseNumber(0)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+		stream := &streamMock{}
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.Expect(stream.Context(), topSyncPulse, 0).Return(insolar.Pulse{PulseNumber: topSyncPulse}, nil)
+
+		server := &RecordServer{
+			jetKeeper:       jetKeeper,
+			limiter:         NewOneRequestLimiter(time.Microsecond),
+			pulseCalculator: pulseCalculator,
+		}
+
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, stream)
+
+		require.Error(t, err)
+	})
+
+	t.Run("PulseNumber can't be more than TopSyncPulseNumber - delay", func(t *testing.T) {
+		topSyncPulse := insolar.PulseNumber(pulse.MinTimePulse)
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+		stream := &streamMock{}
+
+		exportDelay := 10
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.Expect(stream.Context(), topSyncPulse, exportDelay).Return(insolar.Pulse{PulseNumber: topSyncPulse - insolar.PulseNumber(exportDelay)}, nil)
+
+		server := &RecordServer{
+			jetKeeper:       jetKeeper,
+			limiter:         NewOneRequestLimiter(time.Microsecond),
+			pulseCalculator: pulseCalculator,
+			exportDelay:     exportDelay,
+		}
+
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: topSyncPulse + 5}, stream)
 
 		require.Error(t, err)
 	})

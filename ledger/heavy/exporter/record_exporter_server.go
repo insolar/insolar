@@ -115,7 +115,14 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 
 	if getRecords.PulseNumber != 0 {
 		topPulse := r.jetKeeper.TopSyncPulse()
-		if topPulse < getRecords.PulseNumber {
+		lastPossiblePulseToExport, err := r.pulseCalculator.Backwards(ctx, topPulse, r.exportDelay)
+		if err != nil {
+			if err == insolarPulse.ErrNotFound {
+				return errors.Wrap(err, "trying to get a non-finalized pulse data")
+			}
+			return errors.Wrap(err, "failed to get previous pulse")
+		}
+		if lastPossiblePulseToExport.PulseNumber < getRecords.PulseNumber {
 			return errors.New("trying to get a non-finalized pulse data")
 		}
 	} else {
@@ -222,14 +229,14 @@ func (r *recordIterator) HasNext(ctx context.Context) bool {
 func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
 	currentPulse := r.currentPulse
 
+	topPulse := r.jetKeeper.TopSyncPulse()
+	lastPossiblePulseToExport, err := r.pulseCalculator.Backwards(ctx, topPulse, r.exportDelay)
+	if err != nil {
+		return false
+	}
+
 	for {
 		nextPulse, err := r.pulseCalculator.Forwards(ctx, currentPulse, 1)
-		if err != nil {
-			return false
-		}
-
-		topPulse := r.jetKeeper.TopSyncPulse()
-		lastPossiblePulseToExport, err := r.pulseCalculator.Backwards(ctx, topPulse, r.exportDelay)
 		if err != nil {
 			return false
 		}
@@ -278,13 +285,19 @@ func (r *recordIterator) Next(ctx context.Context) (*Record, error) {
 func (r *recordIterator) setNextPulse(ctx context.Context) error {
 	currentPulse := r.currentPulse
 
+	topPulse := r.jetKeeper.TopSyncPulse()
+	lastPossiblePulseToExport, err := r.pulseCalculator.Backwards(ctx, topPulse, r.exportDelay)
+	if err != nil {
+		return err
+	}
+
 	for {
 		nextPulse, err := r.pulseCalculator.Forwards(ctx, currentPulse, 1)
 		if err != nil {
 			return err
 		}
-		topPulse := r.jetKeeper.TopSyncPulse()
-		if topPulse < nextPulse.PulseNumber {
+
+		if lastPossiblePulseToExport.PulseNumber < nextPulse.PulseNumber {
 			return errors.New("there are no synced pulses")
 		}
 		_, err = r.recordIndex.LastKnownPosition(nextPulse.PulseNumber)
