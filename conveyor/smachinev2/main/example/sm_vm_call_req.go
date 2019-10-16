@@ -105,13 +105,15 @@ func (s *StateMachineCallRequest) stateGetSharedReadyToWork(ctx smachine.Executi
 	objCode := s.objInfo.ObjectLatestValidCode
 	callMethod := s.callMethod
 
-	return s.objInfo.ContractRunner.PrepareAsync(ctx, func(svc ContractRunnerService) smachine.AsyncResultFunc {
+	s.objInfo.ContractRunner.PrepareAsync(ctx, func(svc ContractRunnerService) smachine.AsyncResultFunc {
 		callType := svc.ClassifyCall(objCode, callMethod)
 		return func(ctx smachine.AsyncResultContext) {
 			s.callType = callType
 			ctx.WakeUp()
 		}
-	}).DelayedStart().ThenJump(s.stateSharedReadyToWork)
+	}).Start()
+
+	return ctx.Sleep().ThenJump(s.stateSharedReadyToWork)
 }
 
 func (s *StateMachineCallRequest) stateSharedReadyToWork(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -138,13 +140,15 @@ func (s *StateMachineCallRequest) stateStartImmutableCall(ctx smachine.Execution
 	objState := s.objInfo.ObjectLatestValidState
 	callMethod := s.callMethod
 
-	return s.objInfo.ContractRunner.PrepareAsync(ctx, func(svc ContractRunnerService) smachine.AsyncResultFunc {
+	s.objInfo.ContractRunner.PrepareAsync(ctx, func(svc ContractRunnerService) smachine.AsyncResultFunc {
 		result := svc.CallImmutableMethod(objCode, callMethod, objState)
 		return func(ctx smachine.AsyncResultContext) {
 			s.callResult = result
 			ctx.WakeUp()
 		}
-	}).DelayedStart().ThenJump(s.stateDoneImmutableCall)
+	}).Start()
+
+	return ctx.Sleep().ThenJump(s.stateDoneImmutableCall)
 }
 
 func (s *StateMachineCallRequest) stateDoneImmutableCall(ctx smachine.ExecutionContext) smachine.StateUpdate {
