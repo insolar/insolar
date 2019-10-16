@@ -35,6 +35,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -51,7 +52,6 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"

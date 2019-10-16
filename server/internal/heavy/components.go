@@ -32,6 +32,7 @@ import (
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -48,7 +49,6 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"github.com/insolar/insolar/ledger/heavy/handler"
