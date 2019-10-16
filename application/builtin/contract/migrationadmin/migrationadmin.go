@@ -22,10 +22,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
+	"github.com/insolar/insolar/application/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.

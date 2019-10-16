@@ -22,11 +22,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/builtin/contract/member/signer"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
-	hwProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
+	hwProxy "github.com/insolar/insolar/application/builtin/proxy/helloworld"
 )
 
 // HelloWorld contract

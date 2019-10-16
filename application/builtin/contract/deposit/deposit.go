@@ -20,14 +20,14 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/insolar/insolar/application/builtin/proxy/deposit"
+	"github.com/insolar/insolar/application/builtin/proxy/member"
+	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
+	"github.com/insolar/insolar/application/builtin/proxy/wallet"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 const XNS = "XNS"

@@ -19,9 +19,9 @@ package nodedomain
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/application/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/noderecord"
 )
 
 // NodeDomain holds node records.

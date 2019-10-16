@@ -22,13 +22,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/application/builtin/contract/noderecord"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifact"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 )

@@ -21,10 +21,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/builtin/proxy/helloworld"
+	"github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
 // RootDomain is smart contract representing entrance point to system.

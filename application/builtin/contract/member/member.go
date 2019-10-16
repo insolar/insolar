@@ -21,17 +21,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/insolar/insolar/application/builtin/contract/member/signer"
+	"github.com/insolar/insolar/application/builtin/proxy/account"
+	"github.com/insolar/insolar/application/builtin/proxy/deposit"
+	"github.com/insolar/insolar/application/builtin/proxy/member"
+	"github.com/insolar/insolar/application/builtin/proxy/migrationadmin"
+	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
+	"github.com/insolar/insolar/application/builtin/proxy/nodedomain"
+	"github.com/insolar/insolar/application/builtin/proxy/rootdomain"
+	"github.com/insolar/insolar/application/builtin/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Member - basic member contract.

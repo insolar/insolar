@@ -19,10 +19,10 @@ package wallet
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/application/builtin/proxy/account"
+	"github.com/insolar/insolar/application/builtin/proxy/deposit"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 )
 
 // Wallet - basic wallet contract.
