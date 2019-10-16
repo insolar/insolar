@@ -64,15 +64,21 @@ type ChainedCancel struct {
 	chain atomic.Value
 }
 
+const (
+	stateCancelled = 1 << iota
+	stateChainHandlerBeingSet
+	stateChainHandlerSet
+)
+
 func (p *ChainedCancel) Cancel() {
 	for {
 		lastState := atomic.LoadUint32(&p.state)
 		switch {
-		case lastState&0x01 != 0:
+		case lastState&stateCancelled != 0:
 			return
-		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|0x01):
+		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|stateCancelled):
 			continue
-		case lastState == 0x04:
+		case lastState == stateChainHandlerSet:
 			p.runChain()
 		}
 		return
@@ -88,11 +94,14 @@ func (p *ChainedCancel) runChain() {
 		// this can only happen when atomic ordering is broken
 		panic("unexpected atomic ordering")
 	}
+
+	// prevent repeated calls as well as retention of references & possible memory leaks
+	p.chain.Store(context.CancelFunc(func() {}))
 	fn()
 }
 
 func (p *ChainedCancel) IsCancelled() bool {
-	return atomic.LoadUint32(&p.state)&0x01 != 0
+	return atomic.LoadUint32(&p.state)&stateCancelled != 0
 }
 
 /*
@@ -112,10 +121,10 @@ func (p *ChainedCancel) SetChain(chain context.CancelFunc) {
 	for {
 		lastState := atomic.LoadUint32(&p.state)
 		switch {
-		case lastState&^0x01 != 0:
+		case lastState&^stateCancelled != 0: // chain is set or being set
 			panic("illegal state")
 			return
-		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|0x02): //
+		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|stateChainHandlerBeingSet): //
 			continue
 		}
 		break
@@ -126,12 +135,12 @@ func (p *ChainedCancel) SetChain(chain context.CancelFunc) {
 	for {
 		lastState := atomic.LoadUint32(&p.state)
 		switch {
-		case lastState&^0x01 != 0x02:
+		case lastState&^stateCancelled != stateChainHandlerBeingSet:
 			// this can only happen when atomic ordering is broken
 			panic("unexpected atomic ordering")
-		case !atomic.CompareAndSwapUint32(&p.state, lastState, (lastState&0x01)|0x04):
+		case !atomic.CompareAndSwapUint32(&p.state, lastState, (lastState&stateCancelled)|stateChainHandlerSet):
 			continue
-		case lastState&0x01 != 0:
+		case lastState&stateCancelled != 0:
 			// if cancel was set then call the chained cancel here
 			// otherwise, the cancelling process will be responsible to call the chained cancel
 			p.runChain()
