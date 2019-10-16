@@ -158,6 +158,8 @@ type ExecutionContext interface {
 	StepLink() StepLink
 	GetPendingCallCount() int
 
+	// TODO LongRun(PanicOnMigrate)
+
 	// Immediately allocates a new slot and constructs SM. And schedules initialization.
 	// It is guaranteed that:
 	// 1) the child will start at the same migration state as the creator (caller of this function)
@@ -224,15 +226,6 @@ type ConditionalBuilder interface {
 	ThenJumpExt(SlotStep) StateUpdate
 	ThenRepeat() StateUpdate
 }
-
-//type Syncronizer interface {
-//	IsFirst() bool
-//	Broadcast(payload interface{}) (total, accepted int)
-//	ReleaseAll()
-//
-//	Wait() StateUpdate
-//	WaitOrDeadline(d time.Time) StateUpdate
-//}
 
 /*------------------  Contexts for out-of-order steps -----------------------*/
 

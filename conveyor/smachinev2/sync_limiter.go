@@ -16,6 +16,8 @@
 
 package smachine
 
+import "github.com/insolar/insolar/network/consensus/common/rwlock"
+
 func NewFixedLimiter(initialLimit int, name string) SyncLink {
 	if initialLimit < 0 {
 		panic("illegal value")
@@ -84,7 +86,7 @@ func (p *limiterSync) CheckState() Decision {
 }
 
 func (p *limiterSync) CheckDependency(dep SlotDependency) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
@@ -97,12 +99,12 @@ func (p *limiterSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *limiterSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+func (p *limiterSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
-		case !oneStep && (entry.slotFlags&syncForOneStep != 0):
+		case !entry.IsCompatibleWith(flags):
 			return Impossible
 		case p.controller.Contains(entry):
 			return Passed
@@ -113,22 +115,18 @@ func (p *limiterSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
 	return Impossible
 }
 
-func (p *limiterSync) CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency) {
-	flags := DependencyQueueEntryFlags(0)
-	if oneStep {
-		flags |= syncForOneStep
-	}
+func (p *limiterSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
 	if p.controller.IsOpen() {
-		return Passed, p.controller.queue.AddSlot(slot.NewLink(), flags)
+		return true, p.controller.queue.AddSlot(slot.NewLink(), flags)
 	}
-	return NotPassed, p.controller.awaiters.queue.AddSlot(slot.NewLink(), flags)
+	return false, p.controller.awaiters.queue.AddSlot(slot.NewLink(), flags)
 }
 
 func (p *limiterSync) GetLimit() (limit int, isAdjustable bool) {
 	return p.controller.workerLimit, p.isAdjustable
 }
 
-func (p *limiterSync) AdjustLimit(limit int) ([]SlotLink, bool) {
+func (p *limiterSync) AdjustLimit(limit int) ([]StepLink, bool) {
 	if p.controller.workerLimit == limit {
 		return nil, false
 	}
@@ -140,30 +138,38 @@ func (p *limiterSync) AdjustLimit(limit int) ([]SlotLink, bool) {
 	p.controller.workerLimit = limit
 
 	if delta > 0 {
-		toBeActivated := p.controller.awaiters.queue.FlushOut(delta, true)
-
-		links := make([]SlotLink, len(toBeActivated))
-		for i, entry := range toBeActivated {
-			links[i] = entry.link
-			p.controller.queue.AddLast(entry)
-		}
-		return links, true
+		links := make([]StepLink, delta)
+		pos := 0
+		p.controller.awaiters.queue.CutHeadOut(func(entry *dependencyQueueEntry) bool {
+			if step, ok := entry.link.GetStepLink(); ok {
+				p.controller.queue.AddLast(entry)
+				links[pos] = step
+				pos++
+				return pos < delta
+			}
+			return true
+		})
+		return links[:pos], true
 	}
+
+	delta = -delta
+	links := make([]StepLink, delta)
 
 	// sequence is reversed!
-	toBeDeactivated := p.controller.queue.FlushOut(-delta, false)
-
-	links := make([]SlotLink, len(toBeDeactivated))
-	for i, entry := range toBeDeactivated {
-		// keep the original sequence by reversing
-		links[len(toBeDeactivated)-i] = entry.link
-		p.controller.queue.AddFirst(entry)
-	}
-	return links, false
+	p.controller.queue.CutTailOut(func(entry *dependencyQueueEntry) bool {
+		if step, ok := entry.link.GetStepLink(); ok {
+			p.controller.awaiters.queue.AddFirst(entry)
+			delta--
+			links[delta] = step
+			return delta > 0
+		}
+		return true
+	})
+	return links[delta:], false
 }
 
-func (p *limiterSync) GetWaitingCount() int {
-	return p.controller.queue.Count()
+func (p *limiterSync) GetCounts() (active, inactive int) {
+	return p.controller.queue.Count(), p.controller.awaiters.queue.Count()
 }
 
 func (p *limiterSync) GetName() string {
@@ -174,8 +180,9 @@ type waitingQueueController struct {
 	exclusiveQueueController
 }
 
-func (p *waitingQueueController) Release(_ SlotLink, _ DependencyQueueEntryFlags, removeFn func(), _ func(SlotLink)) {
+func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
 	removeFn()
+	return nil
 }
 
 type workingQueueController struct {
@@ -198,24 +205,31 @@ func (p *workingQueueController) IsOpen() bool {
 	return p.queue.Count() < p.workerLimit
 }
 
-func (p *workingQueueController) Release(link SlotLink, flags DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink)) {
+func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
 	removeFn()
 
-	for {
-		// early check to provide some cleanup
-		f := p.awaiters.queue.FirstValid()
-		if f == nil {
-			return
-		}
-		if !p.IsOpen() {
-			return
-		}
-		f.removeFromQueue()
-		p.queue.AddLast(f)
-		activateFn(f.link)
+	if !p.IsOpen() {
+		return nil
 	}
+
+	n := p.awaiters.queue.Count()
+	if n == 0 {
+		return nil
+	}
+
+	links := make([]StepLink, 0, n)
+	for {
+		if f, step := p.awaiters.queue.FirstValid(); f != nil {
+			f.removeFromQueue()
+			p.queue.AddLast(f)
+			links = append(links, step)
+			continue
+		}
+		break
+	}
+	return links
 }
 
-func (p *workingQueueController) ContainsInAwaiters(entry *DependencyQueueEntry) bool {
+func (p *workingQueueController) ContainsInAwaiters(entry *dependencyQueueEntry) bool {
 	return p.awaiters.Contains(entry)
 }

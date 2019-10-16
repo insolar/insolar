@@ -98,12 +98,8 @@ func (s *StateMachineCallRequest) stateGetSharedReadyToWork(ctx smachine.Executi
 		return ctx.Stop()
 	}
 
-	if !s.objInfo.IsReadyToWork {
-		if ctx.AcquireForThisStep(readyToWork).IsNotPassed() {
-			return ctx.Sleep().ThenRepeat()
-		}
-		// current limitation - creation of sync object can be interrupted by migrate
-		return ctx.Yield().ThenRepeat()
+	if !s.objInfo.IsReadyToWork && ctx.AcquireForThisStep(readyToWork).IsNotPassed() {
+		return ctx.Sleep().ThenRepeat()
 	}
 
 	objCode := s.objInfo.ObjectLatestValidCode
@@ -134,11 +130,8 @@ func (s *StateMachineCallRequest) stateSharedReadyToWork(ctx smachine.ExecutionC
 /* ================ Immutable call scenario ============== */
 
 func (s *StateMachineCallRequest) stateStartImmutableCall(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	switch ctx.AcquireForThisStep(s.objInfo.ImmutableExecute) {
-	case smachine.NotPassed:
+	if !ctx.AcquireForThisStep(s.objInfo.ImmutableExecute) {
 		return ctx.Sleep().ThenRepeat()
-	case smachine.Impossible: // current limitation - creation of sync object can be interrupted by migrate
-		return ctx.Yield().ThenRepeat()
 	}
 
 	objCode := s.objInfo.ObjectLatestValidCode

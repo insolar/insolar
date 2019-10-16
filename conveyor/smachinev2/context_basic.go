@@ -261,30 +261,32 @@ func (p *slotContext) Check(link SyncLink) Decision {
 	return link.controller.CheckState()
 }
 
-func (p *slotContext) AcquireForThisStep(link SyncLink) Decision {
-	return p.acquire(link, true)
+func (p *slotContext) AcquireForThisStep(link SyncLink) BoolDecision {
+	return p.acquire(link, syncForOneStep)
 }
 
-func (p *slotContext) Acquire(link SyncLink) Decision {
-	return p.acquire(link, false)
+func (p *slotContext) Acquire(link SyncLink) BoolDecision {
+	return p.acquire(link, 0)
 }
 
-func (p *slotContext) acquire(link SyncLink, oneStep bool) Decision {
+func (p *slotContext) acquire(link SyncLink, flags SlotDependencyFlags) (d BoolDecision) {
 	p.ensureAtLeast(updCtxInit)
+
 	dep := p.s.dependency
-	if dep != nil {
-		d := link.controller.UseDependency(dep, oneStep)
-		if d.IsValid() {
-			return d
-		}
+	if dep == nil {
+		d, p.s.dependency = link.controller.CreateDependency(p.s, flags, nil)
+		return d
 	}
 
-	d := Impossible
-	// TODO need backup when NonDetachableCall didn't get in
-	p.w.NonDetachableCall(func(worker FixedSlotWorker) {
-		p.s.releaseDependency(worker)
-		d, p.s.dependency = link.controller.CreateDependency(p.s, oneStep)
-	})
+	if b, isValid := link.controller.UseDependency(dep, flags).AsValid(); isValid {
+		return b
+	}
+
+	p.s.dependency = nil
+	released := dep.Release()
+	defer p.s.machine.activateDependantByDetachable(released, p.w)
+
+	d, p.s.dependency = link.controller.CreateDependency(p.s, flags, nil)
 	return d
 }
 
@@ -295,16 +297,9 @@ func (p *slotContext) Release(link SyncLink) bool {
 		return false
 	}
 
-	if !p.w.NonDetachableCall(p.s.releaseDependency) {
-		m := p.s.machine
-		m.syncQueue.AddAsyncUpdate(p.s.NewLink(), func(link SlotLink, worker FixedSlotWorker) {
-			if !link.IsValid() || link.s.dependency != dep {
-				return
-			}
-			link.s.releaseDependency(worker)
-		})
-	}
-	return true
+	p.s.dependency = nil
+	released := dep.Release()
+	return p.s.machine.activateDependantByDetachable(released, p.w)
 }
 
 func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
@@ -320,26 +315,11 @@ func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
 		adjustment += adjustmentBase
 	}
 
-	deps, activate := adj.controller.AdjustLimit(adjustment)
-	if len(deps) == 0 {
-		return false
-	}
-	if !activate {
-		// actually, we MUST NOT stop a slot from outside, so we ignore it
-		return true
+	released, activate := adj.controller.AdjustLimit(adjustment)
+	if activate {
+		return p.s.machine.activateDependantByDetachable(released, p.w)
 	}
 
-	m := p.s.machine
-	if !p.w.NonDetachableCall(func(worker FixedSlotWorker) {
-		for _, link := range deps {
-			m.activateDependantByLink(link, worker)
-		}
-	}) {
-		m.syncQueue.AddAsyncUpdate(SlotLink{}, func(_ SlotLink, worker FixedSlotWorker) {
-			for _, link := range deps {
-				m.activateDependantByLink(link, worker)
-			}
-		})
-	}
-	return true
+	// actually, we MUST NOT stop a slot from outside
+	return len(released) > 0
 }

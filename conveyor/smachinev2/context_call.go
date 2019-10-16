@@ -81,7 +81,7 @@ func (c *adapterCallRequest) ensureMode(mode uint8) {
 	}
 }
 
-func (c *adapterCallRequest) GetCancel(fn *context.CancelFunc) AsyncCallRequester {
+func (c *adapterCallRequest) WithCancel(fn *context.CancelFunc) AsyncCallRequester {
 	if c.cancel != nil {
 		*fn = c.cancel.Cancel
 		return c
@@ -93,7 +93,7 @@ func (c *adapterCallRequest) GetCancel(fn *context.CancelFunc) AsyncCallRequeste
 	return &r
 }
 
-func (c *adapterCallRequest) CancelOnStep(attach bool) AsyncCallRequester {
+func (c *adapterCallRequest) WithAutoCancelOnStep(attach bool) AsyncCallRequester {
 	r := *c
 	r.stepBound = attach
 	return &r

@@ -32,6 +32,7 @@ type ExecutionAdapter interface {
 }
 
 type SyncCallRequester interface {
+	// TODO WithNestedHandler
 	/* Returns true when the call was successful. Will return false when worker has a signal / interrupt */
 	TryCall() bool
 	/* Panics when it wasn't possible to perform a sync call */
@@ -40,10 +41,13 @@ type SyncCallRequester interface {
 
 type AsyncCallRequester interface {
 	/* Allocates and provides cancellation function. Repeated calls return the same. */
-	GetCancel(*context.CancelFunc) AsyncCallRequester
+	WithCancel(*context.CancelFunc) AsyncCallRequester
 
-	/* Will automatically cancel this call when step is changed */
-	CancelOnStep(attach bool) AsyncCallRequester
+	/* When true will automatically cancel this call after the step is changed */
+	WithAutoCancelOnStep(attach bool) AsyncCallRequester
+
+	// TODO WithNestedHandler
+	// TODO With(mode AsyncCallFlags) AsyncCallRequester
 
 	/* Starts async call  */
 	Start()
@@ -51,6 +55,16 @@ type AsyncCallRequester interface {
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
 	DelayedStart() CallConditionalBuilder
 }
+
+type AsyncCallFlags uint8
+
+const (
+	CallBoundToStep AsyncCallFlags = iota << 1
+	WakeUpBoundToStep
+	AutoWakeUp
+)
+
+//const WakeUpDisabled AsyncCallFlags = 0
 
 type NestedEventContext interface {
 	NewChild()

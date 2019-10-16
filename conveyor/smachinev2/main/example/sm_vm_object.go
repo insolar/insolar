@@ -23,7 +23,7 @@ import (
 )
 
 func NewVMObjectSM(objKey longbits.ByteString) *vmObjectSM {
-	return &vmObjectSM{SharedObjectState: SharedObjectState{ObjKey: objKey}}
+	return &vmObjectSM{SharedObjectState: SharedObjectState{ObjectInfo: ObjectInfo{ObjKey: objKey}}}
 }
 
 type vmObjectSM struct {

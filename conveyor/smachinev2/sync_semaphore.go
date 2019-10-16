@@ -16,6 +16,8 @@
 
 package smachine
 
+import "github.com/insolar/insolar/network/consensus/common/rwlock"
+
 func NewSemaphore(initialCount int, name string) SemaphoreLink {
 	ctl := &semaSync{}
 	ctl.controller.Init(name)
@@ -71,7 +73,7 @@ func (p *semaSync) CheckState() Decision {
 }
 
 func (p *semaSync) CheckDependency(dep SlotDependency) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
@@ -86,12 +88,12 @@ func (p *semaSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *semaSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+func (p *semaSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
-		case !oneStep && (entry.slotFlags&syncForOneStep != 0):
+		case !entry.IsCompatibleWith(flags):
 			return Impossible
 		case !p.controller.Contains(entry):
 			return Impossible
@@ -104,22 +106,18 @@ func (p *semaSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
 	return Impossible
 }
 
-func (p *semaSync) CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency) {
-	flags := DependencyQueueEntryFlags(0)
-	if oneStep {
-		flags |= syncForOneStep
-	}
+func (p *semaSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
 	if p.controller.IsOpen() {
-		return Passed, nil
+		return true, nil
 	}
-	return NotPassed, p.controller.queue.AddSlot(slot.NewLink(), flags)
+	return false, p.controller.queue.AddSlot(slot.NewLink(), flags)
 }
 
 func (p *semaSync) GetLimit() (limit int, isAdjustable bool) {
 	return p.controller.state, true
 }
 
-func (p *semaSync) AdjustLimit(limit int) ([]SlotLink, bool) {
+func (p *semaSync) AdjustLimit(limit int) ([]StepLink, bool) {
 	p.controller.state = limit
 	if !p.controller.IsOpen() {
 		return nil, false
@@ -127,8 +125,8 @@ func (p *semaSync) AdjustLimit(limit int) ([]SlotLink, bool) {
 	return p.controller.queue.FlushAllAsLinks(), true
 }
 
-func (p *semaSync) GetWaitingCount() int {
-	return p.controller.queue.Count()
+func (p *semaSync) GetCounts() (active, inactive int) {
+	return -1, p.controller.queue.Count()
 }
 
 func (p *semaSync) GetName() string {
@@ -144,17 +142,18 @@ func (p *holdingQueueController) IsOpen() bool {
 	return p.state <= 0
 }
 
-func (p *holdingQueueController) Release(_ SlotLink, _ DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink)) {
+func (p *holdingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
 	removeFn()
 	if p.IsOpen() && p.queue.Count() > 0 {
 		panic("illegal state")
 	}
+	return nil
 }
 
-func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, DependencyQueueEntryFlags) bool {
+func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
 	return p.IsOpen()
 }
 
-func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags DependencyQueueEntryFlags) bool {
+func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
 	return flags&syncForOneStep != 0 || p.IsOpen()
 }

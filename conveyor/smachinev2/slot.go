@@ -85,9 +85,8 @@ const (
 type SlotDependency interface {
 	IsReleaseOnWorking() bool
 	IsReleaseOnStepping() bool
-	Release(activateFn func(SlotLink))
 
-	ReleaseOnDisposed(activateFn func(SlotLink))
+	Release() []StepLink
 }
 
 const (

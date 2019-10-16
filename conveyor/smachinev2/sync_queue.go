@@ -16,44 +16,45 @@
 
 package smachine
 
+import "sync/atomic"
+
 type DependencyQueueController interface {
 	GetName() string
-	IsReleaseOnStepping(link SlotLink, flags DependencyQueueEntryFlags) bool
-	IsReleaseOnWorking(link SlotLink, flags DependencyQueueEntryFlags) bool
-	Release(link SlotLink, flags DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink))
-	Dispose(link SlotLink, flags DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink))
+	IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool
+	IsReleaseOnWorking(link SlotLink, flags SlotDependencyFlags) bool
+	Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink
 }
 
 type DependencyQueueHead struct {
 	controller DependencyQueueController
-	head       DependencyQueueEntry
+	head       dependencyQueueEntry
 	count      int
 }
 
-func (p *DependencyQueueHead) AddSlot(link SlotLink, flags DependencyQueueEntryFlags) *DependencyQueueEntry {
+func (p *DependencyQueueHead) AddSlot(link SlotLink, flags SlotDependencyFlags) *dependencyQueueEntry {
 	if !link.IsValid() {
 		panic("illegal value")
 	}
-	entry := &DependencyQueueEntry{link: link, slotFlags: flags}
+	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsOffset)}
 	p.AddLast(entry)
 	return entry
 }
 
-func (p *DependencyQueueHead) AddFirst(entry *DependencyQueueEntry) {
+func (p *DependencyQueueHead) AddFirst(entry *dependencyQueueEntry) {
 	p.initEmpty()
 	entry.ensureNotInQueue()
 
 	p.head.nextInQueue._addQueuePrev(entry, entry)
-	entry.queue = p
+	entry.setQueue(p)
 	p.count++
 }
 
-func (p *DependencyQueueHead) AddLast(entry *DependencyQueueEntry) {
+func (p *DependencyQueueHead) AddLast(entry *dependencyQueueEntry) {
 	p.initEmpty()
 	entry.ensureNotInQueue()
 
 	p.head._addQueuePrev(entry, entry)
-	entry.queue = p
+	entry.setQueue(p)
 	p.count++
 }
 
@@ -61,21 +62,24 @@ func (p *DependencyQueueHead) Count() int {
 	return p.count
 }
 
-func (p *DependencyQueueHead) FirstValid() *DependencyQueueEntry {
+func (p *DependencyQueueHead) FirstValid() (*dependencyQueueEntry, StepLink) {
 	for {
 		f := p.head.QueueNext()
-		if f == nil || f.link.IsValid() {
-			return f
+		if f == nil {
+			return f, StepLink{}
+		}
+		if step, ok := f.link.GetStepLink(); ok {
+			return f, step
 		}
 		f.removeFromQueue()
 	}
 }
 
-func (p *DependencyQueueHead) First() *DependencyQueueEntry {
+func (p *DependencyQueueHead) First() *dependencyQueueEntry {
 	return p.head.QueueNext()
 }
 
-func (p *DependencyQueueHead) Last() *DependencyQueueEntry {
+func (p *DependencyQueueHead) Last() *dependencyQueueEntry {
 	return p.head.QueuePrev()
 }
 
@@ -95,41 +99,40 @@ func (p *DependencyQueueHead) initEmpty() {
 	}
 }
 
-func (p *DependencyQueueHead) FlushOut(limit int, cutHead bool) []*DependencyQueueEntry {
-	if limit > p.count {
-		limit = p.count
-	}
-	if limit <= 0 {
-		return nil
-	}
-
-	deps := make([]*DependencyQueueEntry, 0, limit)
-	for limit > 0 {
-		var entry *DependencyQueueEntry
-		if cutHead {
-			entry = p.First()
-		} else {
-			entry = p.Last()
-		}
+func (p *DependencyQueueHead) CutHeadOut(fn func(*dependencyQueueEntry) bool) {
+	for {
+		entry := p.First()
 		if entry == nil {
-			break
+			return
 		}
 		entry.removeFromQueue()
 
-		if entry.link.IsValid() {
-			deps = append(deps, entry)
-			limit--
+		if !fn(entry) {
+			return
 		}
 	}
-	return deps
 }
 
-func (p *DependencyQueueHead) FlushAllAsLinks() []SlotLink {
+func (p *DependencyQueueHead) CutTailOut(fn func(*dependencyQueueEntry) bool) {
+	for {
+		entry := p.Last()
+		if entry == nil {
+			return
+		}
+		entry.removeFromQueue()
+
+		if !fn(entry) {
+			return
+		}
+	}
+}
+
+func (p *DependencyQueueHead) FlushAllAsLinks() []StepLink {
 	if p.count == 0 {
 		return nil
 	}
 
-	deps := make([]SlotLink, 0, p.count)
+	deps := make([]StepLink, 0, p.count)
 	for {
 		entry := p.First()
 		if entry == nil {
@@ -137,53 +140,52 @@ func (p *DependencyQueueHead) FlushAllAsLinks() []SlotLink {
 		}
 		entry.removeFromQueue()
 
-		if entry.link.IsValid() {
-			deps = append(deps, entry.link)
+		if step, ok := entry.link.GetStepLink(); ok {
+			deps = append(deps, step)
 		}
 	}
 	return deps
 }
 
-type DependencyQueueEntryFlags uint32
+const flagsOffset = 1
+const atomicInQueue = 1 << (flagsOffset - 1)
 
-var _ SlotDependency = &DependencyQueueEntry{}
+var _ SlotDependency = &dependencyQueueEntry{}
 
-type DependencyQueueEntry struct {
+type dependencyQueueEntry struct {
 	queue                    *DependencyQueueHead
-	nextInQueue, prevInQueue *DependencyQueueEntry
-	slotFlags                DependencyQueueEntryFlags
+	nextInQueue, prevInQueue *dependencyQueueEntry
+	slotFlags                uint32
 	link                     SlotLink
 }
 
-func (p *DependencyQueueEntry) IsReleaseOnStepping() bool {
-	if !p.isInQueue() {
-		return true
-	}
-	return p.queue.controller.IsReleaseOnStepping(p.link, p.slotFlags)
+func (p *dependencyQueueEntry) getFlags() (bool, SlotDependencyFlags) {
+	v := atomic.LoadUint32(&p.slotFlags)
+	return v&atomicInQueue != 0, SlotDependencyFlags(v >> 1)
 }
 
-func (p *DependencyQueueEntry) IsReleaseOnWorking() bool {
-	if !p.isInQueue() {
-		return true
+func (p *dependencyQueueEntry) IsReleaseOnStepping() bool {
+	if inQueue, flags := p.getFlags(); inQueue {
+		return p.queue.controller.IsReleaseOnStepping(p.link, flags)
 	}
-	return p.queue.controller.IsReleaseOnWorking(p.link, p.slotFlags)
+	return true
 }
 
-func (p *DependencyQueueEntry) Release(activateFn func(SlotLink)) {
-	if !p.isInQueue() {
-		return
+func (p *dependencyQueueEntry) IsReleaseOnWorking() bool {
+	if inQueue, flags := p.getFlags(); inQueue {
+		return p.queue.controller.IsReleaseOnWorking(p.link, flags)
 	}
-	p.queue.controller.Release(p.link, p.slotFlags, p.removeFromQueue, activateFn)
+	return true
 }
 
-func (p *DependencyQueueEntry) ReleaseOnDisposed(activateFn func(SlotLink)) {
-	if !p.isInQueue() {
-		return
+func (p *dependencyQueueEntry) Release() []StepLink {
+	if inQueue, flags := p.getFlags(); inQueue {
+		return p.queue.controller.Release(p.link, flags, p.removeFromQueue)
 	}
-	p.queue.controller.Dispose(p.link, p.slotFlags, p.removeFromQueue, activateFn)
+	return nil
 }
 
-func (p *DependencyQueueEntry) _addQueuePrev(chainHead, chainTail *DependencyQueueEntry) {
+func (p *dependencyQueueEntry) _addQueuePrev(chainHead, chainTail *dependencyQueueEntry) {
 	p.ensureInQueue()
 
 	prev := p.prevInQueue
@@ -195,7 +197,7 @@ func (p *DependencyQueueEntry) _addQueuePrev(chainHead, chainTail *DependencyQue
 	prev.nextInQueue = chainHead
 }
 
-func (p *DependencyQueueEntry) QueueNext() *DependencyQueueEntry {
+func (p *dependencyQueueEntry) QueueNext() *dependencyQueueEntry {
 	next := p.nextInQueue
 	if next == nil || next.isQueueHead() {
 		return nil
@@ -203,7 +205,7 @@ func (p *DependencyQueueEntry) QueueNext() *DependencyQueueEntry {
 	return next
 }
 
-func (p *DependencyQueueEntry) QueuePrev() *DependencyQueueEntry {
+func (p *dependencyQueueEntry) QueuePrev() *dependencyQueueEntry {
 	prev := p.prevInQueue
 	if prev == nil || prev.isQueueHead() {
 		return nil
@@ -211,7 +213,7 @@ func (p *DependencyQueueEntry) QueuePrev() *DependencyQueueEntry {
 	return prev
 }
 
-func (p *DependencyQueueEntry) removeFromQueue() {
+func (p *dependencyQueueEntry) removeFromQueue() {
 	if p.isQueueHead() {
 		panic("illegal state")
 	}
@@ -224,27 +226,48 @@ func (p *DependencyQueueEntry) removeFromQueue() {
 	prev.nextInQueue = next
 
 	p.queue.count--
-	p.queue = nil
+	p.setQueue(nil)
 	p.nextInQueue = nil
 	p.prevInQueue = nil
 }
 
-func (p *DependencyQueueEntry) isQueueHead() bool {
+func (p *dependencyQueueEntry) isQueueHead() bool {
 	return p == &p.queue.head
 }
 
-func (p *DependencyQueueEntry) ensureNotInQueue() {
+func (p *dependencyQueueEntry) ensureNotInQueue() {
 	if p.isInQueue() {
 		panic("illegal state")
 	}
 }
 
-func (p *DependencyQueueEntry) ensureInQueue() {
+func (p *dependencyQueueEntry) ensureInQueue() {
 	if !p.isInQueue() {
 		panic("illegal state")
 	}
 }
 
-func (p *DependencyQueueEntry) isInQueue() bool {
+func (p *dependencyQueueEntry) isInQueue() bool {
 	return p.queue != nil || p.nextInQueue != nil || p.prevInQueue != nil
+}
+
+func (p *dependencyQueueEntry) setQueue(head *DependencyQueueHead) {
+	p.queue = head
+	for {
+		v := atomic.LoadUint32(&p.slotFlags)
+		vv := v
+		if head == nil {
+			vv &^= atomicInQueue
+		} else {
+			vv |= atomicInQueue
+		}
+		if v == vv || atomic.CompareAndSwapUint32(&p.slotFlags, v, vv) {
+			return
+		}
+	}
+}
+
+func (p *dependencyQueueEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
+	_, f := p.getFlags()
+	return f&flags == flags
 }

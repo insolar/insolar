@@ -28,28 +28,14 @@ func (p SlotLink) activateSlot(worker FixedSlotWorker) {
 	}
 }
 
-func (s *Slot) releaseDependency(worker FixedSlotWorker) {
-	dep := s.dependency
-	if dep == nil {
-		return
+func (p StepLink) activateSlotStep(worker FixedSlotWorker) {
+	if p.IsAtStep() {
+		p.s.activateSlot(worker)
 	}
-	s.dependency = nil
-	dep.Release(func(link SlotLink) {
-		s.machine.activateDependantByLink(link, worker)
-	})
 }
 
-// MUST be a busy-holder to use
-func (s *Slot) wakeUpSlot(worker DetachableSlotWorker) bool {
-	if s.slotFlags&slotWokenUp != 0 || s.QueueType().IsActiveOrPolling() {
-		return false
-	}
-	s.slotFlags |= slotWokenUp
-
-	if !worker.NonDetachableCall(s.activateSlot) {
-		s.machine.syncQueue.AddAsyncUpdate(s.NewLink(), SlotLink.activateSlot)
-	}
-	return true
+func (p StepLink) activateSlotStepWithSlotLink(_ SlotLink, worker FixedSlotWorker) {
+	p.activateSlotStep(worker)
 }
 
 func buildShadowMigrator(c injector.ReadOnlyContainer, defFn ShadowMigrateFunc) ShadowMigrateFunc {

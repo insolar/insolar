@@ -16,13 +16,19 @@
 
 package smachine
 
+import (
+	"sync/atomic"
+
+	"github.com/insolar/insolar/network/consensus/common/rwlock"
+)
+
 func NewInfiniteLock(name string) SyncLink {
-	return NewSyncLink(&infiniteLock{name: name})
+	return NewSyncLinkNoLock(&infiniteLock{name: name})
 }
 
 type infiniteLock struct {
 	name  string
-	count int
+	count int32 //atomic
 }
 
 func (p *infiniteLock) CheckState() Decision {
@@ -36,10 +42,10 @@ func (p *infiniteLock) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *infiniteLock) UseDependency(dep SlotDependency, oneStep bool) Decision {
+func (p *infiniteLock) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
 	if entry, ok := dep.(*infiniteLockEntry); ok {
 		switch {
-		case !oneStep && (entry.slotFlags&syncForOneStep != 0):
+		case !entry.IsCompatibleWith(flags):
 			return Impossible
 		case entry.ctl == p:
 			return NotPassed
@@ -48,25 +54,21 @@ func (p *infiniteLock) UseDependency(dep SlotDependency, oneStep bool) Decision 
 	return Impossible
 }
 
-func (p *infiniteLock) CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency) {
-	flags := DependencyQueueEntryFlags(0)
-	if oneStep {
-		flags |= syncForOneStep
-	}
-	p.count++
-	return NotPassed, &infiniteLockEntry{p, flags}
+func (p *infiniteLock) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
+	atomic.AddInt32(&p.count, 1)
+	return false, &infiniteLockEntry{p, flags}
 }
 
 func (p *infiniteLock) GetLimit() (limit int, isAdjustable bool) {
 	return 0, false
 }
 
-func (p *infiniteLock) AdjustLimit(limit int) ([]SlotLink, bool) {
+func (p *infiniteLock) AdjustLimit(limit int) ([]StepLink, bool) {
 	panic("illegal state")
 }
 
-func (p *infiniteLock) GetWaitingCount() int {
-	return p.count
+func (p *infiniteLock) GetCounts() (active, inactive int) {
+	return 0, int(p.count)
 }
 
 func (p *infiniteLock) GetName() string {
@@ -77,7 +79,7 @@ var _ SlotDependency = &infiniteLockEntry{}
 
 type infiniteLockEntry struct {
 	ctl       *infiniteLock
-	slotFlags DependencyQueueEntryFlags
+	slotFlags SlotDependencyFlags
 }
 
 func (v infiniteLockEntry) IsReleaseOnStepping() bool {
@@ -88,10 +90,12 @@ func (infiniteLockEntry) IsReleaseOnWorking() bool {
 	return false
 }
 
-func (v infiniteLockEntry) Release(_ func(SlotLink)) {
-	v.ctl.count--
+func (v infiniteLockEntry) Release() []StepLink {
+	atomic.AddInt32(&v.ctl.count, -1)
+	return nil
 }
 
-func (v infiniteLockEntry) ReleaseOnDisposed(_ func(SlotLink)) {
-	v.ctl.count--
+func (v infiniteLockEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
+	f := v.slotFlags
+	return f&flags == flags
 }

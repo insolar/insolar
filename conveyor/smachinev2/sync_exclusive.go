@@ -16,6 +16,8 @@
 
 package smachine
 
+import "github.com/insolar/insolar/network/consensus/common/rwlock"
+
 func NewExclusive(name string) SyncLink {
 	ctl := &exclusiveSync{}
 	ctl.awaiters.Init(name)
@@ -34,7 +36,7 @@ func (p *exclusiveSync) CheckState() Decision {
 }
 
 func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
@@ -49,14 +51,14 @@ func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *exclusiveSync) UseDependency(dep SlotDependency, oneStep bool) Decision {
-	if entry, ok := dep.(*DependencyQueueEntry); ok {
+func (p *exclusiveSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
 		case !p.awaiters.Contains(entry):
 			return Impossible
-		case !oneStep && (entry.slotFlags&syncForOneStep != 0):
+		case !entry.IsCompatibleWith(flags):
 			return Impossible
 		case p.awaiters.IsEmptyOrFirst(entry.link):
 			return Passed
@@ -67,20 +69,20 @@ func (p *exclusiveSync) UseDependency(dep SlotDependency, oneStep bool) Decision
 	return Impossible
 }
 
-func (p *exclusiveSync) CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency) {
-	flags := DependencyQueueEntryFlags(0)
-	if oneStep {
-		flags |= syncForOneStep
-	}
+func (p *exclusiveSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
 	sd := p.awaiters.queue.AddSlot(slot.NewLink(), flags)
-	if p.awaiters.queue.FirstValid() == sd {
-		return Passed, sd
+	if f, _ := p.awaiters.queue.FirstValid(); f == sd {
+		return true, sd
 	}
-	return NotPassed, sd
+	return false, sd
 }
 
-func (p *exclusiveSync) GetWaitingCount() int {
-	return p.awaiters.queue.Count()
+func (p *exclusiveSync) GetCounts() (active, inactive int) {
+	n := p.awaiters.queue.Count()
+	if n <= 0 {
+		return 0, n
+	}
+	return 1, n - 1
 }
 
 func (p *exclusiveSync) GetName() string {
@@ -91,7 +93,7 @@ func (p *exclusiveSync) GetLimit() (limit int, isAdjustable bool) {
 	return 1, false
 }
 
-func (p *exclusiveSync) AdjustLimit(limit int) (deps []SlotLink, activate bool) {
+func (p *exclusiveSync) AdjustLimit(limit int) (deps []StepLink, activate bool) {
 	if limit != 1 {
 		panic("illegal value")
 	}
@@ -99,10 +101,6 @@ func (p *exclusiveSync) AdjustLimit(limit int) (deps []SlotLink, activate bool) 
 }
 
 var _ DependencyQueueController = &exclusiveQueueController{}
-
-const (
-	syncForOneStep DependencyQueueEntryFlags = 1 << iota
-)
 
 type exclusiveQueueController struct {
 	name  string
@@ -130,31 +128,27 @@ func (p *exclusiveQueueController) GetName() string {
 	return p.name
 }
 
-func (p *exclusiveQueueController) IsReleaseOnWorking(SlotLink, DependencyQueueEntryFlags) bool {
+func (p *exclusiveQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
 	return false
 }
 
-func (p *exclusiveQueueController) IsReleaseOnStepping(_ SlotLink, flags DependencyQueueEntryFlags) bool {
+func (p *exclusiveQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
 	return flags&syncForOneStep != 0
 }
 
-func (p *exclusiveQueueController) Release(link SlotLink, flags DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink)) {
-	f := p.queue.FirstValid()
-	isFirst := f != nil && f.link == link
+func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+	if f, _ := p.queue.FirstValid(); f == nil || f.link != link {
+		removeFn()
+		return nil
+	}
+
 	removeFn()
-	if !isFirst {
-		return
+	if f, step := p.queue.FirstValid(); f != nil {
+		return []StepLink{step}
 	}
-	f = p.queue.FirstValid()
-	if f != nil {
-		activateFn(f.link)
-	}
+	return nil
 }
 
-func (p *exclusiveQueueController) Dispose(link SlotLink, flags DependencyQueueEntryFlags, removeFn func(), activateFn func(SlotLink)) {
-	p.Release(link, flags, removeFn, activateFn)
-}
-
-func (p *exclusiveQueueController) Contains(entry *DependencyQueueEntry) bool {
+func (p *exclusiveQueueController) Contains(entry *dependencyQueueEntry) bool {
 	return entry.queue == &p.queue
 }

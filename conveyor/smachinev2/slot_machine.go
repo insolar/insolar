@@ -220,7 +220,8 @@ func (m *SlotMachine) executeWorkingSlots(worker AttachedSlotWorker) {
 func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker AttachedSlotWorker, loopLimit int) (hasSignal bool, loopCount int) {
 
 	if dep := slot.dependency; dep != nil && dep.IsReleaseOnWorking() {
-		slot.releaseDependency(worker)
+		slot.dependency = nil
+		m.activateDependants(dep.Release(), worker)
 	}
 	slot.slotFlags &^= slotWokenUp
 
@@ -522,25 +523,16 @@ func (m *SlotMachine) _recycleSlot(slot *Slot, worker FixedSlotWorker) {
 
 	{ // cleanup synchronization dependency
 		dep := slot.dependency
-		slot.dependency = nil
 		if dep != nil {
-			dep.ReleaseOnDisposed(func(link SlotLink) {
-				if worker == nil {
-					panic("illegal state")
-				}
-				m.activateDependantByLink(link, worker)
-			})
+			slot.dependency = nil
+			m.activateDependants(dep.Release(), worker)
 		}
 	}
 
 	{ // cleanup queues
 		if slot.isQueueHead() {
 			s := slot.removeHeadedQueue()
-			for s != nil {
-				c := s
-				s = s._cutNext()
-				m._activateDependant(c, worker)
-			}
+			m._activateDependantChain(s, worker)
 		} else {
 			slot.removeFromQueue()
 		}
@@ -740,11 +732,7 @@ func (m *SlotMachine) updateSlotQueue(slot *Slot, w FixedSlotWorker, activation 
 	}
 
 	s := m._updateSlotQueue(slot, slot.isInQueue(), activation)
-	for s != nil {
-		c := s
-		s = s._cutNext()
-		m._activateDependant(c, w)
-	}
+	m._activateDependantChain(s, w)
 }
 
 func (m *SlotMachine) _updateSlotQueue(slot *Slot, inplaceUpdate bool, activation slotActivationMode) *Slot {
@@ -1067,8 +1055,14 @@ func (m *SlotMachine) useSlotAsShared(link *SharedDataLink, accessFn SharedDataF
 	wakeUp := accessFn(data)
 
 	m.syncQueue.ProcessSlotCallbacksByDetachable(link.link, worker)
-	if wakeUp || link.flags&ShareDataWakesUpAfterUse != 0 {
-		slot.wakeUpSlot(worker)
+	if !wakeUp && link.flags&ShareDataWakesUpAfterUse == 0 || slot.slotFlags&slotWokenUp != 0 {
+		return SharedSlotLocalAvailable
+	}
+	slot.slotFlags |= slotWokenUp
+
+	if !worker.NonDetachableCall(slot.activateSlot) {
+		stepLink := slot.NewStepLink() // remember the current step to avoid "back-fire" activation
+		m.syncQueue.AddAsyncUpdate(stepLink.SlotLink, stepLink.activateSlotStepWithSlotLink)
 	}
 	return SharedSlotLocalAvailable
 }
@@ -1076,43 +1070,69 @@ func (m *SlotMachine) useSlotAsShared(link *SharedDataLink, accessFn SharedDataF
 func (m *SlotMachine) stopSlotWorking(slot *Slot, prevStepNo uint32, worker FixedSlotWorker) {
 	dep := slot.dependency
 	newStepNo := slot.stopWorking()
-	if dep == nil || newStepNo == prevStepNo || newStepNo <= 1 {
-		return
-	}
-	if prevStepNo == 0 {
-		panic("illegal state")
-	}
 
-	if !dep.IsReleaseOnStepping() {
+	switch {
+	case dep == nil:
+		return
+	case prevStepNo == 0:
+		// there can be NO dependencies when a slot was just created
+		panic("illegal state")
+	case newStepNo == prevStepNo || newStepNo <= 1:
+		// step didn't change or it is initialization (which is considered as a part of creation)
+		return
+	case !dep.IsReleaseOnStepping():
 		return
 	}
 
 	slot.dependency = nil
-	dep.Release(func(link SlotLink) {
-		m.activateDependantByLink(link, worker)
+	m.activateDependants(dep.Release(), worker)
+}
+
+func (m *SlotMachine) _activateDependantChain(chain *Slot, worker FixedSlotWorker) {
+	for chain != nil {
+		s := chain
+		// we MUST cut the slot out of chain before any actions on the slot
+		chain = chain._cutNext()
+
+		switch {
+		case m == s.machine:
+			s.activateSlot(worker)
+		case worker.OuterCall(s.machine, s.activateSlot):
+			//
+		default:
+			link := s.NewStepLink() // remember the current step to avoid "back-fire" activation
+			s.machine.syncQueue.AddAsyncUpdate(link.SlotLink, link.activateSlotStepWithSlotLink)
+		}
+	}
+}
+
+func (m *SlotMachine) activateDependants(links []StepLink, worker FixedSlotWorker) {
+	for _, link := range links {
+		switch {
+		case link.isMachine(m):
+			// slot will be activated if it is at the same step as it was when we've decided to activate it
+			link.activateSlotStep(worker)
+		case worker.OuterCall(link.s.machine, link.activateSlotStep):
+			//
+		default:
+			link.s.machine.syncQueue.AddAsyncUpdate(link.SlotLink, link.activateSlotStepWithSlotLink)
+		}
+	}
+}
+
+func (m *SlotMachine) activateDependantByDetachable(links []StepLink, worker DetachableSlotWorker) bool {
+	if len(links) == 0 {
+		return false
+	}
+
+	if worker.NonDetachableCall(func(worker FixedSlotWorker) {
+		m.activateDependants(links, worker)
+	}) {
+		return true
+	}
+
+	m.syncQueue.AddAsyncUpdate(SlotLink{}, func(_ SlotLink, worker FixedSlotWorker) {
+		m.activateDependants(links, worker)
 	})
-}
-
-func (m *SlotMachine) activateDependantByLink(link SlotLink, worker FixedSlotWorker) {
-	switch {
-	case !link.IsValid():
-		return
-	case m == link.s.machine:
-		link.s.activateSlot(worker)
-	case worker.OuterCall(link.s.machine, link.s.activateSlot):
-		return
-	default:
-		link.s.machine.syncQueue.AddAsyncUpdate(link, SlotLink.activateSlot)
-	}
-}
-
-func (m *SlotMachine) _activateDependant(s *Slot, worker FixedSlotWorker) {
-	switch {
-	case m == s.machine:
-		s.activateSlot(worker)
-	case worker.OuterCall(s.machine, s.activateSlot):
-		return
-	default:
-		s.machine.syncQueue.AddAsyncUpdate(s.NewLink(), SlotLink.activateSlot)
-	}
+	return true
 }

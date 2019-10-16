@@ -16,15 +16,24 @@
 
 package smachine
 
+import "github.com/insolar/insolar/network/consensus/common/rwlock"
+
 type SynchronizationContext interface {
 	Check(SyncLink) Decision
-	AcquireForThisStep(SyncLink) Decision
-	Acquire(SyncLink) Decision
+	AcquireForThisStep(SyncLink) BoolDecision
+	Acquire(SyncLink) BoolDecision
 	Release(SyncLink) bool
 	ApplyAdjustment(SyncAdjustment) bool
 }
 
 func NewSyncLink(controller DependencyController) SyncLink {
+	if controller == nil {
+		panic("illegal value")
+	}
+	return SyncLink{&syncMutexWrapper{inner: controller}}
+}
+
+func NewSyncLinkNoLock(controller DependencyController) SyncLink {
 	if controller == nil {
 		panic("illegal value")
 	}
@@ -53,19 +62,25 @@ func (v SyncAdjustment) IsEmpty() bool {
 	return v.controller == nil || !v.isAbsolute && v.adjustment == 0
 }
 
-func (v SyncLink) GetQueueCount() int {
-	return v.controller.GetWaitingCount()
+func (v SyncLink) GetCounts() (active, inactive int) {
+	return v.controller.GetCounts()
 }
+
+type SlotDependencyFlags uint32
+
+const (
+	syncForOneStep SlotDependencyFlags = 1 << iota
+)
 
 type DependencyController interface {
 	CheckState() Decision
 	CheckDependency(dep SlotDependency) Decision
-	UseDependency(dep SlotDependency, oneStep bool) Decision
-	CreateDependency(slot *Slot, oneStep bool) (Decision, SlotDependency)
+	UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision
+	CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency)
 
 	GetLimit() (limit int, isAdjustable bool)
-	AdjustLimit(limit int) (deps []SlotLink, activate bool)
+	AdjustLimit(limit int) (deps []StepLink, activate bool)
 
-	GetWaitingCount() int
+	GetCounts() (active, inactive int)
 	GetName() string
 }

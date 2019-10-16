@@ -51,6 +51,46 @@ func (v Decision) IsZero() bool {
 	return v == 0
 }
 
+func (v Decision) AsValid() (BoolDecision, bool) {
+	switch v {
+	case Passed:
+		return true, true
+	case NotPassed:
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+type BoolDecision bool
+
+func (v BoolDecision) GetDecision() Decision {
+	if v {
+		return Passed
+	}
+	return NotPassed
+}
+
+func (v BoolDecision) Bool() bool {
+	return bool(v)
+}
+
+func (v BoolDecision) IsPassed() bool {
+	return bool(v)
+}
+
+func (v BoolDecision) IsNotPassed() bool {
+	return !bool(v)
+}
+
+func (v BoolDecision) IsValid() bool {
+	return true
+}
+
+func (v BoolDecision) AsValid() (BoolDecision, bool) {
+	return v, true
+}
+
 func ChooseUpdate(d Decider, valid, invalid, other StateUpdate) StateUpdate {
 	if d != nil {
 		switch d.GetDecision() {
