@@ -30,6 +30,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -74,7 +75,7 @@ type components struct {
 	replicator executor.HeavyReplicator
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor

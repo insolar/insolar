@@ -19,8 +19,9 @@ package contracts
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
@@ -37,11 +38,11 @@ import (
 	pkProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
-func RootDomain(pkShardCount int) insolar.GenesisContractState {
+func RootDomain(pkShardCount int) application.GenesisContractState {
 
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameRootDomain,
-		Prototype:  insolar.GenesisNameRootDomain,
+	return application.GenesisContractState{
+		Name:       application.GenesisNameRootDomain,
+		Prototype:  application.GenesisNameRootDomain,
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
@@ -51,17 +52,17 @@ func RootDomain(pkShardCount int) insolar.GenesisContractState {
 	}
 }
 
-func NodeDomain() insolar.GenesisContractState {
+func NodeDomain() application.GenesisContractState {
 	nd, _ := nodedomain.NewNodeDomain()
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameNodeDomain,
-		Prototype:  insolar.GenesisNameNodeDomain,
-		ParentName: insolar.GenesisNameRootDomain,
+	return application.GenesisContractState{
+		Name:       application.GenesisNameNodeDomain,
+		Prototype:  application.GenesisNameNodeDomain,
+		ParentName: application.GenesisNameRootDomain,
 		Memory:     mustGenMemory(nd),
 	}
 }
 
-func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) insolar.GenesisContractState {
+func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) application.GenesisContractState {
 	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", *insolar.NewEmptyReference())
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
@@ -69,32 +70,32 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 
 	m.Wallet = walletRef
 
-	return insolar.GenesisContractState{
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameMember,
+		Prototype:  application.GenesisNameMember,
 		ParentName: parent,
 		Memory:     mustGenMemory(m),
 	}
 }
 
-func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) insolar.GenesisContractState {
+func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) application.GenesisContractState {
 	w, err := wallet.New(accountRef)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
 	}
 
-	return insolar.GenesisContractState{
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameWallet,
+		Prototype:  application.GenesisNameWallet,
 		ParentName: parent,
 		Memory:     mustGenMemory(w),
 	}
 }
 
-func GetPreWalletGenesisContractState(name string, parent string, accounts foundation.StableMap, deposits foundation.StableMap) insolar.GenesisContractState {
-	return insolar.GenesisContractState{
+func GetPreWalletGenesisContractState(name string, parent string, accounts foundation.StableMap, deposits foundation.StableMap) application.GenesisContractState {
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameWallet,
+		Prototype:  application.GenesisNameWallet,
 		ParentName: parent,
 		Memory: mustGenMemory(&wallet.Wallet{
 			Accounts: accounts,
@@ -103,67 +104,67 @@ func GetPreWalletGenesisContractState(name string, parent string, accounts found
 	}
 }
 
-func GetAccountGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
+func GetAccountGenesisContractState(balance string, name string, parent string) application.GenesisContractState {
 	w, err := account.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` account instance")
 	}
 
-	return insolar.GenesisContractState{
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameAccount,
+		Prototype:  application.GenesisNameAccount,
 		ParentName: parent,
 		Memory:     mustGenMemory(w),
 	}
 }
 
-func GetCostCenterGenesisContractState(fee string) insolar.GenesisContractState {
+func GetCostCenterGenesisContractState(fee string) application.GenesisContractState {
 	cc, err := costcenter.New(&genesisrefs.ContractFeeMember, fee)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
 
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameCostCenter,
-		Prototype:  insolar.GenesisNameCostCenter,
-		ParentName: insolar.GenesisNameRootDomain,
+	return application.GenesisContractState{
+		Name:       application.GenesisNameCostCenter,
+		Prototype:  application.GenesisNameCostCenter,
+		ParentName: application.GenesisNameRootDomain,
 		Memory:     mustGenMemory(cc),
 	}
 }
 
-func GetPKShardGenesisContractState(name string, members foundation.StableMap) insolar.GenesisContractState {
+func GetPKShardGenesisContractState(name string, members foundation.StableMap) application.GenesisContractState {
 	s, err := pkshard.New(members)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
-	return insolar.GenesisContractState{
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNamePKShard,
-		ParentName: insolar.GenesisNameRootDomain,
+		Prototype:  application.GenesisNamePKShard,
+		ParentName: application.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
 	}
 }
 
-func GetMigrationShardGenesisContractState(name string, migrationAddresses []string) insolar.GenesisContractState {
+func GetMigrationShardGenesisContractState(name string, migrationAddresses []string) application.GenesisContractState {
 	s, err := migrationshard.New(migrationAddresses)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
-	return insolar.GenesisContractState{
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameMigrationShard,
-		ParentName: insolar.GenesisNameRootDomain,
+		Prototype:  application.GenesisNameMigrationShard,
+		ParentName: application.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) insolar.GenesisContractState {
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameMigrationAdmin,
-		Prototype:  insolar.GenesisNameMigrationAdmin,
-		ParentName: insolar.GenesisNameRootDomain,
+func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) application.GenesisContractState {
+	return application.GenesisContractState{
+		Name:       application.GenesisNameMigrationAdmin,
+		Prototype:  application.GenesisNameMigrationAdmin,
+		ParentName: application.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards(maShardCount),
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
@@ -184,10 +185,10 @@ func GetDepositGenesisContractState(
 	vestingType foundation.VestingType,
 	pulseDepositUnHold insolar.PulseNumber,
 	name string, parent string,
-) insolar.GenesisContractState {
-	return insolar.GenesisContractState{
+) application.GenesisContractState {
+	return application.GenesisContractState{
 		Name:       name,
-		Prototype:  insolar.GenesisNameDeposit,
+		Prototype:  application.GenesisNameDeposit,
 		ParentName: parent,
 		Memory: mustGenMemory(&deposit.Deposit{
 			Balance:            amount,
@@ -202,12 +203,12 @@ func GetDepositGenesisContractState(
 	}
 }
 
-func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) insolar.GenesisContractState {
+func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) application.GenesisContractState {
 
-	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameMigrationDaemons[numberMigrationDaemon],
-		Prototype:  insolar.GenesisNameMigrationDaemon,
-		ParentName: insolar.GenesisNameRootDomain,
+	return application.GenesisContractState{
+		Name:       application.GenesisNameMigrationDaemons[numberMigrationDaemon],
+		Prototype:  application.GenesisNameMigrationDaemon,
+		ParentName: application.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationdaemon.MigrationDaemon{
 			IsActive:              false,
 			MigrationDaemonMember: genesisrefs.ContractMigrationDaemonMembers[numberMigrationDaemon],

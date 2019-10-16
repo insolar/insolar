@@ -27,6 +27,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/insolar"
@@ -117,11 +118,11 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 		logLevel:               "",
 	}
 
-	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountMigrationDaemonMembers {
-		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", insolar.GenesisAmountActiveMigrationDaemonMembers))
+	if len(response.MigrationDaemonMembers) < application.GenesisAmountMigrationDaemonMembers {
+		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", application.GenesisAmountActiveMigrationDaemonMembers))
 	}
 
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
 		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))

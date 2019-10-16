@@ -20,19 +20,21 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestContractPublicKeyShards(t *testing.T) {
 	for i, ref := range ContractPublicKeyShards(100) {
-		require.Equal(t, GenesisRef(insolar.GenesisNamePKShard+strconv.Itoa(i)), ref)
+		require.Equal(t, GenesisRef(application.GenesisNamePKShard+strconv.Itoa(i)), ref)
 	}
 }
 
 func TestContractMigrationAddressShards(t *testing.T) {
 	for i, ref := range ContractMigrationAddressShards(100) {
-		require.Equal(t, GenesisRef(insolar.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
+		require.Equal(t, GenesisRef(application.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
 	}
 }
 
@@ -41,55 +43,55 @@ func TestReferences(t *testing.T) {
 		got    insolar.Reference
 		expect string
 	}{
-		insolar.GenesisNameRootDomain: {
+		application.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
 			expect: "11tJDjojfnTYn2YqF6kxCQimgYhRHuL82ep8NzqrEeE",
 		},
-		insolar.GenesisNameNodeDomain: {
+		application.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
 			expect: "11tJCQmJvVAEzDUartxvGk2t2U2S642nnHAHSCDNdPa",
 		},
-		insolar.GenesisNameNodeRecord: {
+		application.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
 			expect: "11tJBoja1SMYWkw8xHdJJCu5fdjQAJZ6XfMx8YcrBq5",
 		},
-		insolar.GenesisNameRootMember: {
+		application.GenesisNameRootMember: {
 			got:    ContractRootMember,
 			expect: "11tJCjvL9bzK1HdmaFnvmHGMvNnHYJz2qrN83if4fEf",
 		},
-		insolar.GenesisNameRootWallet: {
+		application.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
 			expect: "11tJCWaEGnNwk97PS5RbKDErnopfH9wx5r2N1tJnqwc",
 		},
-		insolar.GenesisNameRootAccount: {
+		application.GenesisNameRootAccount: {
 			got:    ContractRootAccount,
 			expect: "11tJD3c7peF6Yd7VimufekgnFJg6QvtJBf643JW76L9",
 		},
-		insolar.GenesisNameDeposit: {
+		application.GenesisNameDeposit: {
 			got:    ContractDeposit,
 			expect: "11tJCbm34yHNdh91AsgmbUBpqAyjeMgy45jZD3kjGa8",
 		},
-		insolar.GenesisNameCostCenter: {
+		application.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
 			expect: "11tJC1eCWVFJ6digscGgBs2TdrgWntNHCYYAdaAoWEH",
 		},
-		insolar.GenesisNameFeeAccount: {
+		application.GenesisNameFeeAccount: {
 			got:    ContractFeeAccount,
 			expect: "11tJDMf8Y83BKeEyn9qjjtgAskhRa5mzVbxdVB7Pjez",
 		},
-		insolar.GenesisNameFeeWallet: {
+		application.GenesisNameFeeWallet: {
 			got:    ContractFeeWallet,
 			expect: "11tJCcTZXZY7zBBsNMtimx1iceLkYCED85Anu1D9R3p",
 		},
-		insolar.GenesisNamePKShard: {
+		application.GenesisNamePKShard: {
 			got:    ContractPublicKeyShards(10)[0],
 			expect: "11tJCXnQ9AAiHGYpSee8jD9AbYu9wTJv8rbbX3kAAza",
 		},
-		insolar.GenesisNameMigrationShard: {
+		application.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards(10)[0],
 			expect: "11tJCcyeLGqpzYLa3doKn4gmCdtvTSVCGav6sHcbEZ2",
 		},
-		insolar.GenesisNameMigrationAdminAccount: {
+		application.GenesisNameMigrationAdminAccount: {
 			got:    ContractMigrationAccount,
 			expect: "11tJD1cMXNkRUY1yYNtNwse2KBB59nZmUNUHq1vrXLD",
 		},
@@ -104,7 +106,7 @@ func TestReferences(t *testing.T) {
 
 func TestRootDomain(t *testing.T) {
 	ref1 := ContractRootDomain
-	ref2 := GenesisRef(insolar.GenesisNameRootDomain)
+	ref2 := GenesisRef(application.GenesisNameRootDomain)
 	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
 }
 

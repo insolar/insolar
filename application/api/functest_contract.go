@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/rpc/v2"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
@@ -129,7 +130,7 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 		return errors.Wrap(err, "can't get current pulse")
 	}
 
-	base := insolar.GenesisRecord.Ref()
+	base := application.GenesisRecord.Ref()
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
 			Method:          args.Method,

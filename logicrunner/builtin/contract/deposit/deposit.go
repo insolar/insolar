@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"

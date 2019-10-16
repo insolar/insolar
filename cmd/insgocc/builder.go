@@ -25,27 +25,29 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/preprocessor"
-	"github.com/pkg/errors"
 )
 
 var (
 	contractSources = insolar.RootModule + "/application/contract"
 	proxySources    = insolar.RootModule + "/application/proxy"
 	contractNames   = []string{
-		insolar.GenesisNameRootDomain,
-		insolar.GenesisNameNodeDomain,
-		insolar.GenesisNameNodeRecord,
-		insolar.GenesisNameMember,
-		insolar.GenesisNameWallet,
-		insolar.GenesisNameDeposit,
-		insolar.GenesisNameCostCenter,
-		insolar.GenesisNamePKShard,
-		insolar.GenesisNameMigrationShard,
+		application.GenesisNameRootDomain,
+		application.GenesisNameNodeDomain,
+		application.GenesisNameNodeRecord,
+		application.GenesisNameMember,
+		application.GenesisNameWallet,
+		application.GenesisNameDeposit,
+		application.GenesisNameCostCenter,
+		application.GenesisNamePKShard,
+		application.GenesisNameMigrationShard,
 	}
 )
 

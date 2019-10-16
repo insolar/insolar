@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package insolar
+package application
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/insolar/insolar/insolar"
+)
 
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
@@ -225,13 +229,13 @@ type genesisBinary []byte
 var GenesisRecord genesisBinary = []byte{0xAC}
 
 // ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
+func (r genesisBinary) ID() insolar.ID {
+	return *insolar.NewID(insolar.GenesisPulse.PulseNumber, r)
 }
 
 // Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	return *NewReference(r.ID())
+func (r genesisBinary) Ref() insolar.Reference {
+	return *insolar.NewReference(r.ID())
 }
 
 // DiscoveryNodeRegister carries data required for registering discovery node via genesis.

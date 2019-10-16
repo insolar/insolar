@@ -24,8 +24,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -61,9 +62,9 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	nodes, err := publicKeysFromDir("testdata/keys", "testdata/keys_meta.json")
 	require.NoError(t, err, "can't load keys")
 
-	var networkNodes []insolar.DiscoveryNodeRegister
+	var networkNodes []application.DiscoveryNodeRegister
 	for _, n := range nodes {
-		networkNodes = append(networkNodes, insolar.DiscoveryNodeRegister{
+		networkNodes = append(networkNodes, application.DiscoveryNodeRegister{
 			Role:      n.role.String(),
 			PublicKey: platformpolicy.MustPublicKeyToString(n.key),
 		})

@@ -33,7 +33,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/insolar/insolar/application/genesisrefs"
 
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/api/requester"

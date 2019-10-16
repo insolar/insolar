@@ -19,6 +19,7 @@ package genesisrefs
 import (
 	"sync"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
@@ -42,7 +43,7 @@ var RootDomain = &Record{
 func (r *Record) initialize() {
 	rootRecord := record.IncomingRequest{
 		CallType: record.CTGenesis,
-		Method:   insolar.GenesisNameRootDomain,
+		Method:   application.GenesisNameRootDomain,
 	}
 	virtualRec := record.Wrap(&rootRecord)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtualRec)

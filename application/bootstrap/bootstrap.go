@@ -28,9 +28,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -111,7 +112,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
 	migrationDaemonPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get migration daemon keys")
@@ -120,7 +121,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	networkIncentivesPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountNetworkIncentivesMembers; i++ {
+	for i := 0; i < application.GenesisAmountNetworkIncentivesMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get network incentives keys")
@@ -129,7 +130,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	applicationIncentivesPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountApplicationIncentivesMembers; i++ {
+	for i := 0; i < application.GenesisAmountApplicationIncentivesMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get application incentives keys")
@@ -138,7 +139,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	foundationPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountFoundationMembers; i++ {
+	for i := 0; i < application.GenesisAmountFoundationMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get foundation keys")
@@ -147,7 +148,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	fundsPublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountFundsMembers; i++ {
+	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get funds keys")
@@ -156,7 +157,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	enterprisePublicKeys := []string{}
-	for i := 0; i < insolar.GenesisAmountEnterpriseMembers; i++ {
+	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get enterprise keys")
@@ -218,7 +219,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
-	contractsConfig := insolar.GenesisContractsConfig{
+	contractsConfig := application.GenesisContractsConfig{
 		RootBalance:                     g.config.RootBalance,
 		Fee:                             g.config.Fee,
 		MDBalance:                       g.config.MDBalance,
@@ -329,16 +330,16 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 
 func (g *Generator) makeHeavyGenesisConfig(
 	discoveryNodes []nodeInfo,
-	contractsConfig insolar.GenesisContractsConfig,
+	contractsConfig application.GenesisContractsConfig,
 ) error {
-	items := make([]insolar.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
+	items := make([]application.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
-		items = append(items, insolar.DiscoveryNodeRegister{
+		items = append(items, application.DiscoveryNodeRegister{
 			Role:      node.role,
 			PublicKey: node.publicKey,
 		})
 	}
-	cfg := &insolar.GenesisHeavyConfig{
+	cfg := &application.GenesisHeavyConfig{
 		DiscoveryNodes:  items,
 		ContractsConfig: contractsConfig,
 	}

@@ -20,14 +20,15 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 func TestGenesisRecordMarshalUnmarshal(t *testing.T) {
 	genIn := record.Genesis{
-		Hash: insolar.GenesisRecord,
+		Hash: application.GenesisRecord,
 	}
 
 	virtGenIn := record.Wrap(&genIn)

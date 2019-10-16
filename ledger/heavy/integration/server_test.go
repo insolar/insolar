@@ -20,11 +20,13 @@ package integration_test
 import (
 	"context"
 	"crypto"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io/ioutil"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -32,6 +34,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -117,7 +120,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg insolar.GenesisHeavyConfig,
+	genesisCfg application.GenesisHeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.

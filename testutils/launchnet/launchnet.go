@@ -38,6 +38,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
@@ -105,7 +106,7 @@ var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
 var FeeMember User
-var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
+var MigrationDaemons [application.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
 	Ref              string

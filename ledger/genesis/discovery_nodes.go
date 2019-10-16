@@ -19,8 +19,11 @@ package genesis
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifact"
@@ -28,7 +31,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 // DiscoveryNodeManager should be created by NewDiscoveryNodeManager.
@@ -47,7 +49,7 @@ func NewDiscoveryNodeManager(
 
 // StoreDiscoveryNodes saves discovery nodes objects and saves discovery nodes index in node domain index.
 // If node domain index not empty this method does nothing.
-func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.DiscoveryNodeRegister) error {
+func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []application.DiscoveryNodeRegister) error {
 	if len(discoveryNodes) == 0 {
 		return nil
 	}
@@ -145,7 +147,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		*insolar.NewEmptyReference(),
 		*contract,
 		genesisrefs.ContractNodeDomain,
-		genesisrefs.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),
+		genesisrefs.GenesisRef(application.GenesisNameNodeRecord+"_proto"),
 		nodeData,
 	)
 	if err != nil {
