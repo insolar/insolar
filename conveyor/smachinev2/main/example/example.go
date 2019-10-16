@@ -18,9 +18,11 @@ package example
 
 import (
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/longbits"
-	"time"
 
 	"github.com/insolar/insolar/conveyor/smachinev2"
 )
@@ -42,9 +44,9 @@ var declarationStateMachine1 smachine.StateMachineDeclaration = stateMachine1Dec
 type stateMachine1Declaration struct{}
 
 func (stateMachine1Declaration) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	s := sm.(*StateMachine1)
-	injector.MustInject(&s.serviceA)
-	injector.MustInject(&s.catalogC)
+	//s := sm.(*StateMachine1)
+	//injector.MustInject(&s.serviceA)
+	//injector.MustInject(&s.catalogC)
 }
 
 func (stateMachine1Declaration) IsConsecutive(cur, next smachine.StateFunc) bool {
@@ -60,6 +62,9 @@ func (stateMachine1Declaration) GetInitStateFor(sm smachine.StateMachine) smachi
 	return s.Init
 }
 
+var IterationCount uint64
+var Limiter = smachine.NewFixedLimiter(1000, "global")
+
 /* -------- Instance ------------- */
 
 func (s *StateMachine1) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
@@ -69,8 +74,22 @@ func (s *StateMachine1) GetStateMachineDeclaration() smachine.StateMachineDeclar
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	s.testKey = longbits.NewByteStringOf("testObjectID")
 
-	fmt.Printf("init: %v %v\n", ctx.SlotLink(), time.Now())
-	return ctx.Jump(s.State1)
+	//fmt.Printf("init: %v %v\n", ctx.SlotLink(), time.Now())
+	return ctx.Jump(s.State0)
+}
+
+func (s *StateMachine1) State0(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	if !ctx.AcquireForThisStep(Limiter) {
+		return ctx.Sleep().ThenRepeat()
+	}
+	IterationCount++
+	s.count++
+	if s.count < 1000 {
+		return ctx.Repeat(math.MaxInt32)
+		//return ctx.Yield().ThenRepeat()
+	}
+	s.count = 0
+	return ctx.Yield().ThenJump(s.State0) //forces release of mutex
 }
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
