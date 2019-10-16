@@ -26,7 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
 func TestMemberMigrationCreate(t *testing.T) {

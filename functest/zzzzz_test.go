@@ -22,8 +22,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 // This test file contains tests what always must be last in the package.

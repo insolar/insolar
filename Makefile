@@ -102,11 +102,11 @@ $(INSOLARD):
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):
-	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
-	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+$(INSGOCC): application/cmd/insgocc/insgocc.go logicrunner/preprocessor
+	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" application/cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
 
@@ -124,7 +124,7 @@ $(INSGORUND):
 
 .PHONY: $(BENCHMARK)
 $(BENCHMARK):
-	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" application/cmd/benchmark/*.go
 
 .PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):

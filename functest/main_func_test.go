@@ -23,8 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
 func TestMain(m *testing.M) {

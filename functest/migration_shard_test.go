@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestGetFreeAddressCount(t *testing.T) {

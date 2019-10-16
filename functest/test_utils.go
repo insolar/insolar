@@ -37,9 +37,9 @@ import (
 
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/insolar/rpc/v2/json2"
 

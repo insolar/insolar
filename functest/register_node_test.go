@@ -26,10 +26,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()

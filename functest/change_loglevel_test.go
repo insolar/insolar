@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/insolar/insolar/application/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 )
