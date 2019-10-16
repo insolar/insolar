@@ -110,9 +110,7 @@ func (c *adapterCallRequest) DelayedStart() CallConditionalBuilder {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
-	cu := c.ctx.newConditionalUpdate(stateUpdWaitForEvent)
-	cu.kickOff = c._startAsync
-	return &cu
+	return callConditionalBuilder{c}
 }
 
 func (c *adapterCallRequest) TryCall() bool {
@@ -245,4 +243,40 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 		panic(resultErr)
 	}
 	return resultFn
+}
+
+var _ CallConditionalBuilder = callConditionalBuilder{}
+
+type callConditionalBuilder struct {
+	c *adapterCallRequest
+}
+
+func (v callConditionalBuilder) newConditionalUpdate(updType stateUpdKind) ConditionalBuilder {
+	cu := v.c.ctx.newConditionalUpdate(updType)
+	cu.kickOff = v.c._startAsync
+	return &cu
+}
+
+func (v callConditionalBuilder) Sleep() ConditionalBuilder {
+	return v.newConditionalUpdate(stateUpdSleep)
+}
+
+func (v callConditionalBuilder) Poll() ConditionalBuilder {
+	return v.newConditionalUpdate(stateUpdPoll)
+}
+
+func (v callConditionalBuilder) WaitAny() ConditionalBuilder {
+	return v.newConditionalUpdate(stateUpdWaitForEvent)
+}
+
+func (v callConditionalBuilder) ThenJump(fn StateFunc) StateUpdate {
+	return v.WaitAny().ThenJump(fn)
+}
+
+func (v callConditionalBuilder) ThenJumpExt(step SlotStep) StateUpdate {
+	return v.WaitAny().ThenJumpExt(step)
+}
+
+func (v callConditionalBuilder) ThenRepeat() StateUpdate {
+	return v.WaitAny().ThenRepeat()
 }

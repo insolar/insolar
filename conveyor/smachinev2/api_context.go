@@ -219,6 +219,9 @@ type StateConditionalBuilder interface {
 
 type CallConditionalBuilder interface {
 	ConditionalBuilder
+	Sleep() ConditionalBuilder
+	Poll() ConditionalBuilder
+	WaitAny() ConditionalBuilder
 }
 
 type ConditionalBuilder interface {
