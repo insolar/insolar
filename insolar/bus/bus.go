@@ -46,7 +46,7 @@ const (
 	// TopicIncoming is topic for incoming calls
 	TopicIncoming = "TopicIncoming"
 
-	// TopicIncomingRequestResponse is topic for handling incoming RequestResponse messages
+	// TopicIncomingRequestResults is topic for handling incoming RequestResults messages
 	TopicIncomingRequestResults = "TopicIncomingRequestResults"
 )
 

@@ -18,8 +18,6 @@ package store
 
 import (
 	"io"
-
-	"github.com/dgraph-io/badger"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/store.DB -o ./ -s _gen_mock.go -g
@@ -29,7 +27,6 @@ import (
 // so if you want you can iterate over store using Iterator interface.
 type DB interface {
 	// Backend returns the underlying badger.DB object. Use with care.
-	Backend() *badger.DB
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
 	Delete(key Key) error
