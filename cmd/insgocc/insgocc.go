@@ -146,7 +146,7 @@ func getBuiltinContractDir(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(projectRoot, "logicrunner", "builtin", dir), nil
+	return path.Join(projectRoot, "application", "builtin", dir), nil
 }
 
 func getApplicationContractDir(dir string) (string, error) {
