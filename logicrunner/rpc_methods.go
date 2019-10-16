@@ -152,6 +152,11 @@ func NewExecutionProxyImplementation(
 func (m *executionProxyImplementation) GetCode(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
+	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
+		TraceID: []byte(inslogger.TraceID(ctx)),
+		SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
+	})
+
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.Finish()
 
@@ -185,6 +190,11 @@ func (m *executionProxyImplementation) RouteCall(
 	// Step 1. Register outgoing request.
 
 	logger.Debug("registering outgoing request")
+
+	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
+		TraceID: []byte(inslogger.TraceID(ctx)),
+		SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
+	})
 
 	// If pulse changes during registering of OutgoingRequest we don't care because
 	// we _already_ are processing the request. We should continue to execute and
@@ -240,6 +250,12 @@ func (m *executionProxyImplementation) SaveAsChild(
 		"call to others contract constructor ", req.ConstructorName,
 		" on prototype ", req.Prototype.String(),
 	)
+
+	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
+		TraceID: []byte(inslogger.TraceID(ctx)),
+		SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
+	})
+
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.Finish()
 
