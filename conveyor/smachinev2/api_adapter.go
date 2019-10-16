@@ -16,7 +16,9 @@
 
 package smachine
 
-import "context"
+import (
+	"context"
+)
 
 type AdapterID string
 
@@ -24,11 +26,16 @@ func (v AdapterID) IsEmpty() bool {
 	return len(v) == 0
 }
 
+type AdapterCallbackFunc func(AsyncResultFunc, error)
+type AdapterCallFunc func() AsyncResultFunc
+type AdapterNotifyFunc func()
+
 /* This is a helper interface to facilitate implementation of service adapters */
 type ExecutionAdapter interface {
 	GetAdapterID() AdapterID
 	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
 	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
+	// TODO PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester
 }
 
 type SyncCallRequester interface {
@@ -43,7 +50,10 @@ type AsyncCallRequester interface {
 	/* Allocates and provides cancellation function. Repeated calls return the same. */
 	WithCancel(*context.CancelFunc) AsyncCallRequester
 
-	/* When true will automatically cancel this call after the step is changed */
+	/*
+		When true will automatically cancel this call after the step is changed
+		NB! This cancel functionality is PASSIVE and requires state to be checked by an executor of request.
+	*/
 	WithAutoCancelOnStep(attach bool) AsyncCallRequester
 
 	// TODO WithNestedHandler
@@ -56,6 +66,14 @@ type AsyncCallRequester interface {
 	DelayedStart() CallConditionalBuilder
 }
 
+type NotifyRequester interface {
+	/* Sends notify */
+	Send()
+
+	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
+	DelayedSend() CallConditionalBuilder
+}
+
 type AsyncCallFlags uint8
 
 const (
@@ -66,51 +84,22 @@ const (
 
 //const WakeUpDisabled AsyncCallFlags = 0
 
-type NestedEventContext interface {
-	NewChild()
-	InitChild()
-}
-
-type NestedEventFunc func(precursor StepLink, ctx NestedEventContext)
-
-type AdapterCallbackHandler interface {
-	SendResult(AsyncResultFunc, error)
-	// can be called ONLY until SendResult
-	// TODO send from adapter?
-	SendNestedEvent(NestedEventFunc)
-}
-
-type AdapterCallbackFunc func(AsyncResultFunc, error)
-type AdapterCallFunc func() AsyncResultFunc
-type AdapterNestedEventFunc func(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
-
-//type AdapterNestedEvent interface {
-//	SendNestedEvent(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
-//}
-
 /* Provided by adapter's internals */
 type AdapterExecutor interface {
 	/*
 		Schedules asynchronous execution, MAY return native cancellation function if supported.
-		When callback == nil then fn() must return nil as well.
-		Panics are handled by caller.
+		Panics are handled by caller's function.
 	*/
-	StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc
+	StartCall(fn AdapterCallFunc, callback *AdapterCallback, requireCancel bool) context.CancelFunc
+
+	SendNotify(AdapterCallFunc)
 
 	/*
 		    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
 			Panics are handled by caller.
 	*/
-	TrySyncCall(fn AdapterCallFunc) (bool, AsyncResultFunc)
+	TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc)
 	//Migrate(slotMachineState SlotMachineState, migrationCount uint16)
 }
 
-//type SharedStateAdapter interface {
-//	PrepareUpdate(ctx ExecutionContext, fn func()) SharedUpdateRequester
-//	TryCancel(ctx ExecutionContext)
-//}
-//
-//type SharedUpdateRequester interface {
-//	TryApply() (isValid, isApplied bool)
-//	Apply()
-//}
+type CreateFactoryFunc func(eventPayload interface{}) CreateFunc

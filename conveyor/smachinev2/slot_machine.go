@@ -605,11 +605,33 @@ func (m *SlotMachine) _addNew(ctx context.Context, parent SlotLink, sm StateMach
 	newSlot.ctx = ctx
 	link := newSlot.NewLink()
 
-	m.prepareNewSlot(newSlot, nil, nil, sm, false)
+	return link, m.prepareNewSlot(newSlot, nil, nil, sm, false)
+}
+
+func (m *SlotMachine) createNestedForAdapter(parent SlotLink, fn CreateFunc) (SlotLink, bool) {
+	if fn == nil {
+		panic("illegal value")
+	}
+	if !m.IsActive() {
+		return SlotLink{}, false
+	}
+
+	newSlot := m.allocateSlot()
+	newSlot.parent = parent
+	if parent.IsValid() {
+		newSlot.ctx = parent.s.ctx
+	}
+	link := newSlot.NewLink()
+
+	if !m.prepareNewSlot(newSlot, nil, fn, nil, false) {
+		return link, false
+	}
+
+	m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
 	return link, true
 }
 
-func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm StateMachine, inherit bool) {
+func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm StateMachine, inherit bool) bool {
 	defer func() {
 		recovered := recover()
 		if recovered != nil {
@@ -627,7 +649,7 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 		sm = cc.executeCreate(fn)
 		if sm == nil {
 			m.recycleEmptySlot(slot)
-			return
+			return false
 		}
 
 		if cc.inherit && creator.injected != nil { // TODO copy all custom injects from creator
@@ -680,6 +702,8 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 		su.marker = ec.getMarker()
 		return su
 	}}
+
+	return true
 }
 
 func (m *SlotMachine) startNewSlot(slot *Slot, worker FixedSlotWorker) {

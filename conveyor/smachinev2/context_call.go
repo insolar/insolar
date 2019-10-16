@@ -144,7 +144,8 @@ func (c *adapterCallRequest) _startAsync() {
 	if c.ctx.countAsyncCalls == 0 {
 		panic("overflow")
 	}
-	cancelFn := c.executor.StartCall(stepLink, c.fn, _asyncCallback(stepLink), c.cancel != nil)
+	callback := NewAdapterCallback(stepLink, nil, nil)
+	cancelFn := c.executor.StartCall(c.fn, callback, c.cancel != nil)
 
 	if c.cancel != nil {
 		c.cancel.SetChain(cancelFn)
@@ -206,7 +207,7 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 	var callState int
 
 	stepLink := c.ctx.s.NewStepLink()
-	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, err error) {
+	callback := NewAdapterCallback(stepLink, func(fn AsyncResultFunc, err error) {
 		wc.L.Lock()
 		switch callState {
 		case 0:
@@ -219,7 +220,9 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 			panic("repeated callback")
 		}
 		wc.L.Unlock()
-	}, false)
+	}, nil)
+
+	cancelFn := c.executor.StartCall(c.fn, callback, false)
 
 	wc.L.Lock()
 	if callState == 0 {

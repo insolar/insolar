@@ -108,6 +108,13 @@ func (p SlotLink) isMachine(m *SlotMachine) bool {
 	return p.s != nil && p.s.machine == m
 }
 
+func (p SlotLink) getActiveMachine() *SlotMachine {
+	if p.s != nil && p.s.machine.IsActive() {
+		return p.s.machine
+	}
+	return nil
+}
+
 type StepLink struct {
 	SlotLink
 	step uint32

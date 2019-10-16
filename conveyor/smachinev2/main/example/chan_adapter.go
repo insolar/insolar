@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/conveyor/smachinev2"
-	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
 var _ smachine.AdapterExecutor = &ChannelAdapter{}
@@ -34,6 +33,8 @@ func NewChannelAdapter(ctx context.Context, chanLen int, overflowLimit int) Chan
 	}
 }
 
+type ChannelRecord = smachine.AdapterCall
+
 type ChannelAdapter struct {
 	ctx context.Context
 	c   chan ChannelRecord
@@ -42,26 +43,38 @@ type ChannelAdapter struct {
 	o   int
 }
 
-//func (c *ChannelAdapter) Migrate(slotMachineState smachine.SlotMachineState, migrationCount uint16) {
-//}
-
 func (c *ChannelAdapter) TrySyncCall(fn smachine.AdapterCallFunc) (bool, smachine.AsyncResultFunc) {
 	return false, nil
 }
 
-func (c *ChannelAdapter) StartCall(stepLink smachine.StepLink, fn smachine.AdapterCallFunc, callback smachine.AdapterCallbackFunc, requireCancel bool) context.CancelFunc {
+func (c *ChannelAdapter) SendNotify(fn smachine.AdapterCallFunc) {
+	if fn == nil {
+		panic("illegal value")
+	}
+	r := ChannelRecord{CallFn: fn}
+	c.queueCall(r)
+}
 
-	var cancel *syncrun.ChainedCancel
-	if requireCancel {
-		cancel = syncrun.NewChainedCancel()
+func (c *ChannelAdapter) StartCall(fn smachine.AdapterCallFunc, callback *smachine.AdapterCallback, requireCancel bool) context.CancelFunc {
+	if fn == nil {
+		panic("illegal value")
+	}
+	if callback == nil {
+		panic("illegal value")
 	}
 
-	r := ChannelRecord{fn, smachine.NewAdapterCallback(stepLink, callback, nil, cancel)}
+	r := ChannelRecord{CallFn: fn, Callback: callback}
+	cancelFn := callback.Prepare(requireCancel, nil)
+
+	c.queueCall(r)
+
+	return cancelFn
+}
+
+func (c *ChannelAdapter) queueCall(r ChannelRecord) {
 	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}
-
-	return cancel.Cancel
 }
 
 func (c *ChannelAdapter) Channel() <-chan ChannelRecord {
@@ -145,32 +158,4 @@ func (c *ChannelAdapter) sendWorker() {
 		case c.c <- r:
 		}
 	}
-}
-
-type ChannelRecord struct {
-	callFunc smachine.AdapterCallFunc
-	callback smachine.AdapterCallback
-}
-
-func (c ChannelRecord) RunAndSendResult() bool {
-	if c.callback.IsCancelled() {
-		c.callback.SendCancel()
-		return false
-	}
-
-	result, err := c.safeCall()
-	if err != nil {
-		c.callback.SendPanic(err)
-		return false
-	}
-
-	c.callback.SendResult(result)
-	return true
-}
-
-func (c ChannelRecord) safeCall() (result smachine.AsyncResultFunc, err error) {
-	defer func() {
-		err = smachine.RecoverAsyncSlotPanicWithStack("async call", recover(), err)
-	}()
-	return c.callFunc(), nil
 }

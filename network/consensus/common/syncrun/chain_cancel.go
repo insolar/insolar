@@ -71,6 +71,9 @@ const (
 )
 
 func (p *ChainedCancel) Cancel() {
+	if p == nil {
+		return
+	}
 	for {
 		lastState := atomic.LoadUint32(&p.state)
 		switch {
@@ -101,7 +104,7 @@ func (p *ChainedCancel) runChain() {
 }
 
 func (p *ChainedCancel) IsCancelled() bool {
-	return atomic.LoadUint32(&p.state)&stateCancelled != 0
+	return p != nil && atomic.LoadUint32(&p.state)&stateCancelled != 0
 }
 
 /*
