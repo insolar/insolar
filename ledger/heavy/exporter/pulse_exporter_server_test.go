@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar/node"
+	pulse2 "github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -240,6 +241,33 @@ func TestPulseServer_Export(t *testing.T) {
 
 		err := server.Export(&GetPulses{PulseNumber: currentPulse, Count: 10}, &stream)
 		require.EqualError(t, err, testError.Error())
+		require.Equal(t, 0, len(pulses))
+		require.Len(t, pulses, 0)
+	})
+
+	t.Run("not fail if no more pulses to backward", func(t *testing.T) {
+		var pulses []insolar.PulseNumber
+		pulseGatherer := func(p *Pulse) error {
+			pulses = append(pulses, p.PulseNumber)
+			return nil
+		}
+		stream := pulseStreamMock{checker: pulseGatherer}
+
+		jetKeeper := executor.NewJetKeeperMock(t)
+		topSyncPulse := insolar.PulseNumber(pulse.MinTimePulse + 2)
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+		nodeAccessor := node.NewAccessorMock(t)
+
+		currentPulse := insolar.PulseNumber(pulse.MinTimePulse)
+
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.When(context.TODO(), topSyncPulse, 0).Then(insolar.Pulse{}, pulse2.ErrNotFound)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor, 0)
+
+		err := server.Export(&GetPulses{PulseNumber: currentPulse, Count: 10}, &stream)
+		require.NoError(t, err)
 		require.Equal(t, 0, len(pulses))
 		require.Len(t, pulses, 0)
 	})
