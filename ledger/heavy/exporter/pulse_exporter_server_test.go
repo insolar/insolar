@@ -170,14 +170,19 @@ func TestPulseServer_Export(t *testing.T) {
 		}
 		stream := pulseStreamMock{checker: pulseGatherer}
 
+		topSyncPulse := insolar.PulseNumber(pulse.MinTimePulse + 2)
 		jetKeeper := executor.NewJetKeeperMock(t)
-		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse + 2)
+		jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
 
 		nodeList := []insolar.Node{{Role: insolar.StaticRoleLightMaterial}}
 		nodeAccessor := node.NewAccessorMock(t)
 		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
 
-		server := NewPulseServer(nil, jetKeeper, nodeAccessor, 0)
+		exportDelay := 0
+		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator.BackwardsMock.When(context.TODO(), topSyncPulse, exportDelay).Then(insolar.Pulse{PulseNumber: topSyncPulse - insolar.PulseNumber(exportDelay)}, nil)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor, exportDelay)
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 1}, &stream)
 		require.NoError(t, err)

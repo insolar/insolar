@@ -82,16 +82,16 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 		read++
 	}
 	currentPN := getPulses.PulseNumber
-	for read < getPulses.Count {
-		lastPossiblePulseToExport, err := p.pulses.Backwards(ctx, p.jetKeeper.TopSyncPulse(), p.exportDelay)
-		if err != nil {
-			if err == insolarPulse.ErrNotFound {
-				logger.Infof("no backward pulse for %d, step %d", p.jetKeeper.TopSyncPulse(), p.exportDelay)
-				return nil
-			}
-			logger.Error(err)
-			return err
+	lastPossiblePulseToExport, err := p.pulses.Backwards(ctx, p.jetKeeper.TopSyncPulse(), p.exportDelay)
+	if err != nil {
+		if err == insolarPulse.ErrNotFound {
+			logger.Infof("no backward pulse for %d, step %d", p.jetKeeper.TopSyncPulse(), p.exportDelay)
+			return nil
 		}
+		logger.Error(err)
+		return err
+	}
+	for read < getPulses.Count {
 		if currentPN >= lastPossiblePulseToExport.PulseNumber {
 			logger.Infof("no more pulses. current: %d, lastPossiblePulseToExport: %d", currentPN, lastPossiblePulseToExport.PulseNumber)
 			return nil
