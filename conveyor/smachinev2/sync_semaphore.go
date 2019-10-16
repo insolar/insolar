@@ -52,9 +52,9 @@ func (v SemaphoreLink) NewValue(value int) SyncAdjustment {
 
 func (v SemaphoreLink) NewBoolValue(isOpen bool) SyncAdjustment {
 	if isOpen {
-		return v.NewValue(0)
+		return v.NewValue(1)
 	}
-	return v.NewValue(1)
+	return v.NewValue(0)
 }
 
 func (v SemaphoreLink) SyncLink() SyncLink {
