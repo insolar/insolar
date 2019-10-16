@@ -338,7 +338,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pulseExporter  *exporter.PulseServer
 	)
 	{
-		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper, exporter.NewOneRequestLimiter(cfg.Exporter.DurationBetweenRequests))
+		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper, exporter.NewOneRequestLimiter(cfg.Exporter.DurationBetweenRequests), cfg.Exporter.ExportDelay)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper, Nodes, cfg.Exporter.ExportDelay)
 
 		grpcServer := grpc.NewServer()

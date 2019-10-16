@@ -71,6 +71,8 @@ type RecordServer struct {
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
 	limiter         *OneRequestLimiter
+	// Number of pulses after which client can see finalized pulse
+	exportDelay int
 }
 
 func NewRecordServer(
@@ -79,6 +81,7 @@ func NewRecordServer(
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
 	limiter *OneRequestLimiter,
+	exportDelay int,
 ) *RecordServer {
 	return &RecordServer{
 		pulseCalculator: pulseCalculator,
@@ -86,6 +89,7 @@ func NewRecordServer(
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
 		limiter:         limiter,
+		exportDelay:     exportDelay,
 	}
 }
 
@@ -126,6 +130,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.recordAccessor,
 		r.jetKeeper,
 		r.pulseCalculator,
+		r.exportDelay,
 	)
 	read := 0
 
@@ -172,6 +177,7 @@ type recordIterator struct {
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
 	pulseCalculator insolarPulse.Calculator
+	exportDelay     int
 }
 
 func newRecordIterator(
@@ -182,6 +188,7 @@ func newRecordIterator(
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
 	pulseCalculator insolarPulse.Calculator,
+	exportDelay int,
 ) *recordIterator {
 	return &recordIterator{
 		needToRead:      takeCount,
@@ -191,6 +198,7 @@ func newRecordIterator(
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
 		pulseCalculator: pulseCalculator,
+		exportDelay:     exportDelay,
 	}
 }
 
@@ -219,8 +227,14 @@ func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
 		if err != nil {
 			return false
 		}
+
 		topPulse := r.jetKeeper.TopSyncPulse()
-		if topPulse < nextPulse.PulseNumber {
+		lastPossiblePulseToExport, err := r.pulseCalculator.Backwards(ctx, topPulse, r.exportDelay)
+		if err != nil {
+			return false
+		}
+
+		if lastPossiblePulseToExport.PulseNumber < nextPulse.PulseNumber {
 			return false
 		}
 		_, err = r.recordIndex.LastKnownPosition(nextPulse.PulseNumber)
