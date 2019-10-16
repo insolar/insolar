@@ -208,24 +208,21 @@ func (p *workingQueueController) IsOpen() bool {
 func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
 	removeFn()
 
-	if !p.IsOpen() {
-		return nil
-	}
-
-	n := p.awaiters.queue.Count()
-	if n == 0 {
+	n := p.workerLimit - p.queue.Count()
+	if n <= 0 {
 		return nil
 	}
 
 	links := make([]StepLink, 0, n)
-	for {
-		if f, step := p.awaiters.queue.FirstValid(); f != nil {
+	for n > 0 {
+		if f, step := p.awaiters.queue.FirstValid(); f == nil {
+			break
+		} else {
 			f.removeFromQueue()
 			p.queue.AddLast(f)
 			links = append(links, step)
-			continue
+			n--
 		}
-		break
 	}
 	return links
 }
