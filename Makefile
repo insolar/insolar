@@ -160,7 +160,7 @@ test_unit: ## run all unit tests
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags "functest bloattest" ./functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -213,7 +213,7 @@ ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./functest -count 3 -failfast | tee ci_test_func.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
