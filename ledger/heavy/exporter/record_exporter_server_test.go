@@ -58,7 +58,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(0, errors.New("some error"))
 
-		iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, nil)
+		iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, nil, 0)
 
 		hasNext := iter.HasNext(ctx)
 
@@ -70,7 +70,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(156, nil)
 
-		iter := newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil)
+		iter := newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil, 0)
 		// bigger case
 		iter.read = 11
 
@@ -78,7 +78,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 
 		require.False(t, hasNext)
 
-		iter = newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil)
+		iter = newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil, 0)
 		// equal case
 		iter.read = 10
 
@@ -92,7 +92,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(156, nil)
 
-		iter := newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil)
+		iter := newRecordIterator(pn, 0, 10, positionAccessor, nil, nil, nil, 0)
 		iter.read = 9
 
 		hasNext := iter.HasNext(ctx)
@@ -109,7 +109,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
 
-			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, pulseCalculator)
+			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, nil, pulseCalculator, 0)
 			iter.currentPosition = 2
 
 			hasNext := iter.HasNext(ctx)
@@ -128,7 +128,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(99)
 
-			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
+			iter := newRecordIterator(pn, 0, 0, positionAccessor, nil, jetKeeper, pulseCalculator, 0)
 			iter.currentPosition = 2
 
 			hasNext := iter.HasNext(ctx)
@@ -139,23 +139,76 @@ func TestRecordIterator_HasNext(t *testing.T) {
 		t.Run("no data in the current. has more synced pulses. returns true", func(t *testing.T) {
 			pn := insolar.PulseNumber(99)
 
+			topSyncPulse := insolar.PulseNumber(101)
+
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
+			pulseCalculator.BackwardsMock.Expect(ctx, topSyncPulse, 0).Return(insolar.Pulse{PulseNumber: topSyncPulse}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
-			jetKeeper.TopSyncPulseMock.Return(101)
+			jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
 
 			positionAccessor := object.NewRecordPositionAccessorMock(t)
 			positionAccessor.LastKnownPositionMock.When(99).Then(2, nil)
 			positionAccessor.LastKnownPositionMock.Expect(100).Return(1, nil)
 
-			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
+			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator, 0)
 			iter.read = 10
 			iter.needToRead = 100
 
 			hasNext := iter.HasNext(ctx)
 
 			require.True(t, hasNext)
+		})
+
+		t.Run("return false when delay is not expired", func(t *testing.T) {
+			pn := insolar.PulseNumber(99)
+
+			topSyncPulse := insolar.PulseNumber(101)
+
+			exportDelay := 30
+
+			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
+			pulseCalculator.BackwardsMock.Expect(ctx, topSyncPulse, exportDelay).Return(insolar.Pulse{PulseNumber: topSyncPulse - insolar.PulseNumber(exportDelay)}, nil)
+
+			jetKeeper := executor.NewJetKeeperMock(t)
+			jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.When(99).Then(2, nil)
+			positionAccessor.LastKnownPositionMock.Expect(100).Return(1, nil)
+
+			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator, exportDelay)
+			iter.read = 10
+			iter.needToRead = 100
+
+			require.False(t, iter.HasNext(ctx))
+		})
+
+		t.Run("return false when can't calculate forward pulse", func(t *testing.T) {
+			pn := insolar.PulseNumber(99)
+
+			topSyncPulse := insolar.PulseNumber(101)
+
+			exportDelay := 30
+
+			pulseCalculator := network.NewPulseCalculatorMock(t)
+			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
+			pulseCalculator.BackwardsMock.Expect(ctx, topSyncPulse, exportDelay).Return(insolar.Pulse{}, errors.New("Tests error"))
+
+			jetKeeper := executor.NewJetKeeperMock(t)
+			jetKeeper.TopSyncPulseMock.Return(topSyncPulse)
+
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.When(99).Then(2, nil)
+			positionAccessor.LastKnownPositionMock.Expect(100).Return(1, nil)
+
+			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator, exportDelay)
+			iter.read = 10
+			iter.needToRead = 100
+
+			require.False(t, iter.HasNext(ctx))
 		})
 
 		t.Run("no data in the current. has more synce pulses. returns false, because read everything", func(t *testing.T) {
@@ -169,7 +222,7 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(101)
 
-			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
+			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator, 0)
 			iter.read = 10
 			iter.needToRead = 10
 
@@ -190,7 +243,7 @@ func TestRecordIterator_Next(t *testing.T) {
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
 		positionAccessor.AtPositionMock.Expect(pn, uint32(2)).Return(insolar.ID{}, store.ErrNotFound)
 
-		iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, nil)
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, nil, 0)
 
 		_, err := iter.Next(ctx)
 
@@ -208,7 +261,7 @@ func TestRecordIterator_Next(t *testing.T) {
 		recordsAccessor := object.NewRecordAccessorMock(t)
 		recordsAccessor.ForIDMock.Expect(ctx, id).Return(record.Material{}, store.ErrNotFound)
 
-		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil)
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil, 0)
 
 		_, err := iter.Next(ctx)
 
@@ -231,7 +284,7 @@ func TestRecordIterator_Next(t *testing.T) {
 		recordsAccessor := object.NewRecordAccessorMock(t)
 		recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
 
-		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil)
+		iter := newRecordIterator(pn, 1, 0, positionAccessor, recordsAccessor, nil, nil, 0)
 		next, err := iter.Next(ctx)
 
 		require.NoError(t, err)
@@ -251,7 +304,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{}, store.ErrNotFound)
 
-			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, pulseCalculator)
+			iter := newRecordIterator(pn, 1, 0, positionAccessor, nil, nil, pulseCalculator, 0)
 
 			_, err := iter.Next(ctx)
 
@@ -283,7 +336,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
 
-			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, jetKeeper, pulseCalculator)
+			iter := newRecordIterator(firstPN, 10, 0, positionAccessor, recordsAccessor, jetKeeper, pulseCalculator, 0)
 
 			next, err := iter.Next(ctx)
 
@@ -451,7 +504,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond), 0)
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -613,7 +666,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond), 0)
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -757,7 +810,7 @@ func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond), 0)
 
 	t.Run("calling for pulse with empty pulses after returns the last pulse", func(t *testing.T) {
 		var recs []*Record
