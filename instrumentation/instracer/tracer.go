@@ -264,9 +264,10 @@ func ShouldRegisterJaeger(
 		collectorEndpoint,
 		probabilityRate,
 	)
-	opentracing.SetGlobalTracer(tracer)
+
 	inslog := inslogger.FromContext(ctx)
 	if regerr == nil {
+		opentracing.SetGlobalTracer(tracer)
 		return func() {
 			inslog.Debugf("Flush jaeger for %v\n", serviceName)
 			closer.Close()
