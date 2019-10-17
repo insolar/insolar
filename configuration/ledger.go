@@ -23,6 +23,9 @@ type Storage struct {
 	// BadgerValueLogGCDiscardRatio controls badger's value log GC behaviour.
 	// Compaction on value log file happens only if data would be compacted to at least 1-BadgerValueLogGCDiscardRatio ratio.
 	BadgerValueLogGCDiscardRatio float64
+
+	// GCRunFrequency is period of running gc (in number of pulses)
+	GCRunFrequency uint
 }
 
 // JetSplit holds configuration for jet split.
@@ -115,6 +118,7 @@ func NewLedger() Ledger {
 		Storage: Storage{
 			DataDirectory:                dataDir,
 			BadgerValueLogGCDiscardRatio: 0.4,
+			GCRunFrequency:               1,
 		},
 
 		JetSplit: JetSplit{
