@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"sync"
 
 	"go.opencensus.io/stats"
 
@@ -38,6 +39,7 @@ type BadgerGCRunInfo struct {
 	runFrequency uint
 
 	callCounter uint
+	lock        sync.Mutex
 }
 
 func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
@@ -48,6 +50,8 @@ func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunIn
 }
 
 func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	b.callCounter++
 	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
 		b.runner.RunValueGC(ctx)
