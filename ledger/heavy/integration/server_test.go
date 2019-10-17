@@ -20,11 +20,12 @@ package integration_test
 import (
 	"context"
 	"crypto"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io/ioutil"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -225,7 +226,8 @@ func NewServer(
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
+		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 
 		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork
@@ -237,7 +239,7 @@ func NewServer(
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		h := handler.New(cfg.Ledger)
+		h := handler.New(cfg.Ledger, gcRunInfo)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
