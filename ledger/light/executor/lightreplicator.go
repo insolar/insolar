@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 )
 
 // LightReplicator is a base interface for a sync component
@@ -124,10 +123,8 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
 		ctx, span := instracer.StartSpan(ctx, "LightReplicatorDefault.sync")
-		span.AddAttributes(
-			trace.Int64Attribute("pulse", int64(pn)),
-		)
-		defer span.End()
+		span.SetTag("pulse", int64(pn))
+		defer span.Finish()
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets, err := lr.jetCalculator.MineForPulse(ctx, pn)

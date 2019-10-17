@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -30,8 +32,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 type EnsureIndex struct {
@@ -73,11 +73,9 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "EnsureIndex")
-	defer span.End()
+	defer span.Finish()
 
-	span.AddAttributes(
-		trace.StringAttribute("object_id", p.object.DebugString()),
-	)
+	span.SetTag("object_id", p.object.DebugString())
 
 	_, err := p.dep.indexes.ForID(ctx, p.pulse, p.object)
 	if err == nil {

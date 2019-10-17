@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -48,8 +47,8 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	logger.Debug("got abandoned requests notification")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAbandonedRequestsNotification.Present")
-	span.AddAttributes(trace.StringAttribute("msg.Type", payload.TypeAbandonedRequestsNotification.String()))
-	defer span.End()
+	span.SetTag("msg.Type", payload.TypeAbandonedRequestsNotification.String())
+	defer span.Finish()
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {

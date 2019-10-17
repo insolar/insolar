@@ -25,7 +25,7 @@ log:
   level: Info
   adapter: zerolog
 metrics:
-  listenaddress: 0.0.0.0:9090
+  listenaddress: 0.0.0.0:9091
 logicrunner:
   rpclisten: 127.0.0.1:7778
   rpcprotocol: tcp

@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/rpc/v2"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
@@ -65,7 +66,11 @@ type UploadReply struct {
 
 // Upload builds code and return prototype ref
 func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, requestBody *rpc.RequestBody, reply *UploadReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, instr := instrumenter.NewMethodInstrument("FuncTestContractService.Upload")
+	defer instr.End()
+
+	inslog := inslogger.FromContext(ctx)
+
 	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ FuncTestContractService.Upload ] Incoming request: %s", r.RequestURI)
@@ -110,7 +115,11 @@ type CallConstructorArgs struct {
 
 // CallConstructor make an object from its prototype
 func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, requestBody *rpc.RequestBody, reply *CallMethodReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, instr := instrumenter.NewMethodInstrument("FuncTestContractService.CallConstructor")
+	defer instr.End()
+
+	inslog := inslogger.FromContext(ctx)
+
 	reply.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ FuncTestContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
@@ -169,9 +178,13 @@ type CallMethodReply struct {
 	TraceID        string            `json:"TraceID"`
 }
 
-// CallConstructor make an object from its prototype
+// CallMethod make an object from its prototype
 func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodArgs, requestBody *rpc.RequestBody, re *CallMethodReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+	ctx, instr := instrumenter.NewMethodInstrument("FuncTestContractService.CallMethod")
+	defer instr.End()
+
+	inslog := inslogger.FromContext(ctx)
+
 	re.TraceID = utils.TraceID(ctx)
 
 	inslog.Infof("[ FuncTestContractService.CallMethod ] Incoming request: %s", r.RequestURI)
