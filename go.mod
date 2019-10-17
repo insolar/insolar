@@ -49,6 +49,7 @@ require (
 	github.com/tylerb/is v2.1.4+incompatible // indirect
 	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
+	golang.org/dl v0.0.0-20190926113319-b3a3479952ba // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
