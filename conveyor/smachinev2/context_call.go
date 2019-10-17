@@ -129,14 +129,14 @@ func (c *adapterCallRequest) TryCall() bool {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
-	return c._startSync()
+	return c._startSync(true)
 }
 
 func (c *adapterCallRequest) Call() {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
-	if !c._startSync() {
+	if !c._startSync(false) {
 		panic("call was cancelled")
 	}
 }
@@ -160,8 +160,8 @@ func (c *adapterCallRequest) _startAsync() {
 	}
 }
 
-func (c *adapterCallRequest) _startSync() bool {
-	resultFn := c._startSyncWithResult()
+func (c *adapterCallRequest) _startSync(isTry bool) bool {
+	resultFn := c._startSyncWithResult(isTry)
 
 	if resultFn == nil {
 		return false
@@ -172,7 +172,7 @@ func (c *adapterCallRequest) _startSync() bool {
 	return true
 }
 
-func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
+func (c *adapterCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
 
 	if ok, result := c.executor.TrySyncCall(c.fn); ok {
 		return result
@@ -203,14 +203,21 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 		}
 		return result.fn
 
-	case <-workerMark.ChannelIf(c.ctx.flags&PanicOnMigrate != 0, nil):
-	case <-c.ctx.s.machine.GetStoppingSignal():
-	}
+	case <-workerMark.ChannelIf(c.ctx.flags&IgnoreSignal == 0, nil):
+		if cancelFn != nil {
+			cancelFn()
+		}
+		if isTry {
+			return nil
+		}
+		panic("signal")
 
-	if cancelFn != nil {
-		cancelFn()
+	case <-c.ctx.s.machine.GetStoppingSignal():
+		if cancelFn != nil {
+			cancelFn()
+		}
+		return nil
 	}
-	return nil
 }
 
 /* ============================================================== */

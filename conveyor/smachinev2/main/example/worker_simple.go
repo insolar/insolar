@@ -62,6 +62,10 @@ type DetachableSimpleSlotWorker struct {
 	*SimpleSlotWorker
 }
 
+func (p *DetachableSimpleSlotWorker) TryDetach(flags smachine.LongRunFlags) {
+	panic("unsupported")
+}
+
 func (p *DetachableSimpleSlotWorker) NonDetachableOuterCall(_ *smachine.SlotMachine, fn smachine.NonDetachableFunc) (wasExecuted bool) {
 	fn(&NonDetachableSimpleSlotWorker{p.SimpleSlotWorker})
 	return true

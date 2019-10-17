@@ -30,8 +30,8 @@ func (p *executionContext) InitiateLongRun(flags LongRunFlags) {
 	if p.flags != 0 {
 		panic("illegal state - repeated call")
 	}
-	panic("unsupported")
-	//p.flags = flags | manualDetach
+	p.w.TryDetach(flags)
+	p.flags = manualDetach | flags
 }
 
 func (p *executionContext) GetPendingCallCount() int {

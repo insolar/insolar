@@ -210,7 +210,7 @@ type LongRunFlags uint8
 
 const (
 	manualDetach LongRunFlags = 1 << iota
-	PanicOnMigrate
+	IgnoreSignal
 )
 
 type MigrationContext interface {

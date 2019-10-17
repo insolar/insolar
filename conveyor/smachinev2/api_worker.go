@@ -36,6 +36,8 @@ type DetachableSlotWorker interface {
 	// provides a temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
 	NonDetachableOuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool)
+
+	TryDetach(flags LongRunFlags)
 	//NestedAttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }
 
