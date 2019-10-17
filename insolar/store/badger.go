@@ -72,6 +72,22 @@ func (b *BadgerDB) Backend() *badger.DB {
 	return b.backend
 }
 
+// RunValueGC run badger values garbage collection
+// Now it has to be called only after pulse finalization to
+// exclude running GC during process of backup-replication
+func (b *BadgerDB) RunValueGC(ctx context.Context) {
+	if b.extraOpts.valueLogDiscardRatio > 0 {
+		logger := inslogger.FromContext(ctx)
+		logger.Info("BadgerDB: values GC start")
+		defer logger.Info("BadgerDB: values GC end")
+
+		err := b.backend.RunValueLogGC(b.extraOpts.valueLogDiscardRatio)
+		if err != nil && err != badger.ErrNoRewrite {
+			logger.Errorf("BadgerDB: GC failed with error: %v", err.Error())
+		}
+	}
+}
+
 // Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
 func (b *BadgerDB) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
