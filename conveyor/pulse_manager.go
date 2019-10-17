@@ -34,3 +34,11 @@ func (p *PulseSlot) State() PulseSlotState {
 func (p *PulseSlot) PulseData() pulse.Data {
 	return p.pulseData.PulseData()
 }
+
+func (p *PulseSlot) IsFuture(number pulse.Number) bool {
+
+}
+
+func (p *PulseSlot) IsAccepted(number pulse.Number) bool {
+
+}

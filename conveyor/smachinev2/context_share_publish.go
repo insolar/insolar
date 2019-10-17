@@ -124,6 +124,30 @@ func (m *SlotMachine) GetPublished(key interface{}) (interface{}, bool) {
 	return nil, false
 }
 
+func (m *SlotMachine) TryPublish(key, data interface{}) (interface{}, bool) {
+	switch key.(type) {
+	case nil:
+		panic("illegal value")
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		panic("illegal value")
+	}
+
+	switch sdl := data.(type) {
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		panic("illegal value")
+	case SharedDataLink:
+		if !sdl.IsUnbound() {
+			panic("illegal value")
+		}
+	case *SharedDataLink:
+		if !sdl.IsUnbound() {
+			panic("illegal value")
+		}
+	}
+
+	return m.localRegistry.LoadOrStore(key, data)
+}
+
 func _asSharedDataLink(v interface{}) SharedDataLink {
 	switch d := v.(type) {
 	case SharedDataLink:

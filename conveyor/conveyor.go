@@ -19,7 +19,6 @@ package conveyor
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/conveyor/injector"
@@ -30,16 +29,15 @@ import (
 
 type PreparedState = struct{}
 type InputEvent = interface{}
-type StateMachineFactoryFn = func(InputEvent, pulse.Number, PulseSlotState) smachine.StateMachine
+type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
-func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryFn StateMachineFactoryFn,
+func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryFn PulseEventFactoryFunc,
 	slotMachineConfig smachine.SlotMachineConfig, registry injector.DependencyRegistry) *PulseConveyor {
 
 	r := &PulseConveyor{
 		slotConfig: PulseSlotConfig{
 			config: slotMachineConfig,
 		},
-		past:      make(map[pulse.Number]*PulseSlotMachine),
 		factoryFn: factoryFn,
 	}
 	//r.signalQueue = tools.NewSignalFuncQueue(&r.mutex, r.externalSignal.NextBroadcast)
@@ -50,205 +48,212 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 	r.slotConfig.signalCallback = nil // r.internalSignal.NextBroadcast
 	r.slotConfig.parentRegistry = &r.slotMachine
 
-	r.antique.isAntique = true
-	r.antique.SlotMachine = smachine.NewSlotMachine(
-		r.slotConfig.config,
-		r.slotConfig.eventCallback,
-		r.slotConfig.signalCallback,
-		r.slotConfig.parentRegistry)
+	//r.antique.isAntique = true
+	//r.antique.SlotMachine = smachine.NewSlotMachine(
+	//	r.slotConfig.config,
+	//	r.slotConfig.eventCallback,
+	//	r.slotConfig.signalCallback,
+	//	r.slotConfig.parentRegistry)
 
 	return r
 }
 
 type PulseConveyor struct {
-	presentPulse pulse.Number //atomic
-
-	mutex sync.RWMutex
-
+	// immutable, provided, set at construction
 	slotConfig PulseSlotConfig
+	factoryFn  PulseEventFactoryFunc
+	workerCtx  context.Context
+	//slotConfig   smachine.SlotMachineConfig
 
-	future  *PulseSlotMachine
-	present *PulseSlotMachine
-	past    map[pulse.Number]*PulseSlotMachine
-	antique PulseSlotMachine
-
-	workerCtx      context.Context
+	// immutable, set at construction
 	externalSignal tools.VersionedSignal
 	internalSignal tools.VersionedSignal
+	slotMachine    smachine.SlotMachine
 
-	slotMachine smachine.SlotMachine
+	// mutable
+	presentAndFuturePulse uint64 //atomic
 
-	//slotConfig   smachine.SlotMachineConfig
-	factoryFn    StateMachineFactoryFn
-	pulseService PulseServiceAdapter
+	// mutable, set under SlotMachine synchronization
+	presentMachine *PulseSlotMachine
 }
 
-func (p *PulseConveyor) GetPresentPulse() pulse.Number {
-	return pulse.Number(atomic.LoadUint32((*uint32)(&p.presentPulse)))
-}
+const uninitializedFuture = pulse.LocalRelative
 
-func (p *PulseConveyor) GetPulseData(pn pulse.Number) pulse.Data {
-	panic("unsupported")
-}
-
-func (p *PulseConveyor) getPulseSlot(pn pulse.Number) *PulseSlot {
-	ps, ok := p.slotMachine.GetPublished(pn)
-	if ok && ps == nil {
-		panic("illegal state")
+func (p *PulseConveyor) GetPresentPulse() (present pulse.Number, nearestFuture pulse.Number) {
+	v := atomic.LoadUint64(&p.presentAndFuturePulse)
+	if v == 0 {
+		return pulse.Unknown, uninitializedFuture
 	}
-	return ps.(*PulseSlot)
+	return pulse.Number(v), pulse.Number(v >> 32)
 }
 
-func (p *PulseConveyor) GetPulseSlot(pn pulse.Number) *PulseSlot {
-	ips, ok := p.slotMachine.GetPublished(pn)
-	if ok && ps == nil {
-		panic("illegal state")
-	}
+func (p *PulseConveyor) setPresentPulse(pd pulse.Data) (prevPresent pulse.Number, prevFuture pulse.Number, err error) {
+	for {
+		prev := atomic.LoadUint64(&p.presentAndFuturePulse)
+		presentPN := pd.PulseNumber
+		futurePN := pd.GetNextPulseNumber()
 
+		if prev != 0 {
+			expectedPN := pulse.Number(prev >> 32)
+			if pd.PulseNumber < expectedPN {
+				return pulse.Number(prev), pulse.Number(prev >> 32),
+					fmt.Errorf("illegal pulse data: pn=%v, expected=%v", presentPN, expectedPN)
+			}
+		}
+		// TODO store pulse.Data
+		if atomic.CompareAndSwapUint64(&p.presentAndFuturePulse, prev, uint64(presentPN)|uint64(futurePN)<<32) {
+			return pulse.Number(prev), pulse.Number(prev >> 32), nil
+		}
+	}
+}
+
+func (p *PulseConveyor) GetPulseData(pn pulse.Number) (pulse.Data, bool) {
+	panic("unimplemented")
+}
+
+func (p *PulseConveyor) HasPulseData(pn pulse.Number) bool {
+	panic("unimplemented")
 }
 
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
 
-	pulseSlotMachine, err := p.getPulseSlotMachine(ctx, pn)
-	if err != nil {
+	pulseSlotMachine, targetPN, pulseState, err := p.mapToPulseSlotMachine(pn)
+	switch {
+	case err != nil:
 		return err
+	case pulseSlotMachine == nil || pulseState == 0:
+		return fmt.Errorf("slotMachine is missing: pn=%v", pn)
 	}
 
-	pulseSlotMachine.AddNew(ctx, smachine.NoLink(),
-		&inputEventSM{
-			ps:        &pulseSlotMachine.pulseSlot,
-			event:     event,
-			factoryFn: p.factoryFn,
-		})
+	createFn := p.factoryFn(targetPN, event)
+
+	switch {
+	case createFn == nil:
+		return fmt.Errorf("unrecognized event: pn=%v event=%v", targetPN, event)
+	case pulseState == Future:
+		// event for future need special handling
+		pulseSlotMachine.machine.AddNew(ctx, smachine.NoLink(),
+			&futureEventSM{pn: targetPN, ps: &pulseSlotMachine.pulseSlot, createFn: createFn})
+	default:
+		// TODO Functions to control max future and min past pulse
+		// TODO here we should only check for recent data - very old data should be retrieved via a special SM
+		if !p.HasPulseData(targetPN) {
+			return fmt.Errorf("unknown data for pulse : pn=%v event=%v", targetPN, event)
+		}
+		if _, ok := pulseSlotMachine.machine.AddNewByFunc(ctx, smachine.NoLink(), createFn); !ok {
+			return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
+		}
+	}
 	return nil
 }
 
-func (p *PulseConveyor) getPulseSlotMachine(ctx context.Context, pn pulse.Number) (*PulseSlotMachine, error) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-
-	if p.present == nil {
-		return nil, fmt.Errorf("uninitialized present pulse: pn=%v", pn)
-	}
-
-	presentPulseData := p.present.pulseSlot.PulseData()
-	presentPulse := presentPulseData.PulseNumber
-	npn := presentPulseData.GetNextPulseNumber()
+func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachine, pulse.Number, PulseSlotState, error) {
+	presentPN, futurePN := p.GetPresentPulse()
 
 	switch {
-	case pn == presentPulse:
-		return p.present, nil
-	case pn >= presentPulseData.GetNextPulseNumber():
-		if p.future == nil {
-			return nil, fmt.Errorf("uninitialized future pulse: pn=%v", pn)
+	case presentPN.IsUnknown():
+		// when no present pulse - all pulses go to future
+		return p.getFuturePulseSlotMachine(futurePN), pn, Future, nil
+	case pn.IsUnknownOrEqualTo(presentPN):
+		if psm := p.getPulseSlotMachine(presentPN); psm != nil {
+			return psm, presentPN, Present, nil
 		}
-		return p.future, nil
-	case pn <= presentPulse:
-		pulseSlot := p.past[pn]
-		if pulseSlot == nil {
-			pulseSlot = &p.antique
+		// present slot must be present ;)
+		panic("illegal state")
+	case pn < presentPN:
+		if psm := p.getPulseSlotMachine(pn); psm != nil {
+			return psm, pn, Past, nil
 		}
-		return pulseSlot, nil
-	default:
-		return nil, fmt.Errorf("invalid pulse: pn=%v expected=%v", pn, npn)
+		if pn.IsTimePulse() {
+			return p.getAntiquePulseSlotMachine(), pn, Antique, nil
+		}
+		return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
+	case pn < futurePN:
+		return nil, 0, 0, fmt.Errorf("pulse number is unexpected: pn=%v", pn)
+	default: // pn >= futurePN
+		return p.getFuturePulseSlotMachine(futurePN), pn, Future, nil
 	}
 }
 
-func (p *PulseConveyor) PreparePulseChange(out chan<- PreparedState) {
-	p.slotMachine.ScheduleSignal(func(worker smachine.FixedSlotWorker) {
-		zzz
+func (p *PulseConveyor) getPulseSlotMachine(pn pulse.Number) *PulseSlotMachine {
+	if psv, ok := p.slotMachine.GetPublished(pn); ok {
+		if psm, ok := psv.(*PulseSlotMachine); ok {
+			return psm
+		}
+		panic("illegal state")
+	}
+	return nil
+}
+
+func (p *PulseConveyor) getFuturePulseSlotMachine(pn pulse.Number) *PulseSlotMachine {
+	if psm := p.getPulseSlotMachine(pn); psm != nil {
+		return psm
+	}
+	return p.createAndPublishPulseSlotMachine(pn, Future)
+}
+
+func (p *PulseConveyor) getAntiquePulseSlotMachine() *PulseSlotMachine {
+	if psm := p.getPulseSlotMachine(0); psm != nil {
+		return psm
+	}
+	return p.createAndPublishPulseSlotMachine(0, Antique)
+}
+
+func (p *PulseConveyor) createAndPublishPulseSlotMachine(pn pulse.Number, mode PulseSlotState) *PulseSlotMachine {
+	var psm *PulseSlotMachine
+	// TODO new PulseSlotMachine for the given mode
+	psv, _ := p.slotMachine.TryPublish(pn, psm)
+	psm = psv.(*PulseSlotMachine)
+	if psm == nil {
+		panic("illegal state")
+	}
+	return psm
+}
+
+func (p *PulseConveyor) sendSignal(fn smachine.MachineCallFunc) error {
+	result := make(chan error, 1)
+	p.slotMachine.ScheduleCall(func(ctx smachine.MachineCallContext) {
+		defer func() {
+			result <- smachine.RecoverSlotPanicWithStack("signal", recover(), nil)
+			close(result)
+		}()
+		fn(ctx)
+	}, true)
+	return <-result
+}
+
+func (p *PulseConveyor) PreparePulseChange(out chan<- PreparedState) error {
+	return p.sendSignal(func(ctx smachine.MachineCallContext) {
+		if p.presentMachine == nil {
+			// wrong - we cant produce a state for first pulse
+			panic("illegal state")
+		}
+		ctx.BargeInNow(p.presentMachine.SlotLink(), out, p.presentMachine.preparePulseChange)
 	})
 }
 
-func (p *PulseConveyor) CancelPulseChange() {
-	p.slotMachine.ScheduleSignal(func(worker smachine.FixedSlotWorker) {
-		zzz
+func (p *PulseConveyor) CancelPulseChange() error {
+	return p.sendSignal(func(ctx smachine.MachineCallContext) {
+		if p.presentMachine == nil {
+			return
+		}
+		ctx.BargeInNow(p.presentMachine.SlotLink(), nil, p.presentMachine.cancelPulseChange)
 	})
 }
 
-func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
+func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) error {
 	pd.EnsurePulsarData()
-	p.slotMachine.ScheduleSignal(func(worker smachine.FixedSlotWorker) {
-		// set current pulse number
-		current, ok := p.slotMachine.GetPublished(pd.PulseNumber)
-		if !ok {
+	// TODO check pulse data
 
-		}
-		if ps, ok := current.(*PulseSlot); ok {
-			pulseData
-		}
-
-		p.slotMachine.Migrate(worker)
-		zzz
+	return p.sendSignal(func(ctx smachine.MachineCallContext) {
+		//defer func() {
+		//	result <- recover()
+		//	close(result)
+		//}()
+		//if p.presentMachine == nil {
+		//	return
+		//}
+		// TODO allocate and swap slots
+		ctx.Migrate()
 	})
-
-	//p.signalQueue.Add(func(interface{}) {
-	//	if p.present != nil {
-	//		p.present.pulseSlot.pulseData.MakePast()
-	//		p.present = nil
-	//	}
-	//
-	//	if p.future != nil && !p.future.IsEmpty() {
-	//		p.future.pulseSlot.pulseData.MakePresent(pd)
-	//		p.present = p.future
-	//		p.future = nil
-	//	} else {
-	//		p.present = newPresentPulseSlot(pd, p.slotConfig)
-	//		p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
-	//			&PresentPulseSM{pulseSMTemplate{ps: p.present, psa: &p.pulseService}})
-	//	}
-	//
-	//	futurePD := pd.CreateNextExpected()
-	//	p.future = newFuturePulseSlot(futurePD, p.slotConfig)
-	//
-	//	p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
-	//		&PulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
-	//	p.past[futurePD.PulseNumber] = p.future
-	//
-	//	p.pulseService.svc.onCommitPulseChange(pd)
-	//	p.slotMachine.Migrate(true)
-	//})
 }
-
-//func (p *PulseConveyor) StartWorker(ctx context.Context) {
-//	if ctx == nil {
-//		panic("illegal value")
-//	}
-//
-//	p.mutex.Lock()
-//	defer p.mutex.Unlock()
-//
-//	if p.workerCtx != nil {
-//		panic("illegal state")
-//	}
-//	p.workerCtx = ctx
-//
-//	go p.workerConveyor()
-//}
-//
-//func (p *PulseConveyor) workerConveyor() {
-//	for {
-//		worker := smachine.NewSimpleSlotWorker(p.externalSignal.Mark())
-//
-//		for !worker.HasSignal() {
-//			select {
-//			case <-p.workerCtx.Done():
-//				p.externalSignal.NextBroadcast()
-//				return
-//			default:
-//			}
-//
-//			mark := p.internalSignal.Mark()
-//
-//			for _, sig := range p.signalQueue.Flush() {
-//				sig(nil)
-//			}
-//
-//			p.slotMachine.ScanOnce(worker)
-//
-//			if !mark.HasSignal() {
-//				// TODO we need a Yield to indicate "no work done"
-//			}
-//		}
-//	}
-//}

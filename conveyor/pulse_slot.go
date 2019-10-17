@@ -25,10 +25,11 @@ import (
 type PulseSlotState uint8
 
 const (
-	Uninitialized PulseSlotState = iota
+	_ PulseSlotState = iota
 	Future
 	Present
 	Past
+	Antique // non-individual past
 )
 
 type PulseSlotConfig struct {
@@ -66,7 +67,19 @@ func newPastPulseSlot(pd pulse.Data, config PulseSlotConfig) *PulseSlotMachine {
 }
 
 type PulseSlotMachine struct {
-	smachine.SlotMachine
+	machine   smachine.SlotMachine
 	pulseSlot PulseSlot
 	isAntique bool
+}
+
+func (p *PulseSlotMachine) SlotLink() smachine.SlotLink {
+
+}
+
+func (p *PulseSlotMachine) cancelPulseChange(ctx smachine.BargeInContext) smachine.StateUpdate {
+
+}
+
+func (p *PulseSlotMachine) preparePulseChange(ctx smachine.BargeInContext) smachine.StateUpdate {
+
 }

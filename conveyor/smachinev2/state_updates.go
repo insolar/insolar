@@ -359,5 +359,5 @@ func stateUpdateDefaultReplace(slot *Slot, stateUpdate StateUpdate, worker Fixed
 		return stateUpdateDefaultStop(slot, stateUpdate, worker)
 	}
 
-	return false, errors.New("replacement slot is missing")
+	return false, errors.New("replacement SM is missing")
 }
