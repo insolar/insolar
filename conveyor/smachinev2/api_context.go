@@ -159,8 +159,11 @@ type PostInitStepContext interface {
 	BargeInThisStepOnly() BargeInBuilder
 
 	// After completion of the current SM's step it will be stopped and the new SM created/started.
-	// The new SM will by default inherit parent, context and injected dependencies.
+	// The new SM will by default inherit parent, context, termination handler/result and injected dependencies.
+	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
+	// WARNING! Use of SetTerminationHandler() here will replace a previous handler and it will never fire.
 	Replace(CreateFunc) StateUpdate
+	// See Replace()
 	ReplaceWith(StateMachine) StateUpdate
 }
 

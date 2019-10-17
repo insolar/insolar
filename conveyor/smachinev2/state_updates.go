@@ -113,7 +113,11 @@ func init() {
 
 				newSlot := m.allocateSlot()
 				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
-				m.prepareNewSlot(newSlot, slot, nil, sm, true)
+				if m.prepareNewSlot(newSlot, slot, nil, sm, true) {
+					// prevent this slot from firing the termination handler
+					slot.defResultHandler = nil
+					slot.defResult = nil
+				}
 
 				stateUpdate.param1 = nil
 				stateUpdate.link = newSlot
@@ -135,7 +139,11 @@ func init() {
 				}
 				newSlot := m.allocateSlot()
 				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
-				m.prepareNewSlot(newSlot, slot, fn, nil, true)
+				if m.prepareNewSlot(newSlot, slot, fn, nil, true) {
+					// prevent this slot from firing the termination handler
+					slot.defResultHandler = nil
+					slot.defResult = nil
+				}
 
 				stateUpdate.param1 = nil
 				stateUpdate.link = newSlot
