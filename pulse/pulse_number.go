@@ -32,9 +32,10 @@ const (
 	MinTimePulse = LocalRelative + 1
 	MaxTimePulse = 1<<30 - 1
 	// Jet is a special pulse number value that signifies jet ID.
-	Jet Number = 1
+
+	Jet Number = 1 // TODO @Cyrax revisit
 	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
-	BuiltinContract Number = 200
+	BuiltinContract Number = 200 // TODO @Cyrax revisit
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )
