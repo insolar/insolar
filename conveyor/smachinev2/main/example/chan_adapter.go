@@ -47,11 +47,15 @@ func (c *ChannelAdapter) TrySyncCall(fn smachine.AdapterCallFunc) (bool, smachin
 	return false, nil
 }
 
-func (c *ChannelAdapter) SendNotify(fn smachine.AdapterCallFunc) {
+func (c *ChannelAdapter) SendNotify(fn smachine.AdapterNotifyFunc) {
 	if fn == nil {
 		panic("illegal value")
 	}
-	r := ChannelRecord{CallFn: fn}
+
+	r := ChannelRecord{CallFn: func() smachine.AsyncResultFunc {
+		fn()
+		return nil
+	}}
 	c.queueCall(r)
 }
 

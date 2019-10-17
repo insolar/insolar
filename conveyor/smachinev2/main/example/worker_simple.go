@@ -23,14 +23,14 @@ import (
 	"sync"
 )
 
-func NewSimpleSlotWorker(outerSignal tools.SignalVersion) *SimpleSlotWorker {
+func NewSimpleSlotWorker(outerSignal *tools.SignalVersion) *SimpleSlotWorker {
 	return &SimpleSlotWorker{outerSignal: outerSignal}
 }
 
 var _ smachine.FixedSlotWorker = &SimpleSlotWorker{}
 
 type SimpleSlotWorker struct {
-	outerSignal tools.SignalVersion
+	outerSignal *tools.SignalVersion
 	innerSignal func()
 	cond        *sync.Cond
 }
@@ -43,6 +43,10 @@ func (*SimpleSlotWorker) IsDetached() bool {
 	return false
 }
 
+func (p *SimpleSlotWorker) GetSignalMark() *tools.SignalVersion {
+	return p.outerSignal
+}
+
 func (p *SimpleSlotWorker) OuterCall(*smachine.SlotMachine, smachine.NonDetachableFunc) (wasExecuted bool) {
 	panic("unsupported")
 }
@@ -50,13 +54,6 @@ func (p *SimpleSlotWorker) OuterCall(*smachine.SlotMachine, smachine.NonDetachab
 func (p *SimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
 	fn(&DetachableSimpleSlotWorker{p})
 	return false
-}
-
-func (p *DetachableSimpleSlotWorker) GetCond() (bool, *sync.Cond) {
-	if p.cond == nil {
-		p.cond = sync.NewCond(&sync.Mutex{})
-	}
-	return true, p.cond
 }
 
 var _ smachine.DetachableSlotWorker = &DetachableSimpleSlotWorker{}
@@ -86,93 +83,3 @@ type NonDetachableSimpleSlotWorker struct {
 func (p *NonDetachableSimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
 	panic("not allowed")
 }
-
-//func (p *SimpleSlotWorker) FinishNested(state SlotMachineState) {
-//}
-//
-//func (p *SimpleSlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, err error) {
-//	wCtx := simpleWorkerContext{p}
-//
-//	defer func() {
-//		err = recoverSlotPanic("slot execution has failed", recover(), err)
-//		wCtx.w = nil
-//	}()
-//
-//	fn(wCtx)
-//	return false, nil
-//}
-//
-//func (p *SimpleSlotWorker) HasSignal() bool {
-//	return p.outerSignal.HasSignal()
-//}
-//
-//func (p *SimpleSlotWorker) getCond() *sync.Cond {
-//	if p.cond == nil {
-//		p.cond = sync.NewCond(&sync.Mutex{})
-//	}
-//	return p.cond
-//}
-//
-//func (p *SimpleSlotWorker) wakeUpAfterSharedAccess(slot *Slot, link SlotLink) context.CancelFunc {
-//	return func() {
-//		if !link.IsValid() {
-//			return
-//		}
-//		m := link.s.machine
-//		m._applyInplaceUpdate(link.s, true, activateSlot)
-//	}
-//}
-//
-//type simpleWorkerContext struct {
-//	w *SimpleSlotWorker
-//}
-//
-//func (p simpleWorkerContext) AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
-//	switch {
-//	case !link.IsValid():
-//		return SharedSlotAbsent, nil
-//	case slot == link.s:
-//		// no need to wakeup ourselves
-//		return SharedSlotAvailableAlways, nil
-//	}
-//	if link.s.machine == nil {
-//		panic("illegal state")
-//	}
-//
-//	isRemote := slot.machine != link.s.machine
-//	if link.s.isWorking() {
-//		if isRemote {
-//			return SharedSlotRemoteBusy, nil
-//		}
-//		return SharedSlotLocalBusy, nil
-//	}
-//
-//	var finishFn context.CancelFunc
-//	if wakeUpOnUse {
-//		finishFn = p.w.wakeUpAfterSharedAccess(slot, link)
-//	}
-//
-//	if isRemote {
-//		return SharedSlotRemoteAvailable, finishFn
-//	}
-//	return SharedSlotAvailableAlways, finishFn
-//}
-//
-//func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {
-//	return loopCount < 10, p.w.HasSignal()
-//}
-//
-//func (p simpleWorkerContext) StartNested(state SlotMachineState) SlotWorker {
-//	return p.w
-//}
-//
-//func (p simpleWorkerContext) HasSignal() bool {
-//	return p.w.HasSignal()
-//}
-//
-//func (p simpleWorkerContext) GetCond() (bool, *sync.Cond) {
-//	if p.HasSignal() {
-//		return false, nil
-//	}
-//	return true, p.w.getCond()
-//}

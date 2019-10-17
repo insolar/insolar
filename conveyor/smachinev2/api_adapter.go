@@ -26,42 +26,22 @@ func (v AdapterID) IsEmpty() bool {
 	return len(v) == 0
 }
 
-type AdapterCallbackFunc func(AsyncResultFunc, error)
 type AdapterCallFunc func() AsyncResultFunc
 type AdapterNotifyFunc func()
-
-/* This is a helper interface to facilitate implementation of service adapters */
-type ExecutionAdapter interface {
-	GetAdapterID() AdapterID
-	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
-	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
-	// TODO PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester
-}
-
-type SyncCallRequester interface {
-	// TODO WithNestedHandler
-	/* Returns true when the call was successful. Will return false when worker has a signal / interrupt */
-	TryCall() bool
-	/* Panics when it wasn't possible to perform a sync call */
-	Call()
-}
+type CreateFactoryFunc func(eventPayload interface{}) CreateFunc
 
 type AsyncCallRequester interface {
-	/* Allocates and provides cancellation function. Repeated calls return the same. */
+	/* Allocates and provides cancellation function. Repeated call returns same. */
 	WithCancel(*context.CancelFunc) AsyncCallRequester
-
-	/*
-		When true will automatically cancel this call after the step is changed
-		NB! This cancel functionality is PASSIVE and requires state to be checked by an executor of request.
-	*/
-	WithAutoCancelOnStep(attach bool) AsyncCallRequester
-
-	// TODO WithNestedHandler
-	// TODO With(mode AsyncCallFlags) AsyncCallRequester
+	// Sets a handler to map nested calls from the target adapter to new SMs
+	// If this handler is nil or returns nil, then a default handler of the adapter will be in use.
+	// To block a nested event - return non-nil CreateFunc, and then return nil from CreateFunc.
+	WithNested(CreateFactoryFunc) AsyncCallRequester
+	// See AsyncCallFlags
+	WithFlags(flags AsyncCallFlags) AsyncCallRequester
 
 	/* Starts async call  */
 	Start()
-
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
 	DelayedStart() CallConditionalBuilder
 }
@@ -69,7 +49,6 @@ type AsyncCallRequester interface {
 type NotifyRequester interface {
 	/* Sends notify */
 	Send()
-
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
 	DelayedSend() CallConditionalBuilder
 }
@@ -77,29 +56,59 @@ type NotifyRequester interface {
 type AsyncCallFlags uint8
 
 const (
+	/*
+		Call stays valid for this step (where the call is made) and for a next step.
+		When SM will went further, the call or its result will be cancelled / ignored.
+		NB! This cancel functionality is PASSIVE, an adapter should check this status explicitly.
+	*/
 	CallBoundToStep AsyncCallFlags = iota << 1
+	/*
+		When set, a wakeup from call's result will be valid for this step (where the call is made) and for a next step.
+	*/
 	WakeUpBoundToStep
+	/*
+		When set, receiving of call's successful result will wake up the slot without WakeUp().
+		Behavior of this flag is also affected by WakeUpBoundToStep.
+	*/
 	AutoWakeUp
 )
 
-//const WakeUpDisabled AsyncCallFlags = 0
+type SyncCallRequester interface {
+	// Sets a handler to map nested calls from the target adapter to new SMs.
+	// See AsyncCallRequester.WithNested() for details.
+	WithNested(CreateFactoryFunc) AsyncCallRequester
+
+	/* Returns true when the call was successful. May return false on a signal - depends on context mode */
+	TryCall() bool
+	/* May panic on migrate - depends on context mode */
+	Call()
+}
 
 /* Provided by adapter's internals */
 type AdapterExecutor interface {
 	/*
 		Schedules asynchronous execution, MAY return native cancellation function if supported.
-		Panics are handled by caller's function.
+		Panics are handled by caller.
 	*/
 	StartCall(fn AdapterCallFunc, callback *AdapterCallback, requireCancel bool) context.CancelFunc
 
-	SendNotify(AdapterCallFunc)
+	/*
+		Schedules asynchronous, fire-and-forget execution.
+		Panics are handled by caller.
+	*/
+	SendNotify(AdapterNotifyFunc)
 
 	/*
 		    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
 			Panics are handled by caller.
 	*/
 	TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc)
-	//Migrate(slotMachineState SlotMachineState, migrationCount uint16)
 }
 
-type CreateFactoryFunc func(eventPayload interface{}) CreateFunc
+/* This is interface of a helper to facilitate implementation of service adapters. */
+type ExecutionAdapter interface {
+	GetAdapterID() AdapterID
+	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
+	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
+	PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester
+}

@@ -34,7 +34,7 @@ func (StateMachine2) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc
 }
 
 var IterationCount uint64
-var Limiter = smachine.NewFixedLimiter(1000, "global")
+var Limiter = smachine.NewFixedSemaphore(1000, "global")
 
 /* -------- Instance ------------- */
 

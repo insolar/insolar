@@ -16,9 +16,7 @@
 
 package smachine
 
-import (
-	"sync"
-)
+import "github.com/insolar/insolar/conveyor/tools"
 
 type AttachedFunc func(AttachedSlotWorker)
 type DetachableFunc func(DetachableSlotWorker)
@@ -27,13 +25,14 @@ type NonDetachableFunc func(FixedSlotWorker)
 type SlotWorker interface {
 	HasSignal() bool
 	IsDetached() bool
+	GetSignalMark() *tools.SignalVersion
 }
 
 type DetachableSlotWorker interface {
 	SlotWorker
 
 	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
-	GetCond() (bool, *sync.Cond)
+
 	// provides a temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
 	NonDetachableOuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool)
@@ -52,6 +51,5 @@ type AttachedSlotWorker interface {
 }
 
 type AttachableSlotWorker interface {
-	SlotWorker
 	AttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }

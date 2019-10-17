@@ -290,16 +290,34 @@ func (p *slotContext) acquire(link SyncLink, flags SlotDependencyFlags) (d BoolD
 	return d
 }
 
+func (p *slotContext) ReleaseAny() bool {
+	p.ensureAtLeast(updCtxInit)
+	return p.release(nil)
+}
+
 func (p *slotContext) Release(link SyncLink) bool {
 	p.ensureAtLeast(updCtxInit)
+
+	if link.IsZero() {
+		panic("illegal value")
+	}
+	return p.release(link.controller)
+}
+
+func (p *slotContext) release(controller DependencyController) bool {
 	dep := p.s.dependency
 	if dep == nil {
+		return false
+	}
+	if controller != nil && !controller.CheckDependency(dep).IsValid() {
+		// mismatched sync object
 		return false
 	}
 
 	p.s.dependency = nil
 	released := dep.Release()
-	return p.s.machine.activateDependantByDetachable(released, p.w)
+	p.s.machine.activateDependantByDetachable(released, p.w)
+	return true
 }
 
 func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
@@ -315,7 +333,7 @@ func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
 		adjustment += adjustmentBase
 	}
 
-	released, activate := adj.controller.AdjustLimit(adjustment)
+	released, activate := adj.controller.AdjustLimit(adjustment, false)
 	if activate {
 		return p.s.machine.activateDependantByDetachable(released, p.w)
 	}

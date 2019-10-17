@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
@@ -93,11 +93,8 @@ func (p *exclusiveSync) GetLimit() (limit int, isAdjustable bool) {
 	return 1, false
 }
 
-func (p *exclusiveSync) AdjustLimit(limit int) (deps []StepLink, activate bool) {
-	if limit != 1 {
-		panic("illegal value")
-	}
-	return nil, false
+func (p *exclusiveSync) AdjustLimit(limit int, absolute bool) (deps []StepLink, activate bool) {
+	panic("illegal state")
 }
 
 var _ DependencyQueueController = &exclusiveQueueController{}

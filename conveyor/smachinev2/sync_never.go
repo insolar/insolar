@@ -63,7 +63,7 @@ func (p *infiniteLock) GetLimit() (limit int, isAdjustable bool) {
 	return 0, false
 }
 
-func (p *infiniteLock) AdjustLimit(limit int) ([]StepLink, bool) {
+func (p *infiniteLock) AdjustLimit(limit int, absolute bool) ([]StepLink, bool) {
 	panic("illegal state")
 }
 

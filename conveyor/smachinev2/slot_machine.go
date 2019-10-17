@@ -1160,3 +1160,7 @@ func (m *SlotMachine) activateDependantByDetachable(links []StepLink, worker Det
 	})
 	return true
 }
+
+func (m *SlotMachine) GetStoppingSignal() <-chan struct{} {
+	return m.syncQueue.GetStoppingSignal()
+}

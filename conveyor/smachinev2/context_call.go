@@ -19,7 +19,6 @@ package smachine
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
-	"sync/atomic"
 )
 
 func NewExecutionAdapter(adapterID AdapterID, executor AdapterExecutor) ExecutionAdapter {
@@ -55,11 +54,17 @@ func (p adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc
 	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
 }
 
+func (p adapterExecHelper) PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester {
+	return &adapterNotifyRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
+}
+
 const (
 	adapterSyncCallContext     = 1
 	adapterAsyncCallContext    = 2
 	adapterCallContextDisposed = 3
 )
+
+/* ============================================================== */
 
 type adapterCallRequest struct {
 	ctx      *executionContext
@@ -67,8 +72,9 @@ type adapterCallRequest struct {
 	executor AdapterExecutor
 	mode     uint8
 
-	stepBound bool
-	cancel    *syncrun.ChainedCancel
+	flags    AsyncCallFlags
+	nestedFn CreateFactoryFunc
+	cancel   *syncrun.ChainedCancel
 }
 
 func (c *adapterCallRequest) discard() {
@@ -93,9 +99,15 @@ func (c *adapterCallRequest) WithCancel(fn *context.CancelFunc) AsyncCallRequest
 	return &r
 }
 
-func (c *adapterCallRequest) WithAutoCancelOnStep(attach bool) AsyncCallRequester {
+func (c *adapterCallRequest) WithNested(nestedFn CreateFactoryFunc) AsyncCallRequester {
 	r := *c
-	r.stepBound = attach
+	r.nestedFn = nestedFn
+	return &r
+}
+
+func (c *adapterCallRequest) WithFlags(flags AsyncCallFlags) AsyncCallRequester {
+	r := *c
+	r.flags = flags
 	return &r
 }
 
@@ -110,7 +122,7 @@ func (c *adapterCallRequest) DelayedStart() CallConditionalBuilder {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
-	return callConditionalBuilder{c}
+	return callConditionalBuilder{c.ctx, c._startAsync}
 }
 
 func (c *adapterCallRequest) TryCall() bool {
@@ -130,12 +142,6 @@ func (c *adapterCallRequest) Call() {
 }
 
 func (c *adapterCallRequest) _startAsync() {
-	var stepLink StepLink
-	stepLink = c.ctx.s.NewStepLink()
-	if !c.stepBound {
-		stepLink = stepLink.AnyStep()
-	}
-
 	if c.cancel != nil && c.cancel.IsCancelled() {
 		return
 	}
@@ -144,38 +150,13 @@ func (c *adapterCallRequest) _startAsync() {
 	if c.ctx.countAsyncCalls == 0 {
 		panic("overflow")
 	}
-	callback := NewAdapterCallback(stepLink, nil, nil)
+
+	stepLink := c.ctx.s.NewStepLink()
+	callback := NewAdapterCallback(stepLink, nil, c.flags, c.nestedFn)
 	cancelFn := c.executor.StartCall(c.fn, callback, c.cancel != nil)
 
 	if c.cancel != nil {
 		c.cancel.SetChain(cancelFn)
-	}
-}
-
-func _asyncCallback(stepLink StepLink) AdapterCallbackFunc {
-	callbackGuard := uint32(0)
-
-	return func(resultFn AsyncResultFunc, err error) {
-		if atomic.SwapUint32(&callbackGuard, 1) != 0 {
-			panic("repeated callback")
-		}
-
-		if !stepLink.IsValid() {
-			return
-		}
-
-		stepLink.s.machine.queueAsyncCallback(stepLink.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
-			slot.decAsyncCount()
-
-			if err == nil && resultFn != nil {
-				rc := asyncResultContext{slot: slot}
-				if wakeup := rc.executeResult(resultFn); wakeup {
-					return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
-				}
-			}
-
-			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdNoChange).newNoArg()
-		}, err)
 	}
 }
 
@@ -197,66 +178,88 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 		return result
 	}
 
-	ok, wc := c.ctx.w.GetCond()
-	if !ok {
+	workerMark := c.ctx.w.GetSignalMark()
+	if workerMark == nil {
 		return nil
 	}
 
-	var resultFn AsyncResultFunc
-	var resultErr error
-	var callState int
+	type resultType struct {
+		fn  AsyncResultFunc
+		err error
+	}
+	resultCh := make(chan resultType, 1)
 
-	stepLink := c.ctx.s.NewStepLink()
-	callback := NewAdapterCallback(stepLink, func(fn AsyncResultFunc, err error) {
-		wc.L.Lock()
-		switch callState {
-		case 0:
-			resultFn = fn
-			resultErr = err
-			callState = 1
-			wc.Broadcast()
-		case 1:
-			wc.L.Unlock()
-			panic("repeated callback")
-		}
-		wc.L.Unlock()
-	}, nil)
+	callback := NewAdapterCallback(c.ctx.s.NewStepLink(), func(fn AsyncResultFunc, err error) {
+		resultCh <- resultType{fn, err}
+		close(resultCh) // prevent repeated callbacks
+	}, 0, c.nestedFn)
 
 	cancelFn := c.executor.StartCall(c.fn, callback, false)
 
-	wc.L.Lock()
-	if callState == 0 {
-		wc.Wait()
-
-		if callState == 0 {
-			/* Cond can be triggered by Worker for emergency stop */
-			callState = 2
-
-			wc.L.Unlock()
-
-			if cancelFn != nil {
-				cancelFn()
-			}
-			return nil
+	select {
+	case result := <-resultCh:
+		if result.err != nil {
+			panic(result.err)
 		}
-	}
-	wc.L.Unlock()
+		return result.fn
 
-	if resultErr != nil {
-		panic(resultErr)
+	case <-workerMark.ChannelIf(c.ctx.flags&PanicOnMigrate != 0, nil):
+	case <-c.ctx.s.machine.GetStoppingSignal():
 	}
-	return resultFn
+
+	if cancelFn != nil {
+		cancelFn()
+	}
+	return nil
 }
+
+/* ============================================================== */
+
+type adapterNotifyRequest struct {
+	ctx      *executionContext
+	fn       AdapterNotifyFunc
+	executor AdapterExecutor
+	mode     uint8
+}
+
+func (c *adapterNotifyRequest) discard() {
+	c.mode = adapterCallContextDisposed
+}
+
+func (c *adapterNotifyRequest) ensure() {
+	if c.mode != adapterAsyncCallContext {
+		panic("illegal state")
+	}
+}
+
+func (c *adapterNotifyRequest) Send() {
+	c.ensure()
+	defer c.discard()
+
+	c._startAsync()
+}
+
+func (c *adapterNotifyRequest) DelayedSend() CallConditionalBuilder {
+	c.ensure()
+	return callConditionalBuilder{c.ctx, c._startAsync}
+}
+
+func (c *adapterNotifyRequest) _startAsync() {
+	c.executor.SendNotify(c.fn)
+}
+
+/* ============================================================== */
 
 var _ CallConditionalBuilder = callConditionalBuilder{}
 
 type callConditionalBuilder struct {
-	c *adapterCallRequest
+	ctx     *executionContext
+	kickOff StepPrepareFunc
 }
 
 func (v callConditionalBuilder) newConditionalUpdate(updType stateUpdKind) ConditionalBuilder {
-	cu := v.c.ctx.newConditionalUpdate(updType)
-	cu.kickOff = v.c._startAsync
+	cu := v.ctx.newConditionalUpdate(updType)
+	cu.kickOff = v.kickOff
 	return &cu
 }
 

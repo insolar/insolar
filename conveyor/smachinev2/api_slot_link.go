@@ -142,6 +142,20 @@ func (p StepLink) IsAtStep() bool {
 	return p.id == id && (p.step == 0 || p.step == step)
 }
 
+func (p StepLink) IsNearStep(forwardDelta uint32) bool {
+	if p.s == nil {
+		return false
+	}
+	switch id, step, _ := p.s.GetState(); {
+	case p.id != id:
+		return false
+	case p.step == 0:
+		return true
+	default:
+		return step-p.step <= forwardDelta
+	}
+}
+
 func (p StepLink) isValidAndAtExactStep() (valid, atExactStep bool) {
 	if p.s == nil {
 		return false, false

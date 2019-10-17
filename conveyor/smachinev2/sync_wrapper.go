@@ -58,10 +58,10 @@ func (w *syncMutexWrapper) GetLimit() (limit int, isAdjustable bool) {
 	return w.inner.GetLimit()
 }
 
-func (w *syncMutexWrapper) AdjustLimit(limit int) (deps []StepLink, activate bool) {
+func (w *syncMutexWrapper) AdjustLimit(limit int, absolute bool) (deps []StepLink, activate bool) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-	return w.inner.AdjustLimit(limit)
+	return w.inner.AdjustLimit(limit, absolute)
 }
 
 func (w *syncMutexWrapper) GetCounts() (active, inactive int) {

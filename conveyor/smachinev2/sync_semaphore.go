@@ -16,20 +16,35 @@
 
 package smachine
 
-import "github.com/insolar/insolar/network/consensus/common/rwlock"
+import (
+	"github.com/insolar/insolar/network/consensus/common/rwlock"
+	"math"
+)
 
-func NewSemaphore(initialCount int, name string) SemaphoreLink {
-	ctl := &semaSync{}
-	ctl.controller.Init(name)
-	deps, _ := ctl.AdjustLimit(initialCount)
-	if len(deps) != 0 {
-		panic("illegal state")
+// Semaphore allows Acquire() call to pass through for a number of workers within the limit.
+func NewFixedSemaphore(limit int, name string) SyncLink {
+	if limit < 0 {
+		panic("illegal value")
 	}
-	return SemaphoreLink{ctl}
+	switch limit {
+	case 0:
+		return NewInfiniteLock(name)
+	case 1:
+		return NewExclusive(name)
+	default:
+		return NewSyncLink(newSemaphore(limit, false, name))
+	}
+}
+
+// Semaphore allows Acquire() call to pass through for a number of workers within the limit.
+// Negative and zero values are not passable.
+// The limit can be changed with adjustments. Overflows are capped by min/max int.
+func NewSemaphore(initialValue int, name string) SemaphoreLink {
+	return SemaphoreLink{newSemaphore(initialValue, true, name)}
 }
 
 type SemaphoreLink struct {
-	ctl *semaSync
+	ctl *semaphoreSync
 }
 
 func (v SemaphoreLink) IsZero() bool {
@@ -50,110 +65,178 @@ func (v SemaphoreLink) NewValue(value int) SyncAdjustment {
 	return SyncAdjustment{controller: v.ctl, adjustment: value, isAbsolute: true}
 }
 
-func (v SemaphoreLink) NewBoolValue(isOpen bool) SyncAdjustment {
-	if isOpen {
-		return v.NewValue(1)
-	}
-	return v.NewValue(0)
-}
-
 func (v SemaphoreLink) SyncLink() SyncLink {
 	return NewSyncLink(v.ctl)
 }
 
-type semaSync struct {
-	controller holdingQueueController
+func newSemaphore(initialLimit int, isAdjustable bool, name string) *semaphoreSync {
+	ctl := &semaphoreSync{isAdjustable: true}
+	ctl.controller.Init(name)
+	deps, _ := ctl.AdjustLimit(initialLimit, false)
+	if len(deps) != 0 {
+		panic("illegal state")
+	}
+	ctl.isAdjustable = isAdjustable
+	return ctl
 }
 
-func (p *semaSync) CheckState() Decision {
+type semaphoreSync struct {
+	controller   workingQueueController
+	isAdjustable bool
+}
+
+func (p *semaphoreSync) CheckState() Decision {
 	if p.controller.IsOpen() {
 		return Passed
 	}
 	return NotPassed
 }
 
-func (p *semaSync) CheckDependency(dep SlotDependency) Decision {
+func (p *semaphoreSync) CheckDependency(dep SlotDependency) Decision {
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
-		case !p.controller.Contains(entry):
-			return Impossible
-		case p.controller.IsOpen():
+		case p.controller.Contains(entry):
 			return Passed
-		default:
+		case p.controller.ContainsInAwaiters(entry):
 			return NotPassed
 		}
 	}
 	return Impossible
 }
 
-func (p *semaSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
 		case !entry.IsCompatibleWith(flags):
 			return Impossible
-		case !p.controller.Contains(entry):
-			return Impossible
-		case p.controller.IsOpen():
+		case p.controller.Contains(entry):
 			return Passed
-		default:
+		case p.controller.ContainsInAwaiters(entry):
 			return NotPassed
 		}
 	}
 	return Impossible
 }
 
-func (p *semaSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
+func (p *semaphoreSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
 	if p.controller.IsOpen() {
-		return true, nil
+		return true, p.controller.queue.AddSlot(slot.NewLink(), flags)
 	}
-	return false, p.controller.queue.AddSlot(slot.NewLink(), flags)
+	return false, p.controller.awaiters.queue.AddSlot(slot.NewLink(), flags)
 }
 
-func (p *semaSync) GetLimit() (limit int, isAdjustable bool) {
-	return p.controller.state, true
+func (p *semaphoreSync) GetLimit() (limit int, isAdjustable bool) {
+	return p.controller.workerLimit, p.isAdjustable
 }
 
-func (p *semaSync) AdjustLimit(limit int) ([]StepLink, bool) {
-	p.controller.state = limit
-	if !p.controller.IsOpen() {
+func (p *semaphoreSync) AdjustLimit(limit int, absolute bool) ([]StepLink, bool) {
+	if !p.isAdjustable {
+		panic("illegal state")
+	}
+
+	if ok, newLimit := applyWrappedAdjustment(p.controller.workerLimit, limit, math.MinInt32, math.MaxInt32, absolute); ok {
+		limit = newLimit
+	} else {
 		return nil, false
 	}
-	return p.controller.queue.FlushAllAsLinks(), true
+
+	delta := limit - p.controller.workerLimit
+	p.controller.workerLimit = limit
+
+	if delta > 0 {
+		links := make([]StepLink, delta)
+		pos := 0
+		p.controller.awaiters.queue.CutHeadOut(func(entry *dependencyQueueEntry) bool {
+			if step, ok := entry.link.GetStepLink(); ok {
+				p.controller.queue.AddLast(entry)
+				links[pos] = step
+				pos++
+				return pos < delta
+			}
+			return true
+		})
+		return links[:pos], true
+	}
+
+	delta = -delta
+	links := make([]StepLink, delta)
+
+	// sequence is reversed!
+	p.controller.queue.CutTailOut(func(entry *dependencyQueueEntry) bool {
+		if step, ok := entry.link.GetStepLink(); ok {
+			p.controller.awaiters.queue.AddFirst(entry)
+			delta--
+			links[delta] = step
+			return delta > 0
+		}
+		return true
+	})
+	return links[delta:], false
 }
 
-func (p *semaSync) GetCounts() (active, inactive int) {
-	return -1, p.controller.queue.Count()
+func (p *semaphoreSync) GetCounts() (active, inactive int) {
+	return p.controller.queue.Count(), p.controller.awaiters.queue.Count()
 }
 
-func (p *semaSync) GetName() string {
+func (p *semaphoreSync) GetName() string {
 	return p.controller.GetName()
 }
 
-type holdingQueueController struct {
-	waitingQueueController
-	state int
+type waitingQueueController struct {
+	exclusiveQueueController
 }
 
-func (p *holdingQueueController) IsOpen() bool {
-	return p.state <= 0
-}
-
-func (p *holdingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
 	removeFn()
-	if p.IsOpen() && p.queue.Count() > 0 {
-		panic("illegal state")
-	}
 	return nil
 }
 
-func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
-	return p.IsOpen()
+type workingQueueController struct {
+	exclusiveQueueController
+	workerLimit int
+	awaiters    waitingQueueController
 }
 
-func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
-	return flags&syncForOneStep != 0 || p.IsOpen()
+func (p *workingQueueController) Init(name string) {
+	if p.queue.controller != nil {
+		panic("illegal state")
+	}
+	p.name = name
+	p.awaiters.name = name
+	p.queue.controller = p
+	p.awaiters.queue.controller = &p.awaiters
+}
+
+func (p *workingQueueController) IsOpen() bool {
+	return p.queue.Count() < p.workerLimit
+}
+
+func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+	removeFn()
+
+	n := p.workerLimit - p.queue.Count()
+	if n <= 0 {
+		return nil
+	}
+
+	links := make([]StepLink, 0, n)
+	for n > 0 {
+		if f, step := p.awaiters.queue.FirstValid(); f == nil {
+			break
+		} else {
+			f.removeFromQueue()
+			p.queue.AddLast(f)
+			links = append(links, step)
+			n--
+		}
+	}
+	return links
+}
+
+func (p *workingQueueController) ContainsInAwaiters(entry *dependencyQueueEntry) bool {
+	return p.awaiters.Contains(entry)
 }

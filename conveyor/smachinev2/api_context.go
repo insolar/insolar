@@ -158,7 +158,17 @@ type ExecutionContext interface {
 	StepLink() StepLink
 	GetPendingCallCount() int
 
-	// TODO LongRun(PanicOnMigrate)
+	// WARNING! AVOID this method unless really needed.
+	// The method forces detachment of this slot from SlotMachine's worker to allow slow processing and/or multiple sync calls.
+	// Can only be called once per step. Detachment remains until end of the step.
+	// Detached step will PREVENT access to any bound data shared by this SM.
+	// To avoid doubt - detached step, like a normal step, will NOT receive async results, it can only receive result of sync calls.
+	//
+	// WARNING! SM with a detached step will NOT receive migrations until the detached step is finished.
+	// Hence, SM may become inconsistent with other shared objects and injections that could be updated by migrations.
+	//
+	// Will panic when: (1) not supported by current worker, (2) detachment limit exceeded, (3) called repeatedly.
+	InitiateLongRun(LongRunFlags)
 
 	// Immediately allocates a new slot and constructs SM. And schedules initialization.
 	// It is guaranteed that:
@@ -195,6 +205,13 @@ type ExecutionContext interface {
 	// SM will apply an action chosen by the builder and wait for an explicit activation of this slot, e.g. any WakeUp() action.
 	Sleep() StateConditionalBuilder
 }
+
+type LongRunFlags uint8
+
+const (
+	manualDetach LongRunFlags = 1 << iota
+	PanicOnMigrate
+)
 
 type MigrationContext interface {
 	PostInitStepContext

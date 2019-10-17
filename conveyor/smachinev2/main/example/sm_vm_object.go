@@ -30,7 +30,7 @@ type vmObjectSM struct {
 	smachine.StateMachineDeclTemplate
 
 	SharedObjectState
-	readyToWorkCtl smachine.SemaphoreLink
+	readyToWorkCtl smachine.BoolConditionalLink
 }
 
 type ObjectInfo struct {
@@ -70,10 +70,10 @@ func (sm *vmObjectSM) GetStateMachineDeclaration() smachine.StateMachineDeclarat
 func (sm *vmObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.migrateStop)
 
-	sm.readyToWorkCtl = smachine.NewSemaphore(0, "readyToWork")
+	sm.readyToWorkCtl = smachine.NewConditionalBool(false, "readyToWork")
 	sm.SemaReadyToWork = sm.readyToWorkCtl.SyncLink()
-	sm.ImmutableExecute = smachine.NewFixedLimiter(5, "immutable calls")
-	sm.MutableExecute = smachine.NewFixedLimiter(1, "mutable calls") // TODO here we need an ORDERED queue
+	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
+	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
 
 	sdl := ctx.Share(&sm.SharedObjectState, 0)
 	if !ctx.Publish(sm.ObjKey, sdl) {
@@ -101,7 +101,7 @@ func (sm *vmObjectSM) stateGotLatestValidatedState(ctx smachine.ExecutionContext
 	if sm.ObjectLatestValidState == nil {
 		return ctx.Sleep().ThenRepeat()
 	}
-	ctx.ApplyAdjustment(sm.readyToWorkCtl.NewBoolValue(true))
+	ctx.ApplyAdjustment(sm.readyToWorkCtl.NewValue(true))
 
 	return ctx.JumpExt(smachine.SlotStep{Transition: sm.waitForMigration, Migration: sm.migrateSendState})
 }

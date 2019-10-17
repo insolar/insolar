@@ -23,6 +23,15 @@ var _ ExecutionContext = &executionContext{}
 type executionContext struct {
 	slotContext
 	countAsyncCalls uint16
+	flags           LongRunFlags
+}
+
+func (p *executionContext) InitiateLongRun(flags LongRunFlags) {
+	if p.flags != 0 {
+		panic("illegal state - repeated call")
+	}
+	panic("unsupported")
+	//p.flags = flags | manualDetach
 }
 
 func (p *executionContext) GetPendingCallCount() int {

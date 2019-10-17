@@ -19,6 +19,7 @@ package tools
 import (
 	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 func NewVersionedSignal() VersionedSignal {
@@ -26,115 +27,120 @@ func NewVersionedSignal() VersionedSignal {
 }
 
 type VersionedSignal struct {
-	mutex   sync.Mutex
-	cond    *sync.Cond
-	version uint32 //read:atomic; write:lock+atomic
-	verCh   chan struct{}
+	signalVersion unsafe.Pointer // atomic *SignalVersion
 }
 
-func (p *VersionedSignal) getVersion() uint32 {
-	return atomic.LoadUint32(&p.version)
-}
-
-func (p *VersionedSignal) Mark() SignalVersion {
-	return SignalVersion{p, p.getVersion(), nil}
-}
-
-/* Increment version and send a signal */
 func (p *VersionedSignal) NextBroadcast() {
-	p.NextBroadcastAndMark()
+	sv := (*SignalVersion)(atomic.SwapPointer(&p.signalVersion, nil))
+	if sv != nil {
+		sv.signal()
+	}
 }
 
-/* Increment version and send a signal */
-func (p *VersionedSignal) NextBroadcastAndMark() SignalVersion {
-	p.mutex.Lock()
-	p.verCh = nil
-	v := p.getVersion() + 1
-	if !atomic.CompareAndSwapUint32(&p.version, v-1, v) {
-		p.mutex.Unlock()
-		panic("illegal state")
+func (p *VersionedSignal) BroadcastAndMark() *SignalVersion {
+	nsv := newSignalVersion()
+	sv := (*SignalVersion)(atomic.SwapPointer(&p.signalVersion, (unsafe.Pointer)(nsv)))
+	if sv != nil {
+		sv.signal()
 	}
-	if p.cond != nil {
-		p.cond.Broadcast()
-	}
-	p.mutex.Unlock()
-	return SignalVersion{p, v, nil}
+	return nsv
 }
 
-/* Broadcasts on every signal */
-func (p *VersionedSignal) GetCond() *sync.Cond {
-	p.mutex.Lock()
-	c := p.getCond()
-	p.mutex.Unlock()
-	return c
+func (p *VersionedSignal) Mark() *SignalVersion {
+	var nsv *SignalVersion
+	for {
+		sv := (*SignalVersion)(atomic.LoadPointer(&p.signalVersion))
+		switch {
+		case sv != nil:
+			return sv
+		case nsv == nil: // avoid repetitive new
+			nsv = newSignalVersion()
+		}
+		if atomic.CompareAndSwapPointer(&p.signalVersion, nil, (unsafe.Pointer)(nsv)) {
+			return nsv
+		}
+	}
 }
 
-func (p *VersionedSignal) getCond() *sync.Cond {
-	c := p.cond
-	if c == nil {
-		c = sync.NewCond(&p.mutex)
-		p.cond = c
-	}
-	return c
+func newSignalVersion() *SignalVersion {
+	sv := SignalVersion{}
+	sv.wg.Add(1)
+	return &sv
 }
 
-func (p *VersionedSignal) getChannel(v uint32) <-chan struct{} {
-	if p.getVersion() != v {
-		return ClosedChannel()
-	}
-
-	p.mutex.Lock()
-	if p.getVersion() != v {
-		return ClosedChannel()
-	}
-
-	ch := p.verCh
-	if ch == nil {
-		ch = make(chan struct{})
-		p.verCh = ch
-
-		go p.workerCloser(v, p.getCond(), ch)
-	}
-	p.mutex.Unlock()
-	return ch
-}
-
-func (p *VersionedSignal) workerCloser(v uint32, cd *sync.Cond, ch chan struct{}) {
-	cd.L.Lock()
-	for p.getVersion() == v {
-		cd.Wait()
-	}
-	cd.L.Unlock()
-	close(ch)
-}
+type signalChannel = chan struct{}
 
 type SignalVersion struct {
-	s *VersionedSignal
-	v uint32
-	c <-chan struct{}
+	next *SignalVersion
+	wg   sync.WaitGroup
+	c    unsafe.Pointer // atomic *signalChannel
 }
 
-func (p SignalVersion) HasSignal() bool {
-	return p.v != p.s.getVersion()
-}
-
-func (p SignalVersion) GetCond() *sync.Cond {
-	return p.s.GetCond()
-}
-
-func (p SignalVersion) Wait() {
-	cd := p.GetCond()
-
-	cd.L.Lock()
-	for p.s.getVersion() == p.v {
-		cd.Wait()
+func (p *SignalVersion) signal() {
+	if p.next != nil {
+		p.next.signal() // older signals must fire first
 	}
-	cd.L.Unlock()
+
+	var closedSignal *signalChannel // explicit type decl to avoid passing of something wrong into unsafe.Pointer conversion
+	closedSignal = &closedChan
+
+	atomic.CompareAndSwapPointer(&p.c, nil, (unsafe.Pointer)(closedSignal))
+	p.wg.Done()
+}
+
+func (p *SignalVersion) Wait() {
+	if p == nil {
+		return
+	}
+
+	p.wg.Wait()
+}
+
+func (p *SignalVersion) ChannelIf(choice bool, def <-chan struct{}) <-chan struct{} {
+	if choice {
+		return p.Channel()
+	}
+	return def
 }
 
 func (p *SignalVersion) Channel() <-chan struct{} {
-	if p.c == nil {
-		p.c = p.s.getChannel(p.v)
+	if p == nil {
+		return ClosedChannel()
 	}
-	return p.c
+
+	var wcp *signalChannel
+	for {
+		sc := (*signalChannel)(atomic.LoadPointer(&p.c))
+		switch {
+		case sc != nil:
+			return *sc
+		case wcp == nil:
+			wcp = new(signalChannel)
+		}
+
+		if atomic.CompareAndSwapPointer(&p.c, nil, (unsafe.Pointer)(wcp)) {
+			go func() {
+				p.wg.Wait()
+				close(*wcp)
+			}()
+			return *wcp
+		}
+	}
+}
+
+func (p *SignalVersion) HasSignal() bool {
+	if p == nil {
+		return true
+	}
+
+	sc := (*signalChannel)(atomic.LoadPointer(&p.c))
+	if sc == nil {
+		return false
+	}
+	select {
+	case <-*sc:
+		return true
+	default:
+		return false
+	}
 }

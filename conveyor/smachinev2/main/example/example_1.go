@@ -18,7 +18,6 @@ package example
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/insolar/insolar/conveyor/injector"

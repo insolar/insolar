@@ -23,8 +23,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
-func NewAdapterCallback(caller StepLink, callback AdapterCallbackFunc, nestedFn CreateFactoryFunc) *AdapterCallback {
-	return &AdapterCallback{caller, callback, nil, nestedFn, 0}
+type AdapterCallbackFunc func(AsyncResultFunc, error)
+
+func NewAdapterCallback(caller StepLink, callback AdapterCallbackFunc, flags AsyncCallFlags, nestedFn CreateFactoryFunc) *AdapterCallback {
+	return &AdapterCallback{caller, callback, nil, nestedFn, 0, flags}
 }
 
 type AdapterCallback struct {
@@ -33,6 +35,7 @@ type AdapterCallback struct {
 	cancel     *syncrun.ChainedCancel
 	nestedFn   CreateFactoryFunc
 	state      uint32 // atomic
+	flags      AsyncCallFlags
 }
 
 func (c *AdapterCallback) Prepare(requireCancel bool, chainedCancel context.CancelFunc) context.CancelFunc {
@@ -51,8 +54,14 @@ func (c *AdapterCallback) Prepare(requireCancel bool, chainedCancel context.Canc
 	return c.cancel.Cancel
 }
 
+const stepBondTolerance = 1
+
+func (c *AdapterCallback) canCall() bool {
+	return c.flags&CallBoundToStep == 0 || c.caller.IsNearStep(stepBondTolerance)
+}
+
 func (c *AdapterCallback) IsCancelled() bool {
-	return !c.caller.IsAtStep() || c.cancel.IsCancelled()
+	return c.cancel.IsCancelled() || !c.canCall()
 }
 
 func (c *AdapterCallback) SendResult(result AsyncResultFunc) {
@@ -89,18 +98,21 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 	}
 
 	switch {
+	case !c.canCall():
+		return
 	case c.callbackFn != nil:
 		c.callbackFn(resultFn, err)
 		return
-	case !c.caller.IsAtStep():
-		return
 	}
+
 	c.caller.s.machine.queueAsyncCallback(c.caller.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
 		slot.decAsyncCount()
 
-		if err == nil && resultFn != nil && !c.cancel.IsCancelled() {
+		if err == nil && resultFn != nil /* not a cancellation callback */ && !c.cancel.IsCancelled() {
 			rc := asyncResultContext{slot: slot}
-			if wakeup := rc.executeResult(resultFn); wakeup {
+			wakeup := rc.executeResult(resultFn)
+
+			if (wakeup || c.flags&AutoWakeUp != 0) && (c.flags&WakeUpBoundToStep == 0 || c.caller.IsNearStep(stepBondTolerance)) {
 				return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
 			}
 		}

@@ -20,10 +20,8 @@ func ClosedChannel() <-chan struct{} {
 	return closedChan
 }
 
-var closedChan chan struct{}
-
-func init() {
+var closedChan = func() chan struct{} {
 	c := make(chan struct{})
 	close(c)
-	closedChan = c
-}
+	return c
+}()

@@ -43,7 +43,8 @@ const (
 )
 
 type SlotMachineSync struct {
-	machineStatus uint32 // atomic
+	machineStatus  uint32 // atomic
+	stoppingSignal chan struct{}
 
 	signalQueue   tools.SyncQueue // func(w FixedSlotWorker) // for detached/async ops, queued functions MUST BE panic-safe
 	updateQueue   tools.SyncQueue // func(w FixedSlotWorker) // for detached/async ops, queued functions MUST BE panic-safe
@@ -70,11 +71,25 @@ func (m *SlotMachineSync) IsInactive() bool {
 }
 
 func (m *SlotMachineSync) SetStopping() bool {
-	return atomic.CompareAndSwapUint32(&m.machineStatus, uint32(SlotMachineActive), uint32(SlotMachineStopping))
+	if atomic.CompareAndSwapUint32(&m.machineStatus, uint32(SlotMachineActive), uint32(SlotMachineStopping)) {
+		close(m.stoppingSignal)
+		return true
+	}
+	return false
+}
+
+func (m *SlotMachineSync) GetStoppingSignal() <-chan struct{} {
+	return m.stoppingSignal
 }
 
 func (m *SlotMachineSync) SetInactive() bool {
-	return atomic.SwapUint32(&m.machineStatus, uint32(SlotMachineInactive)) != uint32(SlotMachineInactive)
+	switch atomic.SwapUint32(&m.machineStatus, uint32(SlotMachineInactive)) {
+	case uint32(SlotMachineInactive):
+		return false
+	case uint32(SlotMachineActive):
+		close(m.stoppingSignal)
+	}
+	return true
 }
 
 func (m *SlotMachineSync) FlushAll() {
