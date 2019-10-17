@@ -591,7 +591,7 @@ func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachi
 	return link
 }
 
-func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) SlotLink {
+func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
 	if ctx == nil {
 		panic("illegal value")
 	}
@@ -599,7 +599,7 @@ func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf Crea
 	if ok {
 		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
 	}
-	return link
+	return link, ok
 }
 
 func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (SlotLink, bool) {

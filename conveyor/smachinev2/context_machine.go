@@ -55,13 +55,13 @@ func (p *machineCallContext) AddNew(ctx context.Context, parent SlotLink, sm Sta
 	return link
 }
 
-func (p *machineCallContext) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) SlotLink {
+func (p *machineCallContext) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
 	p.ensureValid()
 	link, ok := p.m._addNewWithFunc(ctx, parent, cf)
 	if ok {
 		p.m.startNewSlot(link.s, p.w)
 	}
-	return link
+	return link, ok
 }
 
 func (p *machineCallContext) SlotMachine() *SlotMachine {

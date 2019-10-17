@@ -23,7 +23,7 @@ type MachineCallContext interface {
 	SlotMachine() *SlotMachine
 
 	AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink
-	AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) SlotLink
+	AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool)
 
 	BargeInNow(SlotLink, interface{}, BargeInApplyFunc) bool
 
