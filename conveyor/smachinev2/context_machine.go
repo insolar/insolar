@@ -46,9 +46,18 @@ func (p *machineCallContext) Stop() {
 	p.m.Stop()
 }
 
-func (p *machineCallContext) AddNow(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
+func (p *machineCallContext) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
 	p.ensureValid()
 	link, ok := p.m._addNew(ctx, parent, sm)
+	if ok {
+		p.m.startNewSlot(link.s, p.w)
+	}
+	return link
+}
+
+func (p *machineCallContext) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) SlotLink {
+	p.ensureValid()
+	link, ok := p.m._addNewWithFunc(ctx, parent, cf)
 	if ok {
 		p.m.startNewSlot(link.s, p.w)
 	}

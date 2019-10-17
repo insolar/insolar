@@ -20,9 +20,9 @@ import (
 	"context"
 )
 
-type AdapterID string
+type AdapterId string
 
-func (v AdapterID) IsEmpty() bool {
+func (v AdapterId) IsEmpty() bool {
 	return len(v) == 0
 }
 
@@ -107,7 +107,7 @@ type AdapterExecutor interface {
 
 /* This is interface of a helper to facilitate implementation of service adapters. */
 type ExecutionAdapter interface {
-	GetAdapterID() AdapterID
+	GetAdapterID() AdapterId
 	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
 	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
 	PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester

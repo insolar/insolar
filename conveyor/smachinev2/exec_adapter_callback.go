@@ -121,14 +121,15 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 	}, err)
 }
 
-func (c *AdapterCallback) SendNested(defaultFactoryFn CreateFactoryFunc, payload interface{}) bool {
+func (c *AdapterCallback) SendNested(adapterId AdapterId, defaultFactoryFn CreateFactoryFunc, payload interface{}) bool {
 	if c.caller.getActiveMachine() == nil {
 		return false
 	}
-	return c._createNested(c.nestedFn, payload) || c._createNested(defaultFactoryFn, payload)
+	return c._createNested(adapterId, c.nestedFn, payload) ||
+		c._createNested(adapterId, defaultFactoryFn, payload)
 }
 
-func (c *AdapterCallback) _createNested(factoryFn CreateFactoryFunc, payload interface{}) bool {
+func (c *AdapterCallback) _createNested(adapterId AdapterId, factoryFn CreateFactoryFunc, payload interface{}) bool {
 	if factoryFn == nil {
 		return false
 	}
@@ -136,6 +137,6 @@ func (c *AdapterCallback) _createNested(factoryFn CreateFactoryFunc, payload int
 	if createFn == nil {
 		return false
 	}
-	_, ok := c.caller.s.machine.createNestedForAdapter(c.caller.SlotLink, createFn)
+	_, ok := c.caller.s.machine.AddNested(adapterId, c.caller.SlotLink, createFn)
 	return ok
 }

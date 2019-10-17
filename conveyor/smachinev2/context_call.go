@@ -21,7 +21,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
-func NewExecutionAdapter(adapterID AdapterID, executor AdapterExecutor) ExecutionAdapter {
+func NewExecutionAdapter(adapterID AdapterId, executor AdapterExecutor) ExecutionAdapter {
 	if adapterID.IsEmpty() {
 		panic("illegal value")
 	}
@@ -34,7 +34,7 @@ func NewExecutionAdapter(adapterID AdapterID, executor AdapterExecutor) Executio
 var _ ExecutionAdapter = &adapterExecHelper{}
 
 type adapterExecHelper struct {
-	adapterID AdapterID
+	adapterID AdapterId
 	executor  AdapterExecutor
 }
 
@@ -42,7 +42,7 @@ func (p adapterExecHelper) IsEmpty() bool {
 	return p.adapterID.IsEmpty()
 }
 
-func (p adapterExecHelper) GetAdapterID() AdapterID {
+func (p adapterExecHelper) GetAdapterID() AdapterId {
 	return p.adapterID
 }
 

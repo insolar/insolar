@@ -581,6 +581,9 @@ func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) {
 /* -- Methods to create and start new machines ------------------------------ */
 
 func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
+	if ctx == nil {
+		panic("illegal value")
+	}
 	link, ok := m._addNew(ctx, parent, sm)
 	if ok {
 		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
@@ -588,47 +591,64 @@ func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachi
 	return link
 }
 
+func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) SlotLink {
+	if ctx == nil {
+		panic("illegal value")
+	}
+	link, ok := m._addNewWithFunc(ctx, parent, cf)
+	if ok {
+		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
+	}
+	return link
+}
+
+func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
+	// TODO pass adapterId into injections
+	link, ok := m._addNewWithFunc(nil, parent, cf)
+	if ok {
+		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
+	}
+	return link, ok
+}
+
 func (m *SlotMachine) _addNew(ctx context.Context, parent SlotLink, sm StateMachine) (SlotLink, bool) {
 	if sm == nil {
 		panic("illegal value")
 	}
-	if ctx == nil {
-		panic("illegal value")
+	link, ok := m._addNewAllocate(ctx, parent)
+	if ok {
+		ok = m.prepareNewSlot(link.s, nil, nil, sm, false)
 	}
-
-	if !m.IsActive() {
-		return SlotLink{}, false
-	}
-
-	newSlot := m.allocateSlot()
-	newSlot.parent = parent
-	newSlot.ctx = ctx
-	link := newSlot.NewLink()
-
-	return link, m.prepareNewSlot(newSlot, nil, nil, sm, false)
+	return link, ok
 }
 
-func (m *SlotMachine) createNestedForAdapter(parent SlotLink, fn CreateFunc) (SlotLink, bool) {
+func (m *SlotMachine) _addNewWithFunc(ctx context.Context, parent SlotLink, fn CreateFunc) (SlotLink, bool) {
 	if fn == nil {
 		panic("illegal value")
 	}
+	link, ok := m._addNewAllocate(ctx, parent)
+	if ok {
+		ok = m.prepareNewSlot(link.s, nil, fn, nil, false)
+	}
+	return link, ok
+}
+
+func (m *SlotMachine) _addNewAllocate(ctx context.Context, parent SlotLink) (SlotLink, bool) {
 	if !m.IsActive() {
 		return SlotLink{}, false
 	}
 
 	newSlot := m.allocateSlot()
 	newSlot.parent = parent
-	if parent.IsValid() {
+	switch {
+	case ctx != nil:
+		newSlot.ctx = ctx
+	case parent.IsValid():
 		newSlot.ctx = parent.s.ctx
+	default:
+		newSlot.ctx = context.Background()
 	}
-	link := newSlot.NewLink()
-
-	if !m.prepareNewSlot(newSlot, nil, fn, nil, false) {
-		return link, false
-	}
-
-	m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
-	return link, true
+	return newSlot.NewLink(), true
 }
 
 func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm StateMachine, inherit bool) bool {
