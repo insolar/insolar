@@ -160,6 +160,11 @@ func (p *slotContext) SetDefaultTerminationResult(v interface{}) {
 	p.s.defResult = v
 }
 
+func (p *slotContext) GetDefaultTerminationResult() interface{} {
+	p.ensureAtLeast(updCtxInit)
+	return p.s.defResult
+}
+
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }

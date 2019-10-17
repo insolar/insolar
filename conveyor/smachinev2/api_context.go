@@ -79,6 +79,7 @@ type InOrderStepContext interface {
 	SetDefaultFlags(StepFlags)
 	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
 	SetDefaultTerminationResult(interface{})
+	GetDefaultTerminationResult() interface{}
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate

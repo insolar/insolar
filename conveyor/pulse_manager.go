@@ -42,3 +42,7 @@ func (p *PulseSlot) IsFuture(number pulse.Number) bool {
 func (p *PulseSlot) IsAccepted(number pulse.Number) bool {
 
 }
+
+func (p *PulseSlot) HasPulseData(number pulse.Number) bool {
+
+}

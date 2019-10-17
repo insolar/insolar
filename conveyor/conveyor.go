@@ -111,6 +111,7 @@ func (p *PulseConveyor) GetPulseData(pn pulse.Number) (pulse.Data, bool) {
 	panic("unimplemented")
 }
 
+// for non-recent past HasPulseData() can be incorrect / incomplete
 func (p *PulseConveyor) HasPulseData(pn pulse.Number) bool {
 	panic("unimplemented")
 }
@@ -133,10 +134,18 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 	case pulseState == Future:
 		// event for future need special handling
 		pulseSlotMachine.machine.AddNew(ctx, smachine.NoLink(),
-			&futureEventSM{pn: targetPN, ps: &pulseSlotMachine.pulseSlot, createFn: createFn})
+			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
+		break
+	case pulseState == Antique:
+		if !p.IsRecentPastRange(pn) {
+			// for non-recent past HasPulseData() can be incorrect / incomplete
+			// we must use a longer procedure to get PulseData and utilize SM for it
+			pulseSlotMachine.machine.AddNew(ctx, smachine.NoLink(),
+				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
+			break
+		}
+		fallthrough
 	default:
-		// TODO Functions to control max future and min past pulse
-		// TODO here we should only check for recent data - very old data should be retrieved via a special SM
 		if !p.HasPulseData(targetPN) {
 			return fmt.Errorf("unknown data for pulse : pn=%v event=%v", targetPN, event)
 		}
@@ -164,13 +173,22 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 		if psm := p.getPulseSlotMachine(pn); psm != nil {
 			return psm, pn, Past, nil
 		}
-		if pn.IsTimePulse() {
-			return p.getAntiquePulseSlotMachine(), pn, Antique, nil
+		if !pn.IsTimePulse() {
+			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 		}
-		return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
+		if !p.IsAllowedPastSpan(presentPN, pn) {
+			return nil, 0, 0, fmt.Errorf("pulse number is too far in past: pn=%v, present=%v", pn, presentPN)
+		}
+		return p.getAntiquePulseSlotMachine(), pn, Antique, nil
 	case pn < futurePN:
 		return nil, 0, 0, fmt.Errorf("pulse number is unexpected: pn=%v", pn)
 	default: // pn >= futurePN
+		if !pn.IsTimePulse() {
+			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
+		}
+		if !p.IsAllowedFutureSpan(futurePN, pn) {
+			return nil, 0, 0, fmt.Errorf("pulse number is too far in future: pn=%v, expected=%v", pn, futurePN)
+		}
 		return p.getFuturePulseSlotMachine(futurePN), pn, Future, nil
 	}
 }
@@ -256,4 +274,19 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) error {
 		// TODO allocate and swap slots
 		ctx.Migrate()
 	})
+}
+
+func (p *PulseConveyor) IsAllowedFutureSpan(expectedPN pulse.Number, futurePN pulse.Number) bool {
+	// TODO limit how much we can handle as future
+	return futurePN >= expectedPN
+}
+
+func (p *PulseConveyor) IsAllowedPastSpan(presentPN pulse.Number, pastPN pulse.Number) bool {
+	// TODO limit how much we can handle as future
+	return pastPN < presentPN
+}
+
+func (p *PulseConveyor) IsRecentPastRange(pastPN pulse.Number) bool {
+	// TODO limit how much we can handle as future
+	return pastPN < presentPN
 }
