@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"unsafe"
 )
@@ -168,6 +169,10 @@ func (p *slotContext) Stop() StateUpdate {
 
 func (p *slotContext) Error(err error) StateUpdate {
 	return p.template(stateUpdError).newError(err)
+}
+
+func (p *slotContext) Errorf(msg string, a ...interface{}) StateUpdate {
+	return p.Error(fmt.Errorf(msg, a...))
 }
 
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {

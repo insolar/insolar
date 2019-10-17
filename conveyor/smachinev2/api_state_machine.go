@@ -19,15 +19,25 @@ package smachine
 import "github.com/insolar/insolar/conveyor/injector"
 
 type StateMachine interface {
-	//GetStateMachineName() string
+	// Returns a meta-type / declaration of a SM.
+	// Must be non-nil.
 	GetStateMachineDeclaration() StateMachineDeclaration
 }
 
 type StateMachineDeclaration interface {
-	IsConsecutive(cur, next StateFunc) bool
+	// Returns an initialization function for the given SM.
 	GetInitStateFor(StateMachine) InitFunc
-	GetShadowMigrateFor(StateMachine) ShadowMigrateFunc
+
+	// Initialization code that SM doesn't need to know.
+	// Dependencies injected through DependencyInjector and implementing ShadowMigrator will be invoked during migration.
 	InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector)
+
+	// Returns a shadow migration handler for the given stateMachine, that will be invoked on every migration. SM has no control over it.
+	GetShadowMigrateFor(StateMachine) ShadowMigrateFunc
+
+	// WARNING! DO NOT EVER return "true" here without CLEAR understanding of internal mechanics.
+	// Returning "true" blindly will VERY LIKELY lead to infinite loops.
+	IsConsecutive(cur, next StateFunc) bool
 }
 
 type ShadowMigrateFunc func(start, delta uint32)
@@ -36,6 +46,7 @@ type ShadowMigrator interface {
 	ShadowMigrate(start, delta uint32)
 }
 
+// A template to include into SM to avoid hassle of creation of any methods but GetInitStateFor()
 type StateMachineDeclTemplate struct {
 }
 

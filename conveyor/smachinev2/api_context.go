@@ -108,6 +108,7 @@ type InOrderStepContext interface {
 
 	// Slot will be terminated by calling an error handler.
 	Error(error) StateUpdate
+	Errorf(msg string, a ...interface{}) StateUpdate
 	// Slot will be terminated.
 	Stop() StateUpdate
 

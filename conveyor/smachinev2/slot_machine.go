@@ -425,6 +425,8 @@ func (m *SlotMachine) _migrateSlot(slot *Slot, worker FixedSlotWorker) (isEmptyO
 			break
 		}
 
+		// TODO support for slot.shadowMigrate
+
 		mc := migrationContext{slotContext: slotContext{s: slot}}
 		stateUpdate, skipMultiple := mc.executeMigration(migrateFn)
 
