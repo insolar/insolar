@@ -509,6 +509,20 @@ func (m *SlotMachine) stopPage(slotPage []Slot, w FixedSlotWorker) (isPageEmptyO
 }
 
 func (m *SlotMachine) recycleSlot(slot *Slot, w FixedSlotWorker) {
+	if slot.defResultHandler != nil {
+		err := func() (err error) {
+			defer func() {
+				err = RecoverSlotPanicWithStack("termination handler", recover(), nil)
+			}()
+			slot.defResultHandler(slot.defResult)
+			return nil
+		}()
+
+		if err != nil {
+			m.defaultSlotErrorHandler(slot, false, err)
+		}
+	}
+
 	m._recycleSlot(slot, w)
 }
 
@@ -880,10 +894,13 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate, w Fi
 func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, isPanic bool, err error) bool {
 
 	canRecover := false
-	res := ErrorHandlerDefault
+	action := ErrorHandlerDefault
+	var slotResult interface{}
 
 	eh := slot.getErrorHandler()
-	if eh != nil {
+	if eh == nil {
+		slotResult = err
+	} else {
 		fc := failureContext{isPanic: isPanic, err: err}
 		if se, ok := err.(SlotPanicError); ok {
 			fc.isAsync = se.IsAsync
@@ -891,11 +908,11 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 		canRecover = fc.isAsync // || !fc.isPanic
 
 		fc.canRecover = canRecover
-		res, err = fc.executeFailure(eh)
+		action, err = fc.executeFailure(eh)
+		slotResult = fc.result
 	}
 
-	recoverState := ""
-	switch res {
+	switch action {
 	case ErrorHandlerMute:
 		//recoverState = "recover=muted "
 		break
@@ -903,22 +920,29 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 		switch {
 		case !canRecover:
 			//break
-		case res == ErrorHandlerRecoverAndWakeUp:
+		case action == ErrorHandlerRecoverAndWakeUp:
 			slot.activateSlot(worker)
 			return true
 		default:
 			return true
 		}
-		recoverState = "recover=failed "
-		fallthrough
+		m.defaultSlotErrorHandler(slot, true, err)
 	default:
-		// TODO log error m._handleStateUpdateError(slot, stateUpdate, w, err)
-		fmt.Printf("SLOT ERROR: slot=%v %serr=%v\n", slot.GetSlotID(), recoverState, err)
-		//runtime.KeepAlive(err)
+		m.defaultSlotErrorHandler(slot, false, err)
 	}
 
+	slot.defResult = slotResult // make the result available for termination handler
 	m.recycleSlot(slot, worker)
 	return false
+}
+
+func (m *SlotMachine) defaultSlotErrorHandler(slot *Slot, deniedRecovery bool, err error) {
+	recoverState := ""
+	if deniedRecovery {
+		recoverState = "recovery=denied "
+	}
+	// TODO log error m._handleStateUpdateError(slot, stateUpdate, w, err)
+	fmt.Printf("SLOT ERROR: slot=%v %serr=%v\n", slot.GetSlotID(), recoverState, err)
 }
 
 /* ------ BargeIn support -------------------------- */

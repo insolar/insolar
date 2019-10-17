@@ -70,6 +70,11 @@ func (p *constructionContext) SetParentLink(parent SlotLink) {
 	p.s.parent = parent
 }
 
+func (p *constructionContext) SetTerminationHandler(tf TerminationHandlerFunc) {
+	p.ensure(updCtxConstruction)
+	p.s.defResultHandler = tf
+}
+
 func (p *constructionContext) executeCreate(nextCreate CreateFunc) StateMachine {
 	p.setMode(updCtxConstruction)
 	defer p.setDiscarded()
@@ -127,6 +132,17 @@ type failureContext struct {
 	isAsync    bool
 	canRecover bool
 	err        error
+	result     interface{}
+}
+
+func (p *failureContext) GetDefaultTerminationResult() interface{} {
+	p.ensure(updCtxFail)
+	return p.s.defResult
+}
+
+func (p *failureContext) SetTerminationResult(v interface{}) {
+	p.ensure(updCtxFail)
+	p.result = v
 }
 
 func (p *failureContext) GetError() error {
@@ -149,6 +165,7 @@ func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (result ErrorHandle
 	defer func() {
 		p.discardAndCapture("failure handler", recover(), &err)
 	}()
+	p.result = p.err
 	err = p.err // ensure it will be included on panic
 	return fn(p), err
 }

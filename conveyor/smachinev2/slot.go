@@ -50,10 +50,12 @@ type slotCreateData struct {
 	declaration StateMachineDeclaration
 	injected    injector.LocalDependencyRegistry // TODO replace with struct ptr
 
-	shadowMigrate   ShadowMigrateFunc
-	defMigrate      MigrateFunc
-	defErrorHandler ErrorHandlerFunc
-	defFlags        StepFlags
+	shadowMigrate    ShadowMigrateFunc
+	defMigrate       MigrateFunc
+	defErrorHandler  ErrorHandlerFunc
+	defResultHandler TerminationHandlerFunc
+	defResult        interface{}
+	defFlags         StepFlags
 }
 
 func (v slotCreateData) takeOutForReplace() slotCreateData {

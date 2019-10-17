@@ -155,6 +155,11 @@ func (p *slotContext) SetDefaultFlags(flags StepFlags) {
 	}
 }
 
+func (p *slotContext) SetDefaultTerminationResult(v interface{}) {
+	p.ensureAtLeast(updCtxInit)
+	p.s.defResult = v
+}
+
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }

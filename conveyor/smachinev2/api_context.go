@@ -28,6 +28,7 @@ type MigrateFunc func(ctx MigrationContext) StateUpdate
 type AsyncResultFunc func(ctx AsyncResultContext)
 type ErrorHandlerFunc func(ctx FailureContext) ErrorHandlerResult
 type ErrorHandlerResult uint8
+type TerminationHandlerFunc func(value interface{})
 
 const (
 	ErrorHandlerDefault ErrorHandlerResult = iota
@@ -56,6 +57,11 @@ type ConstructionContext interface {
 
 	SetContext(context.Context)
 	SetParentLink(SlotLink)
+
+	// Sets a special termination handler that will be invoked when the machine terminates. This handler is not directly accessible to SM.
+	// WARNING! This handler is UNSAFE to access another SM. Use BargeIn() to create a necessary handler.
+	// MUST be fast as it blocks whole SlotMachine and can't be detached.
+	SetTerminationHandler(TerminationHandlerFunc)
 }
 
 /* A context parent for all regular step contexts */
@@ -64,11 +70,15 @@ type InOrderStepContext interface {
 	SynchronizationContext
 
 	// Handler for migrations. Is applied when current SlotStep has no migration handler.
+	// MUST be fast as it blocks whole SlotMachine and can't be detached.
 	SetDefaultMigration(fn MigrateFunc)
 	// Handler for errors and panics. Is applied when current SlotStep has no error handler.
+	// MUST be fast as it blocks whole SlotMachine and can't be detached.
 	SetDefaultErrorHandler(fn ErrorHandlerFunc)
 	// Default flags are merged when SlotStep is set.
 	SetDefaultFlags(StepFlags)
+	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
+	SetDefaultTerminationResult(interface{})
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate
@@ -313,6 +323,13 @@ type FailureContext interface {
 	// True when the error can be recovered by returning ErrorHandlerRecover from the handler.
 	// An a panic inside async call can be recovered.
 	CanRecover() bool
+
+	// Gets a last value set by SetDefaultTerminationResult()
+	GetDefaultTerminationResult() interface{}
+
+	// Sets a value to be passed to TerminationHandlerFunc.
+	// By default - termination result on error will be GetError()
+	SetTerminationResult(interface{})
 
 	NewChild(context.Context, CreateFunc) SlotLink
 	InitChild(context.Context, CreateFunc) SlotLink
