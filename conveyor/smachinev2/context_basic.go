@@ -215,7 +215,7 @@ func (p *slotContext) InitChild(ctx context.Context, fn CreateFunc) SlotLink {
 }
 
 func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool) SlotLink {
-	p.ensure(updCtxExec)
+	p.ensureAny2(updCtxExec, updCtxFail)
 	if fn == nil {
 		panic("illegal value")
 	}

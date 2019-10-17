@@ -94,7 +94,7 @@ func init() {
 		},
 
 		stateUpdReplaceWith: {
-			filter: updCtxExec | updCtxMigrate | updCtxFail,
+			filter: updCtxExec | updCtxMigrate,
 			params: updParamVar,
 			varVerify: func(v interface{}) {
 				sm := v.(StateMachine)
@@ -123,7 +123,7 @@ func init() {
 		},
 
 		stateUpdReplace: {
-			filter: updCtxExec | updCtxMigrate | updCtxFail,
+			filter: updCtxExec | updCtxMigrate,
 			params: updParamVar,
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {

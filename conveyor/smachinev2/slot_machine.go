@@ -866,7 +866,8 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 		if se, ok := err.(SlotPanicError); ok {
 			fc.isAsync = se.IsAsync
 		}
-		canRecover = !fc.isPanic || fc.isAsync
+		canRecover = fc.isAsync // || !fc.isPanic
+
 		fc.canRecover = canRecover
 		res, err = fc.executeFailure(eh)
 	}
@@ -876,8 +877,14 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 	case ErrorHandlerMute:
 		//recoverState = "recover=muted "
 		break
-	case ErrorHandlerRecover:
-		if canRecover {
+	case ErrorHandlerRecover, ErrorHandlerRecoverAndWakeUp:
+		switch {
+		case !canRecover:
+			//break
+		case res == ErrorHandlerRecoverAndWakeUp:
+			slot.activateSlot(worker)
+			return true
+		default:
 			return true
 		}
 		recoverState = "recover=failed "
