@@ -71,6 +71,17 @@ func NewPulsarData(pn Number, deltaNext uint16, deltaPrev uint16, entropy longbi
 	return r
 }
 
+func NewExpectedPulsarData(pn Number, deltaPrev uint16) Data {
+	return Data{
+		PulseNumber: pn,
+		DataExt: DataExt{
+			PulseEpoch:     pn.AsUint32(),
+			Timestamp:      uint32(time.Now().Unix()),
+			PrevPulseDelta: deltaPrev,
+		},
+	}
+}
+
 func NewFirstEphemeralData() Data {
 	return newEphemeralData(MinTimePulse)
 }
@@ -173,10 +184,17 @@ func (r Data) IsValidExpectedPulseData() bool {
 	if !OfUint32(r.PulseEpoch).IsSpecialOrTimePulse() {
 		return false
 	}
-	if r.PrevPulseDelta != 0 {
+	if r.NextPulseDelta != 0 {
 		return false
 	}
 	return true
+}
+
+func (r Data) IsValidExpectedPulsarData() bool {
+	if !OfUint32(r.PulseEpoch).IsTimePulse() {
+		return false
+	}
+	return r.IsValidExpectedPulseData()
 }
 
 func (r Data) EnsurePulsarData() {
@@ -274,12 +292,13 @@ func (r Data) CreateNextExpected() Data {
 	s := Data{
 		PulseNumber: r.GetNextPulseNumber(),
 		DataExt: DataExt{
+			PulseEpoch:     r.PulseEpoch,
 			PrevPulseDelta: r.NextPulseDelta,
 			NextPulseDelta: 0,
 		},
 	}
-	if r.IsFromEphemeral() {
-		s.PulseEpoch = r.PulseEpoch
+	if OfUint32(r.PulseEpoch).IsTimePulse() {
+		s.PulseEpoch = uint32(s.PulseNumber)
 	}
 	return s
 }
