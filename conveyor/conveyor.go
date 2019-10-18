@@ -268,6 +268,9 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 		if p.getPulseSlotMachine(prevPresentPN) != p.presentMachine {
 			panic("illegal state")
 		}
+		if prevPresentPN >= pd.PulseNumber || pd.PulseNumber < prevFuturePN {
+			panic("illegal state")
+		}
 		p.presentMachine.setPast()
 	}
 
@@ -311,4 +314,5 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 		p.presentMachine.activateWithCtx(p.workerCtx, ctx)
 	}
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
+	fmt.Println(pd)
 }

@@ -237,11 +237,11 @@ func (p *PulseSlotMachine) stepPastLoop(ctx smachine.ExecutionContext) smachine.
 	//	return ctx.Repeat(0)
 	//case !nextPollTime.IsZero():
 	//	// old pulses can be throttled down a bit
-	//	return ctx.Poll().ThenRepeat()
+	return ctx.Poll().ThenRepeat()
 	//default:
 	//	return ctx.WaitAny().ThenRepeat()
 	//}
-	return ctx.Yield().ThenRepeat()
+	//return ctx.Yield().ThenRepeat()
 }
 
 func (p *PulseSlotMachine) stepMigratePast(ctx smachine.MigrationContext) smachine.StateUpdate {

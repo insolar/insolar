@@ -34,7 +34,7 @@ import (
 func TestConveyor(t *testing.T) {
 	machineConfig := smachine.SlotMachineConfig{
 		SlotPageSize:    1000,
-		PollingPeriod:   100 * time.Millisecond,
+		PollingPeriod:   500 * time.Millisecond,
 		PollingTruncate: 1 * time.Millisecond,
 		ScanCountLimit:  100000,
 	}
@@ -50,6 +50,14 @@ func TestConveyor(t *testing.T) {
 	go worker(conveyor, signal)
 
 	require.NoError(t, conveyor.CommitPulseChange(pd))
+
+	for i := 0; i < 100; i++ {
+		pd = pd.CreateNextPulsarPulse(2, func() longbits.Bits256 {
+			return longbits.Bits256{}
+		})
+		require.NoError(t, conveyor.CommitPulseChange(pd))
+		time.Sleep(time.Second)
+	}
 	fmt.Println("======================")
 	time.Sleep(time.Hour)
 }
@@ -67,7 +75,7 @@ func worker(conveyor *PulseConveyor, signal tools.VersionedSignal) {
 		if !nextPollTime.IsZero() {
 			time.Sleep(time.Until(nextPollTime))
 		} else {
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 }

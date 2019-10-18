@@ -25,10 +25,11 @@ import (
 
 func newSlotMachineSync(eventCallback, signalCallback func()) SlotMachineSync {
 	return SlotMachineSync{
-		signalQueue:   tools.NewSignalFuncQueue(&sync.Mutex{}, signalCallback),
-		updateQueue:   tools.NewSignalFuncQueue(&sync.Mutex{}, eventCallback),
-		callbackQueue: tools.NewSignalFuncQueue(&sync.Mutex{}, eventCallback),
-		machineStatus: uint32(SlotMachineActive),
+		signalQueue:    tools.NewSignalFuncQueue(&sync.Mutex{}, signalCallback),
+		updateQueue:    tools.NewSignalFuncQueue(&sync.Mutex{}, eventCallback),
+		callbackQueue:  tools.NewSignalFuncQueue(&sync.Mutex{}, eventCallback),
+		machineStatus:  uint32(SlotMachineActive),
+		stoppingSignal: make(chan struct{}),
 	}
 }
 

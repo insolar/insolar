@@ -62,6 +62,10 @@ func (p *VersionedSignal) Mark() *SignalVersion {
 	}
 }
 
+func NewNeverSignal() *SignalVersion {
+	return newSignalVersion()
+}
+
 func newSignalVersion() *SignalVersion {
 	sv := SignalVersion{}
 	sv.wg.Add(1)
