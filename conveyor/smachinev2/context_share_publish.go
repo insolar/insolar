@@ -71,6 +71,11 @@ func (p *slotContext) Unpublish(key interface{}) bool {
 	return p.s.unregisterBoundAlias(key)
 }
 
+func (p *slotContext) UnpublishAll() {
+	p.ensureAtLeast(updCtxInit)
+	p.s.unregisterBoundAliases()
+}
+
 func (p *slotContext) GetPublished(key interface{}) interface{} {
 	p.ensureAtLeast(updCtxInit)
 	if v, ok := p.s.machine.getPublished(key); ok {
@@ -113,7 +118,7 @@ func (m *SlotMachine) GetPublished(key interface{}) (interface{}, bool) {
 			}
 			return nil, true
 		case *SharedDataLink:
-			if sdl.IsUnbound() {
+			if sdl != nil && sdl.IsUnbound() {
 				return sdl.getData(), true
 			}
 			return nil, true
@@ -140,12 +145,100 @@ func (m *SlotMachine) TryPublish(key, data interface{}) (interface{}, bool) {
 			panic("illegal value")
 		}
 	case *SharedDataLink:
-		if !sdl.IsUnbound() {
+		if sdl == nil || !sdl.IsUnbound() {
 			panic("illegal value")
 		}
 	}
 
 	return m.localRegistry.LoadOrStore(key, data)
+}
+
+// WARNING! USE WITH CAUTION. Interfering with published names may be unexpected by SM.
+// This method can unpublish keys published by SMs, but it is not able to always do it in a right ways.
+// As a result - a hidden registry of names published by SM can become inconsistent and will
+// cause an SM to remove key(s) if they were later published by another SM.
+func (m *SlotMachine) TryUnsafeUnpublish(key interface{}) (keyExists, wasUnpublished bool) {
+	switch key.(type) {
+	case nil:
+		panic("illegal value")
+	case dependencyKey, *slotAliases, *uniqueAlias:
+		panic("illegal value")
+	}
+
+	// Lets try to make it right
+
+	switch keyExists, wasUnpublished, v := m.unpublishUnbound(key); {
+	case !keyExists:
+		return false, false
+	case wasUnpublished:
+		return true, true
+	default:
+		var valueOwner SlotLink
+
+		switch sdl := v.(type) {
+		case SharedDataLink:
+			valueOwner = sdl.link
+		case *SharedDataLink:
+			if sdl != nil {
+				valueOwner = sdl.link
+			}
+		}
+
+		// This is the most likely case ... yet it doesn't cover all the cases
+		if valueOwner.IsValid() && m._unregisterSlotBoundAlias(valueOwner.SlotID(), key) {
+			return true, true
+		}
+	}
+
+	// as there are no more options to do it right - then do it wrong
+	m.localRegistry.Delete(key)
+	return true, true
+}
+
+func (m *SlotMachine) unpublishUnbound(k interface{}) (keyExists, wasUnpublished bool, value interface{}) {
+	if v, ok := m.localRegistry.Load(k); !ok {
+		return false, false, nil
+	} else {
+		switch sdl := v.(type) {
+		case SharedDataLink:
+			if sdl.IsUnbound() {
+				m.localRegistry.Delete(k)
+				return true, true, v
+			}
+		case *SharedDataLink:
+			if sdl != nil && sdl.IsUnbound() {
+				m.localRegistry.Delete(k)
+				return true, true, v
+			}
+		}
+		return true, false, v
+	}
+}
+
+// ONLY to be used by a holder of a slot
+func (m *SlotMachine) _unregisterSlotBoundAlias(slotID SlotID, k interface{}) bool {
+	var key interface{} = slotID
+
+	if isa, loaded := m.localRegistry.Load(key); loaded {
+		sa := isa.(*slotAliases)
+
+		for i, kk := range sa.keys {
+			if k == kk {
+				m.localRegistry.Delete(k)
+				switch last := len(sa.keys) - 1; {
+				case last == 0:
+					m.localRegistry.Delete(key)
+				case i < last:
+					copy(sa.keys[i:], sa.keys[i+1:])
+					fallthrough
+				default:
+					sa.keys = sa.keys[:last]
+				}
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func _asSharedDataLink(v interface{}) SharedDataLink {

@@ -47,32 +47,13 @@ func (s *Slot) unregisterBoundAlias(k interface{}) bool {
 		panic("illegal value")
 	}
 
-	m := &s.machine.localRegistry
-	if _, ok := m.Load(k); !ok {
+	switch keyExists, wasUnpublished, _ := s.machine.unpublishUnbound(k); {
+	case !keyExists:
 		return false
+	case wasUnpublished:
+		return true
 	}
-
-	var key interface{} = s.GetSlotID()
-	if isa, loaded := m.Load(key); loaded {
-		sa := isa.(*slotAliases)
-
-		for i, kk := range sa.keys {
-			if k == kk {
-				m.Delete(k)
-				switch last := len(sa.keys) - 1; {
-				case last == 0:
-					m.Delete(key)
-				case i < last:
-					copy(sa.keys[i:], sa.keys[i+1:])
-					fallthrough
-				default:
-					sa.keys = sa.keys[:last]
-				}
-				return true
-			}
-		}
-	}
-	return false
+	return s.machine._unregisterSlotBoundAlias(s.GetSlotID(), k)
 }
 
 // ONLY to be used by a holder of a slot

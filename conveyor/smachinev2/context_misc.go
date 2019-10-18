@@ -133,6 +133,7 @@ type failureContext struct {
 	canRecover bool
 	err        error
 	result     interface{}
+	action     ErrorHandlerAction
 }
 
 func (p *failureContext) GetDefaultTerminationResult() interface{} {
@@ -160,12 +161,18 @@ func (p *failureContext) CanRecover() bool {
 	return p.canRecover
 }
 
-func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (result ErrorHandlerResult, err error) {
+func (p *failureContext) SetAction(action ErrorHandlerAction) {
+	p.ensure(updCtxFail)
+	p.action = action
+}
+
+func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (result ErrorHandlerAction, err error) {
 	p.setMode(updCtxFail)
 	defer func() {
 		p.discardAndCapture("failure handler", recover(), &err)
 	}()
 	p.result = p.err
 	err = p.err // ensure it will be included on panic
-	return fn(p), err
+	fn(p)
+	return p.action, err
 }

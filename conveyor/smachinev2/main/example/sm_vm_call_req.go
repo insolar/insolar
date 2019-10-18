@@ -190,9 +190,8 @@ func (s *StateMachineCallRequest) statePrepareMutableCall(ctx smachine.Execution
 	panic("unimplemented")
 }
 
-func (s *StateMachineCallRequest) sendReplyOnError(ctx smachine.FailureContext) smachine.ErrorHandlerResult {
+func (s *StateMachineCallRequest) sendReplyOnError(ctx smachine.FailureContext) {
 	// TODO send reply
-	return smachine.ErrorHandlerDefault
 }
 
 func (s *StateMachineCallRequest) sendReplyOnCancel(ctx smachine.ExecutionContext) smachine.StateUpdate {

@@ -509,18 +509,10 @@ func (m *SlotMachine) stopPage(slotPage []Slot, w FixedSlotWorker) (isPageEmptyO
 }
 
 func (m *SlotMachine) recycleSlot(slot *Slot, w FixedSlotWorker) {
-	if slot.defResultHandler != nil {
-		err := func() (err error) {
-			defer func() {
-				err = RecoverSlotPanicWithStack("termination handler", recover(), nil)
-			}()
-			slot.defResultHandler(slot.defResult)
-			return nil
-		}()
-
-		if err != nil {
-			m.defaultSlotErrorHandler(slot, false, err)
-		}
+	th := slot.defResultHandler
+	if th != nil {
+		slot.defResultHandler = nil // avoid self-loops
+		m.runTerminationHandler(slot.NewLink(), th, slot.defResult)
 	}
 
 	m._recycleSlot(slot, w)
@@ -592,6 +584,22 @@ func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) {
 	} else {
 		m.syncQueue.AddAsyncUpdate(SlotLink{}, callFn)
 	}
+}
+
+func (m *SlotMachine) runTerminationHandler(link SlotLink, th TerminationHandlerFunc, v interface{}) {
+	m.syncQueue.AddAsyncCallback(link, func(link SlotLink, _ DetachableSlotWorker) bool {
+		err := func() (err error) {
+			defer func() {
+				err = RecoverSlotPanicWithStack("termination handler", recover(), nil)
+			}()
+			th(v)
+			return nil
+		}()
+		if err != nil {
+			m.defaultDeadSlotErrorHandler(link, err)
+		}
+		return true
+	})
 }
 
 /* -- Methods to create and start new machines ------------------------------ */
@@ -941,8 +949,13 @@ func (m *SlotMachine) defaultSlotErrorHandler(slot *Slot, deniedRecovery bool, e
 	if deniedRecovery {
 		recoverState = "recovery=denied "
 	}
-	// TODO log error m._handleStateUpdateError(slot, stateUpdate, w, err)
+	// TODO log error to slot.context
 	fmt.Printf("SLOT ERROR: slot=%v %serr=%v\n", slot.GetSlotID(), recoverState, err)
+}
+
+func (m *SlotMachine) defaultDeadSlotErrorHandler(link SlotLink, err error) {
+	// TODO log error to machine context - as slot is reused
+	fmt.Printf("SLOT ERROR: slot=%v err=%v\n", link.SlotID(), err)
 }
 
 /* ------ BargeIn support -------------------------- */

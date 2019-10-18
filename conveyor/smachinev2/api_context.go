@@ -26,12 +26,12 @@ type StateFunc func(ctx ExecutionContext) StateUpdate
 type CreateFunc func(ctx ConstructionContext) StateMachine
 type MigrateFunc func(ctx MigrationContext) StateUpdate
 type AsyncResultFunc func(ctx AsyncResultContext)
-type ErrorHandlerFunc func(ctx FailureContext) ErrorHandlerResult
-type ErrorHandlerResult uint8
+type ErrorHandlerFunc func(ctx FailureContext)
+type ErrorHandlerAction uint8
 type TerminationHandlerFunc func(value interface{})
 
 const (
-	ErrorHandlerDefault ErrorHandlerResult = iota
+	ErrorHandlerDefault ErrorHandlerAction = iota
 	ErrorHandlerMute
 	ErrorHandlerRecover
 	ErrorHandlerRecoverAndWakeUp
@@ -58,9 +58,11 @@ type ConstructionContext interface {
 	SetContext(context.Context)
 	SetParentLink(SlotLink)
 
-	// Sets a special termination handler that will be invoked when the machine terminates. This handler is not directly accessible to SM.
+	// Sets a special termination handler that will be invoked AFTER termination of SM.
+	// This handler is invoked with either (1) GetDefaultTerminationResult() after Stop() or (2) with error after Error() or panic.
+	// Behavior for error can be modified with a custom ErrorHandlerFunc.
+	// This handler is not directly accessible to SM.
 	// WARNING! This handler is UNSAFE to access another SM. Use BargeIn() to create a necessary handler.
-	// MUST be fast as it blocks whole SlotMachine and can't be detached.
 	SetTerminationHandler(TerminationHandlerFunc)
 }
 
@@ -79,6 +81,7 @@ type InOrderStepContext interface {
 	SetDefaultFlags(StepFlags)
 	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
 	SetDefaultTerminationResult(interface{})
+	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
@@ -106,7 +109,10 @@ type InOrderStepContext interface {
 	// It is recommended to use typed wrappers to access the data.
 	Publish(key, data interface{}) bool
 	// Returns false when key is not in use or the key was published by a different SM.
+	// Is always able to unpublish link with ShareDataUnbound flag.
 	Unpublish(key interface{}) bool
+	// Removes all keys published by this SM.
+	UnpublishAll()
 
 	// Gets data shared by Publish().
 	// Visibility of key/data is limited by the SlotMachine running this SM.
@@ -139,12 +145,14 @@ type ShareDataFlags uint32
 const (
 	// SM that called Share() will be woken up after each use of the shared data.
 	ShareDataWakesUpAfterUse = 1 << iota
+
 	// WARNING! Can ONLY be used for concurrency-safe data. Must NOT keep references to SM.
 	// Data is immediately accessible. Data is not bound to SM and will never be invalidated.
 	// Keeping SharedDataLink will retain the data in memory.
 	ShareDataUnbound
+
 	// WARNING! Must NOT keep references to SM.
-	// Data is bound to SM and will invalidated for new access.
+	// Data is bound to SM and will invalidated after stop.
 	// But keeping SharedDataLink will retain the data in memory.
 	ShareDataDirect
 )
@@ -334,6 +342,10 @@ type FailureContext interface {
 	// Sets a value to be passed to TerminationHandlerFunc.
 	// By default - termination result on error will be GetError()
 	SetTerminationResult(interface{})
+
+	// Choose an action to be applied.
+	// Recovery actions will be ignored when CanRecover() is false.
+	SetAction(action ErrorHandlerAction)
 
 	NewChild(context.Context, CreateFunc) SlotLink
 	InitChild(context.Context, CreateFunc) SlotLink
