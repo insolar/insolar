@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -76,10 +76,8 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	}
 
 	ctx, span := instracer.StartSpan(ctx, procName)
-	span.AddAttributes(
-		trace.StringAttribute("type", "flow_proc"),
-	)
-	defer span.End()
+	span.SetTag("type", "flow_proc")
+	defer span.Finish()
 
 	start := time.Now()
 	err := func() error {

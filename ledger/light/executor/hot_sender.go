@@ -115,7 +115,7 @@ func (m *HotSenderDefault) SendHot(
 	ctx context.Context, currentPulse, newPulse insolar.PulseNumber, jets []insolar.JetID,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "HotSenderDefault.SendHot")
-	defer span.End()
+	defer span.Finish()
 	logger := inslogger.FromContext(ctx)
 
 	idxByJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
@@ -158,7 +158,7 @@ func (m *HotSenderDefault) sendForJet(
 	drop drop.Drop,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
-	defer span.End()
+	defer span.Finish()
 
 	stats.Record(ctx, statHotObjectsTotal.M(int64(len(indexes))))
 

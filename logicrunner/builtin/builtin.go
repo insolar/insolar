@@ -86,7 +86,7 @@ func (b *BuiltIn) CallConstructor(
 	}(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
-	defer span.End()
+	defer span.Finish()
 
 	foundation.SetLogicalContext(callCtx)
 	defer foundation.ClearContext()
@@ -116,7 +116,7 @@ func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallCont
 	}(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
-	defer span.End()
+	defer span.Finish()
 
 	foundation.SetLogicalContext(callCtx)
 	defer foundation.ClearContext()

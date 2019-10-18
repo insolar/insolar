@@ -60,6 +60,7 @@ type HeavyReplicatorDefault struct {
 	keeper          JetKeeper
 	backuper        BackupMaker
 	jets            jet.Modifier
+	gcRunner        *BadgerGCRunInfo
 
 	syncWaitingData chan *payload.Replication
 }
@@ -74,6 +75,7 @@ func NewHeavyReplicatorDefault(
 	keeper JetKeeper,
 	backuper BackupMaker,
 	jets jet.Modifier,
+	gcRunner *BadgerGCRunInfo,
 ) *HeavyReplicatorDefault {
 	return &HeavyReplicatorDefault{
 		records:         records,
@@ -87,6 +89,7 @@ func NewHeavyReplicatorDefault(
 
 		syncWaitingData: make(chan *payload.Replication),
 		done:            make(chan struct{}),
+		gcRunner:        gcRunner,
 	}
 }
 
@@ -155,7 +158,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		logger.Debug("heavy replicator finalize pulse")
-		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse)
+		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse, h.gcRunner)
 
 		logger.Info("heavy replicator stops replication")
 	}

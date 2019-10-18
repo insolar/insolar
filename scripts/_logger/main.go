@@ -39,7 +39,7 @@ func main() {
 	var noBuffer bool
 
 	flag.Usage = myUsage
-	flag.BoolVar(&noBuffer, "no-buffer", false, "server addr")
+	flag.BoolVar(&noBuffer, "no-buffer", false, "disables buffer")
 	flag.BoolVar(&debug, "debug", false, "print debug info")
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -58,11 +58,16 @@ func main() {
 		return
 	}
 	w = f
+
+	var bufWriter *bufio.Writer
 	if !noBuffer {
-		buf := bufio.NewWriter(f)
-		w = buf
+		bufWriter = bufio.NewWriter(f)
+		w = bufWriter
 		flush = func() {
-			buf.Flush()
+			err := bufWriter.Flush()
+			if err != nil {
+				log.Println("flush failed:", err)
+			}
 			if debug {
 				log.Println("flush")
 			}
@@ -84,8 +89,9 @@ func main() {
 		}
 	}()
 
+	stop := make(chan bool)
+	tick := time.Tick(time.Second)
 	go func() {
-		tick := time.Tick(time.Second)
 		for {
 			select {
 			case <-tick:
@@ -112,14 +118,17 @@ func main() {
 				}
 				w = f
 				if !noBuffer {
-					w = bufio.NewWriter(f)
+					bufWriter = bufio.NewWriter(f)
+					w = bufWriter
 				}
+			case <-stop:
+				flush()
+				return
 			}
 		}
 	}()
 
 	finish := make(chan bool)
-
 	var sigUSR2 = make(chan os.Signal, 1)
 	var sigINT = make(chan os.Signal, 1)
 	signal.Notify(sigUSR2, syscall.SIGUSR2)
@@ -130,7 +139,8 @@ func main() {
 			case <-sigUSR2:
 				reopen <- struct{}{}
 			case <-sigINT:
-				flush()
+				// stop work
+				stop <- true
 				close(finish)
 			}
 		}

@@ -161,9 +161,11 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		result     rpctypes.UpGetCodeResp
 	}{
 		{
-			name:       "success",
-			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
+			name: "success",
+			transcript: &common.Transcript{
+				Request: genIncomingRequest(),
+			},
+			req: rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.
 				Return(
@@ -174,17 +176,21 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 			result: rpctypes.UpGetCodeResp{Code: []byte{3, 2, 1}},
 		},
 		{
-			name:       "no code descriptor",
-			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
+			name: "no code descriptor",
+			transcript: &common.Transcript{
+				Request: genIncomingRequest(),
+			},
+			req: rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(nil, errors.New("some")),
 			error: true,
 		},
 		{
-			name:       "no code",
-			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
+			name: "no code",
+			transcript: &common.Transcript{
+				Request: genIncomingRequest(),
+			},
+			req: rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(
 				artifacts.NewCodeDescriptorMock(mc).

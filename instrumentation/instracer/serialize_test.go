@@ -18,32 +18,43 @@ package instracer_test
 
 import (
 	"context"
+	"encoding/binary"
 	"testing"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
-	"go.opencensus.io/trace"
+	"github.com/uber/jaeger-client-go"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 func TestSerialize(t *testing.T) {
 	ttable := []struct {
-		name    string
+		name string
 	}{
 		{name: "empty"},
 		{name: "one"},
 	}
+
+	donefn := instracer.ShouldRegisterJaeger(
+		context.Background(), "server", "nodeRef", "", "/localhost", 1)
+	defer donefn()
+
 	for _, tt := range ttable {
 		t.Run(tt.name, func(t *testing.T) {
-			ctxIn, span := trace.StartSpan(context.Background(), "test")
-			spanctx := span.SpanContext()
+			span, ctxIn := opentracing.StartSpanFromContext(context.Background(), "test")
+
+			assert.NotNil(t, span)
+
+			sc, ok := span.Context().(jaeger.SpanContext)
+
+			assert.True(t, ok, "expected jaeger Context")
 
 			b := instracer.MustSerialize(ctxIn)
 			spanOut := instracer.MustDeserialize(b)
-			assert.Equal(t, spanctx.SpanID[:], spanOut.SpanID)
-			assert.Equal(t, spanctx.TraceID[:], spanOut.TraceID)
-			// assert.NotNil(t, span)
+			assert.Equal(t, 8, len(spanOut.SpanID))
+			assert.Equal(t, uint64(sc.SpanID()), binary.LittleEndian.Uint64(spanOut.SpanID))
+			assert.Equal(t, sc.TraceID().String(), string(spanOut.TraceID))
 		})
 	}
-	// ctx := inslogger.ContextWithTrace(context.Background(), "tracenotdefined")
 }

@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"sync"
 
 	"go.opencensus.io/stats"
 
@@ -26,6 +27,36 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
+
+type BadgerGCRunner interface {
+	// RunValueGC run badger values garbage collection
+	RunValueGC(ctx context.Context)
+}
+
+type BadgerGCRunInfo struct {
+	runner BadgerGCRunner
+	// runFrequency is period of running gc (in number of pulses)
+	runFrequency uint
+
+	callCounter uint
+	lock        sync.Mutex
+}
+
+func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
+	return &BadgerGCRunInfo{
+		runner:       runner,
+		runFrequency: runFrequency,
+	}
+}
+
+func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.callCounter++
+	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+		b.runner.RunValueGC(ctx)
+	}
+}
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
 	logger := inslogger.FromContext(ctx)
@@ -49,17 +80,17 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 }
 
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) {
 	finPulse := &newPulse
 	for {
-		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse)
+		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse, gcRunner)
 		if finPulse == nil {
 			break
 		}
 	}
 }
 
-func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) *insolar.PulseNumber {
+func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx)
 	if !shouldStartFinalization(ctx, jetKeeper, pulses, newPulse) {
 		logger.Info("Skip finalization")
@@ -96,6 +127,10 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", newPulse)
 	stats.Record(ctx, statFinalizedPulse.M(int64(newPulse)))
+
+	// We run value GC here ( and only here ) implicitly since we want to
+	// exclude running GC during process of backup-replication
+	gcRunner.RunGCIfNeeded(ctx)
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {

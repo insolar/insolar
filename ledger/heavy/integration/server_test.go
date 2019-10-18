@@ -25,16 +25,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/log/logwatermill"
-
-	"github.com/dgraph-io/badger"
-	"github.com/pkg/errors"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -57,6 +54,7 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
@@ -228,7 +226,8 @@ func NewServer(
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
+		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 
 		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork
@@ -240,7 +239,7 @@ func NewServer(
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		h := handler.New(cfg.Ledger)
+		h := handler.New(cfg.Ledger, gcRunInfo)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator

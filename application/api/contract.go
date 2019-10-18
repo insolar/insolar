@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 // ContractService is a service that provides API for working with smart contracts.
@@ -84,9 +83,6 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 }
 
 func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
-	ctx, span := instracer.StartSpan(ctx, "Call "+method)
-	defer span.End()
-
 	reference, err := insolar.NewReferenceFromString(params.Reference)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse params.Reference")

@@ -57,7 +57,7 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 	logger.Debug("handling ExecutorResults")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
-	defer span.End()
+	defer span.Finish()
 
 	if err := checkPayloadExecutorResults(ctx, message); err != nil {
 		return err

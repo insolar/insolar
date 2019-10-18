@@ -75,8 +75,7 @@ func (s *Server) Serve() {
 	log.InitTicker()
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
-		var jaegerFlush func()
-		ctx, jaegerFlush = internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
+		jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
 		defer jaegerFlush()
 	}
 

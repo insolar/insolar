@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -56,13 +55,11 @@ func (p *SendFilament) Dep(sender bus.Sender, filaments executor.FilamentCalcula
 
 func (p *SendFilament) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "SendFilament")
-	defer span.End()
+	defer span.Finish()
 
-	span.AddAttributes(
-		trace.StringAttribute("objID", p.objID.DebugString()),
-		trace.StringAttribute("startFrom", p.startFrom.DebugString()),
-		trace.StringAttribute("readUntil", p.readUntil.String()),
-	)
+	span.SetTag("objID", p.objID.DebugString()).
+		SetTag("startFrom", p.startFrom.DebugString()).
+		SetTag("readUntil", p.readUntil.String())
 
 	records, err := p.dep.filaments.Requests(ctx, p.objID, p.startFrom, p.readUntil)
 	if err != nil {
