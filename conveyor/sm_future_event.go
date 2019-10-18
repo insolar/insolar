@@ -50,20 +50,25 @@ func (sm *futureEventSM) stepInit(ctx smachine.InitializationContext) smachine.S
 }
 
 func (sm *futureEventSM) stepWaitMigration(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if sm.ps.IsFuture(sm.pn) { // make sure that this slot isn't late
+	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
+	case !isAccepted:
+		return sm.stepTerminateEvent(ctx)
+	case isFuture: // make sure that this slot isn't late
 		return ctx.Sleep().ThenRepeat()
-	}
-	if sm.ps.IsAccepted(sm.pn) {
+	default:
 		return ctx.Replace(sm.createFn)
 	}
-	return sm.stepTerminateEvent(ctx)
 }
 
 func (sm *futureEventSM) stepMigration(ctx smachine.MigrationContext) smachine.StateUpdate {
-	if sm.ps.IsAccepted(sm.pn) {
+	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
+	case !isAccepted:
+		return ctx.Jump(sm.stepTerminateEvent)
+	case isFuture: // make sure that this slot isn't late
+		panic("illegal state")
+	default:
 		return ctx.Replace(sm.createFn)
 	}
-	return ctx.Jump(sm.stepTerminateEvent)
 }
 
 func (sm *futureEventSM) IsConsecutive(_, _ smachine.StateFunc) bool {

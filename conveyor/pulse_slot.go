@@ -25,14 +25,18 @@ func (p *PulseSlot) PulseData() pulse.Data {
 	return p.pulseData.PulseData()
 }
 
-func (p *PulseSlot) IsFuture(number pulse.Number) bool {
-
+func (p *PulseSlot) IsAcceptedFutureOrPresent(pn pulse.Number) (isFuture, isAccepted bool) {
+	presentPN, futurePN := p.pulseManager.GetPresentPulse()
+	if p.State() == Future {
+		return true, pn >= futurePN
+	}
+	return false, pn == presentPN // TODO consider a set of pulse numbers when there is a skipped pulse
 }
 
-func (p *PulseSlot) IsAccepted(number pulse.Number) bool {
-
-}
-
-func (p *PulseSlot) HasPulseData(number pulse.Number) bool {
-
+func (p *PulseSlot) HasPulseData(pn pulse.Number) bool {
+	pd := p.pulseData.PulseData()
+	if pn == pd.PulseNumber && pd.IsValidPulsarData() {
+		return true
+	}
+	return p.pulseManager.HasPulseData(pn)
 }
