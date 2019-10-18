@@ -79,7 +79,7 @@ var (
 	ContractRootAccount = GenesisRef(application.GenesisNameRootAccount)
 	// ContractMigrationAdminMember is the migration admin member contract reference.
 	ContractMigrationAdminMember = GenesisRef(application.GenesisNameMigrationAdminMember)
-	// ContractMigrationWallet is the migration wallet contract reference.
+	// ContractMigrationAdmin is the migration wallet contract reference.
 	ContractMigrationAdmin = GenesisRef(application.GenesisNameMigrationAdmin)
 	// ContractMigrationWallet is the migration wallet contract reference.
 	ContractMigrationWallet = GenesisRef(application.GenesisNameMigrationAdminWallet)
