@@ -19,7 +19,7 @@ package example
 import (
 	"math"
 
-	"github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/conveyor/smachine"
 )
 
 type StateMachine2 struct {

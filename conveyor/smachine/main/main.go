@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	smachine "github.com/insolar/insolar/conveyor/smachinev2"
-	"github.com/insolar/insolar/conveyor/smachinev2/main/example"
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"github.com/insolar/insolar/conveyor/tools"
 )
 

@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/conveyor/smachine"
 )
 
 var _ smachine.AdapterExecutor = &ChannelAdapter{}

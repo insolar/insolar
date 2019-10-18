@@ -16,7 +16,7 @@
 
 package example
 
-import smachine "github.com/insolar/insolar/conveyor/smachinev2"
+import "github.com/insolar/insolar/conveyor/smachine"
 
 type ContractCallType uint8
 

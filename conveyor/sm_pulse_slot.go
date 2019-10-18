@@ -18,11 +18,12 @@ package conveyor
 
 import (
 	"context"
-	"github.com/insolar/insolar/conveyor/injector"
-	smachine "github.com/insolar/insolar/conveyor/smachinev2"
-	"github.com/insolar/insolar/pulse"
 	"reflect"
 	"runtime"
+
+	"github.com/insolar/insolar/conveyor/injector"
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/pulse"
 )
 
 type PulseSlotConfig struct {

@@ -18,7 +18,7 @@ package example
 
 import (
 	"github.com/insolar/insolar/conveyor/injector"
-	smachine "github.com/insolar/insolar/conveyor/smachinev2"
+	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/longbits"
 )
 
