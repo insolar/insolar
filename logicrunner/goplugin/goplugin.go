@@ -73,7 +73,7 @@ const timeout = time.Minute * 10
 // Downstream returns a connection to `ginsider`
 func (gp *GoPlugin) Downstream(ctx context.Context) (*rpc.Client, error) {
 	_, span := instracer.StartSpan(ctx, "GoPlugin.Downstream")
-	defer span.End()
+	defer span.Finish()
 
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
@@ -114,7 +114,7 @@ func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, 
 		client, err = gp.Downstream(ctx)
 		if err == nil {
 			ctx, span := instracer.StartSpan(ctx, "GoPlugin callClientWithReconnect")
-			defer span.End()
+			defer span.Finish()
 
 			inslogger.FromContext(ctx).Debug("Sending request to insgorund")
 
@@ -162,7 +162,7 @@ func (gp *GoPlugin) CallMethod(
 	ctx = insmetrics.InsertTag(ctx, tagMethodName, method)
 
 	ctx, span := instracer.StartSpan(ctx, "GoPlugin.CallMethod "+method)
-	defer span.End()
+	defer span.Finish()
 
 	inslogger.FromContext(ctx).Debug("GoPlugin.CallMethod starts")
 	start := time.Now()

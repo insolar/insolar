@@ -63,7 +63,6 @@ if [[ $# -lt 1 ]]; then
     echo "# Grafana: http://localhost:3000 admin:pass"
     echo "# Jaeger: http://localhost:16686"
     echo "# Prometheus: http://localhost:9090/targets"
-    echo "# Kibana: http://localhost:5601 (starts slowly, be patient)"
     echo ""
     echo "enable collection of jaeger traces in launchnet by env variable:"
     echo "    INSOLAR_TRACER_JAEGER_AGENTENDPOINT=localhost:6831"

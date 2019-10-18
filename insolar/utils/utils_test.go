@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
-package bus
+package utils
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type Reply struct {
-	Reply insolar.Reply
-	Err   error
+func TestRandTraceID(t *testing.T) {
+	traceID := RandTraceID()
+	require.NotEmpty(t, traceID)
 }

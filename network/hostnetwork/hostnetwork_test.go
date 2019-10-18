@@ -114,9 +114,6 @@ func (m *MockResolver) Resolve(nodeID insolar.Reference) (*host.Host, error) {
 	return result, nil
 }
 
-func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
-func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
-
 func (m *MockResolver) addMapping(key, value string) error {
 	k, err := insolar.NewReferenceFromString(key)
 	if err != nil {

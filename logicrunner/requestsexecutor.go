@@ -60,7 +60,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "RequestsExecutor.ExecuteAndSave")
-	defer span.End()
+	defer span.Finish()
 
 	result, err := e.Execute(ctx, transcript)
 	if err != nil {
@@ -81,7 +81,7 @@ func (e *requestsExecutor) Execute(
 	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
-	defer span.End()
+	defer span.Finish()
 
 	inslogger.FromContext(ctx).Debug("executing request")
 

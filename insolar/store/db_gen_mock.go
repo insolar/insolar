@@ -7,19 +7,12 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
 )
 
 // DBMock implements DB
 type DBMock struct {
 	t minimock.Tester
-
-	funcBackend          func() (dp1 *badger.DB)
-	inspectFuncBackend   func()
-	afterBackendCounter  uint64
-	beforeBackendCounter uint64
-	BackendMock          mDBMockBackend
 
 	funcDelete          func(key Key) (err error)
 	inspectFuncDelete   func(key Key)
@@ -53,8 +46,6 @@ func NewDBMock(t minimock.Tester) *DBMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.BackendMock = mDBMockBackend{mock: m}
-
 	m.DeleteMock = mDBMockDelete{mock: m}
 	m.DeleteMock.callArgs = []*DBMockDeleteParams{}
 
@@ -68,149 +59,6 @@ func NewDBMock(t minimock.Tester) *DBMock {
 	m.SetMock.callArgs = []*DBMockSetParams{}
 
 	return m
-}
-
-type mDBMockBackend struct {
-	mock               *DBMock
-	defaultExpectation *DBMockBackendExpectation
-	expectations       []*DBMockBackendExpectation
-}
-
-// DBMockBackendExpectation specifies expectation struct of the DB.Backend
-type DBMockBackendExpectation struct {
-	mock *DBMock
-
-	results *DBMockBackendResults
-	Counter uint64
-}
-
-// DBMockBackendResults contains results of the DB.Backend
-type DBMockBackendResults struct {
-	dp1 *badger.DB
-}
-
-// Expect sets up expected params for DB.Backend
-func (mmBackend *mDBMockBackend) Expect() *mDBMockBackend {
-	if mmBackend.mock.funcBackend != nil {
-		mmBackend.mock.t.Fatalf("DBMock.Backend mock is already set by Set")
-	}
-
-	if mmBackend.defaultExpectation == nil {
-		mmBackend.defaultExpectation = &DBMockBackendExpectation{}
-	}
-
-	return mmBackend
-}
-
-// Inspect accepts an inspector function that has same arguments as the DB.Backend
-func (mmBackend *mDBMockBackend) Inspect(f func()) *mDBMockBackend {
-	if mmBackend.mock.inspectFuncBackend != nil {
-		mmBackend.mock.t.Fatalf("Inspect function is already set for DBMock.Backend")
-	}
-
-	mmBackend.mock.inspectFuncBackend = f
-
-	return mmBackend
-}
-
-// Return sets up results that will be returned by DB.Backend
-func (mmBackend *mDBMockBackend) Return(dp1 *badger.DB) *DBMock {
-	if mmBackend.mock.funcBackend != nil {
-		mmBackend.mock.t.Fatalf("DBMock.Backend mock is already set by Set")
-	}
-
-	if mmBackend.defaultExpectation == nil {
-		mmBackend.defaultExpectation = &DBMockBackendExpectation{mock: mmBackend.mock}
-	}
-	mmBackend.defaultExpectation.results = &DBMockBackendResults{dp1}
-	return mmBackend.mock
-}
-
-//Set uses given function f to mock the DB.Backend method
-func (mmBackend *mDBMockBackend) Set(f func() (dp1 *badger.DB)) *DBMock {
-	if mmBackend.defaultExpectation != nil {
-		mmBackend.mock.t.Fatalf("Default expectation is already set for the DB.Backend method")
-	}
-
-	if len(mmBackend.expectations) > 0 {
-		mmBackend.mock.t.Fatalf("Some expectations are already set for the DB.Backend method")
-	}
-
-	mmBackend.mock.funcBackend = f
-	return mmBackend.mock
-}
-
-// Backend implements DB
-func (mmBackend *DBMock) Backend() (dp1 *badger.DB) {
-	mm_atomic.AddUint64(&mmBackend.beforeBackendCounter, 1)
-	defer mm_atomic.AddUint64(&mmBackend.afterBackendCounter, 1)
-
-	if mmBackend.inspectFuncBackend != nil {
-		mmBackend.inspectFuncBackend()
-	}
-
-	if mmBackend.BackendMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmBackend.BackendMock.defaultExpectation.Counter, 1)
-
-		results := mmBackend.BackendMock.defaultExpectation.results
-		if results == nil {
-			mmBackend.t.Fatal("No results are set for the DBMock.Backend")
-		}
-		return (*results).dp1
-	}
-	if mmBackend.funcBackend != nil {
-		return mmBackend.funcBackend()
-	}
-	mmBackend.t.Fatalf("Unexpected call to DBMock.Backend.")
-	return
-}
-
-// BackendAfterCounter returns a count of finished DBMock.Backend invocations
-func (mmBackend *DBMock) BackendAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmBackend.afterBackendCounter)
-}
-
-// BackendBeforeCounter returns a count of DBMock.Backend invocations
-func (mmBackend *DBMock) BackendBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmBackend.beforeBackendCounter)
-}
-
-// MinimockBackendDone returns true if the count of the Backend invocations corresponds
-// the number of defined expectations
-func (m *DBMock) MinimockBackendDone() bool {
-	for _, e := range m.BackendMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.BackendMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterBackendCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcBackend != nil && mm_atomic.LoadUint64(&m.afterBackendCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockBackendInspect logs each unmet expectation
-func (m *DBMock) MinimockBackendInspect() {
-	for _, e := range m.BackendMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to DBMock.Backend")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.BackendMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterBackendCounter) < 1 {
-		m.t.Error("Expected call to DBMock.Backend")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcBackend != nil && mm_atomic.LoadUint64(&m.afterBackendCounter) < 1 {
-		m.t.Error("Expected call to DBMock.Backend")
-	}
 }
 
 type mDBMockDelete struct {
@@ -1079,8 +927,6 @@ func (m *DBMock) MinimockSetInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *DBMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockBackendInspect()
-
 		m.MinimockDeleteInspect()
 
 		m.MinimockGetInspect()
@@ -1111,7 +957,6 @@ func (m *DBMock) MinimockWait(timeout mm_time.Duration) {
 func (m *DBMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockBackendDone() &&
 		m.MinimockDeleteDone() &&
 		m.MinimockGetDone() &&
 		m.MinimockNewIteratorDone() &&
