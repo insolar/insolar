@@ -121,9 +121,9 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	s.count++
 	if s.count < 5 {
-		return ctx.Yield().ThenRepeat()
+		//return ctx.Yield().ThenRepeat()
 		//return ctx.Repeat(10)
-		//return ctx.Poll().ThenRepeat()
+		return ctx.Poll().ThenRepeat()
 	}
 
 	return ctx.Jump(s.State4)

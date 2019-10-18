@@ -31,10 +31,11 @@ type PreparedState = struct{}
 type InputEvent = interface{}
 type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
-func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryFn PulseEventFactoryFunc,
+func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMachineConfig, factoryFn PulseEventFactoryFunc,
 	slotMachineConfig smachine.SlotMachineConfig, registry injector.DependencyRegistry) *PulseConveyor {
 
 	r := &PulseConveyor{
+		workerCtx: ctx,
 		slotConfig: PulseSlotConfig{
 			config: slotMachineConfig,
 		},
@@ -45,7 +46,7 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 
 	r.slotConfig.eventCallback = r.internalSignal.NextBroadcast
 	r.slotConfig.signalCallback = nil // r.internalSignal.NextBroadcast
-	r.slotConfig.parentRegistry = &r.slotMachine
+	r.slotConfig.parentRegistry = r.slotMachine
 
 	//r.antique.isAntique = true
 	//r.antique.SlotMachine = smachine.NewSlotMachine(
@@ -67,7 +68,7 @@ type PulseConveyor struct {
 	// immutable, set at construction
 	externalSignal tools.VersionedSignal
 	internalSignal tools.VersionedSignal
-	slotMachine    smachine.SlotMachine
+	slotMachine    *smachine.SlotMachine
 	pdm            PulseDataManager
 
 	// mutable, set under SlotMachine synchronization
@@ -197,8 +198,8 @@ func (p *PulseConveyor) _publishPulseSlotMachine(pn pulse.Number, psm *PulseSlot
 		}
 		return psm
 	}
-	psm.activate(p.workerCtx, &p.slotMachine)
-	psm.setPulseForUnpublish(&p.slotMachine, pn)
+	psm.activate(p.workerCtx, p.slotMachine)
+	psm.setPulseForUnpublish(p.slotMachine, pn)
 
 	return psm
 }
@@ -299,7 +300,7 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 	}
 
 	if republishPresent || activatePresent {
-		p.presentMachine.setPulseForUnpublish(&p.slotMachine, pd.PulseNumber)
+		p.presentMachine.setPulseForUnpublish(p.slotMachine, pd.PulseNumber)
 
 		if _, ok := p.slotMachine.TryPublish(pd.PulseNumber, p.presentMachine); !ok {
 			panic("illegal state")

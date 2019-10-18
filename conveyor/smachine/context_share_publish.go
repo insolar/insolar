@@ -150,7 +150,8 @@ func (m *SlotMachine) TryPublish(key, data interface{}) (interface{}, bool) {
 		}
 	}
 
-	return m.localRegistry.LoadOrStore(key, data)
+	v, loaded := m.localRegistry.LoadOrStore(key, data)
+	return v, !loaded
 }
 
 // WARNING! USE WITH CAUTION. Interfering with published names may be unexpected by SM.

@@ -37,7 +37,7 @@ func (e SlotPanicError) Error() string {
 		sep = "\n"
 	}
 	if e.Prev != nil {
-		return fmt.Sprintf(`%s: %v%s%s\nCaused by:\n%s`, e.Msg, e.Recovered, sep, string(e.Stack), e.Prev.Error())
+		return fmt.Sprintf("%s: %v%s%s\nCaused by:\n%s", e.Msg, e.Recovered, sep, string(e.Stack), e.Prev.Error())
 	}
 	return fmt.Sprintf("%s: %v%s%s", e.Msg, e.Recovered, sep, string(e.Stack))
 }

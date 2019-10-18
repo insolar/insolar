@@ -22,7 +22,7 @@ import (
 
 // SlotPool by default recycles deallocated pages to mitigate possible memory leak through SlotLink references
 // When flow of slots varies a lot and there is no long-living links then deallocateOnCleanup can be enabled.
-func NewSlotPool(pageSize uint16, deallocateOnCleanup bool) SlotPool {
+func newSlotPool(pageSize uint16, deallocateOnCleanup bool) SlotPool {
 	//if locker == nil {
 	//	panic("illegal value")
 	//}
@@ -30,9 +30,8 @@ func NewSlotPool(pageSize uint16, deallocateOnCleanup bool) SlotPool {
 		panic("illegal value")
 	}
 	return SlotPool{
-		slotPages:   [][]Slot{make([]Slot, pageSize)},
-		unusedSlots: NewSlotQueue(UnusedSlots),
-		deallocate:  deallocateOnCleanup,
+		slotPages:  [][]Slot{make([]Slot, pageSize)},
+		deallocate: deallocateOnCleanup,
 	}
 }
 
@@ -44,6 +43,13 @@ type SlotPool struct {
 	emptyPages  [][]Slot
 	slotPgPos   uint16
 	deallocate  bool
+}
+
+func (p *SlotPool) initSlotPool() {
+	if p.slotPages == nil {
+		panic("illegal nil")
+	}
+	p.unusedSlots.initSlotQueue(UnusedSlots)
 }
 
 func (p *SlotPool) Count() int {

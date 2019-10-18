@@ -54,7 +54,7 @@ func (p *PollingQueue) growPollingSlots() {
 
 	bodies := make([]poll, sizeInc)
 	for i := range bodies {
-		bodies[i] = poll{SlotQueue: NewSlotQueue(PollingSlots)}
+		bodies[i].initSlotQueue(PollingSlots)
 		p.polls = append(p.polls, &bodies[i])
 	}
 }
@@ -110,6 +110,9 @@ func (p *PollingQueue) PrepareFor(pollTime time.Time) {
 		if seqHead >= uint16(len(p.polls)) {
 			seqHead -= uint16(len(p.polls))
 		}
+	default: // reuse the empty prepared
+		p.prepared.pollAfter = pollTime
+		return
 	}
 
 	if !p.polls[seqHead].IsEmpty() {

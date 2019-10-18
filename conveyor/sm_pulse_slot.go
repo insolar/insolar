@@ -49,7 +49,7 @@ func NewPulseSlotMachine(config PulseSlotConfig, pulseManager *PulseDataManager)
 type PulseSlotMachine struct {
 	smachine.StateMachineDeclTemplate
 
-	innerMachine smachine.SlotMachine
+	innerMachine *smachine.SlotMachine
 	pulseSlot    PulseSlot // injectable for innerMachine's slots
 
 	finalizeFn func()

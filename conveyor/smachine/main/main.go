@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
+	"github.com/insolar/insolar/conveyor/sworker"
 	"github.com/insolar/insolar/conveyor/tools"
 )
 
@@ -30,8 +31,8 @@ func main() {
 	const scanCountLimit = 1e6
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:    1000,
-		PollingPeriod:   1000 * time.Millisecond,
-		PollingTruncate: 100 * time.Millisecond,
+		PollingPeriod:   1 * time.Millisecond,
+		PollingTruncate: 1 * time.Microsecond,
 		ScanCountLimit:  scanCountLimit,
 	}, nil, nil, nil)
 
@@ -47,7 +48,7 @@ func main() {
 	}
 
 	signal := tools.NewVersionedSignal()
-	worker := example.NewSimpleSlotWorker(signal.Mark())
+	worker := sworker.NewSimpleSlotWorker(signal.Mark(), scanCountLimit)
 	startNano := time.Now().UnixNano()
 	startBase := example.IterationCount
 

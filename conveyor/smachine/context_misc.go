@@ -109,7 +109,12 @@ type migrationContext struct {
 }
 
 func (p *migrationContext) SkipMultipleMigrations() {
+	p.ensure(updCtxMigrate)
 	p.skipMultiple = true
+}
+
+func (p *migrationContext) Jump(fn StateFunc) StateUpdate { // use Next instead of NextLoop
+	return p.template(stateUpdNext).newStep(SlotStep{Transition: fn}, nil)
 }
 
 func (p *migrationContext) executeMigration(fn MigrateFunc) (stateUpdate StateUpdate, skipMultiple bool) {

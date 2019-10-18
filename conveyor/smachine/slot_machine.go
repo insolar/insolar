@@ -42,16 +42,19 @@ const maxLoopCount = 10000
 func NewSlotMachine(config SlotMachineConfig,
 	eventCallback, signalCallback func(),
 	parentRegistry injector.DependencyRegistry,
-) SlotMachine {
-	return SlotMachine{
+) *SlotMachine {
+	sm := &SlotMachine{
 		config:         config,
 		parentRegistry: parentRegistry,
-		slotPool:       NewSlotPool(config.SlotPageSize, false),
-		activeSlots:    NewSlotQueue(ActiveSlots),
-		prioritySlots:  NewSlotQueue(ActiveSlots),
-		workingSlots:   NewSlotQueue(WorkingSlots),
-		syncQueue:      NewSlotMachineSync(eventCallback, signalCallback),
+		slotPool:       newSlotPool(config.SlotPageSize, false),
+		syncQueue:      newSlotMachineSync(eventCallback, signalCallback),
 	}
+	sm.slotPool.initSlotPool()
+	sm.activeSlots.initSlotQueue(ActiveSlots)
+	sm.prioritySlots.initSlotQueue(ActiveSlots)
+	sm.workingSlots.initSlotQueue(WorkingSlots)
+
+	return sm
 }
 
 var _ injector.DependencyRegistry = &SlotMachine{}

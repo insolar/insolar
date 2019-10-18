@@ -186,7 +186,7 @@ func init() {
 		},
 
 		stateUpdNext: {
-			filter:    updCtxExec | updCtxInit | updCtxBargeIn,
+			filter:    updCtxExec | updCtxInit | updCtxBargeIn | updCtxMigrate,
 			params:    updParamStep | updParamVar,
 			prepare:   stateUpdateDefaultNoArgPrepare,
 			varVerify: stateUpdateDefaultVerifyNoArgFn,

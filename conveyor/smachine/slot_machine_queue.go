@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/conveyor/tools"
 )
 
-func NewSlotMachineSync(eventCallback, signalCallback func()) SlotMachineSync {
+func newSlotMachineSync(eventCallback, signalCallback func()) SlotMachineSync {
 	return SlotMachineSync{
 		signalQueue:   tools.NewSignalFuncQueue(&sync.Mutex{}, signalCallback),
 		updateQueue:   tools.NewSignalFuncQueue(&sync.Mutex{}, eventCallback),

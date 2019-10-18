@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,31 +12,46 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
-package example
+package sworker
 
 import (
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/tools"
-
-	"sync"
 )
 
-func NewSimpleSlotWorker(outerSignal *tools.SignalVersion) *SimpleSlotWorker {
-	return &SimpleSlotWorker{outerSignal: outerSignal}
+// Very simple implementation of a slot worker. No support for detachments.
+func NewAttachableSimpleSlotWorker(signalSource *tools.VersionedSignal) AttachableSimpleSlotWorker {
+	return AttachableSimpleSlotWorker{signalSource: signalSource}
+}
+
+// Very simple implementation of a slot worker. No support for detachments.
+func NewSimpleSlotWorker(outerSignal *tools.SignalVersion, loopLimit uint32) *SimpleSlotWorker {
+	return &SimpleSlotWorker{outerSignal: outerSignal, loopLimit: loopLimit}
+}
+
+var _ smachine.AttachableSlotWorker = AttachableSimpleSlotWorker{}
+
+type AttachableSimpleSlotWorker struct {
+	signalSource *tools.VersionedSignal
+}
+
+func (v AttachableSimpleSlotWorker) AttachTo(_ *smachine.SlotMachine, loopLimit uint32, fn smachine.AttachedFunc) (wasDetached bool) {
+	w := NewSimpleSlotWorker(v.signalSource.Mark(), loopLimit)
+	fn(w)
+	return false
 }
 
 var _ smachine.FixedSlotWorker = &SimpleSlotWorker{}
 
 type SimpleSlotWorker struct {
 	outerSignal *tools.SignalVersion
-	innerSignal func()
-	cond        *sync.Cond
+	loopLimit   uint32
 }
 
 func (p *SimpleSlotWorker) HasSignal() bool {
-	return false
+	return p.outerSignal != nil && p.outerSignal.HasSignal()
 }
 
 func (*SimpleSlotWorker) IsDetached() bool {
@@ -48,7 +63,7 @@ func (p *SimpleSlotWorker) GetSignalMark() *tools.SignalVersion {
 }
 
 func (p *SimpleSlotWorker) OuterCall(*smachine.SlotMachine, smachine.NonDetachableFunc) (wasExecuted bool) {
-	panic("unsupported")
+	return false
 }
 
 func (p *SimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
@@ -72,7 +87,7 @@ func (p *DetachableSimpleSlotWorker) NonDetachableOuterCall(_ *smachine.SlotMach
 }
 
 func (p *DetachableSimpleSlotWorker) CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool) {
-	return loopCount < 100, false
+	return uint32(loopCount) <= p.loopLimit, p.HasSignal()
 }
 
 func (p *DetachableSimpleSlotWorker) NonDetachableCall(fn smachine.NonDetachableFunc) (wasExecuted bool) {
@@ -85,5 +100,5 @@ type NonDetachableSimpleSlotWorker struct {
 }
 
 func (p *NonDetachableSimpleSlotWorker) DetachableCall(fn smachine.DetachableFunc) (wasDetached bool) {
-	panic("not allowed")
+	panic("not allowed") // this method shouldn't be accessible through interface
 }
