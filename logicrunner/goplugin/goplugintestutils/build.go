@@ -34,7 +34,7 @@ func buildCLI(name string) (string, error) {
 	out, err := exec.Command(
 		"go", "build",
 		"-o", binPath,
-		filepath.Join(insolarImportPath, "cmd", name),
+		filepath.Join(insolarImportPath, name),
 	).CombinedOutput()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build preprocessor. buildPrototypes output: %s", string(out))
@@ -43,11 +43,11 @@ func buildCLI(name string) (string, error) {
 }
 
 func buildInsiderCLI() (string, error) {
-	return buildCLI("insgorund")
+	return buildCLI("cmd/insgorund")
 }
 
 func BuildPreprocessor() (string, error) {
-	return buildCLI("insgocc")
+	return buildCLI("application/cmd/insgocc")
 }
 
 func testdataPath() string {

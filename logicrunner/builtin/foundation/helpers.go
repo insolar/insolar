@@ -20,8 +20,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 )
 
 const EthAddressLength = 20

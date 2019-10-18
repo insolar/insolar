@@ -29,6 +29,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
@@ -180,7 +181,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
-			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
+			application.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)
@@ -230,7 +231,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name)
+	dstDir := filepath.Join(cb.root, "src/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {

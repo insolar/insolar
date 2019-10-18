@@ -25,14 +25,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
-	"github.com/dgraph-io/badger"
-	"github.com/pkg/errors"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -49,12 +49,12 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
@@ -118,7 +118,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg insolar.GenesisHeavyConfig,
+	genesisCfg application.GenesisHeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.

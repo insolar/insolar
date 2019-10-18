@@ -24,6 +24,7 @@ import (
 
 	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -54,12 +55,12 @@ type BuiltIn struct {
 
 // NewBuiltIn is an constructor
 func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
-	codeDescriptors := InitializeCodeDescriptors()
+	codeDescriptors := builtin.InitializeCodeDescriptors()
 	for _, codeDescriptor := range codeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	prototypeDescriptors := InitializePrototypeDescriptors()
+	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
 	for _, prototypeDescriptor := range prototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
@@ -67,8 +68,8 @@ func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
 	return &BuiltIn{
-		CodeRefRegistry: InitializeCodeRefs(),
-		CodeRegistry:    InitializeContractMethods(),
+		CodeRefRegistry: builtin.InitializeCodeRefs(),
+		CodeRegistry:    builtin.InitializeContractMethods(),
 	}
 }
 
