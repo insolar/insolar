@@ -65,7 +65,7 @@ func TestTimeoutSuite(t *testing.T) {
 
 	cr := testutils.NewContractRequesterMock(mc)
 	cr.CallMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
-		requestReference, _ := insolar.NewReferenceFromString("14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.14FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+		requestReference, _ := insolar.NewReferenceFromString("insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI")
 		switch method {
 		case "Call":
 			var result = "OK"

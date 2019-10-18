@@ -60,7 +60,7 @@ func NewGlobalReference(local ID, base ID) *Reference {
 	return &global
 }
 
-// NewObjectReferenceFromString deserializes reference from base58 encoded string and checks if it object reference
+// NewObjectReferenceFromString deserializes reference from base64 encoded string and checks if it object reference
 func NewObjectReferenceFromString(input string) (*Reference, error) {
 	global, err := NewReferenceFromString(input)
 	if err != nil {
@@ -75,7 +75,7 @@ func NewObjectReferenceFromString(input string) (*Reference, error) {
 	return global, nil
 }
 
-// NewReferenceFromString deserializes reference from base58 encoded string
+// NewReferenceFromString deserializes reference from base64 encoded string
 func NewReferenceFromString(input string) (*Reference, error) {
 	global, err := reference.DefaultDecoder().Decode(input)
 	if err != nil {
@@ -113,7 +113,7 @@ func NewID(p PulseNumber, hash []byte) *ID {
 	return &local
 }
 
-// NewIDFromString deserializes ID from base58 encoded string
+// NewIDFromString deserializes ID from base64 encoded string
 func NewIDFromString(input string) (*ID, error) {
 	global, err := reference.DefaultDecoder().Decode(input)
 	if err != nil {

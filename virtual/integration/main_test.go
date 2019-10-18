@@ -126,13 +126,13 @@ func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
-	mmanager machinesmanager.MachinesManager) (*Server, error) {
+	mManager machinesmanager.MachinesManager) (*Server, error) {
 
 	traceID := "main_" + utils.RandTraceID()
 	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
 
-	if mmanager == nil {
-		mmanager = machinesmanager.NewMachinesManager()
+	if mManager == nil {
+		mManager = machinesmanager.NewMachinesManager()
 	}
 
 	cm := component.Manager{}
@@ -252,7 +252,7 @@ func NewServer(
 
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
-		mmanager,
+		mManager,
 		NodeNetwork,
 		PulseManager)
 

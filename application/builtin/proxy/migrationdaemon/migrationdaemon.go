@@ -31,7 +31,7 @@ type DepositMigrationResult struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromString("0111A7jZX41e1SpH9oW3F2dgUvVQdjSqXEAGQSxhbqmD")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAAAyM7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")
 
 // MigrationDaemon holds proxy type
 type MigrationDaemon struct {

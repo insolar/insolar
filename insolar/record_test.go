@@ -17,9 +17,9 @@
 package insolar_test
 
 import (
+	"encoding/base64"
 	"testing"
 
-	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +39,7 @@ func TestNewIDFromBytes(t *testing.T) {
 
 func TestNewIDFromString(t *testing.T) {
 	id := gen.ID()
-	idStr := "1" + base58.Encode(id.Bytes())
+	idStr := "insolar:1" + base64.RawURLEncoding.EncodeToString(id.Bytes())
 	id2, err := insolar.NewIDFromString(idStr)
 	require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestNewIDFromString(t *testing.T) {
 
 func TestRecordID_String(t *testing.T) {
 	id := gen.ID()
-	idStr := "1" + base58.Encode(id.Bytes()) + ".record"
+	idStr := "insolar:1" + base64.RawURLEncoding.EncodeToString(id.Bytes()) + ".record"
 
 	assert.Equal(t, idStr, id.String())
 }
@@ -56,7 +56,10 @@ func TestRecordID_String(t *testing.T) {
 func TestNewRefFromString(t *testing.T) {
 	recordID := gen.ID()
 	domainID := gen.ID()
-	refStr := "1" + base58.Encode(recordID.Bytes()) + insolar.RecordRefIDSeparator + "1" + base58.Encode(domainID.Bytes())
+	refStr := "insolar:1" +
+		base64.RawURLEncoding.EncodeToString(recordID.Bytes()) +
+		insolar.RecordRefIDSeparator + "1" +
+		base64.RawURLEncoding.EncodeToString(domainID.Bytes())
 
 	expectedRef := insolar.NewGlobalReference(recordID, domainID)
 	actualRef, err := insolar.NewReferenceFromString(refStr)
@@ -67,7 +70,7 @@ func TestNewRefFromString(t *testing.T) {
 
 func TestRecordRef_String(t *testing.T) {
 	ref := gen.Reference()
-	expectedRefStr := "1" + base58.Encode(ref.GetLocal().Bytes())
+	expectedRefStr := "insolar:1" + base64.RawURLEncoding.EncodeToString(ref.GetLocal().Bytes())
 
 	assert.Equal(t, expectedRefStr, ref.String())
 }

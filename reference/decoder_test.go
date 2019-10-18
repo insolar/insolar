@@ -50,7 +50,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 		dec := NewDefaultDecoder(AllowLegacy)
 		_, err := dec.Decode(legacyReference_bad)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "invalid reference, insufficient address length")
+			assert.Contains(t, err.Error(), "invalid reference, illegal base64 data")
 		}
 	}
 
@@ -321,11 +321,11 @@ func TestDecoder_Decode_aliases(t *testing.T) {
 }
 
 func TestCycle(t *testing.T) {
-	inp := "15qwjxArNbE36WiUvT3NRQ9JqyUdW3mCRMBHKY31dJh6"
+	inp := "insolar:1AT2qBwzmA0cjSSH6tlySPS_6030MtpYdx2Bn2VsYtBk"
 
 	var err error
 	dec := NewDefaultDecoder(0)
-	enc := NewBase58Encoder(0)
+	enc := NewBase64Encoder(0)
 
 	gl, err := dec.Decode(inp)
 	assert.NoError(t, err)
