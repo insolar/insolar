@@ -53,7 +53,7 @@ func (p *futurePulseDataHolder) State() PulseSlotState {
 		return Past
 	case p.pd.IsEmpty():
 		p.mutex.RUnlock()
-		return Uninitialized
+		return 0
 	case p.pd.IsExpectedPulse():
 		p.mutex.RUnlock()
 		return Future
@@ -117,29 +117,32 @@ func (p *presentPulseDataHolder) MakePresent(pd pulse.Data) {
 	if p.State() != Present {
 		panic("illegal state")
 	}
+	if p.pd != pd {
+		panic("illegal value")
+	}
 }
 
 func (p *presentPulseDataHolder) MakePast() {
 	atomic.StoreUint32(&p.isPast, 1)
 }
 
-var _ pulseDataHolder = &pastPulseDataHolder{}
+var _ pulseDataHolder = &antiquePulseDataHolder{}
 
-type pastPulseDataHolder struct {
-	pd pulse.Data
+type antiquePulseDataHolder struct {
 }
 
-func (p pastPulseDataHolder) PulseData() pulse.Data {
-	return p.pd
-}
-
-func (p pastPulseDataHolder) State() PulseSlotState {
-	return Past
-}
-
-func (p pastPulseDataHolder) MakePresent(pd pulse.Data) {
+func (p antiquePulseDataHolder) PulseData() pulse.Data {
 	panic("illegal state")
 }
 
-func (p pastPulseDataHolder) MakePast() {
+func (p antiquePulseDataHolder) State() PulseSlotState {
+	return Antique
+}
+
+func (p antiquePulseDataHolder) MakePresent(pd pulse.Data) {
+	panic("illegal state")
+}
+
+func (p antiquePulseDataHolder) MakePast() {
+	panic("illegal state")
 }
