@@ -28,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
