@@ -61,7 +61,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	recursive "proxy/recursive_call_one"
+	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
 )
 type One struct {
 	foundation.BaseContract
@@ -105,7 +105,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	first "proxy/prototype_mismatch_first"
+	first "github.com/insolar/insolar/application/proxy/prototype_mismatch_first"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -210,7 +210,7 @@ package main
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	one "proxy/parent_one"
+	one "github.com/insolar/insolar/application/proxy/parent_one"
 )
 
 type Two struct {

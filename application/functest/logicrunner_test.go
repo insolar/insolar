@@ -90,7 +90,7 @@ func TestContractCallingContract(t *testing.T) {
 package main
 
 import "github.com/insolar/insolar/logicrunner/builtin/foundation"
-import "proxy/two"
+import "github.com/insolar/insolar/application/proxy/two"
 import "github.com/insolar/insolar/insolar"
 import "errors"
 
@@ -269,7 +269,7 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"proxy/test_saga_simple_contract"
+"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
 )
 
 type TestSagaSimpleCallContract struct {
@@ -356,7 +356,7 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"proxy/test_saga_call_from_accept_method"
+"github.com/insolar/insolar/application/proxy/test_saga_call_from_accept_method"
 )
 
 type TestSagaCallFromAcceptMethodContract struct {
@@ -468,7 +468,7 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"proxy/test_saga_multiple_calls"
+"github.com/insolar/insolar/application/proxy/test_saga_multiple_calls"
 )
 
 type TestSagaMultipleCallsContract struct {
@@ -565,7 +565,7 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"proxy/test_saga_magic_flag_contract_two"
+"github.com/insolar/insolar/application/proxy/test_saga_magic_flag_contract_two"
 )
 
 type SagaMagicFlagOne struct {
@@ -666,7 +666,7 @@ package main
 
 import (
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"proxy/test_saga_self_contract"
+"github.com/insolar/insolar/application/proxy/test_saga_self_contract"
 )
 
 type TestSagaSelfCallContract struct {
@@ -791,7 +791,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/error_interface_two"
+	two "github.com/insolar/insolar/application/proxy/error_interface_two"
 )
 
 type One struct {
@@ -868,7 +868,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/nil_result_two"
+	two "github.com/insolar/insolar/application/proxy/nil_result_two"
 )
 
 type One struct {
@@ -926,7 +926,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/constructor_return_nil_two"
+	two "github.com/insolar/insolar/application/proxy/constructor_return_nil_two"
 )
 
 type One struct {
@@ -981,7 +981,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/constructor_return_error_two"
+	two "github.com/insolar/insolar/application/proxy/constructor_return_error_two"
 )
 
 type One struct {
@@ -1034,7 +1034,7 @@ func TestGetParent(t *testing.T) {
 
  import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/get_parent_two"
+	two "github.com/insolar/insolar/application/proxy/get_parent_two"
  )
 
  type One struct {
@@ -1097,7 +1097,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/get_remote_data_two"
+	two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
 )
 
 type One struct {
@@ -1149,7 +1149,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	two "proxy/immutable_annotation_two"
+	two "github.com/insolar/insolar/application/proxy/immutable_annotation_two"
 )
 
 type One struct {
@@ -1186,7 +1186,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	three "proxy/immutable_annotation_three"
+	three "github.com/insolar/insolar/application/proxy/immutable_annotation_three"
 )
 
 type Two struct {
