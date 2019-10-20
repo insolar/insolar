@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -100,7 +101,7 @@ func (tu *fetcher) Fetch(
 	ctx context.Context, target insolar.ID, pulseNumber insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.Fetch")
-	defer span.End()
+	defer span.Finish()
 
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
 	if pulseNumber <= pulse.MinTimePulse {
@@ -114,7 +115,7 @@ func (tu *fetcher) Fetch(
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
-	span.Annotate(nil, "tree in DB is not actual")
+	span.LogFields(log.String("msg", "tree in DB is not actual"))
 	key := seqKey{pulseNumber, jetID}
 
 	// Indicates that this routine is the first in the queue and should do the fetching.
@@ -130,14 +131,14 @@ func (tu *fetcher) Fetch(
 	entry := tu.sequencer[key]
 	tu.seqMutex.Unlock()
 
-	span.Annotate(nil, "got sequencer entry")
+	span.LogFields(log.String("msg", "got sequencer entry"))
 
 	if !executing {
 		// We are not the first, waiting in the queue.
 		<-entry.ch
 
 		// Tree was updated in another thread, rechecking.
-		span.Annotate(nil, "somebody else updated actuality")
+		span.LogFields(log.String("msg", "somebody else updated actuality"))
 		return tu.Fetch(ctx, target, pulseNumber)
 	}
 
@@ -200,7 +201,7 @@ func (tu *fetcher) fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.fetch")
-	defer span.End()
+	defer span.Finish()
 
 	// Fetching result will be written here.
 	ch := make(chan fetchResult, 1)
@@ -225,7 +226,7 @@ func (tu *fetcher) fetch(
 			// Asking all the nodes concurrently.
 			go func(i int, node insolar.Node) {
 				ctx, span := instracer.StartSpan(ctx, "jet_fetcher.one_node_get_jet")
-				defer span.End()
+				defer span.Finish()
 
 				defer wg.Done()
 
@@ -321,7 +322,7 @@ func (tu *fetcher) fetch(
 // All light materials except ourselves.
 func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber) ([]insolar.Node, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.nodesForPulse")
-	defer span.End()
+	defer span.Finish()
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {

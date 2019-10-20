@@ -59,9 +59,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
 
@@ -160,10 +160,10 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	pulseCtx, logger = inslogger.WithTraceField(pulseCtx, traceID)
 
 	pulseCtx, span := instracer.StartSpan(pulseCtx, "Pulsar.Distribute")
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
+	span.LogFields(
+		log.Int64("pulse.PulseNumber", int64(pulse.PulseNumber)),
 	)
-	defer span.End()
+	defer span.Finish()
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(d.bootstrapHosts))
@@ -213,7 +213,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	}()
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
-	defer span.End()
+	defer span.Finish()
 
 	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 

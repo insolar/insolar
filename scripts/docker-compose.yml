@@ -23,12 +23,8 @@ services:
     ports:
       - "3000:3000"
 
-# elastic and kibana are optional here,
-# but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
   elasticsearch:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
-    # update blocked by https://github.com/jaegertracing/jaeger/issues/1474:
-#    image: "docker.elastic.co/elasticsearch/elasticsearch:7.3.0"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:7.3.2"
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -44,16 +40,8 @@ services:
       start_period: 30s
     # restart: on-failure
 
-  kibana:
-    image: "docker.elastic.co/kibana/kibana:6.5.4"
-# update blocked by https://github.com/jaegertracing/jaeger/issues/1474:
-#    image: "docker.elastic.co/kibana/kibana:7.3.0"
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
   jaeger:
-    image: "jaegertracing/all-in-one:1.13.1"
+    image: "jaegertracing/all-in-one:1.14.0"
     ports:
       - "6831:6831/udp"
       - "16686:16686"

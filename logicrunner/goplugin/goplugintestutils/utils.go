@@ -29,6 +29,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
@@ -95,7 +96,6 @@ func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc j
 	return cb
 }
 
-// NotifyAboutPulse deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root) // nolint: errcheck
@@ -177,7 +177,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
-			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
+			application.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)

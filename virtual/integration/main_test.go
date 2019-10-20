@@ -21,7 +21,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 	"math"
 	"os"
@@ -49,6 +48,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
@@ -126,13 +126,13 @@ func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
-	mmanager machinesmanager.MachinesManager) (*Server, error) {
+	mManager machinesmanager.MachinesManager) (*Server, error) {
 
 	traceID := "main_" + utils.RandTraceID()
 	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
 
-	if mmanager == nil {
-		mmanager = machinesmanager.NewMachinesManager()
+	if mManager == nil {
+		mManager = machinesmanager.NewMachinesManager()
 	}
 
 	cm := component.Manager{}
@@ -252,7 +252,7 @@ func NewServer(
 
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
-		mmanager,
+		mManager,
 		NodeNetwork,
 		PulseManager)
 

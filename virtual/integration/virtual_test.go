@@ -202,7 +202,7 @@ func TestVirtual_BasicOperations(t *testing.T) {
 	})
 }
 
-var walletRef = shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.record")
+var walletRef = shouldLoadRef("insolar:0AAAAyANCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")
 
 func shouldLoadRef(strRef string) insolar.Reference {
 	ref, err := insolar.NewReferenceFromString(strRef)

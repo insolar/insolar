@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 // PulseManager implements insolar.PulseManager.
@@ -79,17 +78,13 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	ctx, logger := inslogger.WithField(ctx, "new_pulse", newPulse.PulseNumber.String())
 	logger.Debug("received pulse")
 
-	ctx, span := instracer.StartSpan(
-		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
-	)
-	span.AddAttributes(
-		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
-	)
+	ctx, span := instracer.StartSpan(ctx, "PulseManager.Set")
+	span.SetTag("pulse.PulseNumber", int64(newPulse.PulseNumber))
 
 	onPulseStart := time.Now()
 	defer func() {
 		stats.Record(ctx, metrics.PulseManagerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
-		span.End()
+		span.Finish()
 	}()
 
 	// Dealing with node lists.

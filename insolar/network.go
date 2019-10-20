@@ -50,7 +50,7 @@ type Leaver interface {
 //go:generate minimock -i github.com/insolar/insolar/insolar.CertificateGetter -o ../testutils -s _mock.go -g
 
 type CertificateGetter interface {
-	// GetState returns our current thoughs about whole network
+	// GetCert registers reference and returns new certificate for it
 	GetCert(context.Context, *Reference) (Certificate, error)
 }
 

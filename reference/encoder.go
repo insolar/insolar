@@ -43,11 +43,11 @@ type Encoder interface {
 }
 
 func DefaultEncoder() Encoder {
-	return NewBase58Encoder(0)
+	return NewBase64Encoder(FormatSchema)
 }
 
-func Base64Encoder() Encoder {
-	return NewBase64Encoder(0)
+func Base58Encoder() Encoder {
+	return NewBase58Encoder(FormatSchema)
 }
 
 type encoder struct {

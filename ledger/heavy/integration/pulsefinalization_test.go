@@ -22,12 +22,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_FinalizePulse(t *testing.T) {
@@ -36,8 +38,8 @@ func Test_FinalizePulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	heavyConfig := insolar.GenesisHeavyConfig{
-		ContractsConfig: insolar.GenesisContractsConfig{
+	heavyConfig := application.GenesisHeavyConfig{
+		ContractsConfig: application.GenesisContractsConfig{
 			PKShardCount:       10,
 			MAShardCount:       10,
 			MigrationAddresses: make([][]string, 10),

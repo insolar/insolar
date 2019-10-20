@@ -81,10 +81,12 @@ fi
 build_logger()
 {
     echo "build logger binaries"
+    set -x
     pushd scripts/_logger
     GO111MODULE=on go build -o inslogrotator .
     popd
     mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
+    { set +x; } 2>/dev/null
 }
 
 kill_port()

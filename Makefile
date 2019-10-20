@@ -108,11 +108,11 @@ $(INSOLARD):
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):
-	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
-	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
+$(INSGOCC): application/cmd/insgocc/insgocc.go logicrunner/preprocessor
+	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" application/cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
 
@@ -130,7 +130,7 @@ $(INSGORUND):
 
 .PHONY: $(BENCHMARK)
 $(BENCHMARK):
-	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" cmd/benchmark/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" application/cmd/benchmark/*.go
 
 .PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):
@@ -167,7 +167,7 @@ test_unit: ## run all unit tests
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -180,7 +180,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest $(SLOW_PKGS)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest ./...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -220,7 +220,7 @@ ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./functest -count 3 -failfast | tee ci_test_func.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)

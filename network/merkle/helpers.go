@@ -51,13 +51,19 @@
 package merkle
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/utils"
 )
 
 const reserved = 0xDEADBEEF
+
+func uInt32ToBytes(n uint32) []byte {
+	buff := make([]byte, 4)
+	binary.BigEndian.PutUint32(buff, n)
+	return buff
+}
 
 type merkleHelper struct {
 	scheme     insolar.PlatformCryptographyScheme
@@ -104,13 +110,13 @@ func (mh *merkleHelper) nodeHash(nodeSignature, nodeInfoHash []byte) []byte {
 }
 
 func (mh *merkleHelper) bucketEntryHash(entryIndex uint32, nodeHash []byte) []byte {
-	entryIndexHash := mh.leafHasher.Hash(utils.UInt32ToBytes(entryIndex))
+	entryIndexHash := mh.leafHasher.Hash(uInt32ToBytes(entryIndex))
 	return mh.doubleSliceHash(entryIndexHash, nodeHash)
 }
 
 func (mh *merkleHelper) bucketInfoHash(role insolar.StaticRole, nodeCount uint32) []byte {
-	roleHash := mh.leafHasher.Hash(utils.UInt32ToBytes(uint32(role)))
-	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
+	roleHash := mh.leafHasher.Hash(uInt32ToBytes(uint32(role)))
+	nodeCountHash := mh.leafHasher.Hash(uInt32ToBytes(nodeCount))
 	return mh.doubleSliceHash(roleHash, nodeCountHash)
 }
 
@@ -119,9 +125,9 @@ func (mh *merkleHelper) bucketHash(bucketInfoHash, bucketEntryHash []byte) []byt
 }
 
 func (mh *merkleHelper) globuleInfoHash(prevCloudHash []byte, globuleID, nodeCount uint32) []byte {
-	reservedHash := mh.leafHasher.Hash(utils.UInt32ToBytes(reserved))
-	globuleIDHash := mh.leafHasher.Hash(utils.UInt32ToBytes(globuleID))
-	nodeCountHash := mh.leafHasher.Hash(utils.UInt32ToBytes(nodeCount))
+	reservedHash := mh.leafHasher.Hash(uInt32ToBytes(reserved))
+	globuleIDHash := mh.leafHasher.Hash(uInt32ToBytes(globuleID))
+	nodeCountHash := mh.leafHasher.Hash(uInt32ToBytes(nodeCount))
 
 	return mh.doubleSliceHash(
 		mh.doubleSliceHash(reservedHash, prevCloudHash),

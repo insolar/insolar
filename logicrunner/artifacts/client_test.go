@@ -1534,12 +1534,12 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 	codeDesc := NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAAAyNrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record"),
 	)
 	var protoDesc PrototypeDescriptor
 	{ // account
-		pRef := shouldLoadRef("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")
-		cRef := shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record")
+		pRef := shouldLoadRef("insolar:0AAAAyCjqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU.record")
+		cRef := shouldLoadRef("insolar:0AAAAyNrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")
 		protoDesc = NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),

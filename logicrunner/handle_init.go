@@ -22,7 +22,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
 
@@ -143,16 +142,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", payloadType.String()),
-	)
+	span.SetTag("msg.Type", payloadType.String())
 
 	ctx = insmetrics.InsertTag(ctx, metrics.TagHandlePayloadType, payloadType.String())
 	stats.Record(ctx, metrics.HandleStarted.M(1))
 	defer func() {
 		stats.Record(ctx,
 			metrics.HandleTiming.M(float64(time.Since(handleStart).Nanoseconds())/1e6))
-		span.End()
+		span.Finish()
 	}()
 
 	switch payloadType {

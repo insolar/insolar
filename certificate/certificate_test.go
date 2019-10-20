@@ -66,10 +66,10 @@ func TestReadCertificate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, cert.PublicKey)
 	require.Equal(t, "virtual", cert.Role)
-	require.Equal(t, "11474sCnj1DggSggkNZLry55pcbjWhSss1WSXj6W9XwhT.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+	require.Equal(t, "insolar:1AMuaHS6ENi_58HSwvLmeNg-26BHLcCuz36c0SzEJT1I",
 		cert.Reference)
 	require.Equal(t, 7, cert.MajorityRule)
-	require.Equal(t, "11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6", cert.RootDomainReference)
+	require.Equal(t, "insolar:1AAEAAflht_i9JBIq2_moi5L61cLEVxGNpIBJlzA54zc", cert.RootDomainReference)
 
 	testPubKey1 := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n"
 	key1, err := kp.ImportPublicKeyPEM([]byte(testPubKey1))
@@ -87,21 +87,21 @@ func TestReadCertificate(t *testing.T) {
 			Host:          "localhost:22001",
 			nodePublicKey: key1,
 			// NetworkSign:   base58.Decode("ICDTj1ev/wEBewXBWeNhsmByZ9enmfOAM+ltB7pA6s02sUdGr8n1w2STkp5YsADDj2SudxC18enFEDx8Nh3J0zeR"),
-			NodeRef: "11tJDXVqB8L4AwVGdQKoECgM2TJeMZV2otQuw5X4Uta.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef: "insolar:1AAEAAbP0lFkTHKV3QBOUfu3ORaa7fIcSEbgwUMEB09M",
 		},
 		BootstrapNode{
 			PublicKey:     testPubKey2,
 			Host:          "127.0.0.1:23832",
 			nodePublicKey: key2,
 			// NetworkSign:   base58.Decode("ICA0L77lNk2LlAIlWM727b621vPXMbKzFHHDFVtrXKRBilnMiuGq44QpidwB8Ps3YIhZ2XzElajYo2eQ88M9hKDh"),
-			NodeRef: "11tJC6sijvFtBJvFBSfyaksfMy7XqmDsnjt5RkZLa9u.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef: "insolar:1AAEAASl0Gzn5SYZH9oTf1aMjakbF3SLcyMuvTHV1I4A",
 		},
 		BootstrapNode{
 			PublicKey:     testPubKey3,
 			Host:          "127.0.0.1:33833",
 			nodePublicKey: key3,
 			// NetworkSign:   base58.Decode("ICAgWvCWLtEJSmITTfa0bKiCL1NwsKnAl8Yt6WNYbXGJVMHCTmbSmpTYqDhvRnUNEwq+J1q3E+nKiO3ZbxZBGjLB"),
-			NodeRef: "11tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef: "insolar:1AAEAAaYz0ZzIvcNHXrAsY3_iucph-gU_q461IaIQelw",
 		},
 	}
 
@@ -150,27 +150,27 @@ func TestReadCertificateFromReader(t *testing.T) {
 			"light_material": 3,
 		},
 		"public_key":      string(publicKey[:]),
-		"reference":       "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+		"reference":       "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
 		"role":            "virtual",
-		"root_domain_ref": "11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+		"root_domain_ref": "insolar:1AAABAAH5Ybf4vSQSKtv5qIuS-tXCxFcRjaSASZcwOeM",
 		"bootstrap_nodes": []map[string]interface{}{
 			{
 				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n",
 				"host":       "localhost:22001",
 				// "node_sign":  "ICBcAGEnW9gxvLYUgjTFwsUXh5sISXLKka3gZSVXQumpqQxKMTO4+Q7bF9iQc20+rlBdgMcnh2JYtFkzSOgEdBfH",
-				"node_ref": "11tJDXVqB8L4AwVGdQKoECgM2TJeMZV2otQuw5X4Uta.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+				"node_ref": "insolar:1AAABAAGz9JRZExyld0ATlH7tzkWmu3yHEhG4MFDBAdM",
 			},
 			{
 				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEtlCnGJbptDc+c/pr9nAJE3SlWSCP\n3SIQ9Q9iOFKzZFf71c6fCrLyquAl+lCD/S3ch1v/y42d1peGAWiYujmOuw==\n-----END PUBLIC KEY-----\n",
 				"host":       "localhost:22002",
 				// "node_sign":  "ICAMco6BKxQgpIVVrvijNF+IewMavWKS8YnnZRwsqOxpgjtUe+BAR58efoGnWNVK4IBetuJ0tw0ZJqKHOp2NqdAy",
-				"node_ref": "11tJC6sijvFtBJvFBSfyaksfMy7XqmDsnjt5RkZLa9u.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+				"node_ref": "insolar:1AAABAAEpdBs5-UmGR_aE39WjI2pGxd0i3MjLr0x1dSM",
 			},
 			{
 				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMs0nrI/to+AfRs+AuXr+ri/fHNrQ\nY6A83jNYlQfIUHRFxmv9Oowi6aDGkmsSzRDGVKrqabjgBuVYYTznqm/s9g==\n-----END PUBLIC KEY-----\n",
 				"host":       "localhost:22003",
 				// "node_sign":  "ICDX3f1kb1sdJDQyXiFOWR9X4+jDoCFxNN5WfoEM99ZdJMnDMaFkVk62NTkik+nadlOcNEAe/gBNG1ezuxpZVv8q",
-				"node_ref": "11tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+				"node_ref": "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
 			},
 		},
 	}
@@ -183,13 +183,13 @@ func TestReadCertificateFromReader(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, cert.PublicKey)
 	require.Equal(t, "virtual", cert.Role)
-	require.Equal(t, "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
+	require.Equal(t, "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
 		cert.Reference)
 	require.Equal(t, 7, cert.MajorityRule)
 	require.Equal(t, uint(1), cert.MinRoles.Virtual)
 	require.Equal(t, uint(2), cert.MinRoles.HeavyMaterial)
 	require.Equal(t, uint(3), cert.MinRoles.LightMaterial)
-	require.Equal(t, "11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6", cert.RootDomainReference)
+	require.Equal(t, "insolar:1AAABAAH5Ybf4vSQSKtv5qIuS-tXCxFcRjaSASZcwOeM", cert.RootDomainReference)
 	require.Equal(t, nodePublicKey, cert.nodePublicKey)
 
 	testPubKey1 := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n"
@@ -207,19 +207,19 @@ func TestReadCertificateFromReader(t *testing.T) {
 			PublicKey:     testPubKey1,
 			Host:          "localhost:22001",
 			nodePublicKey: key1,
-			NodeRef:       "11tJDXVqB8L4AwVGdQKoECgM2TJeMZV2otQuw5X4Uta.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef:       "insolar:1AAABAAGz9JRZExyld0ATlH7tzkWmu3yHEhG4MFDBAdM",
 		},
 		BootstrapNode{
 			PublicKey:     testPubKey2,
 			Host:          "localhost:22002",
 			nodePublicKey: key2,
-			NodeRef:       "11tJC6sijvFtBJvFBSfyaksfMy7XqmDsnjt5RkZLa9u.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef:       "insolar:1AAABAAEpdBs5-UmGR_aE39WjI2pGxd0i3MjLr0x1dSM",
 		},
 		BootstrapNode{
 			PublicKey:     testPubKey3,
 			Host:          "localhost:22003",
 			nodePublicKey: key3,
-			NodeRef:       "11tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+			NodeRef:       "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
 		},
 	}
 

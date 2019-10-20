@@ -3,7 +3,7 @@ module github.com/insolar/insolar
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/jaeger v0.1.0
+	contrib.go.opencensus.io/exporter/jaeger v0.1.0 // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/ThreeDotsLabs/watermill v1.0.0
@@ -31,6 +31,7 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/onrik/gomerkle v1.0.0
+	github.com/opentracing/opentracing-go v1.0.2
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
@@ -47,6 +48,8 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
 	github.com/tylerb/is v2.1.4+incompatible // indirect
+	github.com/uber/jaeger-client-go v2.19.0+incompatible
+	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
 	golang.org/dl v0.0.0-20190926113319-b3a3479952ba // indirect

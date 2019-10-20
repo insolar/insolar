@@ -55,8 +55,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 
@@ -149,10 +149,10 @@ func (ac *requester) authorize(ctx context.Context, host *host.Host, cert insola
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", host.String())
 
 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")
-	span.AddAttributes(
-		trace.StringAttribute("node", host.NodeID.String()),
+	span.LogFields(
+		log.String("node", host.NodeID.String()),
 	)
-	defer span.End()
+	defer span.Finish()
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error serializing certificate")
