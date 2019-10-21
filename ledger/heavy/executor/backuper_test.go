@@ -194,6 +194,8 @@ func TestBackuper_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	confirmFile := filepath.Join(cfg.Backup.TargetDirectory, fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse+1), cfg.Backup.ConfirmFile)
+	err = os.MkdirAll(filepath.Dir(confirmFile), 0777)
+	require.NoError(t, err)
 	cfg.Backup.PostProcessBackupCmd = []string{"touch", confirmFile}
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse, db)
 	require.NoError(t, err)
@@ -222,30 +224,6 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 
 	err = bm.MakeBackup(context.Background(), testPulse+1)
 	require.Contains(t, err.Error(), "no backup confirmation")
-}
-
-func TestBackuper_CantMoveToTargetDir(t *testing.T) {
-	testPulse := insolar.GenesisPulse.PulseNumber
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0, db)
-	require.NoError(t, err)
-	// Create dir to fail move operation
-	_, err = os.Create(filepath.Join(cfg.Backup.TargetDirectory, fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse)))
-	require.NoError(t, err)
-
-	err = bm.MakeBackup(context.Background(), testPulse)
-	require.Contains(t, err.Error(), "can't move")
 }
 
 func TestBackuper_Backup_OldPulse(t *testing.T) {
