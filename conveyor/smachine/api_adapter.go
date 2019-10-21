@@ -31,7 +31,7 @@ type AdapterNotifyFunc func()
 type CreateFactoryFunc func(eventPayload interface{}) CreateFunc
 
 type AsyncCallRequester interface {
-	/* Allocates and provides cancellation function. Repeated call returns same. */
+	// Allocates and provides cancellation function. Repeated call returns same.
 	WithCancel(*context.CancelFunc) AsyncCallRequester
 	// Sets a handler to map nested calls from the target adapter to new SMs
 	// If this handler is nil or returns nil, then a default handler of the adapter will be in use.
@@ -40,17 +40,10 @@ type AsyncCallRequester interface {
 	// See AsyncCallFlags
 	WithFlags(flags AsyncCallFlags) AsyncCallRequester
 
-	/* Starts async call  */
+	// Starts async call
 	Start()
-	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
+	// Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state
 	DelayedStart() CallConditionalBuilder
-}
-
-type NotifyRequester interface {
-	/* Sends notify */
-	Send()
-	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
-	DelayedSend() CallConditionalBuilder
 }
 
 type AsyncCallFlags uint8
@@ -73,35 +66,36 @@ const (
 	AutoWakeUp
 )
 
+type NotifyRequester interface {
+	// Sends notify
+	Send()
+	// Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state
+	DelayedSend() CallConditionalBuilder
+}
+
 type SyncCallRequester interface {
 	// Sets a handler to map nested calls from the target adapter to new SMs.
 	// See AsyncCallRequester.WithNested() for details.
 	WithNested(CreateFactoryFunc) AsyncCallRequester
 
-	/* Returns true when the call was successful. May return false on a signal - depends on context mode */
+	// Returns true when the call was successful, or false if cancelled. May return false on a signal - depends on context mode.
 	TryCall() bool
-	/* May panic on migrate - depends on context mode */
+	// May panic on migrate - depends on context mode
 	Call()
 }
 
-/* Provided by adapter's internals */
+// Provides execution of calls to an adapter.
 type AdapterExecutor interface {
-	/*
-		Schedules asynchronous execution, MAY return native cancellation function if supported.
-		Panics are handled by caller.
-	*/
-	StartCall(fn AdapterCallFunc, callback *AdapterCallback, requireCancel bool) context.CancelFunc
+	// Schedules asynchronous execution, MAY return native cancellation function, but only if supported.
+	// This method MUST be fast and MUST NOT lock up. May panic on queue overflow.
+	StartCall(fn AdapterCallFunc, callback *AdapterCallback, needCancel bool) context.CancelFunc
 
-	/*
-		Schedules asynchronous, fire-and-forget execution.
-		Panics are handled by caller.
-	*/
+	// Schedules asynchronous, fire-and-forget execution.
+	// This method MUST be fast and MUST NOT lock up. May panic on queue overflow.
 	SendNotify(AdapterNotifyFunc)
 
-	/*
-		    Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
-			Panics are handled by caller.
-	*/
+	// Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
+	// TODO pass in a cancellation object
 	TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc)
 }
 

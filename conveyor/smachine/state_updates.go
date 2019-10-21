@@ -112,7 +112,7 @@ func init() {
 				}
 
 				newSlot := m.allocateSlot()
-				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
+				newSlot.slotReplaceData = slot.slotReplaceData.takeOutForReplace()
 				if m.prepareNewSlot(newSlot, slot, nil, sm, true) {
 					// prevent this slot from firing the termination handler
 					slot.defResultHandler = nil
@@ -138,7 +138,7 @@ func init() {
 					panic("illegal value")
 				}
 				newSlot := m.allocateSlot()
-				newSlot.slotCreateData = slot.slotCreateData.takeOutForReplace()
+				newSlot.slotReplaceData = slot.slotReplaceData.takeOutForReplace()
 				if m.prepareNewSlot(newSlot, slot, fn, nil, true) {
 					// prevent this slot from firing the termination handler
 					slot.defResultHandler = nil

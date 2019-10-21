@@ -31,11 +31,6 @@ func (p *machineCallContext) Migrate() {
 	p.m.migrate(p.w)
 }
 
-func (p *machineCallContext) AddMigrationCallback(fn MigrationFunc) {
-	p.ensureValid()
-	p.m.AddMigrationCallback(fn)
-}
-
 func (p *machineCallContext) Cleanup() {
 	p.ensureValid()
 	p.m.Cleanup(p.w)

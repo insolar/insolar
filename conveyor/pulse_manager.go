@@ -25,7 +25,7 @@ import (
 type PulseDataManager struct {
 	// mutable
 	presentAndFuturePulse uint64 //atomic
-
+	preparingPulse        uint32 //atomic
 }
 
 const uninitializedFuture = pulse.LocalRelative
@@ -58,6 +58,18 @@ func (p *PulseDataManager) setPresentPulse(pd pulse.Data) {
 			return
 		}
 	}
+}
+
+func (p *PulseDataManager) isPreparingPulse() bool {
+	return atomic.LoadUint32(&p.preparingPulse) != 0
+}
+
+func (p *PulseDataManager) setPreparingPulse(out PreparePulseChangeChannel) {
+	atomic.StoreUint32(&p.preparingPulse, 1)
+}
+
+func (p *PulseDataManager) unsetPreparingPulse() {
+	atomic.StoreUint32(&p.preparingPulse, 0)
 }
 
 func (p *PulseDataManager) GetPulseData(pn pulse.Number) (pulse.Data, bool) {

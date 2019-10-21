@@ -16,23 +16,21 @@
 
 package smachine
 
-import "context"
+var _ DetachableSlotWorker = migrateWorkerWrapper{}
 
-type MachineCallFunc func(MachineCallContext)
+type migrateWorkerWrapper struct {
+	FixedSlotWorker
+}
 
-// Provides easy-to-use access to functions of the SlotMachine that require a proper worker / concurrency control
-type MachineCallContext interface {
-	SlotMachine() *SlotMachine
+func (w migrateWorkerWrapper) NonDetachableCall(fn NonDetachableFunc) (wasExecuted bool) {
+	fn(w)
+	return true
+}
 
-	AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink
-	AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool)
+func (w migrateWorkerWrapper) NonDetachableOuterCall(*SlotMachine, NonDetachableFunc) (wasExecuted bool) {
+	return false
+}
 
-	BargeInNow(SlotLink, interface{}, BargeInApplyFunc) bool
-
-	GetPublished(key interface{}) interface{}
-	GetPublishedLink(key interface{}) SharedDataLink
-
-	Migrate()
-	Cleanup()
-	Stop()
+func (w migrateWorkerWrapper) TryDetach(flags LongRunFlags) {
+	panic("unsupported")
 }

@@ -23,6 +23,9 @@ import (
 
 type SharedDataFunc func(interface{}) (wakeup bool)
 
+// Link to a data shared by a slot.
+// This link can live longer than its origin.
+// Unless ShareDataDirect or ShareDataUnbound are specified, then the shared data will NOT be retained by existence of this link.
 type SharedDataLink struct {
 	link  SlotLink
 	data  interface{}
@@ -33,10 +36,12 @@ func (v SharedDataLink) IsZero() bool {
 	return v.data == nil
 }
 
+// Data is valid at the moment of this call
 func (v SharedDataLink) IsValid() bool {
 	return !v.IsZero() && (v.link.s == nil || v.link.IsValid())
 }
 
+// Data is unbound / can't be invalidated and is always available.
 func (v SharedDataLink) IsUnbound() bool {
 	return v.link.s == nil
 }
@@ -59,6 +64,7 @@ func (v SharedDataLink) getData() interface{} {
 	return v.data
 }
 
+// Returns true when the underlying data is of the given type
 func (v SharedDataLink) IsOfType(t reflect.Type) bool {
 	switch a := v.data.(type) {
 	case *uniqueAlias:
@@ -67,6 +73,7 @@ func (v SharedDataLink) IsOfType(t reflect.Type) bool {
 	return reflect.TypeOf(v.data) == t
 }
 
+// Returns true when the underlying data can be assigned to the given type
 func (v SharedDataLink) IsAssignableToType(t reflect.Type) bool {
 	switch a := v.data.(type) {
 	case nil:
@@ -77,6 +84,7 @@ func (v SharedDataLink) IsAssignableToType(t reflect.Type) bool {
 	return reflect.TypeOf(v.data).AssignableTo(t)
 }
 
+// Returns true when the underlying data can be assigned to the given value
 func (v SharedDataLink) IsAssignableTo(t interface{}) bool {
 	switch a := v.data.(type) {
 	case nil:
@@ -87,6 +95,7 @@ func (v SharedDataLink) IsAssignableTo(t interface{}) bool {
 	return reflect.TypeOf(v.data).AssignableTo(reflect.TypeOf(t))
 }
 
+// Panics when the underlying data is of a different type
 func (v SharedDataLink) EnsureType(t reflect.Type) {
 	if v.data == nil {
 		panic("illegal state")
@@ -97,7 +106,8 @@ func (v SharedDataLink) EnsureType(t reflect.Type) {
 	}
 }
 
-// NB! SharedDataAccessor keeps the SharedDataFunc and may lead to memory leak when retained.
+// Creates an accessor that will apply the given function to the shared data.
+// SharedDataAccessor gets same data retention rules as the original SharedDataLink.
 func (v SharedDataLink) PrepareAccess(fn SharedDataFunc) SharedDataAccessor {
 	if fn == nil {
 		panic("illegal value")
@@ -105,7 +115,7 @@ func (v SharedDataLink) PrepareAccess(fn SharedDataFunc) SharedDataAccessor {
 	return SharedDataAccessor{&v, fn}
 }
 
-// NB! SharedDataAccessor keeps the SharedDataFunc and may lead to memory leak when retained.
+// SharedDataAccessor gets same data retention rules as the original SharedDataLink.
 type SharedDataAccessor struct {
 	link     *SharedDataLink
 	accessFn SharedDataFunc
@@ -115,6 +125,7 @@ func (v SharedDataAccessor) IsZero() bool {
 	return v.link == nil
 }
 
+// Convenience wrapper of ExecutionContext.UseShared()
 func (v SharedDataAccessor) TryUse(ctx ExecutionContext) SharedAccessReport {
 	return ctx.UseShared(v)
 }
@@ -138,14 +149,21 @@ func (v SharedDataAccessor) accessLocal(local *Slot) Decision {
 
 var _ Decider = SharedAccessReport(0)
 
+// Describes a result of shared data access
 type SharedAccessReport uint8
 
 const (
+	// Data is invalidated and can't be accessed anytime further
 	SharedSlotAbsent SharedAccessReport = iota
+	// Data is valid, but is in use by someone else. Data is shared by a slot that belongs to the same SlotMachine
 	SharedSlotLocalBusy
+	// Data is valid, but is in use by someone else.
 	SharedSlotRemoteBusy
+	// Data is valid and is accessible / was accessed. Data belongs to this slot or is always available (unbound).
 	SharedSlotAvailableAlways
+	// Data is valid and is accessible / was accessed. Data is shared by a slot that belongs to the same SlotMachine
 	SharedSlotLocalAvailable
+	// Data is valid and is accessible / was accessed.
 	SharedSlotRemoteAvailable
 )
 

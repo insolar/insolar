@@ -63,11 +63,16 @@ func TestConveyor(t *testing.T) {
 }
 
 func worker(conveyor *PulseConveyor, signal tools.VersionedSignal) {
-	worker := sworker.NewSimpleSlotWorker(signal.Mark(), 100000)
-
+	workerFactory := sworker.NewAttachableSimpleSlotWorker()
 	sm := conveyor.slotMachine
 	for {
-		repeatNow, nextPollTime := sm.ScanOnce(worker)
+		var (
+			repeatNow    bool
+			nextPollTime time.Time
+		)
+		workerFactory.AttachTo(sm, signal.Mark(), 100, func(worker smachine.AttachedSlotWorker) {
+			repeatNow, nextPollTime = sm.ScanOnce(0, worker)
+		})
 
 		if repeatNow {
 			continue

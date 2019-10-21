@@ -26,12 +26,12 @@ type SlotWorker interface {
 	HasSignal() bool
 	IsDetached() bool
 	GetSignalMark() *tools.SignalVersion
+	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
 }
 
+type LoopLimiterFunc func(loopCount int) (canLoop, hasSignal bool)
 type DetachableSlotWorker interface {
 	SlotWorker
-
-	CanLoopOrHasSignal(loopCount int) (canLoop, hasSignal bool)
 
 	// provides a temporary protection from detach
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
@@ -53,5 +53,6 @@ type AttachedSlotWorker interface {
 }
 
 type AttachableSlotWorker interface {
-	AttachTo(m *SlotMachine, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
+	AttachTo(m *SlotMachine, signal *tools.SignalVersion, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
+	AttachAsNested(m *SlotMachine, w DetachableSlotWorker, loopLimit uint32, fn AttachedFunc) (wasDetached bool)
 }

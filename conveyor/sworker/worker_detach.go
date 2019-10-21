@@ -21,19 +21,19 @@ import (
 	"github.com/insolar/insolar/conveyor/tools"
 )
 
-var _ smachine.AttachableSlotWorker = &AttachableWorker{}
+//var _ smachine.AttachableSlotWorker = &AttachableWorker{}
 
 type AttachableWorker struct {
 	signalSource *tools.VersionedSignal
 }
 
 func (p *AttachableWorker) AttachTo(_ *smachine.SlotMachine, loopLimit uint32, fn smachine.AttachedFunc) (wasDetached bool) {
-	w := &SlotWorker{parent: p, outerSignal: p.signalSource.Mark(), loopLimit: loopLimit}
-	fn(w)
+	//w := &SlotWorker{parent: p, outerSignal: p.signalSource.Mark(), loopLimit: loopLimit}
+	//fn(w)
 	return false
 }
 
-var _ smachine.FixedSlotWorker = &SlotWorker{}
+//var _ smachine.FixedSlotWorker = &SlotWorker{}
 
 type SlotWorker struct {
 	parent      *AttachableWorker

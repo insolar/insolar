@@ -165,6 +165,14 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 	return p.s.defResult
 }
 
+func (p *slotContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
+	p.ensureAtLeast(updCtxInit)
+	if lf != nil {
+		panic("illegal value")
+	}
+	p.s.stepLogger = lf
+}
+
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }
@@ -239,6 +247,7 @@ func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool
 	}
 
 	m := p.s.machine
+
 	newSlot := m.allocateSlot()
 	newSlot.ctx = ctx
 	newSlot.parent = p.s.NewLink()

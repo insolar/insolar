@@ -39,7 +39,9 @@ const (
 
 type BasicContext interface {
 	SlotLink() SlotLink
+	// can be empty - no parent
 	ParentLink() SlotLink
+	// not nil
 	GetContext() context.Context
 }
 
@@ -83,6 +85,8 @@ type InOrderStepContext interface {
 	SetDefaultTerminationResult(interface{})
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
+	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
+	SetDefaultStepLogger(StateMachineStepLoggerFunc)
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate
@@ -146,14 +150,14 @@ const (
 	// SM that called Share() will be woken up after each use of the shared data.
 	ShareDataWakesUpAfterUse = 1 << iota
 
-	// WARNING! Can ONLY be used for concurrency-safe data. Must NOT keep references to SM.
+	// WARNING! Can ONLY be used for concurrency-safe data. Must NOT keep references to SM or its fields.
 	// Data is immediately accessible. Data is not bound to SM and will never be invalidated.
-	// Keeping SharedDataLink will retain the data in memory.
+	// Keeping such SharedDataLink will retain the data in memory.
 	ShareDataUnbound
 
-	// WARNING! Must NOT keep references to SM.
+	// WARNING! Must NOT keep references to SM or its fields.
 	// Data is bound to SM and will invalidated after stop.
-	// But keeping SharedDataLink will retain the data in memory.
+	// But keeping such SharedDataLink will retain the data in memory even when invalidated.
 	ShareDataDirect
 )
 
@@ -167,10 +171,10 @@ type PostInitStepContext interface {
 	// Provides a builder for a simple barge-in. The barge-in function will be ignored if the step has changed.
 	BargeInThisStepOnly() BargeInBuilder
 
-	// After completion of the current SM's step it will be stopped and the new SM created/started.
-	// The new SM will by default inherit parent, context, termination handler/result and injected dependencies.
+	// After completion of the current step, SM will be stopped and the new SM created/started.
+	// The new SM will by default inherit from this SM: parent, context, termination handler/result and injected dependencies.
 	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
-	// WARNING! Use of SetTerminationHandler() here will replace a previous handler and it will never fire.
+	// WARNING! Use of SetTerminationHandler() inside CreateFunc will replace the current handler, so it will never fire then.
 	Replace(CreateFunc) StateUpdate
 	// See Replace()
 	ReplaceWith(StateMachine) StateUpdate
@@ -275,7 +279,6 @@ type ConditionalBuilder interface {
 
 type AsyncResultContext interface {
 	BasicContext
-	//SynchronizationContext
 
 	/* Makes SM active if it was waiting or polling */
 	WakeUp()
@@ -300,7 +303,6 @@ type BargeInBuilder interface {
 
 type BargeInContext interface {
 	BasicContext
-	SynchronizationContext
 
 	AffectedStep() SlotStep
 
@@ -329,11 +331,14 @@ type FailureContext interface {
 	/* A step the slot is at */
 	AffectedStep() SlotStep
 
+	// Reason of the failure
 	GetError() error
-	// False when the error was initiated by ctx.Error()
+
+	// False when the error was initiated by ctx.Error(). When true, then GetError() should be SlotPanicError
 	IsPanic() bool
-	// True when the error can be recovered by returning ErrorHandlerRecover from the handler.
-	// An a panic inside async call can be recovered.
+
+	// True when this error can be recovered by SetAction(ErrorHandlerRecover).
+	// A panic inside async call / callback can be recovered.
 	CanRecover() bool
 
 	// Gets a last value set by SetDefaultTerminationResult()
@@ -347,6 +352,8 @@ type FailureContext interface {
 	// Recovery actions will be ignored when CanRecover() is false.
 	SetAction(action ErrorHandlerAction)
 
+	// See ExecutionContext
 	NewChild(context.Context, CreateFunc) SlotLink
+	// See ExecutionContext
 	InitChild(context.Context, CreateFunc) SlotLink
 }

@@ -105,6 +105,7 @@ var _ MigrationContext = &migrationContext{}
 
 type migrationContext struct {
 	slotContext
+	fixedWorker  FixedSlotWorker
 	skipMultiple bool
 }
 

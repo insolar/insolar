@@ -18,6 +18,8 @@ package smachine
 
 type ContextMarker = uintptr
 
+// Represents an update to be applied to SM.
+// Content of this object is used internally. DO NOT interfere.
 type StateUpdate struct {
 	marker  ContextMarker
 	link    *Slot

@@ -48,7 +48,8 @@ func main() {
 	}
 
 	signal := tools.NewVersionedSignal()
-	worker := sworker.NewSimpleSlotWorker(signal.Mark(), scanCountLimit)
+	workerFactory := sworker.NewAttachableSimpleSlotWorker()
+	//(signal.Mark(), scanCountLimit)
 	startNano := time.Now().UnixNano()
 	startBase := example.IterationCount
 
@@ -57,8 +58,14 @@ func main() {
 
 	prev := 0
 	for i := 0; ; i++ {
+		var (
+			repeatNow    bool
+			nextPollTime time.Time
+		)
+		workerFactory.AttachTo(sm, signal.Mark(), scanCountLimit, func(worker smachine.AttachedSlotWorker) {
+			repeatNow, nextPollTime = sm.ScanOnce(0, worker)
+		})
 
-		repeatNow, nextPollTime := sm.ScanOnce(worker)
 		//fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 		//fmt.Printf("%03d %v =============== repeatNow=%v nextPollTime=%v\n", i, time.Now(), repeatNow, nextPollTime)
 

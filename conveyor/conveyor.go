@@ -228,6 +228,7 @@ func (p *PulseConveyor) PreparePulseChange(out PreparePulseChangeChannel) error 
 			// wrong - first pulse can only be committed
 			panic("illegal state")
 		}
+		p.pdm.setPreparingPulse(out)
 		if !ctx.BargeInNow(p.presentMachine.SlotLink(), out, p.presentMachine.preparePulseChange) {
 			panic("present slot is busy")
 		}
@@ -240,6 +241,7 @@ func (p *PulseConveyor) CancelPulseChange() error {
 			// wrong - first pulse can only be committed
 			panic("illegal state")
 		}
+		p.pdm.unsetPreparingPulse()
 		if !ctx.BargeInNow(p.presentMachine.SlotLink(), nil, p.presentMachine.cancelPulseChange) {
 			panic("present slot is busy")
 		}
@@ -248,6 +250,7 @@ func (p *PulseConveyor) CancelPulseChange() error {
 
 func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
+		p.pdm.unsetPreparingPulse()
 		p._promotePulseSlots(ctx, pd)
 		ctx.Migrate()
 	})

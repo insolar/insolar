@@ -16,7 +16,11 @@
 
 package smachine
 
-import "github.com/insolar/insolar/conveyor/injector"
+import (
+	"context"
+
+	"github.com/insolar/insolar/conveyor/injector"
+)
 
 type StateMachine interface {
 	// Returns a meta-type / declaration of a SM.
@@ -33,18 +37,28 @@ type StateMachineDeclaration interface {
 	InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector)
 
 	// Returns a shadow migration handler for the given stateMachine, that will be invoked on every migration. SM has no control over it.
+	// See ShadowMigrator
 	GetShadowMigrateFor(StateMachine) ShadowMigrateFunc
 
+	GetStepLogger(context.Context, StateMachine) StateMachineStepLoggerFunc
+
 	// WARNING! DO NOT EVER return "true" here without CLEAR understanding of internal mechanics.
-	// Returning "true" blindly will VERY LIKELY lead to infinite loops.
+	// Returning "true" blindly will LIKELY lead to infinite loops.
 	IsConsecutive(cur, next StateFunc) bool
 }
 
-type ShadowMigrateFunc func(start, delta uint32)
+// See ShadowMigrator
+type ShadowMigrateFunc func(migrationCount, migrationDelta uint32)
 
+// Provides assistance to injected and other objects handle migration events.
 type ShadowMigrator interface {
-	ShadowMigrate(start, delta uint32)
+	// Called on migration of a related slot BEFORE every call to a normal migration handler with migrationDelta=1.
+	// When there is no migration handler is present or SkipMultipleMigrations() was used, then an additional call is made
+	// with migrationDelta > 0 to indicate how many migration steps were skipped.
+	ShadowMigrate(migrationCount, migrationDelta uint32)
 }
+
+type StateMachineStepLoggerFunc func(stepNo StepLink, step SlotStep, update StateUpdate, wasDetached bool)
 
 // A template to include into SM to avoid hassle of creation of any methods but GetInitStateFor()
 type StateMachineDeclTemplate struct {
@@ -65,4 +79,8 @@ func (s *StateMachineDeclTemplate) GetShadowMigrateFor(StateMachine) ShadowMigra
 }
 
 func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector) {
+}
+
+func (s *StateMachineDeclTemplate) GetStepLogger(context.Context, StateMachine) StateMachineStepLoggerFunc {
+	return nil
 }

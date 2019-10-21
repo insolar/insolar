@@ -44,29 +44,37 @@ type Slot struct {
 	slotData
 }
 
-type slotCreateData struct {
-	parent      SlotLink
-	ctx         context.Context
+type slotDeclarationData struct {
 	declaration StateMachineDeclaration
-	injected    injector.LocalDependencyRegistry // TODO replace with struct ptr
 
-	shadowMigrate    ShadowMigrateFunc
-	defMigrate       MigrateFunc
-	defErrorHandler  ErrorHandlerFunc
+	shadowMigrate   ShadowMigrateFunc
+	stepLogger      StateMachineStepLoggerFunc
+	defMigrate      MigrateFunc
+	defErrorHandler ErrorHandlerFunc
+
+	slotReplaceData
+}
+
+// transferred with Replace()
+type slotReplaceData struct {
+	parent   SlotLink
+	ctx      context.Context
+	injected injector.LocalDependencyRegistry // TODO replace with struct ptr
+
 	defResultHandler TerminationHandlerFunc
 	defResult        interface{}
 	defFlags         StepFlags
 }
 
-func (v slotCreateData) takeOutForReplace() slotCreateData {
-	return slotCreateData{ctx: v.ctx, parent: v.parent}
+func (v slotReplaceData) takeOutForReplace() slotReplaceData {
+	return v
 }
 
 type slotData struct {
-	slotCreateData
+	slotDeclarationData
 
 	slotFlags      slotFlags
-	lastWorkScan   uint8
+	lastWorkScan   uint8  // to check if a slot was executed in this cycle
 	asyncCallCount uint16 // pending calls, overflow panics
 	migrationCount uint32 // can be wrapped by overflow
 
@@ -98,33 +106,85 @@ const (
 
 const stepIncrement uint64 = 1 << stepIncrementShift
 const slotFlagBusy uint64 = 1 << slotFlagBusyShift
+const slotIdMask = slotFlagBusy - 1
+
+//see also numberOfReservedSteps
 
 /*
-	Step number is a cyclic incrementing counter with reserved values:
-	= 0 - slot is not used by a state machine
-	= 1 - slot is initializing, can only appear once for a state machine
+	Slot and step numbers are interpreted together with isBusy flag:
+	[step] [busy] [slotId]
+	[  0 ] [  0 ] [    0 ] slot is unused and is owned by a slot pool
+	[  N ] [  0 ] [   >0 ] slot is in use and is not owned by a slot pool
+	[  N ] [  1 ] [    N ] slot is in use and is not owned by a slot pool
 
-	On overflow, step will change to =2
+	[  0 ] [  0 ] [   >0 ] illegal/reserved state
+	[  0 ] [  1 ] [   >0 ] illegal/reserved state
+	[ >0 ] [  0 ] [    0 ] illegal/reserved state
+
+
+	[ >0 ] [  0 ] [   >0 ] slot is allocated and idle (only slot machine can access it); includes:
+	 [ 1 ] [  0 ] [   >0 ] slot is constructed and awaits initialization
+	 [>1 ] [  0 ] [   >0 ] slot is operational and idle
+
+	[ >0 ] [  1 ] [   >0 ] slot is allocated and busy (only busy-holder can access it, can't be migrated); includes:
+	 [ 1 ] [  1 ] [   >0 ] slot is allocated and is being constructed/initialized
+	 [>1 ] [  1 ] [   >0 ] initialized slot is busy / working
+	 [ 1 ] [  1 ] [    0 ] uninitialized slot is being finalized
+	 [>1 ] [  1 ] [    0 ] initialized slot is being finalized
+
+
+	Usual slot lifecycle is:
+	[  0 ] [  0 ] [    0 ] slot is unused and is owned by a slot pool
+	[  1 ] [  1 ] [   >0 ] slot is allocated and is being constructed/initialized (can't be migrated)
+	[  1 ] [  0 ] [   >0 ] slot is constructed and awaits initialization (can't be migrated)
+    [ >1 ] [  N ] [   >0 ] slot is operational (idle / working)
+    [ >1 ] [  1 ] [    0 ] slot is being finalized (can't be migrated)
+	[  0 ] [  0 ] [    0 ] slot is unused and is owned by a slot pool
+
+	Step number is a cyclic incrementing counter with reserved values:
+	= 0 - slot is is just allocated (+busy flag) or is not used by a state machine
+	= 1 - slot is initializing, can only appear once for a state machine
+	On overflow, step will change to =numberOfReservedSteps
 */
+
+func (s *Slot) _getState() (id SlotID, step uint32, isBusy bool) {
+	v := atomic.LoadUint64(&s.idAndStep)
+	return SlotID(v), uint32(v >> stepIncrementShift), v&slotFlagBusy != 0
+}
 
 func (s *Slot) GetState() (id SlotID, step uint32, isBusy bool) {
 	v := atomic.LoadUint64(&s.idAndStep)
+	if SlotID(v).IsUnknown() || v <= slotFlagBusy {
+		panic("illegal state")
+	}
 	return SlotID(v), uint32(v >> stepIncrementShift), v&slotFlagBusy != 0
 }
 
 func (s *Slot) GetSlotID() SlotID {
 	v := atomic.LoadUint64(&s.idAndStep)
-	if v <= slotFlagBusy {
-		return 0
+	if SlotID(v).IsUnknown() || v <= slotFlagBusy {
+		panic("illegal state")
 	}
 	return SlotID(v)
+}
+
+func (s *Slot) invalidateSlotId() {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if SlotID(v).IsUnknown() || v <= slotFlagBusy {
+			panic("illegal state")
+		}
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, slotFlagBusy|v&^slotIdMask) {
+			return
+		}
+	}
 }
 
 func (s *Slot) isEmpty() bool {
 	return atomic.LoadUint64(&s.idAndStep) == 0
 }
 
-func (s *Slot) isWorking() bool {
+func (s *Slot) isBusy() bool {
 	return atomic.LoadUint64(&s.idAndStep)&slotFlagBusy != 0
 }
 
@@ -190,12 +250,81 @@ func (s *Slot) incStep() {
 		update := v + stepIncrement
 		if update < stepIncrement {
 			// overflow, skip steps 0 and 1
-			update += stepIncrement * 2
+			update += stepIncrement * numberOfReservedSteps
 		}
 		if atomic.CompareAndSwapUint64(&s.idAndStep, v, update) {
 			return
 		}
 	}
+}
+
+func (s *Slot) _tryStartSlot(minStepNo uint32) (isEmpty, isStarted bool, prevStepNo uint32) {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if v == 0 /* isEmpty() */ {
+			return true, false, 0
+		}
+
+		prevStepNo = uint32(v >> stepIncrementShift)
+		if v&slotFlagBusy != 0 /* isBusy() */ || v < slotFlagBusy /* reserved */ || prevStepNo < minStepNo {
+			return false, false, prevStepNo
+		}
+
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
+			return false, true, prevStepNo
+		}
+	}
+}
+
+func (s *Slot) _tryStartWithId(slotId SlotID, minStepNo uint32) (isValid, isStarted bool, prevStepNo uint32) {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if v == 0 /* isEmpty() */ || SlotID(v) != slotId {
+			return false, false, 0
+		}
+
+		prevStepNo = uint32(v >> stepIncrementShift)
+		if v&slotFlagBusy != 0 /* isBusy() */ || v < slotFlagBusy /* reserved */ || prevStepNo < minStepNo {
+			return false, false, prevStepNo
+		}
+
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
+			return false, true, prevStepNo
+		}
+	}
+}
+
+func (s *Slot) stopWorking() (prevStepNo uint32) {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if v&slotFlagBusy == 0 {
+			panic("illegal state")
+		}
+
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v&^slotFlagBusy) {
+			return uint32(v >> stepIncrementShift)
+		}
+	}
+}
+
+func (s *Slot) canMigrateWorking(prevStepNo uint32, migrateIsNeeded bool) bool {
+	if prevStepNo > 1 {
+		return migrateIsNeeded
+	}
+	return prevStepNo == 1 && atomic.LoadUint64(&s.idAndStep) >= stepIncrement*numberOfReservedSteps
+}
+
+func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
+	isEmpty, isStarted, prevStepNo = s._tryStartSlot(2)
+	return
+}
+
+func (s *Slot) startWorking(scanNo uint32) uint32 {
+	if _, isStarted, prevStepNo := s._tryStartSlot(1); isStarted {
+		s.lastWorkScan = uint8(scanNo)
+		return prevStepNo
+	}
+	panic("illegal state")
 }
 
 func (s *Slot) isInQueue() bool {
@@ -231,75 +360,6 @@ func (s *Slot) NewLink() SlotLink {
 func (s *Slot) NewStepLink() StepLink {
 	id, step, _ := s.GetState()
 	return StepLink{SlotLink{id, s}, step}
-}
-
-func (s *Slot) _tryStart(minStepNo uint32) (isEmpty, isStarted bool, prevStepNo uint32) {
-	for {
-		v := atomic.LoadUint64(&s.idAndStep)
-		if v == 0 /* isEmpty() */ {
-			return true, false, 0
-		}
-
-		prevStepNo = uint32(v >> stepIncrementShift)
-		if v&slotFlagBusy != 0 /* isWorking() */ || prevStepNo < minStepNo {
-			return false, false, prevStepNo
-		}
-
-		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
-			return false, true, prevStepNo
-		}
-	}
-}
-
-func (s *Slot) _tryStartWithId(slotId SlotID, minStepNo uint32) (isValid, isStarted bool, prevStepNo uint32) {
-	for {
-		v := atomic.LoadUint64(&s.idAndStep)
-		if v == 0 /* isEmpty() */ || SlotID(v) != slotId {
-			return false, false, 0
-		}
-
-		prevStepNo = uint32(v >> stepIncrementShift)
-		if v&slotFlagBusy != 0 /* isWorking() */ || prevStepNo < minStepNo {
-			return false, false, prevStepNo
-		}
-
-		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
-			return false, true, prevStepNo
-		}
-	}
-}
-
-func (s *Slot) stopWorking() (prevStepNo uint32) {
-	for {
-		v := atomic.LoadUint64(&s.idAndStep)
-		if v&slotFlagBusy == 0 {
-			panic("illegal state")
-		}
-
-		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v&^slotFlagBusy) {
-			return uint32(v >> stepIncrementShift)
-		}
-	}
-}
-
-func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
-	isEmpty, isStarted, prevStepNo = s._tryStart(2)
-	return
-}
-
-func (s *Slot) startWorking(scanNo uint32) uint32 {
-	if _, isStarted, prevStepNo := s._tryStart(1); isStarted {
-		s.lastWorkScan = uint8(scanNo)
-		return prevStepNo
-	}
-	panic("illegal state")
-}
-
-func (s *Slot) canMigrateWorking(prevStepNo uint32, migrateIsNeeded bool) bool {
-	if prevStepNo > 1 {
-		return migrateIsNeeded
-	}
-	return prevStepNo == 1 && atomic.LoadUint64(&s.idAndStep) >= stepIncrement*2
 }
 
 func (s *slotData) isLastScan(scanNo uint32) bool {

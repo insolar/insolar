@@ -25,6 +25,8 @@ import (
 
 var _ smachine.AdapterExecutor = &ChannelAdapter{}
 
+// This is a basic implementation of an adapter to run all calls in a separate goroutine.
+// There an important property - it doesn't lock up.
 func NewChannelAdapter(ctx context.Context, chanLen int, overflowLimit int) ChannelAdapter {
 	return ChannelAdapter{
 		ctx: ctx,
@@ -59,7 +61,7 @@ func (c *ChannelAdapter) SendNotify(fn smachine.AdapterNotifyFunc) {
 	c.queueCall(r)
 }
 
-func (c *ChannelAdapter) StartCall(fn smachine.AdapterCallFunc, callback *smachine.AdapterCallback, requireCancel bool) context.CancelFunc {
+func (c *ChannelAdapter) StartCall(fn smachine.AdapterCallFunc, callback *smachine.AdapterCallback, needCancel bool) context.CancelFunc {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -68,17 +70,21 @@ func (c *ChannelAdapter) StartCall(fn smachine.AdapterCallFunc, callback *smachi
 	}
 
 	r := ChannelRecord{CallFn: fn, Callback: callback}
-	cancelFn := callback.Prepare(requireCancel, nil)
+	cancelFn, setChainCancelFn := callback.Prepare(needCancel)
 
-	c.queueCall(r)
+	nativeCancelFn := c.queueCall(r)
+	if setChainCancelFn != nil {
+		setChainCancelFn(nativeCancelFn)
+	}
 
 	return cancelFn
 }
 
-func (c *ChannelAdapter) queueCall(r ChannelRecord) {
+func (c *ChannelAdapter) queueCall(r ChannelRecord) context.CancelFunc {
 	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}
+	return nil
 }
 
 func (c *ChannelAdapter) Channel() <-chan ChannelRecord {

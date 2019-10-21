@@ -137,11 +137,14 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
 	})
+	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &StateMachine1{}
+	})
 
 	fmt.Printf("wait: %d %v result:%v\n", ctx.SlotLink().SlotID(), time.Now(), s.result)
 	s.count = 0
 
-	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
+	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State5)
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {

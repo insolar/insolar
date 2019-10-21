@@ -58,7 +58,7 @@ func (s *Slot) unregisterBoundAlias(k interface{}) bool {
 
 // ONLY to be used by a holder of a slot
 func (s *Slot) unregisterBoundAliases() {
-	m := &s.machine.localRegistry
+	m := &s.machine.localRegistry // SAFE for concurrent use
 	var key interface{} = s.GetSlotID()
 
 	if isa, ok := m.Load(key); ok {
