@@ -18,14 +18,23 @@ package conveyor
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/pulse"
 	"sync/atomic"
+
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/pulse"
 )
 
 type PulseDataManager struct {
+	svc  PulseDataService
+	exec smachine.ExecutionAdapter
+
 	// mutable
 	presentAndFuturePulse uint64 //atomic
 	preparingPulse        uint32 //atomic
+}
+
+type PulseDataService interface {
+	LoadPulseData(pulse.Number) (pulse.Data, bool)
 }
 
 const uninitializedFuture = pulse.LocalRelative
@@ -94,4 +103,40 @@ func (p *PulseDataManager) IsAllowedPastSpan(presentPN pulse.Number, pastPN puls
 func (p *PulseDataManager) IsRecentPastRange(pastPN pulse.Number) bool {
 	// TODO limit how much we can handle as future
 	return pastPN.IsTimePulse()
+}
+
+func (p *PulseDataManager) prepareAsync(ctx smachine.ExecutionContext, fn func(svc PulseDataService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
+	return p.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+		fn(p.svc)
+		return nil
+	})
+}
+
+func (p *PulseDataManager) RequestPulseData(ctx smachine.ExecutionContext,
+	pn pulse.Number,
+	resultFn func(isAvailable bool, pd pulse.Data),
+) smachine.AsyncCallRequester {
+	if resultFn == nil {
+		panic("illegal value")
+	}
+	if pd, ok := p.GetPulseData(pn); ok {
+		resultFn(ok, pd)
+	}
+
+	return p.prepareAsync(ctx, func(svc PulseDataService) smachine.AsyncResultFunc {
+		pd, ok := svc.LoadPulseData(pn)
+
+		return func(ctx smachine.AsyncResultContext) {
+			if ok && pd.IsValidPulsarData() {
+				p.putPulseData(pd)
+				resultFn(ok, pd)
+			} else {
+				resultFn(false, pulse.Data{})
+			}
+		}
+	}).WithFlags(smachine.AutoWakeUp)
+}
+
+func (p *PulseDataManager) putPulseData(data pulse.Data) {
+	// TODO implement cache
 }

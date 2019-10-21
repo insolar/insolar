@@ -23,14 +23,15 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-// This SM is responsible for pulling in old pulse.Data for events with very old PulseNumber before firing the event
+// This SM is responsible for pulling in old pulse.Data for events with very old PulseNumber before firing the event.
 // Otherwise, the event will not be able to get its pulse.Data from a cache.
 func newAntiqueEventSM(pn pulse.Number, ps *PulseSlot, createFn smachine.CreateFunc) smachine.StateMachine {
-	return &antiqueEventSM{wrapEventSM{pn: pn, ps: ps, createFn: createFn}}
+	return &antiqueEventSM{wrapEventSM: wrapEventSM{pn: pn, ps: ps, createFn: createFn}}
 }
 
 type antiqueEventSM struct {
 	wrapEventSM
+	pd pulse.Data
 }
 
 func (sm *antiqueEventSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
@@ -49,7 +50,10 @@ func (sm *antiqueEventSM) stepInit(ctx smachine.InitializationContext) smachine.
 }
 
 func (sm *antiqueEventSM) stepRequestOldPulseData(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	// TODO send request to a relevant service
+
+	sm.ps.pulseManager.RequestPulseData(ctx, sm.pn, func(_ bool, pd pulse.Data) {
+		sm.pd = pd
+	}).Start()
 
 	return ctx.Sleep().ThenJump(sm.stepGotAnswer)
 }
@@ -57,6 +61,7 @@ func (sm *antiqueEventSM) stepRequestOldPulseData(ctx smachine.ExecutionContext)
 func (sm *antiqueEventSM) stepGotAnswer(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	// check if data became available or and either run the event or kill it
 	if sm.ps.HasPulseData(sm.pn) {
+		// set a dependency?
 		return ctx.Replace(sm.createFn)
 	}
 

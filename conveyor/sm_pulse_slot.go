@@ -52,7 +52,7 @@ type PulseSlotMachine struct {
 
 	innerMachine *smachine.SlotMachine
 	innerWorker  smachine.AttachableSlotWorker
-	pulseSlot    PulseSlot // injectable for innerMachine's slots
+	pulseSlot    PulseSlot // injectable for innerMachine's slots - see NewPulseSlotMachine()
 
 	finalizeFn func()
 	selfLink   smachine.SlotLink
@@ -185,7 +185,7 @@ func (p *PulseSlotMachine) _finalize() {
 }
 
 func (p *PulseSlotMachine) _runInnerMigrate(ctx smachine.MigrationContext) {
-	// TODO ensure that p.innerWorker is stopped or detached?
+	// TODO ensure that p.innerWorker is stopped or detached
 	p.innerMachine.MigrateNested(ctx)
 }
 

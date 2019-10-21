@@ -31,6 +31,8 @@ type PreparedState = struct{}
 type InputEvent = interface{}
 type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
+//type StepLoggerFactoryFunc
+
 func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMachineConfig, factoryFn PulseEventFactoryFunc,
 	slotMachineConfig smachine.SlotMachineConfig, registry injector.DependencyRegistry) *PulseConveyor {
 
@@ -42,18 +44,17 @@ func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMa
 		factoryFn: factoryFn,
 	}
 	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig,
-		nil, r.externalSignal.NextBroadcast, registry)
+		r.internalSignal.NextBroadcast,
+		r.externalSignal.NextBroadcast,
+		//func() {
+		//	r.externalSignal.NextBroadcast()
+		//	r.internalSignal.NextBroadcast()
+		//},
+		registry)
 
 	r.slotConfig.eventCallback = r.internalSignal.NextBroadcast
-	r.slotConfig.signalCallback = nil // r.internalSignal.NextBroadcast
+	r.slotConfig.signalCallback = r.internalSignal.NextBroadcast
 	r.slotConfig.parentRegistry = r.slotMachine
-
-	//r.antique.isAntique = true
-	//r.antique.SlotMachine = smachine.NewSlotMachine(
-	//	r.slotConfig.config,
-	//	r.slotConfig.eventCallback,
-	//	r.slotConfig.signalCallback,
-	//	r.slotConfig.parentRegistry)
 
 	return r
 }
@@ -63,7 +64,6 @@ type PulseConveyor struct {
 	slotConfig PulseSlotConfig
 	factoryFn  PulseEventFactoryFunc
 	workerCtx  context.Context
-	//slotConfig   smachine.SlotMachineConfig
 
 	// immutable, set at construction
 	externalSignal tools.VersionedSignal
