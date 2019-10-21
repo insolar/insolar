@@ -55,16 +55,16 @@ const (
 		NB! This cancel functionality is PASSIVE, an adapter should check this status explicitly.
 	*/
 	CallBoundToStep AsyncCallFlags = iota << 1
-	/*
-		When set, a wakeup from call's result will be valid for this step (where the call is made) and for a next step.
-	*/
+
+	// When set, a wakeup from call's result will be valid for this step (where the call is made) and for a next step.
 	WakeUpBoundToStep
-	/*
-		When set, receiving of call's successful result will wake up the slot without WakeUp().
-		Behavior of this flag is also affected by WakeUpBoundToStep.
-	*/
-	AutoWakeUp
+	//	When set, receiving of call's successful result will wake up the slot without WakeUp(). Affected by WakeUpBoundToStep.
+	WakeUpOnResult
+	// Caller will be woken up when the async request was cancelled by an adapter. Affected by WakeUpBoundToStep.
+	WakeUpOnCancel
 )
+
+const AutoWakeUp = WakeUpOnResult | WakeUpOnCancel
 
 type NotifyRequester interface {
 	// Sends notify

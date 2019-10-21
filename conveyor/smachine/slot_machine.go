@@ -387,7 +387,7 @@ func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, wor
 }
 
 func (m *SlotMachine) queueAsyncCallback(link SlotLink,
-	callbackFn func(slot *Slot, worker DetachableSlotWorker) StateUpdate, prevErr error) {
+	callbackFn func(*Slot, DetachableSlotWorker, error) StateUpdate, prevErr error) {
 
 	if callbackFn == nil && prevErr == nil || !m._canCallback(link) {
 		return
@@ -412,7 +412,7 @@ func (m *SlotMachine) queueAsyncCallback(link SlotLink,
 				recoverSlotPanicAsUpdate(&stateUpdate, "async callback panic", recover(), prevErr)
 			}()
 			if callbackFn != nil {
-				stateUpdate = callbackFn(slot, worker)
+				stateUpdate = callbackFn(slot, worker, prevErr)
 			}
 		}()
 
@@ -1098,7 +1098,7 @@ func (m *SlotMachine) createBargeIn(link StepLink, applyFn BargeInApplyFunc) Bar
 		if !link.IsValid() {
 			return false
 		}
-		m.queueAsyncCallback(link.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
+		m.queueAsyncCallback(link.SlotLink, func(slot *Slot, worker DetachableSlotWorker, _ error) StateUpdate {
 			_, atExactStep := link.isValidAndAtExactStep()
 			bc := bargingInContext{slotContext{s: slot}, param, atExactStep}
 			return bc.executeBargeIn(applyFn)
@@ -1148,11 +1148,11 @@ func (m *SlotMachine) createLightBargeIn(link StepLink, stateUpdate StateUpdate)
 				return
 			}
 			// Plan B
-			m.queueAsyncCallback(link.SlotLink, func(slot *Slot, worker DetachableSlotWorker) StateUpdate {
+			m.queueAsyncCallback(link.SlotLink, func(slot *Slot, worker DetachableSlotWorker, _ error) StateUpdate {
 				if link.IsAtStep() {
 					return stateUpdate
 				}
-				return StateUpdate{}
+				return StateUpdate{} // no change
 			}, nil)
 		})
 		return true

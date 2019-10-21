@@ -280,7 +280,7 @@ type ConditionalBuilder interface {
 type AsyncResultContext interface {
 	BasicContext
 
-	/* Makes SM active if it was waiting or polling */
+	// Makes SM active if it was waiting or polling
 	WakeUp()
 }
 
