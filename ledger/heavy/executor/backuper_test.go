@@ -194,8 +194,6 @@ func TestBackuper_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	confirmFile := filepath.Join(cfg.Backup.TargetDirectory, fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse+1), cfg.Backup.ConfirmFile)
-	err = os.MkdirAll(filepath.Dir(confirmFile), 0777)
-	require.NoError(t, err)
 	cfg.Backup.PostProcessBackupCmd = []string{"touch", confirmFile}
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse, db)
 	require.NoError(t, err)

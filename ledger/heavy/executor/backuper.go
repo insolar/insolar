@@ -292,12 +292,19 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 	currentBkpDirName := fmt.Sprintf(b.config.DirNameTemplate, lastFinalizedPulse)
 	currentBkpDirPath := filepath.Join(b.config.TargetDirectory, currentBkpDirName)
 
+	confirmFile := filepath.Join(currentBkpDirPath, b.config.ConfirmFile)
+
+	err = os.MkdirAll(filepath.Dir(confirmFile), 0777)
+	if err != nil {
+		return errors.Wrapf(err, "can't create target dir")
+	}
+
 	err = invokeBackupPostProcessCommand(ctx, b.config.PostProcessBackupCmd, currentBkpDirPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed to invoke PostProcessBackupCmd. pulse: %d", lastFinalizedPulse)
 	}
 
-	err = waitForFile(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
+	err = waitForFile(ctx, confirmFile, b.config.BackupWaitPeriod)
 	if err != nil {
 		return errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
