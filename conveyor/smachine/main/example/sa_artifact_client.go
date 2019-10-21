@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/insolar"
 )
 
 type ArtifactClientService interface {
@@ -27,7 +28,7 @@ type ArtifactClientService interface {
 }
 
 type ArtifactBinary interface {
-	GetReference() //reference
+	GetReference() insolar.Reference
 	GetCacheId() ArtifactCacheId
 }
 
@@ -70,6 +71,6 @@ func CreateArtifactClientService() *ArtifactClientServiceAdapter {
 type artifactClientService struct {
 }
 
-func (artifactClientService) GetLatestValidatedStateAndCode() (state, code ArtifactBinary) {
-	return nil, nil
+func (artifactClientService) GetLatestValidatedStatePrototypeAndCode(objectID insolar.ID) (state, prototype, code ArtifactBinary) {
+
 }

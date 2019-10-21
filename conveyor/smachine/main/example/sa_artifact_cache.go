@@ -16,8 +16,100 @@
 
 package example
 
+import (
+	"context"
+	"sync"
+
+	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
+
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/insolar"
+)
+
 type ArtifactCacheId string
 
 type ArtifactCacheService interface {
-	//AllocateId() ArtifactCacheId
+	Set(objectID insolar.ID, object []byte) ArtifactCacheId
+	SetRandomID(object []byte) (ArtifactCacheId, error)
+	Get(id ArtifactCacheId) ([]byte, bool)
+}
+
+type ArtifactCacheServiceAdapter struct {
+	svc  ArtifactCacheService
+	exec smachine.ExecutionAdapter
+}
+
+func (a *ArtifactCacheServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ArtifactCacheService)) smachine.SyncCallRequester {
+	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+		fn(a.svc)
+		return nil
+	})
+}
+
+func (a *ArtifactCacheServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ArtifactCacheService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
+	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+		return fn(a.svc)
+	})
+}
+
+func CreateArtifactCacheService() *ArtifactCacheServiceAdapter {
+	ach := NewChannelAdapter(context.Background(), 0, -1)
+
+	go func() {
+		for {
+			select {
+			case <-ach.Context().Done():
+				return
+			case t := <-ach.Channel():
+				t.RunAndSendResult()
+			}
+		}
+	}()
+
+	return &ArtifactCacheServiceAdapter{
+		svc: &unlimitedArtifactCacheService{
+			cache: map[ArtifactCacheId][]byte{},
+		},
+		exec: smachine.NewExecutionAdapter("ArtifactCache", &ach),
+	}
+}
+
+type unlimitedArtifactCacheService struct {
+	lock  sync.RWMutex
+	cache map[ArtifactCacheId][]byte
+}
+
+func (a *unlimitedArtifactCacheService) Set(objectID insolar.ID, object []byte) ArtifactCacheId {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	cacheID := ArtifactCacheId(objectID.String())
+
+	a.cache[cacheID] = object
+
+	return cacheID
+}
+
+func (a *unlimitedArtifactCacheService) SetRandomID(object []byte) (ArtifactCacheId, error) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	rawCacheID, err := uuid.NewV4()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get id for request")
+	}
+	cacheID := ArtifactCacheId(rawCacheID.String())
+
+	a.cache[cacheID] = object
+
+	return cacheID, nil
+}
+
+func (a *unlimitedArtifactCacheService) Get(id ArtifactCacheId) ([]byte, bool) {
+	a.lock.RLock()
+	defer a.lock.RUnlock()
+
+	rv, ok := a.cache[id]
+	return rv, ok
 }

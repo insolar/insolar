@@ -261,13 +261,18 @@ message CallMethod {
     uint32 PulseNumber = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
+enum PreviousExecutorState {
+    PreviousExecutorUnknown  = 0;
+    PreviousExecutorExecutes = 1;
+    PreviousExecutorFinished = 2;
+}
+
 message ExecutorResults {
     uint32 Polymorph = 16;
 
-    bytes Caller = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes RecordRef = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bool LedgerHasMoreRequests = 23;
-    int32 Pending = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PendingState", (gogoproto.nullable) = false];
+    bytes ObjectReference = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool LedgerHasMoreRequests = 21;
+    PreviousExecutorState State = 22;
 }
 
 message PendingFinished {
