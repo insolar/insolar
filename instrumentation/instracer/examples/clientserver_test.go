@@ -74,17 +74,17 @@ func Example_ClientServer() {
 	defer donefn()
 
 	ctx, span := instracer.StartSpan(ctx, "root")
-	defer span.End()
+	defer span.Finish()
 
 	fmt.Println("A> start")
 	_, cSpan1 := instracer.StartSpan(ctx, "client-1")
-	defer cSpan1.End()
+	defer cSpan1.Finish()
 	time.Sleep(time.Millisecond * 15)
 
 	ctx2, cSpan2 := instracer.StartSpan(ctx, "client-2")
 
 	requestServer(ctx2, traceid)
-	cSpan2.End()
+	cSpan2.Finish()
 
 	time.Sleep(time.Millisecond * 150)
 	fmt.Println("A> end")
@@ -93,7 +93,7 @@ func Example_ClientServer() {
 func requestServer(ctx context.Context, traceid string) {
 	fmt.Println(" A> call requestServer")
 	cCtx, cSpan := instracer.StartSpan(ctx, "clientrequest")
-	defer cSpan.End()
+	defer cSpan.Finish()
 
 	cSC := trace.FromContext(cCtx).SpanContext()
 	cmd := exec.Command(os.Args[0], "-test.run="+testNameForExampleClientServer)
@@ -147,7 +147,7 @@ func serverHandler(ctx context.Context, spanbin []byte) {
 
 	fmt.Println("  ... instracer.StartSpan")
 	spanctx, servspan := instracer.StartSpan(ctx, "server")
-	defer servspan.End()
+	defer servspan.Finish()
 	time.Sleep(time.Millisecond * 20)
 	serverSubCalls(spanctx)
 	time.Sleep(time.Millisecond * 40)
@@ -158,10 +158,10 @@ func serverSubCalls(ctx context.Context) {
 
 	_, servspan1 := instracer.StartSpan(ctx, "subcall-1")
 	time.Sleep(time.Millisecond * 13)
-	servspan1.End()
+	servspan1.Finish()
 
 	fmt.Println("  B> SubCall-2")
 	_, servspan2 := instracer.StartSpan(ctx, "subcall-2")
 	time.Sleep(time.Millisecond * 27)
-	servspan2.End()
+	servspan2.Finish()
 }

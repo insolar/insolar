@@ -24,7 +24,6 @@ import (
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -846,7 +845,7 @@ func (i *fetchingIterator) fetchFromNetwork(
 	ctx context.Context, forID insolar.ID,
 ) ([]record.CompositeFilamentRecord, error) {
 	ctx, span := instracer.StartSpan(ctx, "fetchingIterator.fetchFromNetwork")
-	defer span.End()
+	defer span.Finish()
 
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, forID.Pulse())
 	if err != nil {
@@ -877,11 +876,9 @@ func (i *fetchingIterator) fetchFromNetwork(
 		return nil, errors.New("tried to send message to self")
 	}
 
-	span.AddAttributes(
-		trace.StringAttribute("objID", i.objectID.DebugString()),
-		trace.StringAttribute("startFrom", forID.DebugString()),
-		trace.StringAttribute("readUntil", i.readUntil.String()),
-	)
+	span.SetTag("objID", i.objectID.DebugString()).
+		SetTag("startFrom", forID.DebugString()).
+		SetTag("readUntil", i.readUntil.String())
 
 	msg, err := payload.NewMessage(&payload.GetFilament{
 		ObjectID:  i.objectID,

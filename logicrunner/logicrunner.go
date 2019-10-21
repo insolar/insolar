@@ -26,7 +26,6 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/go-actors/actor/system"
 
@@ -243,7 +242,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.LogicRunnerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
-		span.End()
+		span.Finish()
 	}(ctx)
 
 	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
@@ -276,7 +275,7 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages map[insolar.Reference][]payload.Payload) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
-	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
+	spanMessages.SetTag("numMessages", strconv.Itoa(len(messages)))
 
 	var sendWg sync.WaitGroup
 
@@ -288,7 +287,7 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages ma
 	}
 
 	sendWg.Wait()
-	spanMessages.End()
+	spanMessages.Finish()
 }
 
 func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar.Reference, payloadObj payload.Payload, sendWg *sync.WaitGroup) {

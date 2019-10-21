@@ -127,7 +127,9 @@ func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string
 
 	h := datagramHandlers[address]
 	if h != nil {
-		go h.HandleDatagram(ctx, f.address, data)
+		cpData := make([]byte, len(data))
+		copy(cpData, data)
+		go h.HandleDatagram(ctx, f.address, cpData)
 	}
 
 	return nil

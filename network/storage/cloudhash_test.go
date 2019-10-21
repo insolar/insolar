@@ -51,47 +51,11 @@
 package storage
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
 )
-
-func TestCloudHashStorage(t *testing.T) {
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ctx := inslogger.TestContext(t)
-	cm := component.NewManager(nil)
-	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
-	defer badgerDB.Stop(ctx)
-	cs := newCloudHashStorage()
-
-	cm.Register(badgerDB, cs)
-	cm.Inject()
-
-	pulse := insolar.Pulse{PulseNumber: 15}
-	cloudHash := []byte{1, 2, 3, 4, 5}
-
-	err = cs.Append(pulse.PulseNumber, cloudHash)
-	assert.NoError(t, err)
-
-	cloudHash2, err := cs.ForPulseNumber(pulse.PulseNumber)
-	assert.NoError(t, err)
-
-	assert.Equal(t, cloudHash, cloudHash2)
-
-	err = cm.Stop(ctx)
-}
 
 func TestInMemoryCloudHashStorage(t *testing.T) {
 	cs := NewMemoryCloudHashStorage()

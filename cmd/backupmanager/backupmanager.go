@@ -304,7 +304,7 @@ func writeLastBackupFile(to string, lastBackupedVersion uint64) error {
 	return errors.Wrap(err, "failed to write to file")
 }
 
-func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, error) {
+func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
 	pulsesDB := pulse.NewDB(bdb)
 
 	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)

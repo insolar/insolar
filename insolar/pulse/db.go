@@ -53,7 +53,7 @@ type dbNode struct {
 }
 
 // NewDB creates new DB storage instance.
-func NewDB(db store.DB) *DB {
+func NewDB(db *store.BadgerDB) *DB {
 	return &DB{db: db.Backend()}
 }
 

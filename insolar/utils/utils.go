@@ -19,6 +19,7 @@ package utils
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -49,13 +50,9 @@ func RandTraceID() string {
 	if err != nil {
 		return "createRandomTraceIDFailed:" + err.Error()
 	}
-	return traceID.String()
-}
-
-func UInt32ToBytes(n uint32) []byte {
-	buff := make([]byte, 4)
-	binary.BigEndian.PutUint32(buff, n)
-	return buff
+	// We use custom serialization to be able to pass this trace to jaeger TraceID
+	hi, low := binary.LittleEndian.Uint64(traceID[:8]), binary.LittleEndian.Uint64(traceID[8:])
+	return fmt.Sprintf("%x%016x", hi, low)
 }
 
 // CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.
