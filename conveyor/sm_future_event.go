@@ -67,7 +67,7 @@ func (sm *futureEventSM) stepMigration(ctx smachine.MigrationContext) smachine.S
 	case isFuture: // make sure that this slot isn't late
 		panic("illegal state")
 	default:
-		return ctx.Replace(sm.createFn)
+		return ctx.WakeUp()
 	}
 }
 

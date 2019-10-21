@@ -19,6 +19,7 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -39,8 +40,10 @@ func TestConveyor(t *testing.T) {
 		ScanCountLimit:  100000,
 	}
 
-	factoryFn := func(pulse.Number, InputEvent) smachine.CreateFunc {
-		return nil
+	factoryFn := func(pn pulse.Number, v InputEvent) smachine.CreateFunc {
+		return func(ctx smachine.ConstructionContext) smachine.StateMachine {
+			return &AppEventSM{eventValue: v, pn: pn}
+		}
 	}
 	conveyor := NewPulseConveyor(context.Background(), machineConfig, factoryFn, machineConfig, nil)
 
@@ -50,12 +53,26 @@ func TestConveyor(t *testing.T) {
 	go worker(conveyor, signal)
 
 	require.NoError(t, conveyor.CommitPulseChange(pd))
+	eventCount := 0
 
 	for i := 0; i < 100; i++ {
-		pd = pd.CreateNextPulsarPulse(2, func() longbits.Bits256 {
+		pd = pd.CreateNextPulsarPulse(10, func() longbits.Bits256 {
 			return longbits.Bits256{}
 		})
 		require.NoError(t, conveyor.CommitPulseChange(pd))
+
+		if eventCount < math.MaxInt32 {
+			eventCount++
+			require.NoError(t, conveyor.AddInput(context.Background(), pd.GetNextPulseNumber(), fmt.Sprintf("event-%d-future", eventCount)))
+			//eventCount++
+			//require.NoError(t, conveyor.AddInput(context.Background(), pd.GetPrevPulseNumber(), fmt.Sprintf("event-%d-past", eventCount)))
+
+			for j := 0; j < 1; j++ {
+				eventCount++
+				require.NoError(t, conveyor.AddInput(context.Background(), pd.PulseNumber, fmt.Sprintf("event-%d-present", eventCount)))
+			}
+		}
+
 		time.Sleep(time.Second)
 	}
 	fmt.Println("======================")
@@ -80,7 +97,7 @@ func worker(conveyor *PulseConveyor, signal tools.VersionedSignal) {
 		if !nextPollTime.IsZero() {
 			time.Sleep(time.Until(nextPollTime))
 		} else {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
