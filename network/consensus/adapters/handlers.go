@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"sync"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/network/consensus/common/warning"
@@ -106,6 +107,7 @@ func (ph *packetHandler) handlePacket(ctx context.Context, packetParser transpor
 }
 
 type DatagramHandler struct {
+	mu                  sync.RWMutex
 	packetHandler       *packetHandler
 	packetParserFactory PacketParserFactory
 }
@@ -115,25 +117,34 @@ func NewDatagramHandler() *DatagramHandler {
 }
 
 func (dh *DatagramHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
+	dh.mu.Lock()
+	defer dh.mu.Unlock()
+
 	dh.packetHandler = newPacketHandler(packetProcessor)
 }
 
 func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketParserFactory) {
+	dh.mu.Lock()
+	defer dh.mu.Unlock()
+
 	dh.packetParserFactory = packetParserFactory
 }
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
 	ctx, logger := PacketEarlyLogger(ctx, address)
 
-	//if dh.packetHandler == nil {
-	//	logger.Error("Packet handler is not initialized")
-	//	return
-	//}
-	//
-	//if dh.packetParserFactory == nil {
-	//	logger.Error("Packet parser factory is not initialized")
-	//	return
-	//}
+	dh.mu.RLock()
+	defer dh.mu.RUnlock()
+
+	if dh.packetHandler == nil {
+		logger.Error("Packet handler is not initialized")
+		return
+	}
+
+	if dh.packetParserFactory == nil {
+		logger.Error("Packet parser factory is not initialized")
+		return
+	}
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
