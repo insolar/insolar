@@ -170,14 +170,6 @@ type PostInitStepContext interface {
 
 	// Provides a builder for a simple barge-in. The barge-in function will be ignored if the step has changed.
 	BargeInThisStepOnly() BargeInBuilder
-
-	// After completion of the current step, SM will be stopped and the new SM created/started.
-	// The new SM will by default inherit from this SM: parent, context, termination handler/result and injected dependencies.
-	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
-	// WARNING! Use of SetTerminationHandler() inside CreateFunc will replace the current handler, so it will never fire then.
-	Replace(CreateFunc) StateUpdate
-	// See Replace()
-	ReplaceWith(StateMachine) StateUpdate
 }
 
 type ExecutionContext interface {
@@ -207,6 +199,14 @@ type ExecutionContext interface {
 	// Same as NewChild, but also grantees that child's initialization will be completed before return.
 	// Please prefer NewChild() to avoid unnecessary dependency.
 	InitChild(context.Context, CreateFunc) SlotLink
+
+	// After completion of the current step, SM will be stopped and the new SM created/started.
+	// The new SM will by default inherit from this SM: parent, context, termination handler/result and injected dependencies.
+	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
+	// WARNING! Use of SetTerminationHandler() inside CreateFunc will replace the current handler, so it will never fire then.
+	Replace(CreateFunc) StateUpdate
+	// See Replace()
+	ReplaceWith(StateMachine) StateUpdate
 
 	// Applies the accessor produced by a SharedDataLink.
 	// SharedDataLink can be used across different SlotMachines.

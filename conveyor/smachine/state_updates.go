@@ -36,6 +36,7 @@ const (
 	stateUpdRepeat   // supports short-loop
 	stateUpdNextLoop // supports short-loop
 
+	stateUpdWakeup
 	stateUpdNext
 	stateUpdPoll
 	stateUpdSleep
@@ -44,7 +45,7 @@ const (
 	stateUpdWaitForShared
 )
 
-const stateUpdWakeup = stateUpdRepeat
+//const stateUpdWakeup = stateUpdRepeat
 
 var stateUpdateTypes []StateUpdateType
 
@@ -94,7 +95,7 @@ func init() {
 		},
 
 		stateUpdReplaceWith: {
-			filter: updCtxExec | updCtxMigrate,
+			filter: updCtxExec,
 			params: updParamVar,
 			varVerify: func(v interface{}) {
 				sm := v.(StateMachine)
@@ -127,7 +128,7 @@ func init() {
 		},
 
 		stateUpdReplace: {
-			filter: updCtxExec | updCtxMigrate,
+			filter: updCtxExec,
 			params: updParamVar,
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {
@@ -153,7 +154,7 @@ func init() {
 		},
 
 		stateUpdRepeat: {
-			filter: updCtxExec | updCtxBargeIn | updCtxAsyncCallback,
+			filter: updCtxExec,
 			params: updParamUint,
 
 			shortLoop: func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
@@ -167,7 +168,7 @@ func init() {
 		},
 
 		stateUpdNextLoop: {
-			filter: updCtxExec | updCtxInit | updCtxBargeIn,
+			filter: updCtxExec,
 			params: updParamStep | updParamUint,
 
 			shortLoop: func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
@@ -183,6 +184,15 @@ func init() {
 			},
 
 			apply: stateUpdateDefaultJump,
+		},
+
+		stateUpdWakeup: {
+			filter: updCtxExec | updCtxBargeIn | updCtxAsyncCallback | updCtxMigrate,
+
+			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+				slot.activateSlot(worker)
+				return true, nil
+			},
 		},
 
 		stateUpdNext: {
@@ -225,11 +235,29 @@ func init() {
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
 				slot.setNextStep(stateUpdate.step)
-				m.updateSlotQueue(slot, worker, activateHotWaitSlot)
 
-				if stateUpdate.param0 > 0 {
-					m.scanWakeUpAt = minTime(m.scanWakeUpAt, m.fromRelativeTime(stateUpdate.param0))
+				if stateUpdate.param0 == 0 {
+					m.updateSlotQueue(slot, worker, activateHotWaitSlot)
+					return true, nil
 				}
+
+				waitUntil := m.fromRelativeTime(stateUpdate.param0)
+
+				if m.scanStartedAt.After(waitUntil) {
+					m.updateSlotQueue(slot, worker, activateSlot)
+					return true, nil
+				}
+
+				nextPoll := m.pollingSlots.GetPreparedPollTime()
+
+				if nextPoll.IsZero() || waitUntil.Before(nextPoll) {
+					m.scanWakeUpAt = minTime(m.scanWakeUpAt, waitUntil)
+					m.updateSlotQueue(slot, worker, activateHotWaitSlot)
+				} else {
+					m.updateSlotQueue(slot, worker, deactivateSlot)
+					m.pollingSlots.Add(slot)
+				}
+
 				return true, nil
 			},
 		},
@@ -353,11 +381,15 @@ func stateUpdateDefaultStop(slot *Slot, _ StateUpdate, worker FixedSlotWorker) (
 }
 
 func stateUpdateDefaultReplace(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
-	if replacementSlot, ok := stateUpdate.param1.(*Slot); ok {
-		m := replacementSlot.machine
-		defer m.startNewSlot(replacementSlot, worker)
-		return stateUpdateDefaultStop(slot, stateUpdate, worker)
+	replacementSlot := stateUpdate.link
+	if replacementSlot == nil {
+		return false, errors.New("replacement SM is missing")
+	}
+	m := replacementSlot.machine
+	if slot.machine != m {
+		return false, errors.New("replacement SM belongs to a different SlotMachine")
 	}
 
-	return false, errors.New("replacement SM is missing")
+	defer m.startNewSlot(replacementSlot, worker)
+	return stateUpdateDefaultStop(slot, stateUpdate, worker)
 }

@@ -47,11 +47,8 @@ type SlotQueue struct {
 }
 
 func (p *SlotQueue) initSlotQueue(queueType QueueType) {
-	if queueType <= InvalidQueue {
-		panic("illegal value")
-	}
 	p.head = &p.slot
-	p.initQueueHead()
+	p.initQueueHead(queueType)
 }
 
 func (p *SlotQueue) AppendAll(anotherQueue *SlotQueue) {
@@ -93,7 +90,11 @@ func (p *QueueHead) IsEmpty() bool {
 	return p.head.nextInQueue == nil || p.head.nextInQueue.isQueueHead()
 }
 
-func (p *QueueHead) initQueueHead() {
+func (p *QueueHead) initQueueHead(queueType QueueType) {
+	if queueType <= InvalidQueue {
+		panic("illegal value")
+	}
+	p.queueType = queueType
 	p.head.nextInQueue = p.head
 	p.head.prevInQueue = p.head
 	p.head.queue = p
@@ -217,8 +218,7 @@ func (s *Slot) vacateQueueHead() {
 func (s *Slot) makeQueueHead() {
 	s.ensureNotInQueue()
 
-	s.queue = &QueueHead{head: s, queueType: ActivationOfSlot}
-	s.queue.initQueueHead()
+	s.queue.initQueueHead(ActivationOfSlot)
 	s.nextInQueue = s
 	s.prevInQueue = s
 }

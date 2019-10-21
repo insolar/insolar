@@ -16,7 +16,10 @@
 
 package smachine
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 var _ ExecutionContext = &executionContext{}
 
@@ -37,6 +40,11 @@ func (p *executionContext) InitiateLongRun(flags LongRunFlags) {
 func (p *executionContext) GetPendingCallCount() int {
 	p.ensure(updCtxExec)
 	return int(p.s.asyncCallCount) + int(p.countAsyncCalls)
+}
+
+func (p *executionContext) Jump(fn StateFunc) StateUpdate {
+	// allow looping on jump
+	return p.template(stateUpdNextLoop).newStepUint(SlotStep{Transition: fn}, math.MaxUint32)
 }
 
 func (p *executionContext) Yield() StateConditionalBuilder {

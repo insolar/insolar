@@ -127,7 +127,7 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 
 	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slotPages[0][:p.slotPgPos], w)
 
-	j := 1
+	nextSlotPageNo := 1
 	for i, slotPage := range p.slotPages[1:] {
 		isPageEmptyOrWeak, hasWeakSlots := scanPageFn(slotPage, w)
 		switch {
@@ -142,11 +142,11 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 			hasSomeWeakSlots = true
 		}
 
-		if j != i+1 {
-			p.slotPages[j] = slotPage
+		if nextSlotPageNo != i+1 {
+			p.slotPages[nextSlotPageNo] = slotPage
 			p.slotPages[i+1] = nil
 		}
-		j++
+		nextSlotPageNo++
 	}
 
 	if isAllEmptyOrWeak && (cleanupWeak || !hasSomeWeakSlots) {
@@ -178,8 +178,8 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w FixedSlotWorker,
 		return true
 	}
 
-	if len(p.slotPages) > j {
-		p.slotPages = p.slotPages[:j]
+	if len(p.slotPages) > nextSlotPageNo {
+		p.slotPages = p.slotPages[:nextSlotPageNo]
 	}
 	return false
 }

@@ -123,7 +123,7 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 		}
 
 		if wakeup && wakeupAllowed {
-			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdRepeat).newUint(0)
+			return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdWakeup).newNoArg()
 		}
 		return newStateUpdateTemplate(updCtxAsyncCallback, 0, stateUpdNoChange).newNoArg()
 	}, err)

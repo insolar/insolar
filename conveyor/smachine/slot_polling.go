@@ -130,6 +130,12 @@ func (p *PollingQueue) GetNearestPollTime() time.Time {
 	if p.prepared == nil || p.prepared.IsEmpty() {
 		return time.Time{}
 	}
+	return p.prepared.pollAfter
+}
 
+func (p *PollingQueue) GetPreparedPollTime() time.Time {
+	if p.prepared == nil {
+		return time.Time{}
+	}
 	return p.prepared.pollAfter
 }

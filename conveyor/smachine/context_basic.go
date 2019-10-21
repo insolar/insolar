@@ -178,7 +178,7 @@ func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 }
 
 func (p *slotContext) Jump(fn StateFunc) StateUpdate {
-	return p.template(stateUpdNextLoop).newStepUint(SlotStep{Transition: fn}, math.MaxUint32)
+	return p.template(stateUpdNext).newStep(SlotStep{Transition: fn}, nil)
 }
 
 func (p *slotContext) Stop() StateUpdate {
@@ -219,7 +219,7 @@ func (p *slotContext) Stay() StateUpdate {
 }
 
 func (p *slotContext) WakeUp() StateUpdate {
-	return p.template(stateUpdWakeup).newUint(0)
+	return p.template(stateUpdWakeup).newNoArg()
 }
 
 func (p *slotContext) AffectedStep() SlotStep {
