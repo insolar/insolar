@@ -62,6 +62,77 @@ func init() {
 	for _, el := range application.GenesisNameMigrationDaemons {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMigrationDaemon, 0)
 	}
+
+	// Incentives Application
+	for _, el := range application.GenesisNameApplicationIncentivesMembers {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+	}
+	for _, el := range application.GenesisNameApplicationIncentivesWallets {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+	}
+	for _, el := range application.GenesisNameApplicationIncentivesAccounts {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+	}
+	for _, el := range application.GenesisNameApplicationIncentivesDeposits {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+	}
+
+	// Network Incentives
+	for _, el := range application.GenesisNameNetworkIncentivesMembers {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+	}
+	for _, el := range application.GenesisNameNetworkIncentivesWallets {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+	}
+	for _, el := range application.GenesisNameNetworkIncentivesAccounts {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+	}
+	for _, el := range application.GenesisNameNetworkIncentivesDeposits {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+	}
+
+	// Foundation
+	for _, el := range application.GenesisNameFoundationMembers {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+	}
+	for _, el := range application.GenesisNameFoundationWallets {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+	}
+	for _, el := range application.GenesisNameFoundationAccounts {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+	}
+	for _, el := range application.GenesisNameFoundationDeposits {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+	}
+
+	// Funds
+	for _, el := range application.GenesisNameFundsMembers {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+	}
+	for _, el := range application.GenesisNameFundsWallets {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+	}
+	for _, el := range application.GenesisNameFundsAccounts {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+	}
+	for _, el := range application.GenesisNameFundsDeposits {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+	}
+
+	// Enterprise
+	for _, el := range application.GenesisNameEnterpriseMembers {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+	}
+	for _, el := range application.GenesisNameEnterpriseWallets {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+	}
+	for _, el := range application.GenesisNameEnterpriseAccounts {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+	}
+	for _, el := range application.GenesisNameEnterpriseDeposits {
+		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+	}
+
 }
 
 var (

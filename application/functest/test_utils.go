@@ -663,3 +663,27 @@ func getAddressCount(t *testing.T, startWithIndex int) map[int]int {
 	}
 	return migrationShardsMap
 }
+
+func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
+	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+	if err != nil {
+		return err
+	}
+	decodedRes2, ok := res2.(map[string]interface{})
+	m.Ref = decodedRes2["reference"].(string)
+	if !ok {
+		return errors.New(fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
+	}
+	balance, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
+	if big.NewInt(0).Cmp(balance) != 0 {
+		return errors.New("balance should be zero, current value: " + balance.String())
+	}
+	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
+	if deposit["amount"] != "10000000000000000000" {
+		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	}
+	if deposit["balance"] != "10000000000000000000" {
+		return errors.New("deposit balance should be `10000000000000000000`, current value: " + deposit["balance"].(string))
+	}
+	return nil
+}
