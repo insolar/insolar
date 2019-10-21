@@ -17,6 +17,8 @@
 package example
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/longbits"
@@ -40,6 +42,10 @@ type StateMachineCallRequest struct {
 var declCallRequest smachine.StateMachineDeclaration = declarationCallRequest{}
 
 type declarationCallRequest struct{}
+
+func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
+	return nil
+}
 
 func (declarationCallRequest) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 }

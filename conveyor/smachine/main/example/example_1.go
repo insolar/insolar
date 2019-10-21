@@ -17,6 +17,7 @@
 package example
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -41,6 +42,10 @@ type StateMachine1 struct {
 var declarationStateMachine1 smachine.StateMachineDeclaration = stateMachine1Declaration{}
 
 type stateMachine1Declaration struct{}
+
+func (stateMachine1Declaration) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
+	return nil
+}
 
 func (stateMachine1Declaration) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	s := sm.(*StateMachine1)
