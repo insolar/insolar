@@ -125,15 +125,15 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
 	ctx, logger := PacketEarlyLogger(ctx, address)
 
-	if dh.packetHandler == nil {
-		logger.Error("Packet handler is not initialized")
-		return
-	}
-
-	if dh.packetParserFactory == nil {
-		logger.Error("Packet parser factory is not initialized")
-		return
-	}
+	//if dh.packetHandler == nil {
+	//	logger.Error("Packet handler is not initialized")
+	//	return
+	//}
+	//
+	//if dh.packetParserFactory == nil {
+	//	logger.Error("Packet parser factory is not initialized")
+	//	return
+	//}
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
