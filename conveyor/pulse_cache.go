@@ -23,15 +23,10 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-//func NewPulseDataCache(accessRotations int) PulseDataCache {
-//	if accessRotations <= 0 {
-//		panic("illegal value")
-//	}
-//	return PulseDataCache{
-//		access:make([]map[pulse.Number]struct{}, accessRotations),
-//	}
-//}
-
+// Cache that keeps (1) a PD younger than minRange (2) PD touched less than accessRotations ago.
+// Safe for concurrent access.
+// WARNING! Cache size is not directly limited.
+// TODO eviction function is not efficient for 100+ PDs and/or accessRotations > 10
 type PulseDataCache struct {
 	mutex     sync.RWMutex
 	minRange  uint32
