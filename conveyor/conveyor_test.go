@@ -53,7 +53,7 @@ func TestConveyor(t *testing.T) {
 	conveyor := NewPulseConveyor(context.Background(), machineConfig, factoryFn, machineConfig, nil)
 
 	pd := pulse.NewFirstPulsarData(10, longbits.Bits256{})
-	signal := tools.NewVersionedSignal()
+	signal := conveyor.externalSignal
 
 	go worker(conveyor, signal)
 

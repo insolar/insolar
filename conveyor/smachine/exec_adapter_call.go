@@ -16,29 +16,76 @@
 
 package smachine
 
+import (
+	"errors"
+
+	"github.com/insolar/insolar/network/consensus/common/syncrun"
+)
+
 type AdapterCall struct {
 	CallFn   AdapterCallFunc
 	Callback *AdapterCallback
 }
 
-func (c AdapterCall) RunAndSendResult() bool {
+var ErrCancelledCall = errors.New("cancelled")
+
+type AdapterCallDelegateFunc func(callFn AdapterCallFunc, notify bool, chainCancel *syncrun.ChainedCancel) (AsyncResultFunc, error)
+
+func (c AdapterCall) DelegateAndSendResult(delegate AdapterCallDelegateFunc) error {
+	if delegate == nil {
+		panic("illegal value")
+	}
+
+	if c.Callback == nil {
+		result, err := func() (result AsyncResultFunc, err error) {
+			defer func() {
+				err = RecoverAsyncSlotPanicWithStack("async call", recover(), err)
+			}()
+			return delegate(c.CallFn, true, nil)
+		}()
+		switch {
+		case err == nil:
+			if result == nil {
+				return nil
+			}
+			return errors.New("result is unexpected")
+		case err == ErrCancelledCall:
+			// can't send cancel
+			return nil
+		default:
+			return err
+		}
+	}
+
 	if c.Callback.IsCancelled() {
 		c.Callback.SendCancel()
-		return false
+		return nil
 	}
 
 	result, err := func() (result AsyncResultFunc, err error) {
 		defer func() {
 			err = RecoverAsyncSlotPanicWithStack("async call", recover(), err)
 		}()
-		return c.CallFn(), nil
+
+		return delegate(c.CallFn, false, c.Callback.ChainedCancel())
 	}()
 
-	if err != nil {
+	switch {
+	case err == nil:
+		if !c.Callback.IsCancelled() {
+			c.Callback.SendResult(result)
+		}
+		fallthrough
+	case err == ErrCancelledCall:
+		c.Callback.SendCancel()
+	default:
 		c.Callback.SendPanic(err)
-		return false
 	}
+	return nil
+}
 
-	c.Callback.SendResult(result)
-	return true
+func (c AdapterCall) RunAndSendResult(arg interface{}) error {
+	return c.DelegateAndSendResult(func(callFn AdapterCallFunc, _ bool, _ *syncrun.ChainedCancel) (AsyncResultFunc, error) {
+		return callFn(arg), nil
+	})
 }

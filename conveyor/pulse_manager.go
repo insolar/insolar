@@ -26,8 +26,8 @@ import (
 
 type PulseDataManager struct {
 	// set at construction, immutable
-	svc   PulseDataService
-	exec  smachine.ExecutionAdapter
+	execPulseDataService smachine.ExecutionAdapter // for PulseDataService
+
 	cache PulseDataCache
 
 	// set at init, immutable
@@ -163,13 +163,13 @@ func (p *PulseDataManager) isRecentPastRange(presentPN pulse.Number, pastPN puls
 }
 
 func (p *PulseDataManager) prepareAsync(ctx smachine.ExecutionContext, fn func(svc PulseDataService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return p.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
-		fn(p.svc)
+	return p.execPulseDataService.PrepareAsync(ctx, func(svc interface{}) smachine.AsyncResultFunc {
+		fn(svc.(PulseDataService))
 		return nil
 	})
 }
 
-func (p *PulseDataManager) RequestPulseData(ctx smachine.ExecutionContext,
+func (p *PulseDataManager) PreparePulseDataRequest(ctx smachine.ExecutionContext,
 	pn pulse.Number,
 	resultFn func(isAvailable bool, pd pulse.Data),
 ) smachine.AsyncCallRequester {

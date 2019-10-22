@@ -41,14 +41,14 @@ type ContractRunnerServiceAdapter struct {
 }
 
 func (a *ContractRunnerServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ContractRunnerService)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
 func (a *ContractRunnerServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ContractRunnerService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }

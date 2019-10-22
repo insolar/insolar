@@ -31,7 +31,6 @@ func newAntiqueEventSM(pn pulse.Number, ps *PulseSlot, createFn smachine.CreateF
 
 type antiqueEventSM struct {
 	wrapEventSM
-	pd pulse.Data
 }
 
 func (sm *antiqueEventSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
@@ -51,8 +50,8 @@ func (sm *antiqueEventSM) stepInit(ctx smachine.InitializationContext) smachine.
 
 func (sm *antiqueEventSM) stepRequestOldPulseData(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
-	sm.ps.pulseManager.RequestPulseData(ctx, sm.pn, func(_ bool, pd pulse.Data) {
-		sm.pd = pd
+	sm.ps.pulseManager.PreparePulseDataRequest(ctx, sm.pn, func(_ bool, _ pulse.Data) {
+		// we don't need to store PD as it will also be in the cache for a while
 	}).Start()
 
 	return ctx.Sleep().ThenJump(sm.stepGotAnswer)

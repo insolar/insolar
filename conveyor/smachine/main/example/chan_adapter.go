@@ -27,22 +27,24 @@ var _ smachine.AdapterExecutor = &ChannelAdapter{}
 
 // This is a basic implementation of an adapter to run all calls in a separate goroutine.
 // There an important property - it doesn't lock up.
-func NewChannelAdapter(ctx context.Context, chanLen int, overflowLimit int) ChannelAdapter {
+func NewChannelAdapter(ctx context.Context, needCancel bool, chanLen int, overflowLimit int) ChannelAdapter {
 	return ChannelAdapter{
-		ctx: ctx,
-		c:   make(chan ChannelRecord, chanLen),
-		o:   overflowLimit,
+		ctx:        ctx,
+		needCancel: needCancel,
+		c:          make(chan ChannelRecord, chanLen),
+		o:          overflowLimit,
 	}
 }
 
 type ChannelRecord = smachine.AdapterCall
 
 type ChannelAdapter struct {
-	ctx context.Context
-	c   chan ChannelRecord
-	m   sync.Mutex
-	q   []ChannelRecord
-	o   int
+	ctx        context.Context
+	needCancel bool
+	c          chan ChannelRecord
+	m          sync.Mutex
+	q          []ChannelRecord
+	o          int
 }
 
 func (c *ChannelAdapter) TrySyncCall(fn smachine.AdapterCallFunc) (bool, smachine.AsyncResultFunc) {
@@ -54,8 +56,8 @@ func (c *ChannelAdapter) SendNotify(fn smachine.AdapterNotifyFunc) {
 		panic("illegal value")
 	}
 
-	r := ChannelRecord{CallFn: func() smachine.AsyncResultFunc {
-		fn()
+	r := ChannelRecord{CallFn: func(svc interface{}) smachine.AsyncResultFunc {
+		fn(svc)
 		return nil
 	}}
 	c.queueCall(r)
@@ -70,21 +72,16 @@ func (c *ChannelAdapter) StartCall(fn smachine.AdapterCallFunc, callback *smachi
 	}
 
 	r := ChannelRecord{CallFn: fn, Callback: callback}
-	cancelFn, setChainCancelFn := callback.Prepare(needCancel)
-
-	nativeCancelFn := c.queueCall(r)
-	if setChainCancelFn != nil {
-		setChainCancelFn(nativeCancelFn)
-	}
+	cancelFn := callback.Prepare(needCancel || c.needCancel)
+	c.queueCall(r)
 
 	return cancelFn
 }
 
-func (c *ChannelAdapter) queueCall(r ChannelRecord) context.CancelFunc {
+func (c *ChannelAdapter) queueCall(r ChannelRecord) {
 	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}
-	return nil
 }
 
 func (c *ChannelAdapter) Channel() <-chan ChannelRecord {

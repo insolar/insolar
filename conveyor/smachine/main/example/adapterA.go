@@ -46,20 +46,20 @@ type ServiceAdapterA struct {
 }
 
 func (a *ServiceAdapterA) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
 func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }
 
 func CreateServiceAdapterA() *ServiceAdapterA {
-	ach := NewChannelAdapter(context.Background(), 0, -1)
+	ach := NewChannelAdapter(context.Background(), false, 0, -1)
 	ea := smachine.NewExecutionAdapter("ServiceA", &ach)
 
 	go func() {
@@ -68,7 +68,10 @@ func CreateServiceAdapterA() *ServiceAdapterA {
 			case <-ach.Context().Done():
 				return
 			case t := <-ach.Channel():
-				t.RunAndSendResult()
+				err := t.RunAndSendResult(nil)
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}()

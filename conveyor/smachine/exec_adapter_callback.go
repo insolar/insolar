@@ -38,7 +38,7 @@ type AdapterCallback struct {
 	flags      AsyncCallFlags
 }
 
-func (c *AdapterCallback) Prepare(needCancel bool) (context.CancelFunc, func(context.CancelFunc)) {
+func (c *AdapterCallback) Prepare(needCancel bool) context.CancelFunc {
 	if !atomic.CompareAndSwapUint32(&c.state, 0, 1) {
 		panic("illegal state - in use")
 	}
@@ -46,11 +46,11 @@ func (c *AdapterCallback) Prepare(needCancel bool) (context.CancelFunc, func(con
 		panic("illegal state")
 	}
 	if !needCancel {
-		return nil, nil
+		return nil
 	}
 
 	c.cancel = syncrun.NewChainedCancel()
-	return c.cancel.Cancel, c.cancel.SetChain
+	return c.cancel.Cancel
 }
 
 const stepBondTolerance = 1
@@ -61,6 +61,10 @@ func (c *AdapterCallback) canCall() bool {
 
 func (c *AdapterCallback) IsCancelled() bool {
 	return c.cancel.IsCancelled() || !c.canCall()
+}
+
+func (c *AdapterCallback) ChainedCancel() *syncrun.ChainedCancel {
+	return c.cancel
 }
 
 func (c *AdapterCallback) SendResult(result AsyncResultFunc) {

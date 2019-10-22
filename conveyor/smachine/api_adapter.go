@@ -26,8 +26,8 @@ func (v AdapterId) IsEmpty() bool {
 	return len(v) == 0
 }
 
-type AdapterCallFunc func() AsyncResultFunc
-type AdapterNotifyFunc func()
+type AdapterCallFunc func(arg interface{}) AsyncResultFunc
+type AdapterNotifyFunc func(arg interface{})
 type CreateFactoryFunc func(eventPayload interface{}) CreateFunc
 
 type AsyncCallRequester interface {
