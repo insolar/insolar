@@ -25,16 +25,35 @@ import (
 )
 
 type PulseDataManager struct {
-	svc  PulseDataService
-	exec smachine.ExecutionAdapter
+	// set at construction, immutable
+	svc   PulseDataService
+	exec  smachine.ExecutionAdapter
+	cache PulseDataCache
+
+	// set at init, immutable
+	maxPastPulseAge uint32
+	futureCycles    uint8
 
 	// mutable
 	presentAndFuturePulse uint64 //atomic
-	preparingPulse        uint32 //atomic
+	earliestCacheBound    uint32 // atomic
+	preparingPulseFlag    uint32 // atomic
 }
 
 type PulseDataService interface {
 	LoadPulseData(pulse.Number) (pulse.Data, bool)
+}
+
+func (p *PulseDataManager) Init(minCachePulseAge, maxPastPulseAge uint32, maxFutureCycles uint8) {
+	if minCachePulseAge == 0 || minCachePulseAge > pulse.MaxTimePulse {
+		panic("illegal value")
+	}
+	if maxPastPulseAge < minCachePulseAge || maxPastPulseAge > pulse.MaxTimePulse {
+		panic("illegal value")
+	}
+	p.maxPastPulseAge = maxPastPulseAge
+	p.futureCycles = maxFutureCycles
+	p.cache.Init(minCachePulseAge, 2) // any pulse data stays in cache for at least 2 pulse cycles
 }
 
 const uninitializedFuture = pulse.LocalRelative
@@ -55,6 +74,12 @@ func (p *PulseDataManager) setPresentPulse(pd pulse.Data) {
 	presentPN := pd.PulseNumber
 	futurePN := pd.GetNextPulseNumber()
 
+	if epd, ok := p.cache.Check(presentPN); ok {
+		if epd != pd {
+			panic("illegal state")
+		}
+	}
+
 	for {
 		prev := atomic.LoadUint64(&p.presentAndFuturePulse)
 		if prev != 0 {
@@ -64,45 +89,77 @@ func (p *PulseDataManager) setPresentPulse(pd pulse.Data) {
 			}
 		}
 		if atomic.CompareAndSwapUint64(&p.presentAndFuturePulse, prev, uint64(presentPN)|uint64(futurePN)<<32) {
-			return
+			if prev == 0 {
+				atomic.CompareAndSwapUint32(&p.earliestCacheBound, 0, uint32(presentPN))
+			}
+			break
 		}
 	}
+
+	p.cache.EvictAndRotate(presentPN)
+}
+
+func (p *PulseDataManager) getEarliestCacheBound() pulse.Number {
+	return pulse.Number(atomic.LoadUint32(&p.earliestCacheBound))
 }
 
 func (p *PulseDataManager) isPreparingPulse() bool {
-	return atomic.LoadUint32(&p.preparingPulse) != 0
+	return atomic.LoadUint32(&p.preparingPulseFlag) != 0
 }
 
 func (p *PulseDataManager) setPreparingPulse(out PreparePulseChangeChannel) {
-	atomic.StoreUint32(&p.preparingPulse, 1)
+	atomic.StoreUint32(&p.preparingPulseFlag, 1)
 }
 
 func (p *PulseDataManager) unsetPreparingPulse() {
-	atomic.StoreUint32(&p.preparingPulse, 0)
+	atomic.StoreUint32(&p.preparingPulseFlag, 0)
 }
 
 func (p *PulseDataManager) GetPulseData(pn pulse.Number) (pulse.Data, bool) {
-	panic("unimplemented")
+	return p.cache.Get(pn)
 }
 
 // for non-recent past HasPulseData() can be incorrect / incomplete
 func (p *PulseDataManager) HasPulseData(pn pulse.Number) bool {
-	return true // TODO HasPulseData
+	return p.cache.Contains(pn)
 }
 
-func (p *PulseDataManager) IsAllowedFutureSpan(expectedPN pulse.Number, futurePN pulse.Number) bool {
-	// TODO limit how much we can handle as future
-	return futurePN >= expectedPN
+func (p *PulseDataManager) TouchPulseData(pn pulse.Number) bool {
+	return p.cache.Touch(pn)
 }
 
-func (p *PulseDataManager) IsAllowedPastSpan(presentPN pulse.Number, pastPN pulse.Number) bool {
-	// TODO limit how much we can handle as future
-	return pastPN < presentPN
+// Returns true when the given PN can be accepted into Future pulse slot, otherwise must be rejected
+func (p *PulseDataManager) IsAllowedFutureSpan(futurePN pulse.Number) bool {
+	presentPN, expectedPN := p.GetPresentPulse()
+	return p.isAllowedFutureSpan(presentPN, expectedPN, futurePN)
+}
+
+func (p *PulseDataManager) isAllowedFutureSpan(presentPN, expectedPN pulse.Number, futurePN pulse.Number) bool {
+	if futurePN < expectedPN {
+		return false
+	}
+	return p.futureCycles == 0 || futurePN <= (expectedPN+(expectedPN-presentPN)*pulse.Number(p.futureCycles))
+}
+
+func (p *PulseDataManager) IsAllowedPastSpan(pastPN pulse.Number) bool {
+	presentPN, _ := p.GetPresentPulse()
+	return p.isAllowedPastSpan(presentPN, pastPN)
+}
+
+func (p *PulseDataManager) isAllowedPastSpan(presentPN pulse.Number, pastPN pulse.Number) bool {
+	return pastPN < presentPN && pastPN+pulse.Number(p.maxPastPulseAge) >= presentPN
 }
 
 func (p *PulseDataManager) IsRecentPastRange(pastPN pulse.Number) bool {
-	// TODO limit how much we can handle as future
-	return pastPN.IsTimePulse()
+	presentPN, _ := p.GetPresentPulse()
+	return p.isRecentPastRange(presentPN, pastPN)
+}
+
+//Returns true when the given PN is within a mandatory retention interval for the cache. So we don't need to populate it
+func (p *PulseDataManager) isRecentPastRange(presentPN pulse.Number, pastPN pulse.Number) bool {
+	return pastPN < presentPN &&
+		(pastPN+pulse.Number(p.cache.GetMinRange())) >= presentPN &&
+		pastPN >= p.getEarliestCacheBound() // this interval can be much narrower for a recently started node
 }
 
 func (p *PulseDataManager) prepareAsync(ctx smachine.ExecutionContext, fn func(svc PulseDataService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
@@ -138,5 +195,5 @@ func (p *PulseDataManager) RequestPulseData(ctx smachine.ExecutionContext,
 }
 
 func (p *PulseDataManager) putPulseData(data pulse.Data) {
-	// TODO implement cache
+	p.cache.Put(data)
 }

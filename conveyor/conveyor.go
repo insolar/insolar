@@ -59,6 +59,8 @@ func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMa
 	// shared SlotId sequence
 	r.slotConfig.config.SlotIdGenerateFn = r.slotMachine.CopyConfig().SlotIdGenerateFn
 
+	r.pdm.Init(100, 1000, 1)
+
 	return r
 }
 
@@ -94,27 +96,32 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 	switch {
 	case createFn == nil:
 		return fmt.Errorf("unrecognized event: pn=%v event=%v", targetPN, event)
+
 	case pulseState == Future:
 		// event for future need special handling
 		pulseSlotMachine.innerMachine.AddNew(ctx, smachine.NoLink(),
 			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
-		break
+		return nil
+
 	case pulseState == Antique:
+		if p.pdm.TouchPulseData(targetPN) {
+			break // go forward
+		}
 		if !p.pdm.IsRecentPastRange(pn) {
 			// for non-recent past HasPulseData() can be incorrect / incomplete
 			// we must use a longer procedure to get PulseData and utilize SM for it
 			pulseSlotMachine.innerMachine.AddNew(ctx, smachine.NoLink(),
 				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
-			break
+			return nil
 		}
 		fallthrough
-	default:
-		if !p.pdm.HasPulseData(targetPN) {
+	default: //pulseState == Past or Present:
+		if !p.pdm.TouchPulseData(targetPN) { // make sure - for PAST we should always have the data ...
 			return fmt.Errorf("unknown data for pulse : pn=%v event=%v", targetPN, event)
 		}
-		if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, smachine.NoLink(), createFn); !ok {
-			return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
-		}
+	}
+	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, smachine.NoLink(), createFn); !ok {
+		return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
 	}
 	return nil
 }
@@ -139,7 +146,7 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 		if !pn.IsTimePulse() {
 			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 		}
-		if !p.pdm.IsAllowedPastSpan(presentPN, pn) {
+		if !p.pdm.isAllowedPastSpan(presentPN, pn) {
 			return nil, 0, 0, fmt.Errorf("pulse number is too far in past: pn=%v, present=%v", pn, presentPN)
 		}
 		return p.getAntiquePulseSlotMachine(), pn, Antique, nil
@@ -149,7 +156,7 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 		if !pn.IsTimePulse() {
 			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 		}
-		if !p.pdm.IsAllowedFutureSpan(futurePN, pn) {
+		if !p.pdm.isAllowedFutureSpan(presentPN, futurePN, pn) {
 			return nil, 0, 0, fmt.Errorf("pulse number is too far in future: pn=%v, expected=%v", pn, futurePN)
 		}
 		return p.getFuturePulseSlotMachine(presentPN, futurePN), pn, Future, nil
@@ -279,6 +286,7 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 		}
 		p.presentMachine.setPast()
 	}
+	p.pdm.putPulseData(pd) // add to the recent cache
 
 	if p.unpublishPulse.IsTimePulse() {
 		// we know what we do - right!?
