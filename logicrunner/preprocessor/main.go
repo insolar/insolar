@@ -731,8 +731,7 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 }
 
 func extendImportsMapWithType(parsed *ParsedFile, t *ast.TypeSpec, imports map[string]bool) {
-	switch st := t.Type.(type) {
-	case *ast.StructType:
+	if st, ok := t.Type.(*ast.StructType); ok {
 		if st.Fields == nil || st.Fields.NumFields() == 0 {
 			return
 		}
