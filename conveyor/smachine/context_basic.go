@@ -167,9 +167,6 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 
 func (p *slotContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
 	p.ensureAtLeast(updCtxInit)
-	if lf != nil {
-		panic("illegal value")
-	}
 	p.s.stepLogger = lf
 }
 

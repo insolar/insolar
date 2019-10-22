@@ -58,7 +58,22 @@ type ShadowMigrator interface {
 	ShadowMigrate(migrationCount, migrationDelta uint32)
 }
 
-type StateMachineStepLoggerFunc func(stepNo StepLink, step SlotStep, update StateUpdate, wasDetached bool)
+type StepLoggerFlags uint8
+
+const (
+	StepLoggerMigrate StepLoggerFlags = 1 << iota
+	StepLoggerDetached
+)
+
+type StepLoggerData struct {
+	StepNo      StepLink
+	CurrentStep SlotStep
+	NextStep    SlotStep
+	UpdateType  string
+	Flags       StepLoggerFlags
+}
+
+type StateMachineStepLoggerFunc func(StepLoggerData)
 
 // A template to include into SM to avoid hassle of creation of any methods but GetInitStateFor()
 type StateMachineDeclTemplate struct {

@@ -37,6 +37,8 @@ type SlotMachineConfig struct {
 	SlotPageSize         uint16
 	ScanCountLimit       int
 	CleanupWeakOnMigrate bool
+
+	SlotIdGenerateFn func() SlotID
 }
 
 const maxLoopCount = 10000
@@ -49,19 +51,23 @@ func NewSlotMachine(config SlotMachineConfig,
 		config.ScanCountLimit = maxLoopCount
 	}
 
-	sm := &SlotMachine{
+	m := &SlotMachine{
 		config:         config,
 		parentRegistry: parentRegistry,
 		slotPool:       newSlotPool(config.SlotPageSize, false),
 		syncQueue:      newSlotMachineSync(eventCallback, signalCallback),
 	}
 
-	sm.slotPool.initSlotPool()
-	sm.activeSlots.initSlotQueue(ActiveSlots)
-	sm.prioritySlots.initSlotQueue(ActiveSlots)
-	sm.workingSlots.initSlotQueue(WorkingSlots)
+	if m.config.SlotIdGenerateFn == nil {
+		m.config.SlotIdGenerateFn = m._allocateNextSlotID
+	}
 
-	return sm
+	m.slotPool.initSlotPool()
+	m.activeSlots.initSlotQueue(ActiveSlots)
+	m.prioritySlots.initSlotQueue(ActiveSlots)
+	m.workingSlots.initSlotQueue(WorkingSlots)
+
+	return m
 }
 
 var _ injector.DependencyRegistry = &SlotMachine{}
@@ -138,6 +144,10 @@ func (m *SlotMachine) incScanCount() uint32 {
 
 func (m *SlotMachine) incMigrateCount() uint32 {
 	return uint32(atomic.AddUint64(&m.scanAndMigrateCounts, 1<<32) >> 32)
+}
+
+func (m *SlotMachine) CopyConfig() SlotMachineConfig {
+	return m.config
 }
 
 /* ------- Methods for dependency injections - safe for concurrent use ------------- */
@@ -366,9 +376,7 @@ func (m *SlotMachine) _executeSlotInitByCreator(currentSlot *Slot, worker Detach
 func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker,
 	prevStepNo uint32, wasAsync bool) (hasAsync bool) {
 
-	if slot.stepLogger != nil {
-		slot.stepLogger(slot.NewStepLink(), slot.step, stateUpdate, wasAsync)
-	}
+	slot.logStepUpdate(prevStepNo, stateUpdate, wasAsync)
 
 	if !stateUpdate.IsZero() && !m.applyStateUpdate(slot, stateUpdate, worker) {
 		return false
@@ -376,7 +384,7 @@ func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, wor
 
 	if slot.canMigrateWorking(prevStepNo, wasAsync) {
 		_, migrateCount := m.getScanAndMigrateCounts()
-		if _, isAvailable := m._migrateSlot(migrateCount, slot, worker); !isAvailable {
+		if _, isAvailable := m._migrateSlot(migrateCount, slot, prevStepNo, worker); !isAvailable {
 			return false
 		}
 	}
@@ -504,14 +512,14 @@ func (m *SlotMachine) migrateSlot(migrateCount uint32, slot *Slot, w FixedSlotWo
 	if !isStarted {
 		return isEmpty, false
 	}
-	isEmptyOrWeak, isAvailable = m._migrateSlot(migrateCount, slot, w)
+	isEmptyOrWeak, isAvailable = m._migrateSlot(migrateCount, slot, prevStepNo, w)
 	if isAvailable {
 		m.stopSlotWorking(slot, prevStepNo, w)
 	}
 	return isEmptyOrWeak, isAvailable
 }
 
-func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, worker FixedSlotWorker) (isEmptyOrWeak, isAvailable bool) {
+func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, prevStepNo uint32, worker FixedSlotWorker) (isEmptyOrWeak, isAvailable bool) {
 
 	for delta := migrateCount - slot.migrationCount; delta > 0; {
 		migrateFn := slot.getMigration()
@@ -527,6 +535,9 @@ func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, worker Fixed
 			}
 
 			stateUpdate, skipMultiple := mc.executeMigration(migrateFn)
+
+			slot.logStepMigrate(prevStepNo, stateUpdate)
+
 			if !m.applyStateUpdate(slot, stateUpdate, worker) {
 				return true, false
 			}
@@ -554,6 +565,10 @@ func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, worker Fixed
 
 // SAFE for concurrent use
 func (m *SlotMachine) allocateNextSlotID() SlotID {
+	return m.config.SlotIdGenerateFn()
+}
+
+func (m *SlotMachine) _allocateNextSlotID() SlotID {
 	for {
 		r := atomic.LoadUint32((*uint32)(&m.lastSlotID))
 		if r == math.MaxUint32 {
@@ -1360,4 +1375,9 @@ func (m *SlotMachine) activateDependantByDetachable(links []StepLink, worker Det
 
 func (m *SlotMachine) GetStoppingSignal() <-chan struct{} {
 	return m.syncQueue.GetStoppingSignal()
+}
+
+// Must support nil receiver
+func (m *SlotMachine) GetMachineId() string {
+	return fmt.Sprintf("%p", m)
 }

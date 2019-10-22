@@ -75,6 +75,11 @@ func (p *constructionContext) SetTerminationHandler(tf TerminationHandlerFunc) {
 	p.s.defResultHandler = tf
 }
 
+func (p *constructionContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
+	p.ensure(updCtxConstruction)
+	p.s.stepLogger = lf
+}
+
 func (p *constructionContext) executeCreate(nextCreate CreateFunc) StateMachine {
 	p.setMode(updCtxConstruction)
 	defer p.setDiscarded()

@@ -53,6 +53,7 @@ var stateUpdateTypes []StateUpdateType
 func init() {
 	stateUpdateTypes = []StateUpdateType{
 		stateUpdNoChange: {
+			name:   "noChange",
 			filter: updCtxMigrate | updCtxBargeIn | updCtxAsyncCallback,
 
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
@@ -64,6 +65,7 @@ func init() {
 		},
 
 		stateUpdInternalRepeatNow: {
+			name:   "internalRepeat",
 			filter: updCtxInternal, // can't be created by a template
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				if slot.isInQueue() {
@@ -76,11 +78,13 @@ func init() {
 		},
 
 		stateUpdStop: {
+			name:   "stop",
 			filter: updCtxExec | updCtxInit | updCtxMigrate | updCtxBargeIn,
 			apply:  stateUpdateDefaultStop,
 		},
 
 		stateUpdError: {
+			name:      "error",
 			filter:    updCtxExec | updCtxInit | updCtxMigrate | updCtxBargeIn,
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
@@ -88,6 +92,7 @@ func init() {
 		},
 
 		stateUpdPanic: {
+			name:      "panic",
 			filter:    updCtxInternal, // can't be created by a template
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
@@ -95,6 +100,7 @@ func init() {
 		},
 
 		stateUpdReplaceWith: {
+			name:   "replaceWith",
 			filter: updCtxExec,
 			params: updParamVar,
 			varVerify: func(v interface{}) {
@@ -128,6 +134,7 @@ func init() {
 		},
 
 		stateUpdReplace: {
+			name:   "replace",
 			filter: updCtxExec,
 			params: updParamVar,
 
@@ -154,6 +161,7 @@ func init() {
 		},
 
 		stateUpdRepeat: {
+			name:   "repeat",
 			filter: updCtxExec,
 			params: updParamUint,
 
@@ -168,6 +176,7 @@ func init() {
 		},
 
 		stateUpdNextLoop: {
+			name:   "jumpLoop",
 			filter: updCtxExec,
 			params: updParamStep | updParamUint,
 
@@ -187,6 +196,7 @@ func init() {
 		},
 
 		stateUpdWakeup: {
+			name:   "wakeUp",
 			filter: updCtxExec | updCtxBargeIn | updCtxAsyncCallback | updCtxMigrate,
 
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
@@ -196,6 +206,7 @@ func init() {
 		},
 
 		stateUpdNext: {
+			name:      "jump",
 			filter:    updCtxExec | updCtxInit | updCtxBargeIn | updCtxMigrate,
 			params:    updParamStep | updParamVar,
 			prepare:   stateUpdateDefaultNoArgPrepare,
@@ -204,6 +215,7 @@ func init() {
 		},
 
 		stateUpdPoll: {
+			name:    "poll",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamVar,
 			prepare: stateUpdateDefaultNoArgPrepare,
@@ -217,6 +229,7 @@ func init() {
 		},
 
 		stateUpdSleep: {
+			name:    "sleep",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamVar,
 			prepare: stateUpdateDefaultNoArgPrepare,
@@ -229,6 +242,7 @@ func init() {
 		},
 
 		stateUpdWaitForEvent: {
+			name:    "waitEvent",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamUint | updParamVar,
 			prepare: stateUpdateDefaultNoArgPrepare,
@@ -263,6 +277,7 @@ func init() {
 		},
 
 		stateUpdWaitForActive: {
+			name:   "waitActive",
 			filter: updCtxExec,
 			params: updParamStep | updParamLink,
 			//		prepare: stateUpdateDefaultNoArgPrepare,
@@ -296,6 +311,7 @@ func init() {
 		},
 
 		stateUpdWaitForShared: {
+			name:    "waitInactive",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamLink,
 			prepare: stateUpdateDefaultNoArgPrepare,

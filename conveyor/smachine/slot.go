@@ -439,3 +439,33 @@ func (s *Slot) decAsyncCount() {
 	}
 	s.asyncCallCount--
 }
+
+func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags StepLoggerFlags) {
+	stepData := StepLoggerData{StepNo: s.NewStepLink(), Flags: flags, CurrentStep: s.step, NextStep: stateUpdate.step}
+
+	if prevStepNo <= 1 {
+		// nil all handlers as initialization transition can't be logged properly
+		stepData.CurrentStep = SlotStep{Flags: s.step.Flags}
+	}
+	stepData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
+	s.stepLogger(stepData)
+}
+
+func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
+	if s.stepLogger == nil {
+		return
+	}
+
+	if wasAsync {
+		s._logStepUpdate(prevStepNo, stateUpdate, StepLoggerDetached)
+	} else {
+		s._logStepUpdate(prevStepNo, stateUpdate, 0)
+	}
+}
+
+func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
+	if s.stepLogger == nil {
+		return
+	}
+	s._logStepUpdate(prevStepNo, stateUpdate, StepLoggerMigrate)
+}

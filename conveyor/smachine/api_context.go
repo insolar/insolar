@@ -66,6 +66,8 @@ type ConstructionContext interface {
 	// This handler is not directly accessible to SM.
 	// WARNING! This handler is UNSAFE to access another SM. Use BargeIn() to create a necessary handler.
 	SetTerminationHandler(TerminationHandlerFunc)
+	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
+	SetDefaultStepLogger(lf StateMachineStepLoggerFunc)
 }
 
 /* A context parent for all regular step contexts */

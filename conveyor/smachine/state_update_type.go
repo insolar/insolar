@@ -25,8 +25,33 @@ func newStateUpdateTemplate(contextType updCtxMode, marker ContextMarker, updKin
 	return stateUpdateTypes[updKind].template(marker, contextType)
 }
 
-func getStateUpdateType(updType stateUpdKind) StateUpdateType {
-	return stateUpdateTypes[updType].get()
+func _getStateUpdateType(updKind stateUpdKind) (StateUpdateType, bool) {
+	if int(updKind) >= len(stateUpdateTypes) {
+		return StateUpdateType{}, false
+	}
+	sut := stateUpdateTypes[updKind]
+	if sut.canGet() {
+		return sut, true
+	}
+	return StateUpdateType{}, false
+}
+
+func getStateUpdateType(stateUpdate StateUpdate) (StateUpdateType, bool) {
+	return _getStateUpdateType(stateUpdKind(stateUpdate.updKind))
+}
+
+func getStateUpdateTypeName(stateUpdate StateUpdate) (string, bool) {
+	switch sut, ok := _getStateUpdateType(stateUpdKind(stateUpdate.updKind)); ok {
+	case ok:
+		if len(sut.name) > 0 {
+			return sut.name, true
+		}
+		return fmt.Sprintf("noname(%d)", stateUpdate.updKind), true
+	case stateUpdate.IsZero():
+		return "zero", false
+	default:
+		return fmt.Sprintf("unknown(%d)", stateUpdate.updKind), false
+	}
 }
 
 func typeOfStateUpdate(stateUpdate StateUpdate) StateUpdateType {
@@ -71,8 +96,8 @@ type StateUpdateType struct {
 	filter    updCtxMode
 	params    stateUpdParam
 	varVerify func(interface{})
-	//bargeIn func()
-	//migrate bool
+
+	name string
 }
 
 type StateUpdateTemplate struct {
@@ -150,6 +175,16 @@ func (v StateUpdateType) get() StateUpdateType {
 		panic("not implemented")
 	}
 	return v
+}
+
+func (v StateUpdateType) canGet() bool {
+	if v.updKind == 0 {
+		return false
+	}
+	if v.apply == nil {
+		return false
+	}
+	return true
 }
 
 func (v StateUpdateType) verifyVar(u interface{}) interface{} {

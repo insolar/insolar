@@ -53,6 +53,13 @@ func (p SlotLink) String() string {
 	return fmt.Sprintf("slot-%d", p.id)
 }
 
+func (p SlotLink) MachineId() string {
+	if p.s == nil {
+		(*SlotMachine)(nil).GetMachineId()
+	}
+	return p.s.machine.GetMachineId()
+}
+
 func (p SlotLink) SlotID() SlotID {
 	return p.id
 }
@@ -124,6 +131,10 @@ const numberOfReservedSteps = 2
 type StepLink struct {
 	SlotLink
 	step uint32
+}
+
+func (p StepLink) StepNo() uint32 {
+	return p.step
 }
 
 // Makes the step link unbound - IsAtStep()/IsNearStep() will return true for any step of a valid slot
