@@ -42,7 +42,7 @@ const (
 	stateUpdSleep
 	stateUpdWaitForEvent
 	stateUpdWaitForActive
-	stateUpdWaitForShared
+	stateUpdWaitForInactive
 )
 
 //const stateUpdWakeup = stateUpdRepeat
@@ -286,13 +286,34 @@ func init() {
 				slot.setNextStep(stateUpdate.step)
 				waitOn := stateUpdate.getLink()
 
-				if waitOn.s == slot || !waitOn.IsValid() {
+				if waitOn.s == slot {
 					// don't wait for self
-					// don't wait for an expired slot
 					m.updateSlotQueue(slot, worker, activateSlot)
-					return
+					return true, nil
 				}
-				panic("not implemented") // TODO requires sync
+
+				// TODO work in progress
+				panic("work in progress")
+
+				//switch isValid, isBusy := waitOn.getIsValidAndBusy(); {
+				//case !isValid:
+				//	// don't wait for an expired or busy slot
+				//	m.updateSlotQueue(slot, worker, activateSlot)
+				//	return true, nil
+				//case waitOn.isMachine(m):
+				//	if isBusy {
+				//		m.updateSlotQueue(slot, worker, activateHotWaitSlot)
+				//		return true, nil
+				//	}
+				//	//m.queueOnSlot(waitOn.s, slot)
+				//	panic("not implemented")
+				////case worker.OuterCall(waitOn.s.machine, func(worker FixedSlotWorker) {
+				////
+				////}):
+				//default:
+				//	panic("not implemented") // TODO decide on action
+				//}
+
 				//switch waitOn.s.QueueType() {
 				//case ActiveSlots, WorkingSlots:
 				//	// don't wait
@@ -306,11 +327,11 @@ func init() {
 				//default:
 				//	return false, errors.New("illegal slot queue")
 				//}
-				return true, nil
+				//return true, nil
 			},
 		},
 
-		stateUpdWaitForShared: {
+		stateUpdWaitForInactive: {
 			name:    "waitInactive",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamLink,
@@ -328,12 +349,16 @@ func init() {
 				}
 
 				wakeupLink := slot.NewLink()
+				// here is a trick - we put a callback on the AWAITED object
+				// because a callback is executed on non-busy object
+				// hence our call back will only be triggered when the object became available
 				m.syncQueue.AddAsyncCallback(waitOn, func(waitOn SlotLink, worker DetachableSlotWorker) bool {
 					switch {
 					case !wakeupLink.IsValid():
+						// requester is dead, don't wait anymore
 						return true
 					case waitOn.isValidAndBusy():
-						// add this back
+						// someone got it already, this callback should be added back to the queue
 						return false
 					case !worker.NonDetachableCall(wakeupLink.s.activateSlot):
 						m.syncQueue.AddAsyncUpdate(wakeupLink, SlotLink.activateSlot)
@@ -355,10 +380,9 @@ func init() {
 
 func stateUpdateDefaultNoArgPrepare(_ *Slot, stateUpdate *StateUpdate) {
 	fn := stateUpdate.param1.(StepPrepareFunc)
-	if fn == nil {
-		return
+	if fn != nil {
+		fn()
 	}
-	fn()
 }
 
 func stateUpdateDefaultVerifyNoArgFn(u interface{}) {

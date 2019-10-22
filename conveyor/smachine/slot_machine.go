@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
@@ -817,6 +817,7 @@ func (m *SlotMachine) _addNewAllocate(ctx context.Context, parent SlotLink) (Slo
 	return newSlot.NewLink(), true
 }
 
+// TODO allocate a new slot inside?
 // caller MUST be busy-holder of both creator and slot, then this method is SAFE for concurrent use
 func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm StateMachine, inherit bool) bool {
 	defer func() {

@@ -107,12 +107,13 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdKind) StateCon
 	}
 }
 
+// EXPERIMENTAL! SM will apply an action chosen by the builder and wait for activation or stop of the given slot.
 func (p *executionContext) WaitActivation(link SlotLink) StateConditionalBuilder {
 	return p.waitFor(link, stateUpdWaitForActive)
 }
 
 func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalBuilder {
-	return p.waitFor(link.link, stateUpdWaitForShared)
+	return p.waitFor(link.link, stateUpdWaitForInactive)
 }
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
@@ -160,6 +161,27 @@ func (c *conditionalUpdate) GetDecision() Decision {
 		return NotPassed
 	}
 	return c.decision
+}
+
+func (c *conditionalUpdate) ThenRepeatOrElse() (StateUpdate, bool) {
+	if c.decision.IsNotPassed() {
+		return c.ThenRepeat(), true
+	}
+	return StateUpdate{}, false
+}
+
+func (c *conditionalUpdate) ThenRepeatOrJump(fn StateFunc) StateUpdate {
+	if c.decision.IsNotPassed() {
+		return c.ThenRepeat()
+	}
+	return c.ThenJump(fn)
+}
+
+func (c *conditionalUpdate) ThenRepeatOrJumpExt(step SlotStep) StateUpdate {
+	if c.decision.IsNotPassed() {
+		return c.ThenRepeat()
+	}
+	return c.ThenJumpExt(step)
 }
 
 func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {

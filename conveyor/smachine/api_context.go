@@ -224,12 +224,14 @@ type ExecutionContext interface {
 	Poll() StateConditionalBuilder
 
 	// EXPERIMENTAL! SM will apply an action chosen by the builder and wait for activation or stop of the given slot.
-	WaitActivation(SlotLink) StateConditionalBuilder
+	// WaitActivation(SlotLink) StateConditionalBuilder
+	// WaitStepChange(StepLink, tolerance uint32) StateConditionalBuilder
+
 	// SM will apply an action chosen by the builder and wait for availability of the SharedDataLink.
 	WaitShared(SharedDataLink) StateConditionalBuilder
-	// SM will apply an action chosen by the builder and wait for any event (even irrelevant to this SM).
+	// SM will apply an action chosen by the builder and wait for any event (even for one irrelevant to this SM).
 	WaitAny() StateConditionalBuilder
-	// SM will apply an action chosen by the builder and wait for any event (even irrelevant to this SM), but not later than the given time.
+	// SM will apply an action chosen by the builder and wait for any event (even for one irrelevant to this SM), but not later than the given time.
 	WaitAnyUntil(time.Time) StateConditionalBuilder
 
 	// SM will apply an action chosen by the builder and wait for an explicit activation of this slot, e.g. any WakeUp() action.
@@ -262,6 +264,12 @@ type StateConditionalBuilder interface {
 	ConditionalBuilder
 	/* Returns information if the condition is already met */
 	Decider
+	// When the conditional requires wait, then return (Repeat(), true), otherwise returns ({}, false)
+	ThenRepeatOrElse() (StateUpdate, bool)
+	// When the conditional requires wait, then returns Repeat(), otherwise Jump()
+	ThenRepeatOrJump(StateFunc) StateUpdate
+	// When the conditional requires wait, then returns Repeat(), otherwise JumpExt()
+	ThenRepeatOrJumpExt(SlotStep) StateUpdate
 }
 
 type CallConditionalBuilder interface {

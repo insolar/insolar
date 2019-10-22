@@ -63,10 +63,9 @@ func (sm *AppEventSM) migrateToClosing(ctx smachine.MigrationContext) smachine.S
 }
 
 func (sm *AppEventSM) stepClosingRun(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	ws := ctx.WaitAnyUntil(sm.expiry)
-	if ws.GetDecision().IsNotPassed() {
+	if su, wait := ctx.WaitAnyUntil(sm.expiry).ThenRepeatOrElse(); wait {
 		fmt.Println("wait: ", sm.eventValue, sm.pn)
-		return ws.ThenRepeat()
+		return su
 	}
 	fmt.Println("stop: ", sm.eventValue, sm.pn, "late=", time.Now().Sub(sm.expiry))
 	return ctx.Stop()
