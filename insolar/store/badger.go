@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -72,14 +73,17 @@ func (b *BadgerDB) Backend() *badger.DB {
 	return b.backend
 }
 
+var gcCallCount uint64
+
 // RunValueGC run badger values garbage collection
 // Now it has to be called only after pulse finalization to
 // exclude running GC during process of backup-replication
 func (b *BadgerDB) RunValueGC(ctx context.Context) {
 	if b.extraOpts.valueLogDiscardRatio > 0 {
 		logger := inslogger.FromContext(ctx)
-		logger.Info("BadgerDB: values GC start")
-		defer logger.Info("BadgerDB: values GC end")
+		currentCall := atomic.AddUint64(&gcCallCount, 1)
+		logger.Info("BadgerDB: values GC start. callCount: ", currentCall)
+		defer logger.Info("BadgerDB: values GC end. callCount: ", currentCall)
 
 		err := b.backend.RunValueLogGC(b.extraOpts.valueLogDiscardRatio)
 		if err != nil && err != badger.ErrNoRewrite {
