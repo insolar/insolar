@@ -255,12 +255,12 @@ generate_root_member_keys()
     bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 2; b++ ))
+    for (( b = 0; b < 1; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 3; b++ ))
+    for (( b = 0; b < 4; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
     done
