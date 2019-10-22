@@ -56,6 +56,9 @@ func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMa
 	r.slotConfig.signalCallback = r.internalSignal.NextBroadcast
 	r.slotConfig.parentRegistry = r.slotMachine
 
+	// shared SlotId sequence
+	r.slotConfig.config.SlotIdGenerateFn = r.slotMachine.CopyConfig().SlotIdGenerateFn
+
 	return r
 }
 
@@ -317,5 +320,4 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 		p.presentMachine.activateWithCtx(p.workerCtx, ctx)
 	}
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
-	fmt.Println(pd)
 }

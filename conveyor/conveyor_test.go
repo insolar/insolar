@@ -42,7 +42,12 @@ func TestConveyor(t *testing.T) {
 
 	factoryFn := func(pn pulse.Number, v InputEvent) smachine.CreateFunc {
 		return func(ctx smachine.ConstructionContext) smachine.StateMachine {
-			return &AppEventSM{eventValue: v, pn: pn}
+			sm := &AppEventSM{eventValue: v, pn: pn}
+
+			ctx.SetDefaultStepLogger(func(data smachine.StepLoggerData) {
+				stepLogger(data, sm)
+			})
+			return sm
 		}
 	}
 	conveyor := NewPulseConveyor(context.Background(), machineConfig, factoryFn, machineConfig, nil)
@@ -60,6 +65,7 @@ func TestConveyor(t *testing.T) {
 			return longbits.Bits256{}
 		})
 		require.NoError(t, conveyor.CommitPulseChange(pd))
+		fmt.Println("==================================== ", pd, " ====================================")
 
 		if eventCount < math.MaxInt32 {
 			eventCount++
@@ -77,6 +83,20 @@ func TestConveyor(t *testing.T) {
 	}
 	fmt.Println("======================")
 	time.Sleep(time.Hour)
+}
+
+func stepLogger(data smachine.StepLoggerData, sm smachine.StateMachine) {
+	migrate := ""
+	if data.Flags&smachine.StepLoggerMigrate != 0 {
+		migrate = "migrate "
+	}
+
+	detached := ""
+	if data.Flags&smachine.StepLoggerDetached != 0 {
+		detached = "(detached)"
+	}
+	fmt.Printf("%s: %03d @ %03d: %s%s%s current=%p next=%p payload=%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
+		migrate, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, sm)
 }
 
 func worker(conveyor *PulseConveyor, signal tools.VersionedSignal) {
