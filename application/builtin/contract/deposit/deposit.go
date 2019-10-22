@@ -267,7 +267,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 			c++
 		}
 	}
-	if c < numConfirmation {
+	if d.VestingType == foundation.DefaultVesting && c < numConfirmation {
 		return fmt.Errorf("number of confirms is less then 2")
 	}
 
