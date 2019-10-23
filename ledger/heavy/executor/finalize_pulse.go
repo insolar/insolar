@@ -90,6 +90,8 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	}
 }
 
+var finalizationLock sync.Mutex
+
 func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx)
 	if !shouldStartFinalization(ctx, jetKeeper, pulses, newPulse) {
@@ -110,6 +112,10 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
 		return nil
 	}
+
+	finalizationLock.Lock()
+	defer finalizationLock.Unlock()
+	logger.Debug("FinalizePulse: after getting lock")
 
 	err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
 	if err != nil {
