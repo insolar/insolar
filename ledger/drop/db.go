@@ -19,11 +19,11 @@ package drop
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -106,7 +106,7 @@ func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error 
 			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base58.Encode(key.jetPrefix))
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base64.RawURLEncoding.EncodeToString(key.jetPrefix))
 	}
 	if !hasKeys {
 		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())

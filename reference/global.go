@@ -165,13 +165,18 @@ func (v Global) GetLocal() *Local {
 	return &v.addressLocal
 }
 
-// String outputs base58 Reference representation.
-func (v Global) String() string {
-	repr, err := DefaultEncoder().Encode(&v)
+// Encode encodes Global to string with chosen encoder.
+func (v Global) Encode(enc Encoder) string {
+	repr, err := enc.Encode(&v)
 	if err != nil {
 		return NilRef
 	}
 	return repr
+}
+
+// String outputs base64 Reference representation.
+func (v Global) String() string {
+	return v.Encode(DefaultEncoder())
 }
 
 // Bytes returns byte slice of Reference
