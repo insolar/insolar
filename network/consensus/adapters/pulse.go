@@ -69,7 +69,7 @@ const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
 func NewPulse(pulseData pulse.Data) insolar.Pulse {
 	var prev insolar.PulseNumber
 	if !pulseData.IsFirstPulse() {
-		prev = pulseData.GetPrevPulseNumber()
+		prev = pulseData.PrevPulseNumber()
 	} else {
 		prev = pulseData.PulseNumber
 	}
@@ -81,7 +81,7 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 
 	return insolar.Pulse{
 		PulseNumber:      pulseData.PulseNumber,
-		NextPulseNumber:  pulseData.GetNextPulseNumber(),
+		NextPulseNumber:  pulseData.NextPulseNumber(),
 		PrevPulseNumber:  prev,
 		PulseTimestamp:   int64(pulseData.Timestamp) * nanosecondsInSecond,
 		EpochPulseNumber: int(pulseData.PulseEpoch),

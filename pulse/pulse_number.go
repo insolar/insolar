@@ -28,13 +28,11 @@ type Number uint32
 const (
 	Unknown       Number = 0
 	LocalRelative        = 65536
+
 	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 	MinTimePulse = LocalRelative + 1
 	MaxTimePulse = 1<<30 - 1
-	// Jet is a special pulse number value that signifies jet ID.
-	Jet Number = 1
-	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
-	BuiltinContract Number = 200
+
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )

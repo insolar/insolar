@@ -169,7 +169,7 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 				panic("illegal value")
 			}
 
-			if !pda.IsEmpty() && pd.PulseNumber < pda.GetNextPulseNumber() {
+			if !pda.IsEmpty() && pd.PulseNumber < pda.NextPulseNumber() {
 				panic("illegal value - pulse retroactive")
 			}
 		}

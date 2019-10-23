@@ -414,20 +414,20 @@ func TestGetNextPulseNumber(t *testing.T) {
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
 	pd := newPulsarData(pn, delta, entropy)
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	require.Panics(t, func() { pd.NextPulseNumber() })
 
 	pd.PulseNumber = MaxTimePulse + 1
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	require.Panics(t, func() { pd.NextPulseNumber() })
 
 	pd.PulseNumber = MaxTimePulse - 1
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	require.Panics(t, func() { pd.NextPulseNumber() })
 
 	pd.NextPulseDelta = 0
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	require.Panics(t, func() { pd.NextPulseNumber() })
 
 	pd.NextPulseDelta = delta
 	pd.PulseNumber = MinTimePulse
-	require.Equal(t, MinTimePulse+Number(delta), pd.GetNextPulseNumber())
+	require.Equal(t, MinTimePulse+Number(delta), pd.NextPulseNumber())
 }
 
 func TestGetPrevPulseNumber(t *testing.T) {
@@ -435,20 +435,20 @@ func TestGetPrevPulseNumber(t *testing.T) {
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
 	pd := newPulsarData(pn, delta, entropy)
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PulseNumber = MaxTimePulse + 1
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PulseNumber = MinTimePulse + 1
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PrevPulseDelta = 0
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PrevPulseDelta = delta
 	pd.PulseNumber = MaxTimePulse
-	require.Equal(t, MaxTimePulse-Number(delta), pd.GetPrevPulseNumber())
+	require.Equal(t, MaxTimePulse-Number(delta), pd.PrevPulseNumber())
 }
 
 func TestCreateNextExpected(t *testing.T) {

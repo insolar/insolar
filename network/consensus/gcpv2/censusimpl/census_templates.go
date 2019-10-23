@@ -133,7 +133,7 @@ func (c *PrimingCensusTemplate) GetExpectedPulseNumber() pulse.Number {
 	case c.pd.IsExpectedPulse():
 		return c.pd.GetPulseNumber()
 	}
-	return c.pd.GetNextPulseNumber()
+	return c.pd.NextPulseNumber()
 }
 
 func (c *PrimingCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
@@ -256,7 +256,7 @@ func (c *ActiveCensusTemplate) IsActive() bool {
 }
 
 func (c *ActiveCensusTemplate) GetExpectedPulseNumber() pulse.Number {
-	return c.pd.GetNextPulseNumber()
+	return c.pd.NextPulseNumber()
 }
 
 func (c *ActiveCensusTemplate) CreateBuilder(ctx context.Context, pn pulse.Number) census.Builder {
