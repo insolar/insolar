@@ -231,7 +231,7 @@ func TestTryLogObject_Optionals(t *testing.T) {
 	require.Equal(t,
 		"msg:inlineConstantText",
 		f.testTryLogObject(struct {
-			Data int    `opt:""`
+			Data int    `anotherTag:"" opt:""`
 			Msg  string `txt:"inlineConstantText"`
 		}{}))
 }

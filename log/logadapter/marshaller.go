@@ -19,7 +19,6 @@ package logadapter
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -161,7 +160,7 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		fd.reportFn = getReporterFn(fd.Type)
 		tagType, fmtStr := singleTag(fd.Tag)
 
-		if tagType == `txt` && (tf.Anonymous || fieldName == "_") {
+		if tagType == fmtTagText && (tf.Anonymous || fieldName == "_") {
 			// a special case - we can take `txt` of an anonymous as a message text
 			fieldName = "Message"
 		} else if fd.reportFn == nil && (tf.Anonymous || fieldName == "" || fieldName[0] == '_') {
@@ -244,35 +243,35 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 	return true
 }
 
-func outputOfField(tagType, fmtStr string) (fn fieldOutputFunc, optional bool, needsValue bool) {
+func outputOfField(tagType fmtTagType, fmtStr string) (fn fieldOutputFunc, optional bool, needsValue bool) {
 	switch tagType {
-	case "fmt+opt", "opt+fmt":
+	case fmtTagFormatValueOpt:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddStrField(fieldName, s)
 		}, true, true
-	case "fmt":
+	case fmtTagFormatValue:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddStrField(fieldName, s)
 		}, false, true
-	case "raw+opt", "opt+raw":
+	case fmtTagFormatRawOpt:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddRawJSON(fieldName, []byte(s))
 		}, true, true
-	case "raw":
+	case fmtTagFormatRaw:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
 			writer.AddRawJSON(fieldName, []byte(s))
 		}, false, true
-	case "skip":
+	case fmtTagSkip:
 		return nil, false, false
-	case "txt":
+	case fmtTagText:
 		return func(writer insolar.LogObjectWriter, fieldName string, _ interface{}) {
 			writer.AddStrField(fieldName, fmtStr)
 		}, false, false
-	case "opt":
+	case fmtTagOptional:
 		return insolar.LogObjectWriter.AddField, true, true
 	default:
 		return insolar.LogObjectWriter.AddField, false, true
@@ -406,15 +405,46 @@ func (p *typeMarshaller) reportFields(value reflect.Value, collector insolar.Log
 	}
 }
 
-func singleTag(tag reflect.StructTag) (string, string) {
-	if len(tag) <= 3 {
-		return "", ""
-	}
+type fmtTagType uint8
 
-	colon := strings.IndexByte(string(tag), ':')
-	if colon <= 0 || colon+2 >= len(tag) || tag[colon+1] != '"' || tag[len(tag)-1] != '"' {
-		return "", ""
-	}
+const (
+	fmtTagDefault  fmtTagType = 0
+	fmtTagOptional            = 1
 
-	return string(tag[:colon]), string(tag[colon+2 : len(tag)-1])
+	fmtTagText = 2
+	fmtTagSkip = 3 // text + opt
+
+	fmtTagFormatRaw    = 4
+	fmtTagFormatRawOpt = 5
+
+	fmtTagFormatValue    = 6
+	fmtTagFormatValueOpt = 7
+)
+
+func singleTag(tag reflect.StructTag) (fmtTagType, string) {
+	tagType := fmtTagDefault
+	if _, v, ok := ParseStructTag(tag, func(name, _ string) bool {
+		switch name {
+		case "fmt+opt", "opt+fmt":
+			tagType = fmtTagFormatValueOpt
+		case "fmt":
+			tagType = fmtTagFormatValue
+		case "raw+opt", "opt+raw":
+			tagType = fmtTagFormatRawOpt
+		case "raw":
+			tagType = fmtTagFormatRaw
+		case "skip":
+			tagType = fmtTagSkip
+		case "txt":
+			tagType = fmtTagText
+		case "opt":
+			tagType = fmtTagOptional
+		default:
+			return false
+		}
+		return true
+	}); ok {
+		return tagType, v
+	}
+	return fmtTagDefault, ""
 }
