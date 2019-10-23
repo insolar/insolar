@@ -23,6 +23,17 @@ import (
 	"time"
 )
 
+// Number is a type for pulse numbers.
+//
+// Special values:
+// 0 					Unknown
+// 1 .. 256				Reserved for package internal usage
+// 257 .. 65535			Reserved for platform wide usage
+// 65536				Local relative pulse number
+// 65537 .. 1<<30 - 1	Regular time based pulse numbers
+//
+// NB! Range 0..256 IS RESERVED for internal operations
+// There MUST BE NO references with PN < 256 ever visible to contracts / users.
 type Number uint32
 
 const (
@@ -32,7 +43,6 @@ const (
 	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 	MinTimePulse = LocalRelative + 1
 	MaxTimePulse = 1<<30 - 1
-
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )
