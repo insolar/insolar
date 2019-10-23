@@ -52,3 +52,16 @@ func (a *ContractRunnerServiceAdapter) PrepareAsync(ctx smachine.ExecutionContex
 		return fn(a.svc)
 	})
 }
+
+type contractRunnerService struct{
+
+}
+
+func (c contractRunnerService) ClassifyCall(code ArtifactBinary, method string) ContractCallType {
+	if code.GetCacheId()
+}
+
+func (c contractRunnerService) CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult {
+	panic("implement me")
+}
+
