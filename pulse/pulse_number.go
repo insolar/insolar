@@ -38,14 +38,16 @@ type Number uint32
 
 const (
 	Unknown       Number = 0
-	LocalRelative        = 65536
+	LocalRelative Number = 65536
 
 	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 	MinTimePulse = LocalRelative + 1
 	MaxTimePulse = 1<<30 - 1
+
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )
+
 const UnixTimeOfMinTimePulse = 1546300800                                           // 2019-01-01 00:00:00 +0000 UTC
 const UnixTimeOfMaxTimePulse = UnixTimeOfMinTimePulse - MinTimePulse + MaxTimePulse // 2053-01-08 19:24:46 +0000 UTC
 

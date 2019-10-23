@@ -21,8 +21,8 @@ const (
 	// There MUST BE NO references with PN < 256 ever visible to contracts / users.
 
 	_ Number = 256 + iota
-	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
-	BuiltinContract
 	// Jet is a special pulse number value that signifies jet ID.
 	Jet
+	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
+	BuiltinContract
 )

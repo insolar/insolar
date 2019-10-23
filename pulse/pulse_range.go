@@ -36,6 +36,12 @@ func (v Range) IsArticulated() bool {
 	return v.start < v.end.PulseNumber
 }
 
+//func (v Range) ListNumbers(fn func (n Number, prevDelta uint16)) {
+//	if !v.IsArticulated() {
+//		fn(v.end.PulseNumber)
+//	}
+//}
+
 func (v Range) BuildPulseChain() []Data {
 	if !v.IsArticulated() {
 		return []Data{v.end}
@@ -58,17 +64,32 @@ func (v Range) BuildPulseChain() []Data {
 		chain = _appendSegments(nil, v.start, v.startPrevDelta, *v.epoch)
 		return _appendSegments(chain, v.epoch.NextPulseNumber(), v.epoch.NextPulseDelta, v.end)
 	}
-	return _appendSegments(chain, v.end)
 }
 
 const minSegmentPulseDelta = 10
 
-func _appendSegments(chain []Data, n Number, prevDelta uint16, end Data) []Data {
-	beforeEnd := end.PrevPulseNumber()
+func _appendSegments(chain []Data, next Number, prevDelta uint16, end Data) []Data {
+	if next != end.PulseNumber {
+		_enumSegments(next, prevDelta, end.PrevPulseNumber(), end.PrevPulseDelta, func(n Number, prevDelta, nextDelta uint16) {
+			chain = append(chain, Data{
+				next, DataExt{
+					PulseEpoch:     ArticulationPulseEpoch,
+					NextPulseDelta: nextDelta,
+					PrevPulseDelta: prevDelta,
+				}})
+		})
+	}
+	chain = append(chain, end)
+	return chain
+}
+
+func _enumSegments(next Number, prevDelta uint16, beforeEnd Number, endNextDelta uint16,
+	fn func(n Number, prevDelta, nextDelta uint16),
+) {
 	for {
 		switch {
-		case n < beforeEnd:
-			delta := beforeEnd - n
+		case next < beforeEnd:
+			delta := beforeEnd - next
 			switch {
 			case delta <= math.MaxUint16:
 			case delta < math.MaxUint16+minSegmentPulseDelta:
@@ -76,27 +97,15 @@ func _appendSegments(chain []Data, n Number, prevDelta uint16, end Data) []Data 
 			default:
 				delta = math.MaxUint16
 			}
-			chain = append(chain, Data{
-				n, DataExt{
-					PulseEpoch:     ArticulationPulseEpoch,
-					NextPulseDelta: uint16(delta),
-					PrevPulseDelta: prevDelta,
-				}})
+			fn(next, prevDelta, uint16(delta))
 			prevDelta = uint16(delta)
-			n = n.Next(prevDelta)
+			next = next.Next(prevDelta)
 			continue
-		case n == beforeEnd:
-			chain = append(chain, Data{
-				n, DataExt{
-					PulseEpoch:     ArticulationPulseEpoch,
-					NextPulseDelta: uint16(end.PrevPulseDelta),
-					PrevPulseDelta: prevDelta,
-				}})
+		case next == beforeEnd:
+			fn(next, prevDelta, endNextDelta)
+			return
 		default:
 			panic("illegal state")
 		}
-		break
 	}
-	chain = append(chain, end)
-	return chain
 }
