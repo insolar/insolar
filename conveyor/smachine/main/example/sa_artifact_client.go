@@ -56,12 +56,14 @@ func CreateArtifactClientService() *ArtifactClientServiceAdapter {
 	ea := smachine.NewExecutionAdapter("ServiceA", ae)
 
 	smachine.StartChannelWorker(ctx, ch, nil)
-	return &ArtifactClientServiceAdapter{artifactClientService{}, ea}
+	return &ArtifactClientServiceAdapter{&artifactClientService{}, ea}
 }
+
+var _ ArtifactClientService = &artifactClientService{}
 
 type artifactClientService struct {
 }
 
-func (artifactClientService) GetLatestValidatedStatePrototypeAndCode(objectID insolar.ID) (state, prototype, code ArtifactBinary) {
-
+func (*artifactClientService) GetLatestValidatedStateAndCode() (state, code ArtifactBinary) {
+	panic("implement me")
 }

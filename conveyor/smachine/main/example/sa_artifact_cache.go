@@ -41,37 +41,29 @@ type ArtifactCacheServiceAdapter struct {
 }
 
 func (a *ArtifactCacheServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ArtifactCacheService)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
 func (a *ArtifactCacheServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ArtifactCacheService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }
 
 func CreateArtifactCacheService() *ArtifactCacheServiceAdapter {
-	ach := NewChannelAdapter(context.Background(), 0, -1)
+	ctx := context.Background()
+	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
 
-	go func() {
-		for {
-			select {
-			case <-ach.Context().Done():
-				return
-			case t := <-ach.Channel():
-				t.RunAndSendResult()
-			}
-		}
-	}()
+	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &ArtifactCacheServiceAdapter{
 		svc: &unlimitedArtifactCacheService{
 			cache: map[ArtifactCacheId][]byte{},
 		},
-		exec: smachine.NewExecutionAdapter("ArtifactCache", &ach),
+		exec: smachine.NewExecutionAdapter("ArtifactCache", ae),
 	}
 }
 

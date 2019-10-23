@@ -53,15 +53,14 @@ func (a *ContractRunnerServiceAdapter) PrepareAsync(ctx smachine.ExecutionContex
 	})
 }
 
-type contractRunnerService struct{
-
+type contractRunnerService struct {
 }
 
 func (c contractRunnerService) ClassifyCall(code ArtifactBinary, method string) ContractCallType {
-	if code.GetCacheId()
+	panic("implement me")
+	// if code.GetCacheId()
 }
 
 func (c contractRunnerService) CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult {
 	panic("implement me")
 }
-
