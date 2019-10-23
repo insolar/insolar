@@ -60,18 +60,18 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/pulse"
 	mock "github.com/insolar/insolar/testutils/network"
 )
 
 const (
-	PULSENUMBER = 155
-	ID1         = "14K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
-	DOMAIN      = ".14F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	PULSENUMBER = pulse.MinTimePulse + 155
 )
 
 func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
@@ -79,7 +79,7 @@ func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n1, err := hostnetwork.NewHostNetwork(ID1 + DOMAIN)
+	n1, err := hostnetwork.NewHostNetwork(gen.Reference().String())
 	if err != nil {
 		return nil, err
 	}

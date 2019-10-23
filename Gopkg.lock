@@ -2,17 +2,6 @@
 
 
 [[projects]]
-  digest = "1:8dd0db5b95368d375a994534f0ff7b1454cad3fc222c3f76a41dae43fa070d8b"
-  name = "contrib.go.opencensus.io/exporter/jaeger"
-  packages = [
-    ".",
-    "internal/gen-go/jaeger",
-  ]
-  pruneopts = "UT"
-  revision = "f3684086370a4b70671b0611a7d4ffd560eb3b54"
-  version = "v0.1.0"
-
-[[projects]]
   digest = "1:a0f79124a2fba5112d3d1466b917daf508e548c6c2da106399df92a79e06628b"
   name = "contrib.go.opencensus.io/exporter/prometheus"
   packages = ["."]
@@ -50,14 +39,6 @@
   pruneopts = "UT"
   revision = "b24eb346a94c3ba12c1da1e564dbac1b498a77ce"
   version = "v1.1.1"
-
-[[projects]]
-  digest = "1:b39cf81d5f440b9c0757a25058432d33af867e5201109bf53621356d9dab4b73"
-  name = "github.com/apache/thrift"
-  packages = ["lib/go/thrift"]
-  pruneopts = "UT"
-  revision = "384647d290e2e4a55a14b1b7ef1b7e66293a2c33"
-  version = "v0.12.0"
 
 [[projects]]
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
@@ -472,6 +453,18 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:11e62d6050198055e6cd87ed57e5d8c669e84f839c16e16f192374d913d1a70d"
+  name = "github.com/opentracing/opentracing-go"
+  packages = [
+    ".",
+    "ext",
+    "log",
+  ]
+  pruneopts = "UT"
+  revision = "659c90643e714681897ec2521c60567dd21da733"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:93131d8002d7025da13582877c32d1fc302486775a1b06f62241741006428c5e"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
@@ -639,6 +632,40 @@
   revision = "e606233f194d6c314156dc6a35f21a42a470c6f6"
 
 [[projects]]
+  digest = "1:b0fcdb2b7d3f20b60e024bb8c8be5a47d72c353f21e9a083fb1a226de4a94c43"
+  name = "github.com/uber/jaeger-client-go"
+  packages = [
+    ".",
+    "config",
+    "internal/baggage",
+    "internal/baggage/remote",
+    "internal/spanlog",
+    "internal/throttler",
+    "internal/throttler/remote",
+    "log",
+    "rpcmetrics",
+    "thrift",
+    "thrift-gen/agent",
+    "thrift-gen/baggage",
+    "thrift-gen/jaeger",
+    "thrift-gen/sampling",
+    "thrift-gen/zipkincore",
+    "transport",
+    "utils",
+  ]
+  pruneopts = "UT"
+  revision = "d4d621cd6ed9aa5f1fc91eb0d0211d336bd6b79d"
+  version = "v2.19.0"
+
+[[projects]]
+  digest = "1:d7b6fd08442b8d26882fae2c859a0d63962d72a533476a217d46743ed30cb803"
+  name = "github.com/uber/jaeger-lib"
+  packages = ["metrics"]
+  pruneopts = "UT"
+  revision = "a87ae9d84fb038a8d79266298970720be7c80fcd"
+  version = "v2.2.0"
+
+[[projects]]
   digest = "1:56a1ddd7eb11b4e46f7c8b8137194f6e33f2faa64afb25d0412002603452f274"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -700,14 +727,6 @@
   ]
   pruneopts = "UT"
   revision = "ba9fcec4b297b415637633c5a6e8fa592e4a16c3"
-
-[[projects]]
-  branch = "master"
-  digest = "1:382bb5a7fb4034db3b6a2d19e5a4a6bcf52f4750530603c01ca18a172fa3089b"
-  name = "golang.org/x/sync"
-  packages = ["semaphore"]
-  pruneopts = "UT"
-  revision = "112230192c580c3556b8cee6403af37a4fc5f28c"
 
 [[projects]]
   branch = "master"
@@ -789,14 +808,6 @@
   revision = "40fa6a493b3df38b974481987358c70e5a1a144d"
 
 [[projects]]
-  digest = "1:5f003878aabe31d7f6b842d4de32b41c46c214bb629bb485387dbcce1edf5643"
-  name = "google.golang.org/api"
-  packages = ["support/bundler"]
-  pruneopts = "UT"
-  revision = "feb0267beb8644f5088a03be4d5ec3f8c7020152"
-  version = "v0.9.0"
-
-[[projects]]
   branch = "master"
   digest = "1:1233ed1b527b0ff66c3df5879f7e80b1d8631e030cc45821b77fc25acd0d72a6"
   name = "google.golang.org/genproto"
@@ -863,7 +874,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "contrib.go.opencensus.io/exporter/jaeger",
     "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/ThreeDotsLabs/watermill",
     "github.com/ThreeDotsLabs/watermill/message",
@@ -896,6 +906,8 @@
     "github.com/jbenet/go-base58",
     "github.com/olekukonko/tablewriter",
     "github.com/onrik/gomerkle",
+    "github.com/opentracing/opentracing-go",
+    "github.com/opentracing/opentracing-go/log",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
@@ -909,6 +921,8 @@
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",
+    "github.com/uber/jaeger-client-go",
+    "github.com/uber/jaeger-client-go/config",
     "github.com/ugorji/go/codec",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",

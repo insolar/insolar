@@ -18,8 +18,10 @@ package instracer
 
 import (
 	"context"
+	"encoding/binary"
 
-	"go.opencensus.io/trace"
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
 )
 
 // MustSerialize encode baggage entries from bytes, panics on error.
@@ -33,15 +35,20 @@ func MustSerialize(ctx context.Context) []byte {
 
 // Serialize encode baggage entries to bytes.
 func Serialize(ctx context.Context) ([]byte, error) {
-	var tracespan TraceSpan
-	span := trace.FromContext(ctx)
+	var traceSpan TraceSpan
+	span := opentracing.SpanFromContext(ctx)
 
-	if span != nil {
-		sc := span.SpanContext()
-		tracespan.SpanID = sc.SpanID[:]
-		tracespan.TraceID = sc.TraceID[:]
+	if span == nil {
+		return traceSpan.Serialize()
 	}
-	return tracespan.Serialize()
+
+	if sc, ok := span.Context().(jaeger.SpanContext); ok && sc.IsValid() {
+		traceSpan.SpanID = make([]byte, 8)
+		binary.LittleEndian.PutUint64(traceSpan.SpanID, uint64(sc.SpanID()))
+		traceSpan.TraceID = []byte(sc.TraceID().String())
+	}
+
+	return traceSpan.Serialize()
 }
 
 // MustDeserialize decode baggage entries from bytes, panics on error.

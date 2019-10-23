@@ -22,15 +22,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/application"
 )
 
 func TestStartStop(t *testing.T) {
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	heavyConfig := insolar.GenesisHeavyConfig{
-		ContractsConfig: insolar.GenesisContractsConfig{
+	heavyConfig := application.GenesisHeavyConfig{
+		ContractsConfig: application.GenesisContractsConfig{
 			PKShardCount:       10,
 			MAShardCount:       10,
 			MigrationAddresses: make([][]string, 10),

@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 type SendRequests struct {
@@ -53,7 +52,7 @@ func (p *SendRequests) Dep(sender bus.Sender, records object.RecordAccessor, ind
 
 func (p *SendRequests) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, fmt.Sprintf("SendRequests"))
-	defer span.End()
+	defer span.Finish()
 
 	msg := payload.GetFilament{}
 	err := msg.Unmarshal(p.meta.Payload)
@@ -62,11 +61,10 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode GetFilament payload")
 	}
 
-	span.AddAttributes(
-		trace.StringAttribute("objID", msg.ObjectID.DebugString()),
-		trace.StringAttribute("startFrom", msg.StartFrom.DebugString()),
-		trace.StringAttribute("readUntil", msg.ReadUntil.String()),
-	)
+	span.SetTag(
+		"objID", msg.ObjectID.DebugString()).
+		SetTag("startFrom", msg.StartFrom.DebugString()).
+		SetTag("readUntil", msg.ReadUntil.String())
 
 	_, err = p.dep.indexes.ForID(ctx, msg.StartFrom.Pulse(), msg.ObjectID)
 	if err != nil {

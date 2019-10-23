@@ -27,13 +27,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/bootstrap"
+	"github.com/spf13/cobra"
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/insolar/insolar/application/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
-	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {

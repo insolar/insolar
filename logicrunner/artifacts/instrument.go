@@ -22,24 +22,24 @@ import (
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/opentracing/opentracing-go"
 )
 
 type methodInstrumenter struct {
 	ctx     context.Context
-	span    *trace.Span
+	span    opentracing.Span
 	name    string
 	start   time.Time
 	errlink *error
 }
 
 func instrument(ctx context.Context, name string, err *error) (context.Context, *methodInstrumenter) {
-	name = "artifacts."+name
+	name = "artifacts." + name
 	ctx, span := instracer.StartSpan(ctx, name)
 	return ctx, &methodInstrumenter{
 		ctx:     ctx,
@@ -68,5 +68,5 @@ func (mi *methodInstrumenter) end() {
 		tag.Insert(tagResult, code),
 	)
 	stats.Record(ctx, statCalls.M(1), statLatency.M(latency.Nanoseconds()/1e6))
-	mi.span.End()
+	mi.span.Finish()
 }

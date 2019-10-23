@@ -25,8 +25,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -62,7 +62,7 @@ func (s *Server) Serve() {
 	if err != nil {
 		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
 	}
-	var genesisCfg insolar.GenesisHeavyConfig
+	var genesisCfg application.GenesisHeavyConfig
 	err = json.Unmarshal(b, &genesisCfg)
 	if err != nil {
 		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
@@ -82,8 +82,7 @@ func (s *Server) Serve() {
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
-		var jaegerFlush func()
-		ctx, jaegerFlush = internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+		jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
 		defer jaegerFlush()
 	}
 

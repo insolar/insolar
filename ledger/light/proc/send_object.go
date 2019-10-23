@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -139,7 +140,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 
 	sendPassState := func(stateID insolar.ID) error {
 		ctx, span := instracer.StartSpan(ctx, "SendObject.sendPassState")
-		defer span.End()
+		defer span.Finish()
 
 		buf, err := p.message.Marshal()
 		if err != nil {
@@ -165,7 +166,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
-			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString()))
+			span.LogFields(log.String("msg", fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString())))
 		} else {
 			inslogger.FromContext(ctx).Infof("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
@@ -177,7 +178,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate role")
 			}
 			node = *l
-			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to light", stateID.DebugString()))
+			span.LogFields(log.String("msg", fmt.Sprintf("Send StateID:%v to light", stateID.DebugString())))
 		}
 
 		go func() {

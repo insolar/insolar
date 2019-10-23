@@ -20,7 +20,6 @@ import (
 	"context"
 	"io"
 	"sync"
-	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -31,10 +30,6 @@ import (
 type BadgerDB struct {
 	backend   *badger.DB
 	extraOpts BadgerOptions
-
-	stopGC  chan struct{}
-	forceGC chan chan struct{}
-	doneGC  chan struct{}
 }
 
 type BadgerOptions struct {
@@ -70,9 +65,6 @@ func NewBadgerDB(opts badger.Options, extras ...BadgerOption) (*BadgerDB, error)
 	}
 	b.backend = bdb
 
-	if b.extraOpts.valueLogDiscardRatio > 0 {
-		b.runGC(context.Background())
-	}
 	return b, nil
 }
 
@@ -80,98 +72,26 @@ func (b *BadgerDB) Backend() *badger.DB {
 	return b.backend
 }
 
-type state struct {
-	mu    sync.RWMutex
-	state bool
-}
-
-func (s *state) set(val bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.state = val
-}
-
-func (s *state) check() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.state
-}
-
-func (b *BadgerDB) runGC(ctx context.Context) {
-	db := b.backend
-	logger := inslogger.FromContext(ctx)
-	ticker := time.NewTicker(5 * time.Minute)
-
-	b.forceGC = make(chan chan struct{})
-	b.stopGC = make(chan struct{})
-	b.doneGC = make(chan struct{})
-
-	do := func() {
+// RunValueGC run badger values garbage collection
+// Now it has to be called only after pulse finalization to
+// exclude running GC during process of backup-replication
+func (b *BadgerDB) RunValueGC(ctx context.Context) {
+	if b.extraOpts.valueLogDiscardRatio > 0 {
+		logger := inslogger.FromContext(ctx)
 		logger.Info("BadgerDB: values GC start")
 		defer logger.Info("BadgerDB: values GC end")
 
-		err := db.RunValueLogGC(b.extraOpts.valueLogDiscardRatio)
+		err := b.backend.RunValueLogGC(b.extraOpts.valueLogDiscardRatio)
 		if err != nil && err != badger.ErrNoRewrite {
 			logger.Errorf("BadgerDB: GC failed with error: %v", err.Error())
 		}
 	}
-
-	var gcWait sync.WaitGroup
-	gcAsync := &state{}
-
-	go func() {
-		for {
-			select {
-			case done := <-b.forceGC:
-				func() {
-					defer close(done)
-					if gcAsync.check() {
-						// blocks ForceValueGC call (on done channel) until end of GC
-						gcWait.Wait()
-						return
-					}
-					do()
-				}()
-			case <-ticker.C:
-				func() {
-					if gcAsync.check() {
-						return
-					}
-					gcAsync.set(true)
-					gcWait.Add(1)
-					go func() {
-						do()
-						gcAsync.set(false)
-						gcWait.Done()
-					}()
-				}()
-			case <-b.stopGC:
-				gcWait.Wait()
-				close(b.doneGC)
-				return
-			}
-		}
-	}()
-}
-
-// ForceValueGC forces badger values garbage collection.
-func (b *BadgerDB) ForceValueGC(ctx context.Context) {
-	fin := make(chan struct{})
-	b.forceGC <- fin
-	<-fin
 }
 
 // Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
 func (b *BadgerDB) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	defer logger.Info("BadgerDB: database closed")
-
-	if b.stopGC != nil {
-		logger.Info("BadgerDB: wait values GC")
-		close(b.stopGC)
-		<-b.doneGC
-	}
 
 	logger.Info("BadgerDB: closing database...")
 	return b.backend.Close()

@@ -37,7 +37,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/insolar/insolar/application/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -611,6 +611,11 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 			extendImportsMap(pf, fun.Type.Results, imports)
 		}
 	}
+	if !wrapper {
+		for _, t := range pf.types {
+			extendImportsMapWithType(pf, t, imports)
+		}
+	}
 
 	return imports
 }
@@ -721,30 +726,45 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 
 	for _, e := range params.List {
 		tname := parsed.codeOfNode(e.Type)
-		tname = strings.Trim(tname, "*")
-		tnameFrom := strings.Split(tname, ".")
+		findAndAddImport(parsed, tname, imports)
+	}
+}
 
-		if len(tnameFrom) < 2 {
-			continue
+func extendImportsMapWithType(parsed *ParsedFile, t *ast.TypeSpec, imports map[string]bool) {
+	if st, ok := t.Type.(*ast.StructType); ok {
+		if st.Fields == nil || st.Fields.NumFields() == 0 {
+			return
+		}
+		for _, fd := range st.Fields.List {
+			tname := parsed.codeOfNode(fd.Type)
+			findAndAddImport(parsed, tname, imports)
+		}
+	}
+}
+
+func findAndAddImport(parsed *ParsedFile, typeName string, imports map[string]bool) {
+	typeName = strings.Trim(typeName, "*")
+	tnameFrom := strings.Split(typeName, ".")
+	if len(tnameFrom) < 2 {
+		return
+	}
+
+	for _, imp := range parsed.node.Imports {
+		var importAlias string
+		var impValue string
+
+		if imp.Name != nil {
+			importAlias = imp.Name.Name
+			impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
+		} else {
+			impValue = imp.Path.Value
+			importString := strings.Trim(impValue, `"`)
+			importAlias = filepath.Base(importString)
 		}
 
-		for _, imp := range parsed.node.Imports {
-			var importAlias string
-			var impValue string
-
-			if imp.Name != nil {
-				importAlias = imp.Name.Name
-				impValue = fmt.Sprintf(`%s %s`, importAlias, imp.Path.Value)
-			} else {
-				impValue = imp.Path.Value
-				importString := strings.Trim(impValue, `"`)
-				importAlias = filepath.Base(importString)
-			}
-
-			if importAlias == tnameFrom[0] {
-				imports[impValue] = true
-				break
-			}
+		if importAlias == tnameFrom[0] {
+			imports[impValue] = true
+			break
 		}
 	}
 }

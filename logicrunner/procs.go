@@ -48,7 +48,7 @@ var ErrCantExecute = errors.New("can't executeAndReply this object")
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "CheckOurRole")
-	defer span.End()
+	defer span.Finish()
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.GetLocal())
@@ -90,7 +90,7 @@ func (r *RegisterIncomingRequest) getResult() *payload.RequestInfo { // nolint
 
 func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
-	defer span.End()
+	defer span.Finish()
 
 	reqInfo, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
@@ -113,7 +113,7 @@ type RecordErrorResult struct {
 
 func (r *RecordErrorResult) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RecordErrorResult.Proceed")
-	defer span.End()
+	defer span.Finish()
 
 	inslogger.FromContext(ctx).Debug("recording error result")
 

@@ -33,7 +33,7 @@ type Metrics struct {
 // NewMetrics creates new default configuration for metrics publishing.
 func NewMetrics() Metrics {
 	return Metrics{
-		ListenAddress: "0.0.0.0:9090",
+		ListenAddress: "0.0.0.0:9091",
 		Namespace:     "insolar",
 		ZpagesEnabled: true,
 	}

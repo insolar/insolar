@@ -5,7 +5,7 @@ datasources:
   type: prometheus
   access: proxy
   orgId: 1
-  url: http://prometheus:9090
+  url: http://prometheus:909
   isDefault: true
   version: 1
   editable: true

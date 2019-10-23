@@ -17,8 +17,9 @@
 package payload
 
 import (
+	"encoding/base64"
+
 	"github.com/gogo/protobuf/proto"
-	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -129,7 +130,7 @@ func (h MessageHash) Size() int {
 }
 
 func (h *MessageHash) String() string {
-	return base58.Encode(h[:])
+	return base64.RawURLEncoding.EncodeToString(h[:])
 }
 
 func (h *MessageHash) IsZero() bool {

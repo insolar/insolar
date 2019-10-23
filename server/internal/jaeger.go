@@ -13,7 +13,7 @@ func Jaeger(
 	ctx context.Context,
 	cfg configuration.JaegerConfig,
 	traceID, nodeRef, nodeRole string,
-) (context.Context, func()) {
+) func() {
 	inslogger.FromContext(ctx).Infof(
 		"Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'\n",
 		cfg.AgentEndpoint,
@@ -27,5 +27,5 @@ func Jaeger(
 		cfg.CollectorEndpoint,
 		cfg.ProbabilityRate,
 	)
-	return ctx, flush
+	return flush
 }

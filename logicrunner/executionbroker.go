@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -255,11 +256,24 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
 
+	var (
+		replyData insolar.Reply
+		err       error
+	)
+
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
+
+	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
+		TraceID: []byte(inslogger.TraceID(ctx)),
+		SpanID:  instracer.MakeBinarySpan(transcript.Request.Reason.Bytes()),
+	})
+
+	ctx, span := instracer.StartSpan(ctx, "IncomingRequest processing")
+	defer span.Finish()
 
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"request": transcript.RequestRef.String(),
@@ -270,11 +284,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		// either closed broker or we're executing this already
 		return
 	}
-
-	var (
-		replyData insolar.Reply
-		err       error
-	)
 
 	sendReply := true
 	defer func() {

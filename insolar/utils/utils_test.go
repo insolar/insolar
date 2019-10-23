@@ -14,26 +14,15 @@
 // limitations under the License.
 //
 
-// +build functest
-
-package functest
+package utils
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/insolar/insolar/testutils/launchnet"
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMain(m *testing.M) {
-	os.Exit(launchnet.Run(func() int {
-		err := setMigrationDaemonsRef()
-		if err != nil {
-			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
-		}
-
-		return m.Run()
-	}))
+func TestRandTraceID(t *testing.T) {
+	traceID := RandTraceID()
+	require.NotEmpty(t, traceID)
 }
