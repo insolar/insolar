@@ -408,17 +408,17 @@ func (p *typeMarshaller) reportFields(value reflect.Value, collector insolar.Log
 type fmtTagType uint8
 
 const (
-	fmtTagDefault  fmtTagType = 0
-	fmtTagOptional            = 1
+	fmtTagDefault fmtTagType = iota
+	fmtTagOptional
 
-	fmtTagText = 2
-	fmtTagSkip = 3 // text + opt
+	fmtTagText
+	fmtTagSkip // + opt
 
-	fmtTagFormatRaw    = 4
-	fmtTagFormatRawOpt = 5
+	fmtTagFormatRaw
+	fmtTagFormatRawOpt // + opt
 
-	fmtTagFormatValue    = 6
-	fmtTagFormatValueOpt = 7
+	fmtTagFormatValue
+	fmtTagFormatValueOpt // + opt
 )
 
 func singleTag(tag reflect.StructTag) (fmtTagType, string) {
