@@ -182,8 +182,14 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
-	lArray := []byte{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	rArray := []byte{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	lArray := []byte{
+		0, 0, 1, 1,
+		1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	}
+	rArray := []byte{
+		0, 0, 1, 1,
+		1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	}
 	var (
 		expectedLeft  = insolar.JetID(*insolar.NewIDFromBytes(lArray))
 		expectedRight = insolar.JetID(*insolar.NewIDFromBytes(rArray))
