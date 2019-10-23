@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -35,14 +34,14 @@ type ArtifactClientServiceAdapter struct {
 }
 
 func (a *ArtifactClientServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ArtifactClientService)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
 func (a *ArtifactClientServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ArtifactClientService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }
@@ -52,23 +51,14 @@ type artifactClientService struct {
 }
 
 func CreateArtifactClientService(sender bus.Sender) *ArtifactClientServiceAdapter {
-	ach := example.NewChannelAdapter(context.Background(), 0, -1)
-
-	go func() {
-		for {
-			select {
-			case <-ach.Context().Done():
-				return
-			case t := <-ach.Channel():
-				t.RunAndSendResult()
-			}
-		}
-	}()
+	ctx := context.Background()
+	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
+	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &ArtifactClientServiceAdapter{
-		artifactClientService{
+		svc: artifactClientService{
 			Client: artifacts.NewClient(sender),
 		},
-		smachine.NewExecutionAdapter("ArtifactClient", &ach),
+		exec: smachine.NewExecutionAdapter("ArtifactClientService", ae),
 	}
 }

@@ -15,13 +15,10 @@ message Genesis {
 }
 
 enum CallType {
-    CTMethod = 0;
-    CTSaveAsChild = 1;
-
-    CTGenesis = 2;
-
+    CTMethod          = 0;
+    CTSaveAsChild     = 1;
+    CTGenesis         = 2;
     CTDeployPrototype = 3;
-
 }
 
 enum ReturnMode {

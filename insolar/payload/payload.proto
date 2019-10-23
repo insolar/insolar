@@ -262,9 +262,10 @@ message CallMethod {
 }
 
 enum PreviousExecutorState {
-    PreviousExecutorUnknown  = 0;
-    PreviousExecutorExecutes = 1;
-    PreviousExecutorFinished = 2;
+    PreviousExecutorUnknown          = 0;
+    PreviousExecutorProbablyExecutes = 1;
+    PreviousExecutorExecutes         = 2;
+    PreviousExecutorFinished         = 3;
 }
 
 message ExecutorResults {

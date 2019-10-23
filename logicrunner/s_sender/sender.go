@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/storage"
@@ -37,20 +36,20 @@ type SenderServiceAdapter struct {
 }
 
 func (a *SenderServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc SenderService)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
 func (a *SenderServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc SenderService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
+	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }
 
 func (a *SenderServiceAdapter) PrepareNotify(ctx smachine.ExecutionContext, fn func(svc SenderService)) smachine.NotifyRequester {
-	return a.exec.PrepareNotify(ctx, func() { fn(a.svc) })
+	return a.exec.PrepareNotify(ctx, func(interface{}) { fn(a.svc) })
 }
 
 type senderService struct {
@@ -58,24 +57,15 @@ type senderService struct {
 	Accessor pulse.Accessor
 }
 
-func NewSenderService(sender bus.Sender, accessor storage.PulseAccessor) *SenderServiceAdapter {
-	ach := example.NewChannelAdapter(context.Background(), 0, -1)
-
-	go func() {
-		for {
-			select {
-			case <-ach.Context().Done():
-				return
-			case t := <-ach.Channel():
-				t.RunAndSendResult()
-			}
-		}
-	}()
+func CreateSenderService(sender bus.Sender, accessor storage.PulseAccessor) *SenderServiceAdapter {
+	ctx := context.Background()
+	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
+	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &SenderServiceAdapter{
-		senderService{
+		svc: senderService{
 			Sender: sender,
 		},
-		smachine.NewExecutionAdapter("Sender", &ach),
+		exec: smachine.NewExecutionAdapter("Sender", ae),
 	}
 }

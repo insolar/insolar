@@ -50,7 +50,8 @@ type ObjectInfo struct {
 }
 
 type SharedObjectState struct {
-	SemaReadyToWork smachine.SyncLink
+	SemaphoreReadyToWork              smachine.SyncLink
+	SemaphorePreviousExecutorFinished smachine.SyncLink
 	ObjectInfo
 }
 
@@ -68,7 +69,8 @@ type ObjectSM struct {
 	smachine.StateMachineDeclTemplate
 
 	SharedObjectState
-	readyToWorkCtl smachine.BoolConditionalLink
+	readyToWorkCtl           smachine.BoolConditionalLink
+	previousExecutorFinished smachine.BoolConditionalLink
 }
 
 func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
@@ -106,7 +108,11 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 	ctx.SetDefaultMigration(sm.migrateSendStateBeforeExecution)
 
 	sm.readyToWorkCtl = smachine.NewConditionalBool(false, "readyToWork")
-	sm.SemaReadyToWork = sm.readyToWorkCtl.SyncLink()
+	sm.SemaphoreReadyToWork = sm.readyToWorkCtl.SyncLink()
+
+	sm.previousExecutorFinished = smachine.NewConditionalBool(false, "previousExecutorFinished")
+	sm.SemaphorePreviousExecutorFinished = sm.readyToWorkCtl.SyncLink()
+
 	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
 	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
 
@@ -118,16 +124,57 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 }
 
 func (sm *ObjectSM) checkPreviousExecutor(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if sm.PreviousExecutorState == payload.PreviousExecutorFinished {
+	switch sm.PreviousExecutorState {
+	case payload.PreviousExecutorUnknown:
+		return ctx.Jump(sm.stateGetPendingsInformation)
+	case payload.PreviousExecutorProbablyExecutes, payload.PreviousExecutorExecutes:
+		// we should wait here till PendingFinished/ExecutorResults came, retry and then change state to PreviousExecutorFinished
+		if ctx.AcquireForThisStep(sm.SemaphorePreviousExecutorFinished).IsNotPassed() {
+			return ctx.Sleep().ThenRepeat()
+		}
+
+		// we shouldn't be here
+		// if we came to that place - means MutableRequestsAreReady, but PreviousExecutor still executes)
+		panic("unreachable")
+	case payload.PreviousExecutorFinished:
 		return ctx.Jump(sm.stateGetLatestValidatedStatePrototypeAndCode)
+	default:
+		panic("unreachable")
 	}
+}
 
-	if sm.PreviousExecutorState == payload.PreviousExecutorUnknown {
-		// TODO[bigbes]: we should go to LE and get information about pendings here
-	}
+func (sm *ObjectSM) stateGetPendingsInformation(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
-	// we should wait until we became PreviousExecutorFinished here (if we'll get)
-	return ctx.Sleep().ThenRepeat()
+	objectReference := sm.ObjectReference
+	sm.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		goctx := ctx.GetContext()
+		logger := inslogger.FromContext(goctx)
+
+		hasAbandonedRequests, err := svc.HasPendings(goctx, objectReference)
+		if err != nil {
+			logger.Error("couldn't check pending state: ", err.Error())
+		}
+
+		var newState payload.PreviousExecutorState
+		if hasAbandonedRequests {
+			logger.Debug("ledger has requests older than one pulse")
+			newState = payload.PreviousExecutorProbablyExecutes
+		} else {
+			logger.Debug("no requests on ledger older than one pulse")
+			newState = payload.PreviousExecutorFinished
+		}
+
+		return func(ctx smachine.AsyncResultContext) {
+			if sm.PreviousExecutorState == payload.PreviousExecutorUnknown {
+				sm.PreviousExecutorState = newState
+			} else {
+				logger.Info("state already changed, ignoring check")
+			}
+			ctx.WakeUp()
+		}
+	})
+
+	return ctx.Jump(sm.checkPreviousExecutor)
 }
 
 func (sm *ObjectSM) stateGetLatestValidatedStatePrototypeAndCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -216,6 +263,8 @@ func (sm *ObjectSM) stateSendStateBeforeExecution(ctx smachine.ExecutionContext)
 
 	switch sm.PreviousExecutorState {
 	case payload.PreviousExecutorUnknown:
+		newState = payload.PreviousExecutorFinished
+	case payload.PreviousExecutorProbablyExecutes:
 		newState = payload.PreviousExecutorFinished
 	case payload.PreviousExecutorExecutes:
 		newState = payload.PreviousExecutorUnknown
