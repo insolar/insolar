@@ -272,6 +272,11 @@ func (p *slotContext) BargeInThisStepOnly() BargeInBuilder {
 
 func (p *slotContext) Check(link SyncLink) Decision {
 	p.ensureAtLeast(updCtxInit)
+
+	if link.controller == nil {
+		panic("illegal value")
+	}
+
 	dep := p.s.dependency
 	if dep != nil {
 		d := link.controller.CheckDependency(dep)
@@ -348,13 +353,7 @@ func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
 		panic("illegal value")
 	}
 
-	adjustment := adj.adjustment
-	if !adj.isAbsolute {
-		adjustmentBase, _ := adj.controller.GetLimit()
-		adjustment += adjustmentBase
-	}
-
-	released, activate := adj.controller.AdjustLimit(adjustment, false)
+	released, activate := adj.controller.AdjustLimit(adj.adjustment, adj.isAbsolute)
 	if activate {
 		return p.s.machine.activateDependantByDetachable(released, p.w)
 	}

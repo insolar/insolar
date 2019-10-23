@@ -53,7 +53,7 @@ func (c *AdapterCallback) Prepare(needCancel bool) context.CancelFunc {
 	return c.cancel.Cancel
 }
 
-const stepBondTolerance = 1
+const stepBondTolerance uint32 = 1
 
 func (c *AdapterCallback) canCall() bool {
 	return c.flags&CallBoundToStep == 0 || c.caller.IsNearStep(stepBondTolerance)

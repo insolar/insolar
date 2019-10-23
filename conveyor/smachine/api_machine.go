@@ -35,4 +35,8 @@ type MachineCallContext interface {
 	Migrate()
 	Cleanup()
 	Stop()
+
+	//See SynchronizationContext
+	ApplyAdjustment(SyncAdjustment) bool
+	Check(SyncLink) Decision
 }

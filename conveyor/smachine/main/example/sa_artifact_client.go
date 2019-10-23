@@ -50,23 +50,11 @@ func (a *ArtifactClientServiceAdapter) PrepareAsync(ctx smachine.ExecutionContex
 }
 
 func CreateArtifactClientService() *ArtifactClientServiceAdapter {
-	ach := NewChannelAdapter(context.Background(), false, 0, -1)
-	ea := smachine.NewExecutionAdapter("ServiceA", &ach)
+	ctx := context.Background()
+	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
+	ea := smachine.NewExecutionAdapter("ServiceA", ae)
 
-	go func() {
-		for {
-			select {
-			case <-ach.Context().Done():
-				return
-			case t := <-ach.Channel():
-				err := t.RunAndSendResult(nil)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}
-	}()
-
+	smachine.StartChannelWorker(ctx, ch, nil)
 	return &ArtifactClientServiceAdapter{artifactClientService{}, ea}
 }
 

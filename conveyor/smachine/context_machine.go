@@ -69,6 +69,32 @@ func (p *machineCallContext) BargeInNow(link SlotLink, param interface{}, fn Bar
 	return p.m.bargeInNow(link, param, fn, p.w)
 }
 
+func (p *machineCallContext) ApplyAdjustment(adj SyncAdjustment) bool {
+	p.ensureValid()
+
+	if adj.controller == nil {
+		panic("illegal value")
+	}
+
+	released, activate := adj.controller.AdjustLimit(adj.adjustment, adj.isAbsolute)
+	if activate {
+		p.m.activateDependants(released, p.w)
+	}
+
+	// actually, we MUST NOT stop a slot from outside
+	return len(released) > 0
+}
+
+func (p *machineCallContext) Check(link SyncLink) Decision {
+	p.ensureValid()
+
+	if link.controller == nil {
+		panic("illegal value")
+	}
+
+	return link.controller.CheckState()
+}
+
 func (p *machineCallContext) executeCall(fn MachineCallFunc) (err error) {
 	p.setMode(updCtxMachineCall)
 	defer func() {
