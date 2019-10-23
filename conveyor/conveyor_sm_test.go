@@ -20,12 +20,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/pulse"
 )
 
 type AppEventSM struct {
 	smachine.StateMachineDeclTemplate
+
+	pulseSlot *PulseSlot
 
 	pn         pulse.Number
 	eventValue interface{}
@@ -34,6 +37,10 @@ type AppEventSM struct {
 
 func (sm *AppEventSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
 	return sm
+}
+
+func (sm *AppEventSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
+	injector.MustInject(&sm.pulseSlot)
 }
 
 func (sm *AppEventSM) GetInitStateFor(machine smachine.StateMachine) smachine.InitFunc {
