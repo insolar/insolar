@@ -26,3 +26,7 @@ const (
 	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
 	BuiltinContract
 )
+
+func (n Number) IsJet() bool {
+	return n == Jet
+}

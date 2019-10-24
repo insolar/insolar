@@ -210,10 +210,6 @@ func (n Number) Size() int {
 	return NumberSize
 }
 
-func (n Number) IsJet() bool {
-	return n == Jet
-}
-
 func (n Number) EnsureTimePulse() Number {
 	if n.IsTimePulse() {
 		return n
