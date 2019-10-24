@@ -33,10 +33,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-const (
-	JSONRPCVersion = "2.0"
-)
-
 func (g *certGen) generateKeys() {
 	privKey, err := g.keyProcessor.GeneratePrivateKey()
 	checkError("Failed to generate private key:", err)

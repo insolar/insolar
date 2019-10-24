@@ -96,7 +96,7 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, *args, requestBody.Raw, signature, seedPulse)
 
 	var ref string
 	if requestRef != nil {
