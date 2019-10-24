@@ -2,6 +2,7 @@ BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artifacts
 INSOLAR = insolar
 INSOLARD = insolard
+NETWORKD = networkd
 INSGOCC = insgocc
 PULSARD = pulsard
 TESTPULSARD = testpulsard
@@ -24,6 +25,7 @@ TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?= -timeout 1200s
 BUILD_TAGS ?=
+
 
 CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
@@ -100,6 +102,10 @@ build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(BADGER) $(H
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
+
+.PHONY: $(NETWORKD)
+$(NETWORKD):
+	$(GOBUILD) -o $(BIN_DIR)/$(NETWORKD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" network/cmd/*.go
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):

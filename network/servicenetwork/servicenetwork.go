@@ -79,11 +79,13 @@ type ServiceNetwork struct {
 
 	// dependencies
 	CertificateManager  insolar.CertificateManager         `inject:""`
-	PulseManager        insolar.PulseManager               `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	ContractRequester   insolar.ContractRequester          `inject:""`
+
+	// todo: remove
+	// PulseManager        insolar.PulseManager               `inject:""`
+	// ContractRequester   insolar.ContractRequester          `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`

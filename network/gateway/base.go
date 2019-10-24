@@ -88,21 +88,21 @@ const (
 type Base struct {
 	component.Initer
 
-	Self                network.Gateway
-	Gatewayer           network.Gatewayer                  `inject:""`
-	NodeKeeper          network.NodeKeeper                 `inject:""`
-	ContractRequester   insolar.ContractRequester          `inject:""`
+	Self       network.Gateway
+	Gatewayer  network.Gatewayer  `inject:""`
+	NodeKeeper network.NodeKeeper `inject:""`
+	// ContractRequester   insolar.ContractRequester          `inject:""`
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	CertificateManager  insolar.CertificateManager         `inject:""`
 	HostNetwork         network.HostNetwork                `inject:""`
 	PulseAccessor       storage.PulseAccessor              `inject:""`
 	PulseAppender       storage.PulseAppender              `inject:""`
-	PulseManager        insolar.PulseManager               `inject:""`
-	BootstrapRequester  bootstrap.Requester                `inject:""`
-	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	Aborter             network.Aborter                    `inject:""`
-	TransportFactory    transport.Factory                  `inject:""`
+	// PulseManager        insolar.PulseManager               `inject:""`
+	BootstrapRequester bootstrap.Requester  `inject:""`
+	KeyProcessor       insolar.KeyProcessor `inject:""`
+	Aborter            network.Aborter      `inject:""`
+	TransportFactory   transport.Factory    `inject:""`
 
 	// nolint
 	OriginProvider network.OriginProvider `inject:""`
