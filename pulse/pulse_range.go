@@ -49,36 +49,50 @@ func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
 	panic("illegal value")
 }
 
-//func NewMultiPulseRange(data []Data) Range {
-//	switch len(data) {
-//	case 0:
-//		panic("illegal value")
-//	case 1:
-//		return data[0].AsRange()
-//	}
-//
-//	sequence := true
-//	cp := make([]Data, len(data))
-//	for i, d := range data {
-//		switch {
-//		case i == 1:
-//
-//		case i != 0:
-//			before, prev := data[i-1].IsBeforeOrPrev(d)
-//			if !before {
-//				panic("illegal value")
-//			}
-//			sequence = sequence && prev
-//			fallthrough
-//		case d.NextPulseDelta != 0:
-//			d.EnsurePulseData()
-//		default:
-//			sequence = false
-//			d.PulseNumber.Prev(d.PrevPulseDelta) // ensure correctness for expected
-//		}
-//		cp[i] = d
-//	}
-//}
+func NewMultiPulseRange(data []Data) Range {
+	switch len(data) {
+	case 0:
+		panic("illegal value")
+	case 1:
+		return data[0].AsRange()
+	}
+
+	if !data[0].isExpected() {
+		if checkSequence(data) {
+			return seqPulseRange{data: append([]Data(nil), data...)}
+		}
+	} else {
+		if data[1].PrevPulseNumber() != data[0].PulseNumber || !data[0].IsValidExpectedPulseData() {
+			panic("illegal value")
+		}
+		if len(data) == 2 {
+			data[1].EnsurePulseData()
+		} else {
+			checkSequence(data[1:])
+		}
+	}
+	return sparsePulseRange{data: append([]Data(nil), data...)}
+}
+
+func checkSequence(data []Data) bool {
+	sequence := true
+	for i, d := range data {
+		d.EnsurePulseData()
+		if i == 0 {
+			continue
+		}
+
+		prev := &data[i-1]
+		switch {
+		case prev.IsValidNext(d):
+		case prev.NextPulseNumber() >= d.PrevPulseNumber():
+			panic("illegal value - unordered or intersecting pulses")
+		default:
+			sequence = false
+		}
+	}
+	return sequence
+}
 
 /* ===================================================== */
 
