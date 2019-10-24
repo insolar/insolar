@@ -205,11 +205,6 @@ func (g *Base) initConsensus(ctx context.Context) error {
 		EphemeralController: g,
 	})
 
-	err = g.datagramTransport.Start(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to start datagram transport")
-	}
-
 	err = g.createOriginCandidate()
 	if err != nil {
 		return errors.Wrap(err, "failed to createOriginCandidate")
@@ -246,6 +241,11 @@ func (g *Base) StartConsensus(ctx context.Context) error {
 
 	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
 		g.ConsensusMode = consensus.ReadyNetwork
+	}
+
+	err := g.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to start datagram transport")
 	}
 
 	pulseHandler := adapters.NewPulseHandler()
