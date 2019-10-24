@@ -70,7 +70,7 @@ func (v Epoch) IsCompatible(vv Epoch) bool {
 	case !isValid:
 		return false
 	case !isSpecial:
-		return v == ArticulationPulseEpoch || vv.IsTimeEpoch()
+		return vv == ArticulationPulseEpoch || vv.IsTimeEpoch()
 	case v == vv:
 		return true
 	case v == ArticulationPulseEpoch:
