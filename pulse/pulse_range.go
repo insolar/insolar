@@ -31,8 +31,8 @@ type Range interface {
 	EnumNumbers(fn FindNumberFunc) bool
 	EnumData(func(Data) bool) bool
 
-	//IsValidNext(Range)
-	//IsValidPrev(Range)
+	IsValidNext(Range) bool
+	IsValidPrev(Range) bool
 }
 
 func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
@@ -102,6 +102,20 @@ type onePulseRange struct {
 	data Data
 }
 
+func (p onePulseRange) IsValidNext(a Range) bool {
+	if p.data.NextPulseDelta != a.LeftPrevDelta() {
+		return false
+	}
+	if n, ok := p.data.GetNextPulseNumber(); ok {
+		return n == a.LeftBoundNumber()
+	}
+	return false
+}
+
+func (p onePulseRange) IsValidPrev(a Range) bool {
+	return a.IsValidNext(p)
+}
+
 func (p onePulseRange) EnumNumbers(fn FindNumberFunc) bool {
 	return fn(p.data.PulseNumber, p.data.PrevPulseDelta, p.data.NextPulseDelta)
 }
@@ -148,6 +162,20 @@ type gapPulseRange struct {
 	end       Data
 }
 
+func (p gapPulseRange) IsValidNext(a Range) bool {
+	if p.end.NextPulseDelta != a.LeftPrevDelta() {
+		return false
+	}
+	if n, ok := p.end.GetNextPulseNumber(); ok {
+		return n == a.LeftBoundNumber()
+	}
+	return false
+}
+
+func (p gapPulseRange) IsValidPrev(a Range) bool {
+	return a.IsValidNext(p)
+}
+
 func (p gapPulseRange) EnumNumbers(fn FindNumberFunc) bool {
 	return _enumSegments(p.start, p.prevDelta, p.end.PulseNumber, p.end.NextPulseDelta, fn)
 }
@@ -181,6 +209,21 @@ var _ Range = seqPulseRange{}
 type seqPulseRange struct {
 	templatePulseRange
 	data []Data
+}
+
+func (p seqPulseRange) IsValidNext(a Range) bool {
+	end := p.RightBoundData()
+	if end.NextPulseDelta != a.LeftPrevDelta() {
+		return false
+	}
+	if n, ok := end.GetNextPulseNumber(); ok {
+		return n == a.LeftBoundNumber()
+	}
+	return false
+}
+
+func (p seqPulseRange) IsValidPrev(a Range) bool {
+	return a.IsValidNext(p)
 }
 
 func (p seqPulseRange) EnumNumbers(fn FindNumberFunc) bool {
@@ -223,6 +266,21 @@ var _ Range = sparsePulseRange{}
 type sparsePulseRange struct {
 	templatePulseRange
 	data []Data
+}
+
+func (p sparsePulseRange) IsValidNext(a Range) bool {
+	end := p.RightBoundData()
+	if end.NextPulseDelta != a.LeftPrevDelta() {
+		return false
+	}
+	if n, ok := end.GetNextPulseNumber(); ok {
+		return n == a.LeftBoundNumber()
+	}
+	return false
+}
+
+func (p sparsePulseRange) IsValidPrev(a Range) bool {
+	return a.IsValidNext(p)
 }
 
 func (p sparsePulseRange) EnumNumbers(fn FindNumberFunc) bool {
