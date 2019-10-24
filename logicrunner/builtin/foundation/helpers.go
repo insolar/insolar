@@ -33,12 +33,12 @@ func GetPulseNumber() (insolar.PulseNumber, error) {
 }
 
 // GetRequestReference - Returns request reference from context.
-func GetRequestReference() insolar.Reference {
+func GetRequestReference() (*insolar.Reference, error) {
 	ctx := GetLogicalContext()
 	if ctx.Request == nil {
-		panic("context has no request set")
+		return nil, errors.New("request from LogicCallContext is nil, get pulse is failed")
 	}
-	return *ctx.Request
+	return ctx.Request, nil
 }
 
 // GetObject create proxy by address
