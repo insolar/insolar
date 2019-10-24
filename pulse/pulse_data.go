@@ -18,17 +18,12 @@ package pulse
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-)
-
-const (
-	InvalidPulseEpoch uint32 = iota
-	EphemeralPulseEpoch
-	ArticulationPulseEpoch
 )
 
 var _ DataReader = &Data{}
@@ -46,7 +41,7 @@ type DataHolder interface {
 
 type DataExt struct {
 	// ByteSize=44
-	PulseEpoch     uint32
+	PulseEpoch     Epoch
 	PulseEntropy   longbits.Bits256
 	NextPulseDelta uint16
 	PrevPulseDelta uint16
@@ -82,7 +77,7 @@ func NewExpectedPulsarData(pn Number, deltaPrev uint16) Data {
 	return Data{
 		PulseNumber: pn,
 		DataExt: DataExt{
-			PulseEpoch:     pn.AsUint32(),
+			PulseEpoch:     pn.AsEpoch(),
 			Timestamp:      0, //uint32(time.Now().Unix()),
 			PrevPulseDelta: deltaPrev,
 		},
@@ -99,18 +94,18 @@ func (r Data) String() string {
 	buf := strings.Builder{}
 	buf.WriteString(fmt.Sprint(r.PulseNumber))
 
-	ep := OfUint32(r.PulseEpoch)
-	if ep != r.PulseNumber && ep != 0 {
-		buf.WriteString(fmt.Sprintf("@%d", ep))
+	ep := r.PulseEpoch
+	if uint32(ep) != uint32(r.PulseNumber) && ep != 0 {
+		buf.WriteString(fmt.Sprintf("(%v)", ep))
 	}
 	if r.NextPulseDelta == r.PrevPulseDelta {
-		buf.WriteString(fmt.Sprintf(",±%d", r.NextPulseDelta))
+		buf.WriteString(fmt.Sprintf("±%d", r.NextPulseDelta))
 	} else {
-		if r.NextPulseDelta > 0 {
-			buf.WriteString(fmt.Sprintf(",+%d", r.NextPulseDelta))
-		}
 		if r.PrevPulseDelta > 0 {
-			buf.WriteString(fmt.Sprintf(",-%d", r.PrevPulseDelta))
+			buf.WriteString(fmt.Sprintf("-%d", r.PrevPulseDelta))
+		}
+		if r.NextPulseDelta > 0 {
+			buf.WriteString(fmt.Sprintf("+%d", r.NextPulseDelta))
 		}
 	}
 	return buf.String()
@@ -123,7 +118,7 @@ func newPulsarData(pn Number, delta uint16, entropy longbits.Bits256) Data {
 	return Data{
 		PulseNumber: pn,
 		DataExt: DataExt{
-			PulseEpoch:     pn.AsUint32(),
+			PulseEpoch:     pn.AsEpoch(),
 			PulseEntropy:   entropy,
 			Timestamp:      uint32(time.Now().Unix()),
 			NextPulseDelta: delta,
@@ -152,98 +147,103 @@ func fixedPulseEntropy(v *longbits.Bits256, pn Number) {
 }
 
 func (r Data) EnsurePulseData() {
-	if !r.PulseNumber.IsTimePulse() {
-		panic("incorrect pulse number")
-	}
-	if !OfUint32(r.PulseEpoch).IsSpecialOrTimePulse() {
-		panic("incorrect pulse epoch")
-	}
-	if r.NextPulseDelta == 0 {
+	switch {
+	case r.isExpected():
 		panic("next delta can't be zero")
+	case !r.PulseNumber.IsTimePulse():
+		panic("incorrect pulse number")
+	case !r.HasValidEpoch():
+		panic("incorrect pulse epoch")
+	default:
+		r.PulseNumber.Prev(r.PrevPulseDelta)
 	}
 }
 
+func (r Data) HasValidEpoch() bool {
+	return r.PulseEpoch <= r.PulseNumber.AsEpoch() && r.PulseEpoch.IsValidEpoch()
+}
+
+func (r Data) HasValidTimeEpoch() bool {
+	return r.PulseEpoch <= r.PulseNumber.AsEpoch() && r.PulseEpoch.IsTimeEpoch()
+}
+
+func (r Data) isExpected() bool {
+	return r.NextPulseDelta == 0
+}
+
+func (r Data) isFirst() bool {
+	return r.PrevPulseDelta == 0
+}
+
 func (r Data) IsValidPulseData() bool {
-	if !r.PulseNumber.IsTimePulse() {
-		return false
+	switch {
+	case r.isExpected():
+	case !r.PulseNumber.IsTimePulse():
+	case !r.HasValidEpoch():
+	default:
+		return true
 	}
-	if !OfUint32(r.PulseEpoch).IsSpecialOrTimePulse() {
-		return false
-	}
-	if r.NextPulseDelta == 0 {
-		return false
-	}
-	return true
+	return false
 }
 
 func (r Data) IsEmpty() bool {
 	return r.PulseNumber.IsUnknown()
 }
 
-func (r Data) IsEmptyWithEpoch(epoch uint32) bool {
-	return r.PulseNumber.IsUnknown() && r.PulseEpoch == epoch
+func (r Data) IsEmptyCompatibleWith(epoch Epoch) bool {
+	return r.PulseNumber.IsUnknown() && r.PulseEpoch.IsCompatible(epoch)
 }
 
 func (r Data) IsValidExpectedPulseData() bool {
-	if !r.PulseNumber.IsTimePulse() {
-		return false
-	}
-	if !OfUint32(r.PulseEpoch).IsSpecialOrTimePulse() {
-		return false
-	}
-	if r.NextPulseDelta != 0 {
-		return false
-	}
-	return true
+	return r.isExpected() && r.PulseNumber.IsTimePulse() && r.HasValidEpoch()
 }
 
 func (r Data) IsValidExpectedPulsarData() bool {
-	if !OfUint32(r.PulseEpoch).IsTimePulse() {
-		return false
-	}
-	return r.IsValidExpectedPulseData()
+	return r.isExpected() && r.PulseNumber.IsTimePulse() && r.HasValidTimeEpoch()
 }
 
 func (r Data) EnsurePulsarData() {
-	if !OfUint32(r.PulseEpoch).IsTimePulse() {
+	if !r.PulseEpoch.IsTimeEpoch() {
 		panic("incorrect pulse epoch by pulsar")
 	}
 	r.EnsurePulseData()
 }
 
 func (r Data) IsValidPulsarData() bool {
-	if !OfUint32(r.PulseEpoch).IsTimePulse() {
+	if !r.PulseEpoch.IsTimeEpoch() {
 		return false
 	}
 	return r.IsValidPulseData()
 }
 
 func (r Data) EnsureEphemeralData() {
-	if r.PulseEpoch != EphemeralPulseEpoch {
+	if !r.PulseEpoch.IsEphemeral() {
 		panic("incorrect pulse epoch")
 	}
 	r.EnsurePulseData()
 }
 
 func (r Data) IsValidEphemeralData() bool {
-	if r.PulseEpoch != EphemeralPulseEpoch {
+	if !r.PulseEpoch.IsEphemeral() {
 		return false
 	}
 	return r.IsValidPulseData()
 }
 
 func (r Data) IsFromPulsar() bool {
-	return r.PulseNumber.IsTimePulse() && OfUint32(r.PulseEpoch).IsTimePulse()
+	return r.PulseEpoch.IsTimeEpoch() && r.PulseNumber.IsTimePulse()
 }
 
 func (r Data) IsFromEphemeral() bool {
-	return r.PulseNumber.IsTimePulse() && r.PulseEpoch == EphemeralPulseEpoch
+	return r.PulseEpoch.IsEphemeral() && r.PulseNumber.IsTimePulse()
 }
 
 func (r Data) GetStartOfEpoch() Number {
-	ep := OfUint32(r.PulseEpoch)
-	if r.PulseNumber.IsTimePulse() {
-		return ep
+	switch {
+	case !r.PulseNumber.IsTimePulse():
+		return Unknown
+	case r.HasValidEpoch():
+		return OfUint32(uint32(r.PulseEpoch))
 	}
 	return r.PulseNumber
 }
@@ -253,61 +253,101 @@ func (r Data) GetPulseEntropy() longbits.Bits256 {
 }
 
 func (r Data) CreateNextPulse(entropyGen EntropyFunc) Data {
-	if r.IsFromEphemeral() {
+	switch {
+	case r.PulseEpoch.IsEphemeral():
 		return r.createNextEphemeralPulse()
+	case r.PulseEpoch.IsTimeEpoch():
+		return r.createNextPulsarPulse(r.NextPulseDelta, entropyGen)
+	case r.PulseEpoch.IsArticulation():
+		panic("articulation pulse")
+	default:
+		panic("unknown pulse type")
 	}
-	return r.createNextPulsarPulse(r.NextPulseDelta, entropyGen)
 }
 
+//func (r Data) IsCompatibleEpoch(epoch uint32) bool {
+//	switch {
+//	case epoch == r.PulseEpoch:
+//		return epoch != InvalidPulseEpoch
+//	case !OfUint32(r.PulseEpoch).IsTimePulse():
+//		return r.PulseEpoch == epoch
+//	default:
+//		return OfUint32(epoch).IsTimePulse()
+//	}
+//}
+
 func (r Data) IsValidNext(n Data) bool {
-	if r.IsExpectedPulse() || r.NextPulseNumber() != n.PulseNumber || r.NextPulseDelta != n.PrevPulseDelta {
-		return false
-	}
 	switch {
-	case r.IsFromPulsar():
-		return n.IsValidPulsarData()
-	case r.IsFromEphemeral():
-		return n.IsValidEphemeralData()
+	case r.NextPulseDelta != n.PrevPulseDelta || r.isExpected() || n.isExpected():
+	case !r.PulseNumber.IsTimePulse():
+	case r.PulseNumber+Number(r.NextPulseDelta) != n.PulseNumber:
+	case !r.PulseEpoch.IsCompatible(n.PulseEpoch):
+	default:
+		return true
 	}
-	return n.IsValidPulseData()
+	return false
 }
+
+//func (r Data) IsBeforeOrPrev(n Data) (bool, bool) {
+//
+//}
+
+//func (r Data) IsBefore(n Data) bool {
+//	rExpected := r.IsExpectedPulse()
+//	nExpected := n.IsExpectedPulse()
+//	switch {
+//	case rExpected && nExpected:
+//		return false
+//	case r.Is
+//	case rExpected:
+//		switch {
+//		case n.IsFirstPulse():
+//		case r.PulseNumber <= n.PrevPulseNumber():
+//			return true
+//		case r.PulseNumber == n.PulseNumber && r.PrevPulseDelta == n.PrevPulseDelta:
+//		}
+//		return false
+//	case n.IsExpectedPulse():
+//		if !r.IsExpectedPulse() && r.NextPulseNumber() <= n.PulseNumber
+//	case r.NextPulseNumber() >= n.PrevPulseNumber()
+//	}
+//}
 
 func (r Data) IsValidPrev(p Data) bool {
 	switch {
-	case r.IsFirstPulse() || p.IsExpectedPulse() || p.NextPulseNumber() != r.PulseNumber || p.NextPulseDelta != r.PrevPulseDelta:
-		return false
-	case r.IsFromPulsar():
-		return p.IsValidPulsarData()
-	case r.IsFromEphemeral():
-		return p.IsValidEphemeralData()
+	case p.NextPulseDelta != r.PrevPulseDelta || r.isFirst():
+	case !r.PulseNumber.IsTimePulse():
+	case p.PulseNumber+Number(p.NextPulseDelta) != r.PulseNumber:
+	case !r.PulseEpoch.IsCompatible(p.PulseEpoch):
 	default:
-		return p.IsValidPulseData()
+		return true
 	}
+	return false
 }
 
 func (r Data) GetNextPulseNumber() (Number, bool) {
-	if r.IsExpectedPulse() || !r.PulseNumber.IsTimePulse() {
+	if r.isExpected() {
 		return r.PulseNumber, false
 	}
-	return r.PulseNumber.Next(r.NextPulseDelta), true
+	return r.PulseNumber.TryNext(r.NextPulseDelta)
 }
 
 func (r Data) GetPrevPulseNumber() (Number, bool) {
-	if r.IsFirstPulse() || !r.PulseNumber.IsTimePulse() {
+	if r.isFirst() {
 		return r.PulseNumber, false
 	}
-	return r.PulseNumber.Prev(r.PrevPulseDelta), true
+	return r.PulseNumber.TryPrev(r.PrevPulseDelta)
 }
 
 func (r Data) NextPulseNumber() Number {
-	if r.IsExpectedPulse() {
+	if r.isExpected() {
 		panic("illegal state")
 	}
 	return r.PulseNumber.Next(r.NextPulseDelta)
 }
 
 func (r Data) PrevPulseNumber() Number {
-	if r.IsFirstPulse() {
+	if r.isFirst() {
 		panic("illegal state")
 	}
 	return r.PulseNumber.Prev(r.PrevPulseDelta)
@@ -322,8 +362,8 @@ func (r Data) CreateNextExpected() Data {
 			NextPulseDelta: 0,
 		},
 	}
-	if OfUint32(r.PulseEpoch).IsTimePulse() {
-		s.PulseEpoch = uint32(s.PulseNumber)
+	if r.PulseEpoch.IsTimeEpoch() {
+		s.PulseEpoch = s.PulseNumber.AsEpoch()
 	}
 	return s
 }
@@ -342,8 +382,8 @@ func (r Data) createNextEphemeralPulse() Data {
 }
 
 func (r Data) CreateNextPulsarPulse(delta uint16, entropyGen EntropyFunc) Data {
-	if r.IsFromEphemeral() {
-		panic("prev is ephemeral")
+	if !r.PulseEpoch.IsTimeEpoch() {
+		panic("not time pulse")
 	}
 	return r.createNextPulsarPulse(delta, entropyGen)
 }
@@ -371,13 +411,38 @@ func (r Data) GetTimestamp() uint64 {
 }
 
 func (r Data) IsExpectedPulse() bool {
-	return r.PulseNumber.IsTimePulse() && r.NextPulseDelta == 0
+	return r.isExpected() && r.PulseNumber.IsTimePulse()
 }
 
 func (r Data) IsFirstPulse() bool {
-	return r.PulseNumber.IsTimePulse() && r.PrevPulseDelta == 0
+	return r.isFirst() && r.PulseNumber.IsTimePulse()
 }
 
 func (r Data) AsPulseData() Data {
 	return r
+}
+
+func (r Data) AsRange() Range {
+	r.EnsurePulseData()
+	return onePulseRange{r}
+}
+
+func SortData(data []Data) {
+	sort.Sort(DataSorter{data})
+}
+
+type DataSorter struct {
+	Data []Data
+}
+
+func (d DataSorter) Len() int {
+	return len(d.Data)
+}
+
+func (d DataSorter) Less(i, j int) bool {
+	return d.Data[i].PulseNumber < d.Data[j].PulseNumber
+}
+
+func (d DataSorter) Swap(i, j int) {
+	d.Data[i], d.Data[j] = d.Data[j], d.Data[i]
 }

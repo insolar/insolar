@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,84 +12,290 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package pulse
 
 import "math"
 
-//var _ DataReader = Range{}
+type FindNumberFunc func(n Number, prevDelta, nextDelta uint16) bool
 
-type Range struct {
-	start          Number
-	startPrevDelta uint16
+type Range interface {
+	LeftPrevDelta() uint16
+	LeftBoundNumber() Number
+	RightBoundData() Data
 
-	end   Data
-	epoch *Data
+	IsArticulated() bool
+	IsSingleton() bool
+
+	EnumNumbers(fn FindNumberFunc) bool
+	EnumData(func(Data) bool) bool
+
+	//IsValidNext(Range)
+	//IsValidPrev(Range)
 }
 
-func (v Range) IsZero() bool {
-	return v.start.IsUnknown() && v.start == v.end.PulseNumber
+func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
+	right.EnsurePulseData()
+	switch {
+	case left == right.PulseNumber:
+		if leftPrevDelta == right.PrevPulseDelta {
+			return right.AsRange()
+		}
+	case left.IsBeforeOrEq(right.PrevPulseNumber()):
+		left.Prev(leftPrevDelta) // ensure correctness
+		return gapPulseRange{start: left, prevDelta: leftPrevDelta, end: right}
+	}
+	panic("illegal value")
 }
 
-func (v Range) IsArticulated() bool {
-	return v.start < v.end.PulseNumber
-}
-
-//func (v Range) ListNumbers(fn func (n Number, prevDelta uint16)) {
-//	if !v.IsArticulated() {
-//		fn(v.end.PulseNumber)
+//func NewMultiPulseRange(data []Data) Range {
+//	switch len(data) {
+//	case 0:
+//		panic("illegal value")
+//	case 1:
+//		return data[0].AsRange()
+//	}
+//
+//	sequence := true
+//	cp := make([]Data, len(data))
+//	for i, d := range data {
+//		switch {
+//		case i == 1:
+//
+//		case i != 0:
+//			before, prev := data[i-1].IsBeforeOrPrev(d)
+//			if !before {
+//				panic("illegal value")
+//			}
+//			sequence = sequence && prev
+//			fallthrough
+//		case d.NextPulseDelta != 0:
+//			d.EnsurePulseData()
+//		default:
+//			sequence = false
+//			d.PulseNumber.Prev(d.PrevPulseDelta) // ensure correctness for expected
+//		}
+//		cp[i] = d
 //	}
 //}
 
-func (v Range) BuildPulseChain() []Data {
-	if !v.IsArticulated() {
-		return []Data{v.end}
-	}
+/* ===================================================== */
 
-	switch {
-	case v.epoch == nil || v.start > v.epoch.PulseNumber: // epoch is out of range
-		return _appendSegments(nil, v.start, v.startPrevDelta, v.end)
+var _ Range = onePulseRange{}
 
-	case v.start == v.epoch.PulseNumber: // epoch is the start of the range
-		// TODO check [epoch, end] case
-		chain := append(make([]Data, 0, 2), *v.epoch)
-		return _appendSegments(chain, v.epoch.NextPulseNumber(), v.epoch.NextPulseDelta, v.end)
-
-	case v.epoch.PulseNumber >= v.end.PulseNumber:
-		panic("illegal state")
-
-	default: // epoch is inside this range
-		chain := make([]Data, 0, 3)
-		chain = _appendSegments(nil, v.start, v.startPrevDelta, *v.epoch)
-		return _appendSegments(chain, v.epoch.NextPulseNumber(), v.epoch.NextPulseDelta, v.end)
-	}
+type onePulseRange struct {
+	data Data
 }
 
+func (p onePulseRange) EnumNumbers(fn FindNumberFunc) bool {
+	return fn(p.data.PulseNumber, p.data.PrevPulseDelta, p.data.NextPulseDelta)
+}
+
+func (p onePulseRange) EnumData(fn func(Data) bool) bool {
+	return fn(p.data)
+}
+
+func (p onePulseRange) RightBoundData() Data {
+	return p.data
+}
+
+func (p onePulseRange) IsSingleton() bool {
+	return true
+}
+
+func (p onePulseRange) IsArticulated() bool {
+	return false
+}
+
+func (p onePulseRange) LeftBoundNumber() Number {
+	return p.data.PulseNumber
+}
+
+func (p onePulseRange) LeftPrevDelta() uint16 {
+	return p.data.PrevPulseDelta
+}
+
+/* ===================================================== */
+
+type templatePulseRange struct {
+}
+
+func (p templatePulseRange) IsSingleton() bool {
+	return false
+}
+
+var _ Range = gapPulseRange{}
+
+type gapPulseRange struct {
+	templatePulseRange
+	start     Number
+	prevDelta uint16
+	end       Data
+}
+
+func (p gapPulseRange) EnumNumbers(fn FindNumberFunc) bool {
+	return _enumSegments(p.start, p.prevDelta, p.end.PulseNumber, p.end.NextPulseDelta, fn)
+}
+
+func (p gapPulseRange) EnumData(fn func(Data) bool) bool {
+	if _enumSegmentData(p.start, p.prevDelta, p.end, fn) {
+		return true
+	}
+	return fn(p.end)
+}
+
+func (p gapPulseRange) LeftPrevDelta() uint16 {
+	return p.prevDelta
+}
+
+func (p gapPulseRange) LeftBoundNumber() Number {
+	return p.start
+}
+
+func (p gapPulseRange) RightBoundData() Data {
+	return p.end
+}
+
+func (p gapPulseRange) IsArticulated() bool {
+	return true
+}
+
+/* ===================================================== */
+var _ Range = seqPulseRange{}
+
+type seqPulseRange struct {
+	templatePulseRange
+	data []Data
+}
+
+func (p seqPulseRange) EnumNumbers(fn FindNumberFunc) bool {
+	for _, d := range p.data {
+		if fn(d.PulseNumber, d.PrevPulseDelta, d.NextPulseDelta) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p seqPulseRange) EnumData(fn func(Data) bool) bool {
+	for _, d := range p.data {
+		if fn(d) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p seqPulseRange) IsArticulated() bool {
+	return false
+}
+
+func (p seqPulseRange) LeftPrevDelta() uint16 {
+	return p.data[0].PrevPulseDelta
+}
+
+func (p seqPulseRange) LeftBoundNumber() Number {
+	return p.data[0].PulseNumber
+}
+
+func (p seqPulseRange) RightBoundData() Data {
+	return p.data[len(p.data)-1]
+}
+
+/* ===================================================== */
+var _ Range = sparsePulseRange{}
+
+type sparsePulseRange struct {
+	templatePulseRange
+	data []Data
+}
+
+func (p sparsePulseRange) EnumNumbers(fn FindNumberFunc) bool {
+	var (
+		next      Number
+		prevDelta uint16
+	)
+
+	switch first := p.data[0]; {
+	case first.NextPulseDelta == 0: // expected pulse
+		next, prevDelta = first.PulseNumber, first.PrevPulseDelta
+	default:
+		next, prevDelta = first.NextPulseNumber(), first.NextPulseDelta
+		fn(first.PulseNumber, first.PrevPulseDelta, first.NextPulseDelta)
+	}
+
+	for _, d := range p.data[1:] {
+		if _enumSegments(next, prevDelta, d.PulseNumber, d.NextPulseDelta, fn) {
+			return true
+		}
+		next, prevDelta = d.NextPulseNumber(), d.NextPulseDelta
+	}
+	return false
+}
+
+func (p sparsePulseRange) EnumData(fn func(Data) bool) bool {
+	var (
+		next      Number
+		prevDelta uint16
+	)
+
+	switch first := p.data[0]; {
+	case first.NextPulseDelta == 0: // expected pulse
+		next, prevDelta = first.PulseNumber, first.PrevPulseDelta
+	default:
+		next, prevDelta = first.NextPulseNumber(), first.NextPulseDelta
+		fn(first)
+	}
+
+	for _, d := range p.data[1:] {
+		if _enumSegmentData(next, prevDelta, d, fn) {
+			return true
+		}
+		next, prevDelta = d.NextPulseNumber(), d.NextPulseDelta
+	}
+	return false
+}
+
+func (p sparsePulseRange) IsArticulated() bool {
+	return true
+}
+
+func (p sparsePulseRange) LeftPrevDelta() uint16 {
+	return p.data[0].PrevPulseDelta
+}
+
+func (p sparsePulseRange) LeftBoundNumber() Number {
+	return p.data[0].PulseNumber
+}
+
+func (p sparsePulseRange) RightBoundData() Data {
+	return p.data[len(p.data)-1]
+}
+
+/* ===================================================== */
 const minSegmentPulseDelta = 10
 
-func _appendSegments(chain []Data, next Number, prevDelta uint16, end Data) []Data {
-	if next != end.PulseNumber {
-		_enumSegments(next, prevDelta, end.PrevPulseNumber(), end.PrevPulseDelta, func(n Number, prevDelta, nextDelta uint16) {
-			chain = append(chain, Data{
-				next, DataExt{
+func _enumSegmentData(start Number, prevDelta uint16, end Data, fn func(Data) bool) bool {
+	if start != end.PulseNumber && _enumSegments(start, prevDelta, end.PrevPulseNumber(), end.PrevPulseDelta,
+		func(n Number, prevDelta, nextDelta uint16) bool {
+			return fn(Data{
+				n, DataExt{
 					PulseEpoch:     ArticulationPulseEpoch,
 					NextPulseDelta: nextDelta,
 					PrevPulseDelta: prevDelta,
 				}})
-		})
+		}) {
+		return true
 	}
-	chain = append(chain, end)
-	return chain
+	return fn(end)
 }
 
-func _enumSegments(next Number, prevDelta uint16, beforeEnd Number, endNextDelta uint16,
-	fn func(n Number, prevDelta, nextDelta uint16),
-) {
+func _enumSegments(next Number, prevDelta uint16, end Number, endNextDelta uint16, fn FindNumberFunc) bool {
 	for {
 		switch {
-		case next < beforeEnd:
-			delta := beforeEnd - next
+		case next < end:
+			delta := end - next
 			switch {
 			case delta <= math.MaxUint16:
 			case delta < math.MaxUint16+minSegmentPulseDelta:
@@ -97,13 +303,14 @@ func _enumSegments(next Number, prevDelta uint16, beforeEnd Number, endNextDelta
 			default:
 				delta = math.MaxUint16
 			}
-			fn(next, prevDelta, uint16(delta))
+			if fn(next, prevDelta, uint16(delta)) {
+				return true
+			}
 			prevDelta = uint16(delta)
 			next = next.Next(prevDelta)
 			continue
-		case next == beforeEnd:
-			fn(next, prevDelta, endNextDelta)
-			return
+		case next == end:
+			return fn(next, prevDelta, endNextDelta)
 		default:
 			panic("illegal state")
 		}

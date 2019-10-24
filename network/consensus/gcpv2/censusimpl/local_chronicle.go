@@ -152,7 +152,7 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 
 		checkExpectedPulse := true
 		switch {
-		case pda.PulseEpoch == pulse.EphemeralPulseEpoch: // supports empty with ephemeral
+		case pda.PulseEpoch.IsEphemeral(): // supports empty with ephemeral
 			if pd.IsFromEphemeral() {
 				if !pda.IsEmpty() && !pda.IsValidNext(pd) {
 					panic("illegal value - ephemeral pulses must be consecutive")
