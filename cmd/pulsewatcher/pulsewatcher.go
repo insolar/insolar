@@ -246,16 +246,16 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 
 			if err != nil {
 				errStr := err.Error()
-				if strings.Contains(errStr, "connection refused") ||
-					strings.Contains(errStr, "request canceled while waiting for connection") ||
-					strings.Contains(errStr, "no such host") {
-					// Print compact error string when node is down.
-					// This prevents table distortion on small screens.
-					errStr = "NODE IS DOWN"
-				}
-				if strings.Contains(errStr, "exceeded while awaiting headers") {
-					errStr = "TIMEOUT"
-				}
+				// if strings.Contains(errStr, "connection refused") ||
+				// 	strings.Contains(errStr, "request canceled while waiting for connection") ||
+				// 	strings.Contains(errStr, "no such host") {
+				// 	// Print compact error string when node is down.
+				// 	// This prevents table distortion on small screens.
+				// 	errStr = "NODE IS DOWN"
+				// }
+				// if strings.Contains(errStr, "exceeded while awaiting headers") {
+				// 	errStr = "TIMEOUT"
+				// }
 
 				lock.Lock()
 				if len(lastResults) > i {

@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/api"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
@@ -146,6 +147,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.Gatewayer,
 		storage.NewMemoryStorage(),
 		termination.NewHandler(n),
+		api.NewApiService(n.cfg.APIRunner),
 	)
 
 	err = n.cm.Init(ctx)

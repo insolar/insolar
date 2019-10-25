@@ -312,7 +312,9 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 
 // ValidateCert validates node certificate
 func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationCertificate) (bool, error) {
-	return certificate.VerifyAuthorizationCertificate(g.CryptographyService, g.CertificateManager.GetCertificate().GetDiscoveryNodes(), authCert)
+	return true, nil
+	// todo: fix
+	// return certificate.VerifyAuthorizationCertificate(g.CryptographyService, g.CertificateManager.GetCertificate().GetDiscoveryNodes(), authCert)
 }
 
 // ============= Bootstrap =======
