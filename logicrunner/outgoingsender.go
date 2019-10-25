@@ -222,7 +222,7 @@ func (a *abandonedSenderActorState) Receive(message actor.Message) (actor.Actor,
 }
 
 func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (insolar.Arguments, *record.IncomingRequest, error) {
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
+	incoming := BuildIncomingRequestFromOutgoing(outgoing)
 
 	latestPulse, err := a.pa.Latest(ctx)
 	if err != nil {

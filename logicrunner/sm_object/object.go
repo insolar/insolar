@@ -52,6 +52,7 @@ type ObjectInfo struct {
 type SharedObjectState struct {
 	SemaphoreReadyToWork              smachine.SyncLink
 	SemaphorePreviousExecutorFinished smachine.SyncLink
+	SemaphorePreviousResultSaved      smachine.SyncLink
 	ObjectInfo
 }
 
@@ -71,6 +72,7 @@ type ObjectSM struct {
 	SharedObjectState
 	readyToWorkCtl           smachine.BoolConditionalLink
 	previousExecutorFinished smachine.BoolConditionalLink
+	previousResultSaved      smachine.BoolConditionalLink
 }
 
 func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
@@ -112,6 +114,9 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 
 	sm.previousExecutorFinished = smachine.NewConditionalBool(false, "previousExecutorFinished")
 	sm.SemaphorePreviousExecutorFinished = sm.readyToWorkCtl.SyncLink()
+
+	sm.previousResultSaved = smachine.NewConditionalBool(false, "previousResultSaved")
+	sm.SemaphorePreviousResultSaved = sm.previousResultSaved.SyncLink()
 
 	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
 	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
@@ -188,7 +193,6 @@ func (sm *ObjectSM) stateGetLatestValidatedStatePrototypeAndCode(ctx smachine.Ex
 		failCallback := func(ctx smachine.AsyncResultContext) {
 			inslogger.FromContext(ctx.GetContext()).Error("Failed to obtain objects: ", err)
 			sm.ServiceCallError = err
-			ctx.WakeUp()
 		}
 
 		objectDescriptor, err := svc.GetObject(ctx.GetContext(), objectReference, nil)
@@ -219,7 +223,6 @@ func (sm *ObjectSM) stateGetLatestValidatedStatePrototypeAndCode(ctx smachine.Ex
 			sm.ObjectLatestCodeDescriptor = codeDescriptor
 			sm.ObjectLatestProtoDescriptor = prototypeDescriptor
 			sm.IsReadyToWork = true
-			ctx.WakeUp()
 		}
 	})
 

@@ -159,10 +159,10 @@ func (s *StateMachineCallRequest) stateStartImmutableCall(ctx smachine.Execution
 
 func (s *StateMachineCallRequest) stateDoneImmutableCall(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	/*
-			Steps:
-		    1. register resulting immutable state on ledger (and request if a normal call)
-		    2. report resulting immutable state to SharedObjectStateAccessor
-			3. send results back
+		Steps:
+		1. register resulting immutable state on ledger (and request if a normal call)
+		2. report resulting immutable state to SharedObjectStateAccessor
+		3. send results back
 	*/
 	panic("unimplemented")
 }

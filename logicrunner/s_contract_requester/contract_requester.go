@@ -14,58 +14,54 @@
 // limitations under the License.
 //
 
-package s_sender
+package s_contract_requester
 
 import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar"
 )
 
-// TODO[bigbes]: port it to state machine
-type SenderService interface {
-	bus.Sender
+type ContractRequesterService interface {
+	insolar.ContractRequester
 }
 
-type SenderServiceAdapter struct {
-	svc  SenderService
+type ContractRequesterServiceAdapter struct {
+	svc  ContractRequesterService
 	exec smachine.ExecutionAdapter
 }
 
-func (a *SenderServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc SenderService)) smachine.SyncCallRequester {
+func (a *ContractRequesterServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ContractRequesterService)) smachine.SyncCallRequester {
 	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
-func (a *SenderServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc SenderService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
+func (a *ContractRequesterServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ContractRequesterService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
 	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }
 
-func (a *SenderServiceAdapter) PrepareNotify(ctx smachine.ExecutionContext, fn func(svc SenderService)) smachine.NotifyRequester {
+func (a *ContractRequesterServiceAdapter) PrepareNotify(ctx smachine.ExecutionContext, fn func(svc ContractRequesterService)) smachine.NotifyRequester {
 	return a.exec.PrepareNotify(ctx, func(interface{}) { fn(a.svc) })
 }
 
-type senderService struct {
-	bus.Sender
-	Accessor pulse.Accessor
+type contractRequesterService struct {
+	insolar.ContractRequester
 }
 
-func CreateSenderService(sender bus.Sender, accessor pulse.Accessor) *SenderServiceAdapter {
+func CreateContractRequesterService(ContractRequester insolar.ContractRequester) *ContractRequesterServiceAdapter {
 	ctx := context.Background()
 	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
 	smachine.StartChannelWorker(ctx, ch, nil)
 
-	return &SenderServiceAdapter{
-		svc: senderService{
-			Sender:   sender,
-			Accessor: accessor,
+	return &ContractRequesterServiceAdapter{
+		svc: contractRequesterService{
+			ContractRequester: ContractRequester,
 		},
-		exec: smachine.NewExecutionAdapter("Sender", ae),
+		exec: smachine.NewExecutionAdapter("ContractRequester", ae),
 	}
 }

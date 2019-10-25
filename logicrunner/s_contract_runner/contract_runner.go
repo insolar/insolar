@@ -20,13 +20,14 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 )
 
 type ContractCallType uint8
 
 const (
-	_ ContractCallType = iota
+	ContractCallUnknown ContractCallType = iota
 	ContractCallMutable
 	ContractCallImmutable
 	ContractCallSaga
@@ -35,7 +36,7 @@ const (
 type CallResult interface{}
 
 type ContractRunnerService interface {
-	// ClassifyCall(code artifacts.CodeDescriptor, method string) ContractCallType
+	ClassifyCall(request *record.IncomingRequest) ContractCallType
 	// CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult
 }
 
@@ -61,25 +62,38 @@ type contractRunnerService struct {
 	MachinesManager machinesmanager.MachinesManager
 }
 
-func CreateContractRunnerService() *ContractRunnerServiceAdapter {
+func CreateContractRunnerService(manager machinesmanager.MachinesManager) *ContractRunnerServiceAdapter {
 	ctx := context.Background()
 	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
 	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &ContractRunnerServiceAdapter{
-		svc:  contractRunnerService{},
+		svc: contractRunnerService{
+			MachinesManager: manager,
+		},
 		exec: smachine.NewExecutionAdapter("ArtifactClientService", ae),
 	}
 }
 
-// func (c contractRunnerService) CallMethod()
-//
-// func (c contractRunnerService) ClassifyCall(code artifacts.CodeDescriptor, method string) ContractCallType {
-// 	panic("implement me")
-// }
-//
+func (c contractRunnerService) ClassifyCall(request *record.IncomingRequest) ContractCallType {
+	if false && request.ReturnMode == record.ReturnSaga {
+		if !request.Immutable && request.CallType == record.CTMethod {
+			return ContractCallSaga
+		} else {
+			return ContractCallUnknown
+		}
+	}
+
+	if request.Immutable {
+		return ContractCallImmutable
+	}
+
+	return ContractCallMutable
+}
+
+// func (c contractRunnerService) CallMethod() {}
 // func (c contractRunnerService) CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult {
-// 	panic("implement me")
+//  panic("implement me")
 // }
 //
-// func (c contractRunnerService) CallMutableMethod(code ArtifactBinary)
+// func (c contractRunnerService) CallMutableMethod(code ArtifactBinary) {}

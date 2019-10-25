@@ -347,7 +347,7 @@ func (m *validationProxyImplementation) RouteCall(
 	}
 
 	outgoing := buildOutgoingRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
+	incoming := BuildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -366,7 +366,7 @@ func (m *validationProxyImplementation) SaveAsChild(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
+	incoming := BuildIncomingRequestFromOutgoing(outgoing)
 
 	reqRes := current.HasOutgoingRequest(ctx, *incoming)
 	if reqRes == nil {
@@ -388,7 +388,7 @@ func (m *validationProxyImplementation) DeactivateObject(
 	return nil
 }
 
-func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.IncomingRequest {
+func BuildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.IncomingRequest {
 	// Currently IncomingRequest and OutgoingRequest are almost exact copies of each other
 	// thus the following code is a bit ugly. However this will change when we'll
 	// figure out which fields are actually needed in OutgoingRequest and which are
