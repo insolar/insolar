@@ -69,9 +69,9 @@ func TestConveyor(t *testing.T) {
 
 		if eventCount < math.MaxInt32 {
 			eventCount++
-			require.NoError(t, conveyor.AddInput(context.Background(), pd.GetNextPulseNumber(), fmt.Sprintf("event-%d-future", eventCount)))
+			require.NoError(t, conveyor.AddInput(context.Background(), pd.NextPulseNumber(), fmt.Sprintf("event-%d-future", eventCount)))
 			eventCount++
-			require.NoError(t, conveyor.AddInput(context.Background(), pd.GetPrevPulseNumber(), fmt.Sprintf("event-%d-past", eventCount)))
+			require.NoError(t, conveyor.AddInput(context.Background(), pd.PrevPulseNumber(), fmt.Sprintf("event-%d-past", eventCount)))
 
 			for j := 0; j < 1; j++ {
 				eventCount++

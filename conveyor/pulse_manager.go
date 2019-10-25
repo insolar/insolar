@@ -72,7 +72,7 @@ func (*PulseDataManager) _split(v uint64) (present pulse.Number, nearestFuture p
 
 func (p *PulseDataManager) setPresentPulse(pd pulse.Data) {
 	presentPN := pd.PulseNumber
-	futurePN := pd.GetNextPulseNumber()
+	futurePN := pd.NextPulseNumber()
 
 	if epd, ok := p.cache.Check(presentPN); ok {
 		if epd != pd {
