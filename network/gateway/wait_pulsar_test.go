@@ -52,11 +52,12 @@ package gateway
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
@@ -127,7 +128,7 @@ func TestWaitPulsar_PulseArrivedInETA(t *testing.T) {
 	waitPulsar.bootstrapETA = time.Second * 2
 	waitPulsar.bootstrapTimer = time.NewTimer(waitPulsar.bootstrapETA)
 
-	go waitPulsar.Run(context.Background(), *insolar.GenesisPulse)
+	go waitPulsar.Run(context.Background(), *insolar.EphemeralPulse)
 	time.Sleep(100 * time.Millisecond)
 
 	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: pulse.MinTimePulse + 10})

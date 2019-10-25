@@ -151,7 +151,7 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		Entropy:          tp.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(tp.pulseDelta),
 		PrevPulseNumber:  pulseNumber - insolar.PulseNumber(tp.pulseDelta),
-		EpochPulseNumber: int(pulseNumber),
+		EpochPulseNumber: pulseNumber.AsEpoch(),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 	}
 
@@ -195,7 +195,7 @@ func (tp *testPulsar) incrementPulse(pulse insolar.Pulse) insolar.Pulse {
 	var err error
 	newPulse.Signs, err = getPSC(newPulse)
 	if err != nil {
-		log.Errorf("[ incermentPulse ]", err)
+		log.Errorf("[ incrementPulse ]", err)
 	}
 	return newPulse
 }

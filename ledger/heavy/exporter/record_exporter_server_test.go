@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -333,9 +332,7 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Parallel()
 
 	t.Run("count can't be 0", func(t *testing.T) {
-		server := &RecordServer{
-			limiter: NewOneRequestLimiter(time.Microsecond),
-		}
+		server := &RecordServer{}
 
 		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
@@ -347,7 +344,6 @@ func TestRecordServer_Export(t *testing.T) {
 		jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(0))
 		server := &RecordServer{
 			jetKeeper: jetKeeper,
-			limiter:   NewOneRequestLimiter(time.Microsecond),
 		}
 
 		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
@@ -450,7 +446,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -612,7 +608,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -756,7 +752,7 @@ func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
 
 	t.Run("calling for pulse with empty pulses after returns the last pulse", func(t *testing.T) {
 		var recs []*Record

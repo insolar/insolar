@@ -14,19 +14,16 @@
 // limitations under the License.
 //
 
-package configuration
+package appfoundation
 
-// Exporter holds exporter configuration.
-// Is was assumed, that exporter will be used for exporting data for observer
-// Exporter is grpc-base service
-type Exporter struct {
-	// Addr specifies address where exporter server starts
-	Addr string
-}
+// VestingType type of vesting process
+type VestingType int
 
-// NewExporter creates new default configuration for export.
-func NewExporter() Exporter {
-	return Exporter{
-		Addr: ":5678",
-	}
-}
+//go:generate stringer -type=VestingType
+const (
+	DefaultVesting VestingType = iota
+	Vesting1
+	Vesting2
+	Vesting3
+	Vesting4
+)

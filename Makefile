@@ -50,7 +50,12 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
 
 .PHONY: all
-all: clean install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: clean submodule install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+
+.PHONY: submodule
+submodule: ## init git submodule
+	git submodule init
+	git submodule update
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
@@ -298,6 +303,11 @@ docker_base_build: ## build base image with source dependencies and compiled bin
 docker_clean: ## removes intermediate docker image layers w/o tags (beware: it clean up space, but resets caches)
 	docker image prune -f
 
+
+.PHONY: application-git-config
+application-git-config: ## change remote repo url from HTTPS to SSH in 'application' submodule
+	perl -i.bak -pe 's!url\s*=\s*https?://github.com/!url = git\@github.com:!' .git/modules/application/config
+
 .PHONY: help
-help: ## Display this help screen
+help: ## display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

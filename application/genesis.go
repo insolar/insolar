@@ -61,8 +61,8 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 2
 
-	GenesisAmountFundsMembers                 = 2
-	GenesisAmountEnterpriseMembers            = 3
+	GenesisAmountFundsMembers                 = 1
+	GenesisAmountEnterpriseMembers            = 4
 	GenesisAmountNetworkIncentivesMembers     = 30
 	GenesisAmountApplicationIncentivesMembers = 30
 	GenesisAmountFoundationMembers            = 30

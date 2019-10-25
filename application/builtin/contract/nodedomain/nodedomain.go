@@ -19,6 +19,7 @@ package nodedomain
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -45,7 +46,7 @@ func (nd NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecord
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
 
-	root := foundation.GetRootMember()
+	root := appfoundation.GetRootMember()
 	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
 	}

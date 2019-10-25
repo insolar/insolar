@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/insolar"
@@ -202,7 +203,7 @@ func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberR
 
 func (mA *MigrationAdmin) checkDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
 
-	if caller != mA.MigrationAdminMember && !foundation.IsMigrationDaemonMember(caller) {
+	if caller != mA.MigrationAdminMember && !appfoundation.IsMigrationDaemonMember(caller) {
 		return nil, fmt.Errorf("permission denied to information about migration daemons")
 	}
 	migrationDaemonContract, err := mA.getMigrationDamon(params, caller)
@@ -232,7 +233,7 @@ func (mA *MigrationAdmin) GetMigrationDaemonByMemberRef(memberRef string) (insol
 		return insolar.Reference{}, fmt.Errorf(" failed to parse params.Reference")
 	}
 
-	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(*migrationDaemonMemberRef)
+	migrationDaemonContractRef, err := appfoundation.GetMigrationDaemon(*migrationDaemonMemberRef)
 	if err != nil {
 		return insolar.Reference{}, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
 	}
@@ -268,7 +269,7 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) (int, error) {
 	newMA := make([][]string, len(mA.MigrationAddressShards))
 	for _, ma := range migrationAddresses {
-		if foundation.IsEthereumAddress(ma) {
+		if appfoundation.IsEthereumAddress(ma) {
 			trimmedMigrationAddress := foundation.TrimAddress(ma)
 			i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 			if i >= len(newMA) {
