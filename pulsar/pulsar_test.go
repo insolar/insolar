@@ -21,17 +21,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPulsar_Send(t *testing.T) {
 	distMock := testutils.NewPulseDistributorMock(t)
-	pn := insolar.PulseNumber(123)
+	var pn pulse.Number = pulse.MinTimePulse
 
 	distMock.DistributeMock.Set(func(ctx context.Context, p1 insolar.Pulse) {
 		require.Equal(t, pn, p1.PulseNumber)

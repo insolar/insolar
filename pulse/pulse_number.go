@@ -23,21 +23,35 @@ import (
 	"time"
 )
 
+// Number is a type for pulse numbers.
+//
+// Special values:
+// 0 					Unknown
+// 1 .. 256				Reserved for package internal usage
+// 257 .. 65535			Reserved for platform wide usage
+// 65536				Local relative pulse number
+// 65537 .. 1<<30 - 1	Regular time based pulse numbers
+//
+// NB! Range 0..256 IS RESERVED for internal operations
+// There MUST BE NO references with PN < 256 ever visible to contracts / users.
 type Number uint32
 
+// =========================================================
+// NB! To ADD a special pulse - see special_pulse_numbers.go
+// =========================================================
 const (
 	Unknown       Number = 0
-	LocalRelative        = 65536
+	localRelative        = 65536
+	LocalRelative Number = localRelative
+
 	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-	MinTimePulse = LocalRelative + 1
+	MinTimePulse = localRelative + 1
 	MaxTimePulse = 1<<30 - 1
-	// Jet is a special pulse number value that signifies jet ID.
-	Jet Number = 1
-	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
-	BuiltinContract Number = 200
+
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )
+
 const UnixTimeOfMinTimePulse = 1546300800                                           // 2019-01-01 00:00:00 +0000 UTC
 const UnixTimeOfMaxTimePulse = UnixTimeOfMinTimePulse - MinTimePulse + MaxTimePulse // 2053-01-08 19:24:46 +0000 UTC
 
@@ -70,6 +84,22 @@ func (n Number) IsTimePulse() bool {
 	return IsValidAsPulseNumber(int(n))
 }
 
+func (n Number) IsBefore(pn Number) bool {
+	return n >= MinTimePulse && n < pn
+}
+
+func (n Number) IsAfter(pn Number) bool {
+	return n > pn && n <= MaxTimePulse
+}
+
+func (n Number) IsBeforeOrEq(pn Number) bool {
+	return n >= MinTimePulse && n <= pn
+}
+
+func (n Number) IsEqOrAfter(pn Number) bool {
+	return n >= pn && n <= MaxTimePulse
+}
+
 func (n Number) AsUint32() uint32 {
 	return uint32(n)
 }
@@ -95,25 +125,47 @@ func (n Number) IsUnknownOrEqualTo(o Number) bool {
 }
 
 func (n Number) Next(delta uint16) Number {
-	if !n.IsTimePulse() {
+	switch n, ok := n.TryNext(delta); {
+	case ok:
+		return n
+	case n.IsUnknown():
 		panic("not a time pulse")
+	default:
+		panic("overflow")
+	}
+}
+
+func (n Number) TryNext(delta uint16) (Number, bool) {
+	if !n.IsTimePulse() {
+		return Unknown, false
 	}
 	n += Number(delta)
 	if n > MaxTimePulse {
-		panic("overflow")
+		return MaxTimePulse, false
 	}
-	return n
+	return n, true
 }
 
 func (n Number) Prev(delta uint16) Number {
-	if !n.IsTimePulse() {
+	switch n, ok := n.TryPrev(delta); {
+	case ok:
+		return n
+	case n.IsUnknown():
 		panic("not a time pulse")
+	default:
+		panic("underflow")
+	}
+}
+
+func (n Number) TryPrev(delta uint16) (Number, bool) {
+	if !n.IsTimePulse() {
+		return Unknown, false
 	}
 	n -= Number(delta)
 	if n < MinTimePulse {
-		panic("underflow")
+		return MinTimePulse, false
 	}
-	return n
+	return n, true
 }
 
 func (n Number) WithFlags(flags uint8) uint32 {
@@ -161,8 +213,18 @@ func (n Number) Size() int {
 	return NumberSize
 }
 
-func (n Number) IsJet() bool {
-	return n == Jet
+func (n Number) EnsureTimePulse() Number {
+	if n.IsTimePulse() {
+		return n
+	}
+	panic("illegal value")
+}
+
+func (n Number) AsEpoch() Epoch {
+	if n.IsTimePulse() {
+		return Epoch(n)
+	}
+	panic("illegal value")
 }
 
 func IsValidAsPulseNumber(n int) bool {

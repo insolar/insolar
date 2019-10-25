@@ -108,7 +108,7 @@ type Pulse struct {
 	NextPulseNumber PulseNumber
 
 	PulseTimestamp   int64
-	EpochPulseNumber int
+	EpochPulseNumber pulse.Epoch
 	OriginID         [OriginIDSize]byte
 
 	Entropy Entropy
@@ -126,11 +126,6 @@ type PulseSenderConfirmation struct {
 	Signature       []byte
 }
 
-const (
-	InvalidPulseEpoch   int = 0
-	EphemeralPulseEpoch     = InvalidPulseEpoch + 1
-)
-
 // GenesisPulse is a first pulse for the system
 // because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
@@ -145,6 +140,6 @@ var GenesisPulse = &Pulse{
 var EphemeralPulse = &Pulse{
 	PulseNumber:      pulse.MinTimePulse,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: EphemeralPulseEpoch,
+	EpochPulseNumber: pulse.EphemeralPulseEpoch,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }
