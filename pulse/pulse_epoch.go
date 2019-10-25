@@ -16,6 +16,7 @@
 
 package pulse
 
+// NB! Non-time epoch is ONLY allowed to be [1..255], range of [256..65535] is FORBIDDEN
 type Epoch uint32
 
 const (
@@ -28,7 +29,6 @@ const (
 	ArticulationPulseEpoch
 
 	MaxSpecialEpoch = iota - 1
-	// NB! Special epoch is ONLY allowed to be [1..255], range of [256..65535] is FORBIDDEN
 )
 
 func (v Epoch) IsUnknown() bool {

@@ -100,7 +100,7 @@ func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) erro
 		Entropy:          entropy,
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(p.Config.NumberDelta),
 		PrevPulseNumber:  p.lastPN,
-		EpochPulseNumber: int(pulseNumber),
+		EpochPulseNumber: pulseNumber.AsEpoch(),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 		PulseTimestamp:   time.Now().UnixNano(),
 		Signs:            map[string]insolar.PulseSenderConfirmation{},

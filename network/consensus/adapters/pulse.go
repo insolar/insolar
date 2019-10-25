@@ -84,7 +84,7 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 		NextPulseNumber:  pulseData.NextPulseNumber(),
 		PrevPulseNumber:  prev,
 		PulseTimestamp:   int64(pulseData.Timestamp) * nanosecondsInSecond,
-		EpochPulseNumber: int(pulseData.PulseEpoch),
+		EpochPulseNumber: pulseData.PulseEpoch,
 		Entropy:          entropy,
 	}
 }
@@ -97,7 +97,7 @@ func NewPulseData(p insolar.Pulse) pulse.Data {
 		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
 	)
 	data.Timestamp = uint32(p.PulseTimestamp / nanosecondsInSecond)
-	data.PulseEpoch = uint32(p.EpochPulseNumber)
+	data.PulseEpoch = p.EpochPulseNumber
 	return data
 }
 
