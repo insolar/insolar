@@ -1,0 +1,22 @@
+[
+  {
+    "role": "heavy_material",
+    "file": "node_01.json"
+  },
+  {
+    "role": "virtual",
+    "file": "node_02.json"
+  },
+  {
+    "role": "light_material",
+    "file": "node_03.json"
+  },
+  {
+    "role": "virtual",
+    "file": "node_04.json"
+  },
+  {
+    "role": "light_material",
+    "file": "node_05.json"
+  }
+]
