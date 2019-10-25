@@ -21,21 +21,34 @@ import "math"
 type FindNumberFunc func(n Number, prevDelta, nextDelta uint16) bool
 
 type Range interface {
+	// Left bound of the range. It may be an expected pulse.
 	LeftPrevDelta() uint16
 	LeftBoundNumber() Number
+
+	// Right bound of the range. MUST be a valid pulse data.
 	RightBoundData() Data
 
+	// Indicates that this range requires articulated pulses to be properly chained.
 	IsArticulated() bool
-	IsSingleton() bool
+	// Indicates that this range is a singular and contains only one pulse.
+	IsSingular() bool
 
+	// Iterates over both provided and articulated pulses within the range.
 	EnumNumbers(fn FindNumberFunc) bool
+	// Iterates over both provided and articulated pulse data within the range.
 	EnumData(func(Data) bool) bool
+	// Iterates only over the provided pulse data within the range.
 	EnumNonArticulatedData(func(Data) bool) bool
 
+	// Return true then the given range is next immediate range
 	IsValidNext(Range) bool
+	// Return true then the given range is prev immediate range
 	IsValidPrev(Range) bool
 }
 
+// Creates a range that covers a gap between the last expected pulse and the last available one.
+// Will panic when pulse are overlapping and can't be properly connected.
+// Supports gaps with delta > 65535
 func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
 	right.EnsurePulseData()
 	switch {
@@ -50,7 +63,10 @@ func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
 	panic("illegal value")
 }
 
-// sequence MUST be sorted, all pulses must be connected, otherwise use NewPulseRange()
+// Creates a range that consists of >0 properly connected pulses.
+// Sequence MUST be sorted, all pulses must be connected, otherwise use NewPulseRange()
+// Will panic when pulse are overlapping and can't be properly connected.
+// Supports gaps with delta > 65535
 func NewSequenceRange(data []Data) Range {
 	switch {
 	case len(data) == 0:
@@ -63,7 +79,10 @@ func NewSequenceRange(data []Data) Range {
 	panic("illegal value")
 }
 
-// sequence MUST be sorted, an expected pulse is allowed at [0]
+// Creates a range that consists of both connected and disconnected pulses.
+// Sequence MUST be sorted, an expected pulse is allowed at [0]
+// Will panic when pulse are overlapping and can't be properly connected.
+// Supports gaps with delta > 65535
 func NewPulseRange(data []Data) Range {
 	switch {
 	case len(data) == 0:
@@ -142,7 +161,7 @@ func (p onePulseRange) RightBoundData() Data {
 	return p.data
 }
 
-func (p onePulseRange) IsSingleton() bool {
+func (p onePulseRange) IsSingular() bool {
 	return true
 }
 
@@ -163,7 +182,7 @@ func (p onePulseRange) LeftPrevDelta() uint16 {
 type templatePulseRange struct {
 }
 
-func (p templatePulseRange) IsSingleton() bool {
+func (p templatePulseRange) IsSingular() bool {
 	return false
 }
 
