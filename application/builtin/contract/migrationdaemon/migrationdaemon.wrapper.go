@@ -98,11 +98,13 @@ func INSMETHOD_DepositMigrationCall(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 2)
+	args := make([]interface{}, 3)
 	var args0 map[string]interface{}
 	args[0] = &args0
 	var args1 insolar.Reference
 	args[1] = &args1
+	var args2 insolar.Reference
+	args[2] = &args2
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -110,7 +112,7 @@ func INSMETHOD_DepositMigrationCall(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.DepositMigrationCall(args0, args1)
+	ret0, ret1 := self.DepositMigrationCall(args0, args1, args2)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()

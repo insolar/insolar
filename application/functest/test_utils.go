@@ -687,3 +687,21 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
 	}
 	return nil
 }
+
+func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
+	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+	if err != nil {
+		return err
+	}
+	decodedRes2, ok := res2.(map[string]interface{})
+	m.Ref = decodedRes2["reference"].(string)
+	if !ok {
+		return errors.New(fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
+	}
+	_, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
+	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
+	if deposit["amount"] != "10000000000000000000" {
+		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	}
+	return nil
+}

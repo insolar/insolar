@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/bootstrap/contracts"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
@@ -60,8 +61,8 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	MigrationDaemonLockup      = 1578700800 // 11.01.2020
-	MigrationDaemonVesting     = 31622400   // 1 year
+	MigrationDaemonLockup      = 1606435200 // 27.11.2020
+	MigrationDaemonVesting     = 31536000   // 365 days
 	MigrationDaemonVestingStep = 2629746    // 1 month
 
 	EnterpriseLockup      = 0
@@ -72,15 +73,15 @@ const (
 	FundsVesting     = 10
 	FundsVestingStep = 10
 
-	NetworkIncentivesLockup      = 1593561600 // 01.07.2020
+	NetworkIncentivesLockup      = 1595808000 // 27.07.2020
 	NetworkIncentivesVesting     = 315569520  // 10 years
 	NetworkIncentivesVestingStep = 2629746    // 1 month
 
-	ApplicationIncentivesLockup      = 1593561600 // 01.07.2020
+	ApplicationIncentivesLockup      = 1595808000 // 27.07.2020
 	ApplicationIncentivesVesting     = 315569520  // 10 years
 	ApplicationIncentivesVestingStep = 2629746    // 1 month
 
-	FoundationLockup      = 1672444800 // 31.12.2022
+	FoundationLockup      = 1669507200 // 27.11.2022
 	FoundationVesting     = 10
 	FoundationVestingStep = 10
 )
@@ -264,8 +265,8 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
 			MigrationDaemonVesting,
 			MigrationDaemonVestingStep,
-			foundation.Vesting2,
-			0,
+			appfoundation.Vesting2,
+			pulse.MinTimePulse+pulse.OfUnixTime(MigrationDaemonLockup),
 			application.GenesisNameMigrationAdminDeposit,
 			application.GenesisNameRootDomain,
 		),
@@ -288,8 +289,8 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			int64(pulse.OfUnixTime(ApplicationIncentivesLockup)),
 			ApplicationIncentivesVesting,
 			ApplicationIncentivesVestingStep,
-			foundation.Vesting2,
-			0,
+			appfoundation.Vesting2,
+			pulse.MinTimePulse+pulse.OfUnixTime(ApplicationIncentivesLockup),
 			application.GenesisNameApplicationIncentivesDeposits[i],
 			application.GenesisNameRootDomain,
 		))
@@ -316,8 +317,8 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			int64(pulse.OfUnixTime(NetworkIncentivesLockup)),
 			NetworkIncentivesVesting,
 			NetworkIncentivesVestingStep,
-			foundation.Vesting2,
-			0,
+			appfoundation.Vesting2,
+			pulse.MinTimePulse+pulse.OfUnixTime(NetworkIncentivesLockup),
 			application.GenesisNameNetworkIncentivesDeposits[i],
 			application.GenesisNameRootDomain,
 		))
@@ -344,8 +345,8 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			int64(pulse.OfUnixTime(FoundationLockup)),
 			FoundationVesting,
 			FoundationVestingStep,
-			foundation.Vesting2,
-			0,
+			appfoundation.Vesting2,
+			pulse.MinTimePulse+pulse.OfUnixTime(FoundationLockup),
 			application.GenesisNameFoundationDeposits[i],
 			application.GenesisNameRootDomain,
 		))
@@ -372,7 +373,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			FundsLockup,
 			FundsVesting,
 			FundsVestingStep,
-			foundation.Vesting2,
+			appfoundation.Vesting2,
 			0,
 			application.GenesisNameFundsDeposits[i],
 			application.GenesisNameRootDomain,
@@ -400,7 +401,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			EnterpriseLockup,
 			EnterpriseVesting,
 			EnterpriseVestingStep,
-			foundation.Vesting2,
+			appfoundation.Vesting2,
 			0,
 			application.GenesisNameEnterpriseDeposits[i],
 			application.GenesisNameRootDomain,

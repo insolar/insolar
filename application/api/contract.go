@@ -82,7 +82,7 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	return 0, errors.New("incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
+func (ar *Runner) makeCall(ctx context.Context, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
 	reference, err := insolar.NewReferenceFromString(params.Reference)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse params.Reference")

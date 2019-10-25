@@ -23,6 +23,17 @@ import (
 	"time"
 )
 
+// Number is a type for pulse numbers.
+//
+// Special values:
+// 0 					Unknown
+// 1 .. 256				Reserved for package internal usage
+// 257 .. 65535			Reserved for platform wide usage
+// 65536				Local relative pulse number
+// 65537 .. 1<<30 - 1	Regular time based pulse numbers
+//
+// NB! Range 0..256 IS RESERVED for internal operations
+// There MUST BE NO references with PN < 256 ever visible to contracts / users.
 type Number uint32
 
 const (
@@ -31,13 +42,13 @@ const (
 	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 	MinTimePulse = LocalRelative + 1
 	MaxTimePulse = 1<<30 - 1
-	// Jet is a special pulse number value that signifies jet ID.
-
-	Jet Number = 1 // TODO @Cyrax revisit
-	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
-	BuiltinContract Number = 200 // TODO @Cyrax revisit
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
+
+	// Jet is a special pulse number value that signifies jet ID.
+	Jet Number = 257
+	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
+	BuiltinContract Number = 258
 )
 const UnixTimeOfMinTimePulse = 1546300800                                           // 2019-01-01 00:00:00 +0000 UTC
 const UnixTimeOfMaxTimePulse = UnixTimeOfMinTimePulse - MinTimePulse + MaxTimePulse // 2053-01-08 19:24:46 +0000 UTC

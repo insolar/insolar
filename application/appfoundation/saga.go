@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +12,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package configuration
+package appfoundation
 
-// Exporter holds exporter configuration.
-// Is was assumed, that exporter will be used for exporting data for observer
-// Exporter is grpc-base service
-type Exporter struct {
-	// Addr specifies address where exporter server starts
-	Addr string
-}
+import "github.com/insolar/insolar/insolar"
 
-// NewExporter creates new default configuration for export.
-func NewExporter() Exporter {
-	return Exporter{
-		Addr: ":5678",
-	}
+type SagaAcceptInfo struct {
+	Amount     string
+	FromMember insolar.Reference
+	Request    insolar.Reference
 }

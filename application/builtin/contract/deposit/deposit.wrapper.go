@@ -20,6 +20,7 @@
 package deposit
 
 import (
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -302,13 +303,15 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 3)
+	args := make([]interface{}, 4)
 	var args0 string
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
-	var args2 string
+	var args2 insolar.Reference
 	args[2] = &args2
+	var args3 insolar.Reference
+	args[3] = &args3
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -316,7 +319,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0 := self.Confirm(args0, args1, args2)
+	ret0 := self.Confirm(args0, args1, args2, args3)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -357,11 +360,15 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 2)
+	args := make([]interface{}, 4)
 	var args0 string
 	args[0] = &args0
 	var args1 insolar.Reference
 	args[1] = &args1
+	var args2 insolar.Reference
+	args[2] = &args2
+	var args3 insolar.Reference
+	args[3] = &args3
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -369,7 +376,7 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, e
 	}
 
-	ret0 := self.TransferToDeposit(args0, args1)
+	ret0 := self.TransferToDeposit(args0, args1, args2, args3)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -410,11 +417,13 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 2)
+	args := make([]interface{}, 3)
 	var args0 string
 	args[0] = &args0
 	var args1 insolar.Reference
 	args[1] = &args1
+	var args2 insolar.Reference
+	args[2] = &args2
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -422,7 +431,7 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Transfer(args0, args1)
+	ret0, ret1 := self.Transfer(args0, args1, args2)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -464,7 +473,7 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	args := make([]interface{}, 1)
-	var args0 string
+	var args0 appfoundation.SagaAcceptInfo
 	args[0] = &args0
 
 	err = ph.Deserialize(data, &args)

@@ -31,7 +31,7 @@ type DepositMigrationResult struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAAAyM7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAABAs7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")
 
 // MigrationDaemon holds proxy type
 type MigrationDaemon struct {
@@ -152,10 +152,11 @@ func (r *MigrationDaemon) GetCode() (insolar.Reference, error) {
 }
 
 // DepositMigrationCall is proxy generated method
-func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
-	var args [2]interface{}
+func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, caller insolar.Reference, request insolar.Reference) (*DepositMigrationResult, error) {
+	var args [3]interface{}
 	args[0] = params
 	args[1] = caller
+	args[2] = request
 
 	var argsSerialized []byte
 
@@ -193,10 +194,11 @@ func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, ca
 }
 
 // DepositMigrationCallAsImmutable is proxy generated method
-func (r *MigrationDaemon) DepositMigrationCallAsImmutable(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
-	var args [2]interface{}
+func (r *MigrationDaemon) DepositMigrationCallAsImmutable(params map[string]interface{}, caller insolar.Reference, request insolar.Reference) (*DepositMigrationResult, error) {
+	var args [3]interface{}
 	args[0] = params
 	args[1] = caller
+	args[2] = request
 
 	var argsSerialized []byte
 
