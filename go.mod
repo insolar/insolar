@@ -14,6 +14,7 @@ require (
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gogo/protobuf v1.2.1
+	github.com/gojuno/minimock v1.9.2
 	github.com/gojuno/minimock/v3 v3.0.5
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
