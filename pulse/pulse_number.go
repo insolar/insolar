@@ -36,6 +36,9 @@ import (
 // There MUST BE NO references with PN < 256 ever visible to contracts / users.
 type Number uint32
 
+// =========================================================
+// NB! To ADD a special pulse - see special_pulse_numbers.go
+// =========================================================
 const (
 	Unknown       Number = 0
 	localRelative        = 65536
