@@ -277,32 +277,6 @@ func (r Data) IsValidNext(n Data) bool {
 	return false
 }
 
-//func (r Data) IsBeforeOrPrev(n Data) (bool, bool) {
-//	rExpected := r.IsExpectedPulse()
-//	nExpected := n.IsExpectedPulse()
-//
-//	if rExpected == nExpected {
-//
-//	}
-//
-//	switch {
-//	case rExpected && nExpected :
-//		return false, false
-//	case r.Is
-//	case rExpected:
-//		switch {
-//		case n.IsFirstPulse():
-//		case r.PulseNumber <= n.PrevPulseNumber():
-//			return true
-//		case r.PulseNumber == n.PulseNumber && r.PrevPulseDelta == n.PrevPulseDelta:
-//		}
-//		return false
-//	case n.IsExpectedPulse():
-//		if !r.IsExpectedPulse() && r.NextPulseNumber() <= n.PulseNumber
-//	case r.NextPulseNumber() >= n.PrevPulseNumber()
-//	}
-//}
-
 func (r Data) IsValidPrev(p Data) bool {
 	switch {
 	case p.NextPulseDelta != r.PrevPulseDelta || r.isFirst():
