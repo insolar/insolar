@@ -2,6 +2,8 @@
 set -em
 # requires: lsof, awk, sed, grep, pgrep
 
+export GO111MODULE=on
+
 # Changeable environment variables (parameters)
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/

@@ -1,3 +1,7 @@
+export GO111MODULE ?= on
+export GOPROXY ?= https://proxy.golang.org
+export GOSUMDB ?= sum.golang.org
+
 BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artifacts
 INSOLAR = insolar
@@ -15,12 +19,10 @@ KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
 
-GO111MODULE=on
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
-GOBUILD ?= GO111MODULE=on go build -mod=vendor
-GOTEST ?= GO111MODULE=on go test -mod=vendor
-GOPROXY ?= https://proxy.golang.org
+GOBUILD ?= go build -mod=vendor
+GOTEST ?= go test -mod=vendor
 
 FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
@@ -97,8 +99,7 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	export GO111MODULE=on
-	GO111MODULE=on GOPROXY=$(GOPROXY) go mod vendor
+	GOPROXY=$(GOPROXY) go mod vendor
 
 
 .PHONY: build
@@ -160,7 +161,6 @@ $(KEEPERD):
 
 .PHONY: $(BADGER)
 $(BADGER):
-	export GO111MODULE=on
 	# GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
