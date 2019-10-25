@@ -121,12 +121,13 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(2 * time.Minute)
 	suite.mc.Finish()
-	suite.lt()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
 	// Do what we must, stop server
 	_ = suite.lr.Stop(suite.ctx)
+
+	suite.lt() // leaktest.Check()
 }
 
 type LogicRunnerTestSuite struct {
