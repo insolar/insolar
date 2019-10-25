@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,7 +103,8 @@ func TestGetPendings_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("FetchJet procedure returns unknown err", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -119,7 +121,8 @@ func TestGetPendings_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("passed flag is false and FetchJet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -136,7 +139,8 @@ func TestGetPendings_FlowWithPassedFlag(t *testing.T) {
 
 	t.Run("passed flag is true and FetchJet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -170,7 +174,8 @@ func TestGetPendings_ErrorFromWaitHot(t *testing.T) {
 
 	t.Run("WaitHot procedure returns err", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -190,7 +195,8 @@ func TestGetPendings_ErrorFromWaitHot(t *testing.T) {
 	// Happy path, everything is fine.
 	t.Run("WaitHot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -227,7 +233,8 @@ func TestGetPendings_ErrorFromGetPendings(t *testing.T) {
 
 	t.Run("GetPendings procedure returns err", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
@@ -249,7 +256,8 @@ func TestGetPendings_ErrorFromGetPendings(t *testing.T) {
 	// Happy path, everything is fine.
 	t.Run("GetPendings procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
-		f := flow.NewFlowMock(t)
+		mc := minimock.NewController(t)
+		f := flow.NewFlowMock(mc)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
