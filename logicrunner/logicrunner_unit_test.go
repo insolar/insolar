@@ -585,4 +585,13 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	wg.Wait()
 
 	broker.close()
+
+	// current leaktest gone dumb on this count of goroutines
+	// TODO: remove after implementing proper leaktest
+	for i := 0; i < 4000000; i++ {
+		go func() {
+			time.Sleep(20 * time.Second)
+		}()
+	}
+
 }
