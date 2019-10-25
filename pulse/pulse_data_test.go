@@ -17,6 +17,7 @@
 package pulse
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -654,4 +655,25 @@ func TestIsFirstPulse(t *testing.T) {
 
 	pd.PulseNumber = Number(MinTimePulse)
 	require.True(t, pd.IsFirstPulse())
+}
+
+func TestSort(t *testing.T) {
+	pdBefore := NewPulsarData(MinTimePulse<<1, 10, 1, longbits.Bits256{})
+	pdLeft := pdBefore.CreateNextPulse(emptyEntropyFn)
+	pd := pdLeft.CreateNextPulse(emptyEntropyFn)
+	pdAfter := pd.CreateNextPulse(emptyEntropyFn)
+
+	sorted := []Data{pdBefore, pdLeft, pd, pdAfter}
+	shuffled := append([]Data(nil), sorted...)
+
+	require.Equal(t, sorted, shuffled)
+	for {
+		rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+		if sorted[0] != shuffled[0] {
+			break
+		}
+	}
+	require.NotEqual(t, sorted, shuffled)
+	SortData(shuffled)
+	require.Equal(t, sorted, shuffled)
 }
