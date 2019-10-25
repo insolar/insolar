@@ -30,6 +30,7 @@ type Range interface {
 
 	EnumNumbers(fn FindNumberFunc) bool
 	EnumData(func(Data) bool) bool
+	EnumNonArticulatedData(func(Data) bool) bool
 
 	IsValidNext(Range) bool
 	IsValidPrev(Range) bool
@@ -49,7 +50,21 @@ func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
 	panic("illegal value")
 }
 
-func NewMultiPulseRange(data []Data) Range {
+// sequence MUST be sorted, all pulses must be connected, otherwise use NewPulseRange()
+func NewSequenceRange(data []Data) Range {
+	switch {
+	case len(data) == 0:
+		panic("illegal value")
+	case len(data) == 1:
+		return data[0].AsRange()
+	case checkSequence(data):
+		return seqPulseRange{data: append([]Data(nil), data...)}
+	}
+	panic("illegal value")
+}
+
+// sequence MUST be sorted, an expected pulse is allowed at [0]
+func NewPulseRange(data []Data) Range {
 	switch {
 	case len(data) == 0:
 		panic("illegal value")
@@ -119,6 +134,10 @@ func (p onePulseRange) EnumData(fn func(Data) bool) bool {
 	return fn(p.data)
 }
 
+func (p onePulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+	return fn(p.data)
+}
+
 func (p onePulseRange) RightBoundData() Data {
 	return p.data
 }
@@ -182,6 +201,10 @@ func (p gapPulseRange) EnumData(fn func(Data) bool) bool {
 	return _enumSegmentData(p.start, p.prevDelta, p.end, fn)
 }
 
+func (p gapPulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+	return fn(p.end)
+}
+
 func (p gapPulseRange) LeftPrevDelta() uint16 {
 	return p.prevDelta
 }
@@ -231,6 +254,15 @@ func (p seqPulseRange) EnumNumbers(fn FindNumberFunc) bool {
 }
 
 func (p seqPulseRange) EnumData(fn func(Data) bool) bool {
+	for _, d := range p.data {
+		if fn(d) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p seqPulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
 	for _, d := range p.data {
 		if fn(d) {
 			return true
@@ -327,6 +359,20 @@ func (p sparsePulseRange) EnumData(fn func(Data) bool) bool {
 			return true
 		}
 		next, prevDelta = d.NextPulseNumber(), d.NextPulseDelta
+	}
+	return false
+}
+
+func (p sparsePulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+	startIdx := 0
+	if p.data[0].NextPulseDelta == 0 {
+		startIdx++
+	}
+
+	for _, d := range p.data[startIdx:] {
+		if fn(d) {
+			return true
+		}
 	}
 	return false
 }
