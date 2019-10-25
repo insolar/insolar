@@ -418,7 +418,7 @@ func (r *FullRealm) GetPulseNumber() pulse.Number {
 }
 
 func (r *FullRealm) GetNextPulseNumber() pulse.Number {
-	return r.pulseData.GetNextPulseNumber()
+	return r.pulseData.NextPulseNumber()
 }
 
 func (r *FullRealm) GetOriginalPulse() proofs.OriginalPulsarPacket {
