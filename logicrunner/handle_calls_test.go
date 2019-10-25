@@ -22,6 +22,7 @@ import (
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,7 @@ import (
 )
 
 func TestHandleCall_Present(t *testing.T) {
+	defer leaktest.Check(t)()
 
 	t.Run("happy path", func(t *testing.T) {
 		t.Parallel()

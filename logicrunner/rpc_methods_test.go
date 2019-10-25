@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/insolar"
@@ -40,6 +41,8 @@ import (
 )
 
 func TestRPCMethods_New(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	m := NewRPCMethods(
 		artifacts.NewClientMock(t),
 		artifacts.NewDescriptorsCacheMock(t),
@@ -51,6 +54,8 @@ func TestRPCMethods_New(t *testing.T) {
 }
 
 func TestRPCMethods_DeactivateObject(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -147,6 +152,8 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 }
 
 func TestProxyImplementation_GetCode(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -225,6 +232,8 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -260,6 +269,8 @@ func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_RouteCall(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()

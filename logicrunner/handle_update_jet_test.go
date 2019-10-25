@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/require"
 
@@ -18,6 +19,8 @@ import (
 )
 
 func TestHandleUpdateJet_Present(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (*HandleUpdateJet, flow.Flow)
@@ -85,7 +88,7 @@ func TestHandleUpdateJet_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleUpdateJet, flow.Flow) {
 				h := &HandleUpdateJet{
 					meta: payload.Meta{
-						Payload: []byte{3,2,1},
+						Payload: []byte{3, 2, 1},
 					},
 				}
 
