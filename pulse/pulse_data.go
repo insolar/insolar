@@ -73,6 +73,17 @@ func NewPulsarData(pn Number, deltaNext uint16, deltaPrev uint16, entropy longbi
 	return r
 }
 
+func NewExpectedPulsarData(pn Number, deltaPrev uint16) Data {
+	return Data{
+		PulseNumber: pn,
+		DataExt: DataExt{
+			PulseEpoch:     pn.AsEpoch(),
+			Timestamp:      uint32(time.Now().Unix()),
+			PrevPulseDelta: deltaPrev,
+		},
+	}
+}
+
 func NewFirstEphemeralData() Data {
 	return newEphemeralData(MinTimePulse)
 }
