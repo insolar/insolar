@@ -553,7 +553,7 @@ func TestCreateNextEphemeralPulse(t *testing.T) {
 	require.Equal(t, pn+Number(delta), cne.PulseNumber)
 }
 
-func TestCcreateNextEphemeralPulse(t *testing.T) {
+func Test_createNextEphemeralPulse(t *testing.T) {
 	pn := Number(MinTimePulse)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
@@ -622,7 +622,7 @@ func TestGetTimestamp(t *testing.T) {
 	entropy := longbits.Bits256{3}
 	pd := newPulsarData(pn, delta, entropy)
 	pd.Timestamp = 5
-	require.Equal(t, uint64(5), pd.GetTimestamp())
+	require.Equal(t, int64(5), pd.GetTimestamp())
 }
 
 func TestIsExpectedPulse(t *testing.T) {

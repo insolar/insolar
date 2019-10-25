@@ -50,26 +50,21 @@ func NewLeftGapRange(left Number, leftPrevDelta uint16, right Data) Range {
 }
 
 func NewMultiPulseRange(data []Data) Range {
-	switch len(data) {
-	case 0:
+	switch {
+	case len(data) == 0:
 		panic("illegal value")
-	case 1:
+	case len(data) == 1:
 		return data[0].AsRange()
-	}
-
-	if !data[0].isExpected() {
+	case !data[0].isExpected():
 		if checkSequence(data) {
 			return seqPulseRange{data: append([]Data(nil), data...)}
 		}
-	} else {
-		if data[1].PrevPulseNumber() != data[0].PulseNumber || !data[0].IsValidExpectedPulseData() {
-			panic("illegal value")
-		}
-		if len(data) == 2 {
-			data[1].EnsurePulseData()
-		} else {
-			checkSequence(data[1:])
-		}
+	case data[1].PrevPulseNumber() < data[0].PulseNumber || !data[0].IsValidExpectedPulseData():
+		panic("illegal value")
+	case len(data) == 2:
+		return NewLeftGapRange(data[0].PulseNumber, data[0].PrevPulseDelta, data[1])
+	default:
+		checkSequence(data[1:])
 	}
 	return sparsePulseRange{data: append([]Data(nil), data...)}
 }
@@ -85,7 +80,7 @@ func checkSequence(data []Data) bool {
 		prev := &data[i-1]
 		switch {
 		case prev.IsValidNext(d):
-		case prev.NextPulseNumber() >= d.PrevPulseNumber():
+		case prev.NextPulseNumber() > d.PrevPulseNumber():
 			panic("illegal value - unordered or intersecting pulses")
 		default:
 			sequence = false
@@ -177,14 +172,14 @@ func (p gapPulseRange) IsValidPrev(a Range) bool {
 }
 
 func (p gapPulseRange) EnumNumbers(fn FindNumberFunc) bool {
-	return _enumSegments(p.start, p.prevDelta, p.end.PulseNumber, p.end.NextPulseDelta, fn)
+	if _enumSegments(p.start, p.prevDelta, p.end.PrevPulseNumber(), p.end.PrevPulseDelta, fn) {
+		return true
+	}
+	return fn(p.end.PulseNumber, p.end.PrevPulseDelta, p.end.NextPulseDelta)
 }
 
 func (p gapPulseRange) EnumData(fn func(Data) bool) bool {
-	if _enumSegmentData(p.start, p.prevDelta, p.end, fn) {
-		return true
-	}
-	return fn(p.end)
+	return _enumSegmentData(p.start, p.prevDelta, p.end, fn)
 }
 
 func (p gapPulseRange) LeftPrevDelta() uint16 {
@@ -298,7 +293,14 @@ func (p sparsePulseRange) EnumNumbers(fn FindNumberFunc) bool {
 	}
 
 	for _, d := range p.data[1:] {
-		if _enumSegments(next, prevDelta, d.PulseNumber, d.NextPulseDelta, fn) {
+		switch {
+		case next == d.PulseNumber:
+			if _enumSegments(next, prevDelta, d.PulseNumber, d.NextPulseDelta, fn) {
+				return true
+			}
+		case _enumSegments(next, prevDelta, d.PrevPulseNumber(), d.PrevPulseDelta, fn):
+			return true
+		case fn(d.PulseNumber, d.PrevPulseDelta, d.NextPulseDelta):
 			return true
 		}
 		next, prevDelta = d.NextPulseNumber(), d.NextPulseDelta

@@ -56,7 +56,7 @@ type DataReader interface {
 	GetNextPulseNumber() (Number, bool)
 	GetPrevPulseNumber() (Number, bool)
 
-	GetTimestamp() uint64
+	GetTimestamp() int64
 	IsExpectedPulse() bool
 	IsFromEphemeral() bool
 
@@ -396,8 +396,8 @@ func (r Data) GetPrevPulseDelta() uint16 {
 	return r.PrevPulseDelta
 }
 
-func (r Data) GetTimestamp() uint64 {
-	return uint64(r.Timestamp)
+func (r Data) GetTimestamp() int64 {
+	return int64(r.Timestamp)
 }
 
 func (r Data) IsExpectedPulse() bool {
