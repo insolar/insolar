@@ -588,5 +588,4 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	wg.Wait()
 
 	broker.close()
-
 }
