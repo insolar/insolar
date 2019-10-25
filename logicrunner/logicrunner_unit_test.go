@@ -76,6 +76,7 @@ type LogicRunnerCommonTestSuite struct {
 	sender *bus.SenderMock
 	cr     *testutils.ContractRequesterMock
 	pub    message2.Publisher
+	lt     func()
 }
 
 func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) {
@@ -95,6 +96,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
+	suite.lt = leaktest.Check(&testutils.SyncT{T: suite.T()})
 	suite.SetupLogicRunner()
 }
 
@@ -119,6 +121,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(2 * time.Minute)
 	suite.mc.Finish()
+	suite.lt()
 
 	// LogicRunner created a number of goroutines (in watermill, for example)
 	// that weren't shut down in case no Stop was called
@@ -429,7 +432,6 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	syncT := &testutils.SyncT{T: suite.T()}
-	defer leaktest.Check(syncT)()
 
 	wg := &sync.WaitGroup{}
 
