@@ -21,7 +21,7 @@ INSGORUND_LOGS=${LAUNCHNET_LOGS_DIR}insgorund/
 
 BIN_DIR=bin
 INSOLAR_CLI=${BIN_DIR}/insolar
-INSOLARD=$BIN_DIR/insolard
+INSOLARD=$BIN_DIR/networkd
 INSGORUND=$BIN_DIR/insgorund
 KEEPERD=$BIN_DIR/keeperd
 PULSARD=$BIN_DIR/pulsard
@@ -106,7 +106,7 @@ kill_all()
   echo "kill all processes: insgorund, insolard, pulsard"
   set +e
   killall insgorund
-  killall insolard
+  killall ${INSOLARD}
   killall pulsard
   set -e
 }
