@@ -59,7 +59,7 @@ import (
 
 var _ insolar.LogicRunner = &LogicRunner{}
 
-const useLeakTest = true
+const useLeakTest = false
 
 func leakTestCheck(t *testing.T) func() {
 	if useLeakTest {
@@ -105,9 +105,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
-	if useLeakTest {
-		suite.lt = leaktest.Check(&testutils.SyncT{T: suite.T()})
-	}
+	suite.lt = leaktest.Check(&testutils.SyncT{T: suite.T()})
 	suite.SetupLogicRunner()
 }
 
@@ -138,9 +136,7 @@ func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	// Do what we must, stop server
 	_ = suite.lr.Stop(suite.ctx)
 
-	if useLeakTest {
-		suite.lt()
-	}
+	suite.lt()
 }
 
 type LogicRunnerTestSuite struct {
