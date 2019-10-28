@@ -305,7 +305,7 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 
 	if dep := slot.dependency; dep != nil && dep.IsReleaseOnWorking() {
 		slot.dependency = nil
-		m.activateDependants(dep.Release(), worker)
+		m.activateDependants(dep.Release(), slot.NewLink(), worker)
 	}
 	slot.slotFlags &^= slotWokenUp
 
@@ -667,7 +667,7 @@ func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, e
 		dep := slot.dependency
 		if dep != nil {
 			slot.dependency = nil
-			m.activateDependants(dep.Release(), worker)
+			m.activateDependants(dep.Release(), link.SlotLink, worker)
 		}
 	}
 
@@ -1406,7 +1406,7 @@ func (m *SlotMachine) stopSlotWorking(slot *Slot, prevStepNo uint32, worker Fixe
 	}
 
 	slot.dependency = nil
-	m.activateDependants(dep.Release(), worker)
+	m.activateDependants(dep.Release(), slot.NewLink(), worker)
 }
 
 func (m *SlotMachine) _activateDependantChain(chain *Slot, worker FixedSlotWorker) {
@@ -1427,9 +1427,11 @@ func (m *SlotMachine) _activateDependantChain(chain *Slot, worker FixedSlotWorke
 	}
 }
 
-func (m *SlotMachine) activateDependants(links []StepLink, worker FixedSlotWorker) {
+func (m *SlotMachine) activateDependants(links []StepLink, ignore SlotLink, worker FixedSlotWorker) {
 	for _, link := range links {
 		switch {
+		case link.SlotLink == ignore:
+			continue
 		case link.isMachine(m):
 			// slot will be activated if it is at the same step as it was when we've decided to activate it
 			link.activateSlotStep(worker)
@@ -1441,19 +1443,19 @@ func (m *SlotMachine) activateDependants(links []StepLink, worker FixedSlotWorke
 	}
 }
 
-func (m *SlotMachine) activateDependantByDetachable(links []StepLink, worker DetachableSlotWorker) bool {
+func (m *SlotMachine) activateDependantByDetachable(links []StepLink, ignore SlotLink, worker DetachableSlotWorker) bool {
 	if len(links) == 0 {
 		return false
 	}
 
 	if worker.NonDetachableCall(func(worker FixedSlotWorker) {
-		m.activateDependants(links, worker)
+		m.activateDependants(links, ignore, worker)
 	}) {
 		return true
 	}
 
 	m.syncQueue.AddAsyncUpdate(SlotLink{}, func(_ SlotLink, worker FixedSlotWorker) {
-		m.activateDependants(links, worker)
+		m.activateDependants(links, ignore, worker)
 	})
 	return true
 }

@@ -97,7 +97,7 @@ func (p *machineCallContext) ApplyAdjustment(adj SyncAdjustment) bool {
 
 	released, activate := adj.controller.AdjustLimit(adj.adjustment, adj.isAbsolute)
 	if activate {
-		p.m.activateDependants(released, p.w)
+		p.m.activateDependants(released, SlotLink{}, p.w)
 	}
 
 	// actually, we MUST NOT stop a slot from outside

@@ -310,10 +310,11 @@ func (p *slotContext) acquire(link SyncLink, flags SlotDependencyFlags) (d BoolD
 	}
 
 	p.s.dependency = nil
-	released := dep.Release()
-	defer p.s.machine.activateDependantByDetachable(released, p.w)
-
 	d, p.s.dependency = link.controller.CreateDependency(p.s, flags, nil)
+
+	released := dep.Release()
+	p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
+
 	return d
 }
 
@@ -343,7 +344,7 @@ func (p *slotContext) release(controller DependencyController) bool {
 
 	p.s.dependency = nil
 	released := dep.Release()
-	p.s.machine.activateDependantByDetachable(released, p.w)
+	p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
 	return true
 }
 
@@ -356,7 +357,7 @@ func (p *slotContext) ApplyAdjustment(adj SyncAdjustment) bool {
 
 	released, activate := adj.controller.AdjustLimit(adj.adjustment, adj.isAbsolute)
 	if activate {
-		return p.s.machine.activateDependantByDetachable(released, p.w)
+		return p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
 	}
 
 	// actually, we MUST NOT stop a slot from outside
