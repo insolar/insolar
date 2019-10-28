@@ -632,18 +632,28 @@ func (m *SlotMachine) stopPage(slotPage []Slot, w FixedSlotWorker) (isPageEmptyO
 }
 
 func (m *SlotMachine) recycleSlot(slot *Slot, worker FixedSlotWorker) {
+	m.recycleSlotWithError(slot, worker, nil)
+}
 
-	link := slot.NewLink()
+func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, err error) {
+
+	link := slot.NewStepLink()
 	slot.invalidateSlotId() // slotId is reset here and all links are invalid since this moment
 
-	th := slot.defResultHandler
+	th := slot.defTerminate
 	if th != nil {
-		slot.defResultHandler = nil // avoid self-loops
-		m.runTerminationHandler(link, th, slot.defResult)
+		slot.defTerminate = nil // avoid self-loops
+		m.runTerminationHandler(slot.ctx, th, TerminationData{
+			Slot:   link,
+			Parent: slot.parent,
+			Result: slot.defResult,
+			Error:  err,
+			worker: worker,
+		})
 	}
 
 	if slot.slotFlags&(slotHadAsync|slotHasBargeIn|slotHasAliases) != 0 {
-		defer m.syncQueue.FlushSlotDetachQueue(link)
+		defer m.syncQueue.FlushSlotDetachQueue(link.SlotLink)
 	}
 
 	if slot.slotFlags&slotHasAliases != 0 {
@@ -675,16 +685,21 @@ func (m *SlotMachine) recycleSlot(slot *Slot, worker FixedSlotWorker) {
 
 // SAFE for concurrent use
 // This method can be called concurrently but ONLY to release new (empty) slots - slot MUST NOT have any kind of dependencies
-func (m *SlotMachine) recycleEmptySlot(slot *Slot) {
+func (m *SlotMachine) recycleEmptySlot(slot *Slot, err error) {
 	if slot.slotFlags != 0 {
 		panic("illegal state")
 	}
 
-	th := slot.defResultHandler
+	th := slot.defTerminate
 	if th != nil { // it can be already set by construction - we must invoke it
-		slot.defResultHandler = nil // avoid self-loops
-		link := slot.NewLink()
-		m.runTerminationHandler(link, th, slot.defResult) // SAFE for concurrent use
+		slot.defTerminate = nil // avoid self-loops
+		m.runTerminationHandler(slot.ctx, th, TerminationData{
+			Slot:   slot.NewStepLink(),
+			Parent: slot.parent,
+			Result: slot.defResult,
+			Error:  err,
+			worker: nil,
+		})
 	}
 
 	// slot.invalidateSlotId() // empty slot doesn't need early invalidation
@@ -727,17 +742,21 @@ func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) {
 }
 
 // SAFE for concurrent use
-func (m *SlotMachine) runTerminationHandler(link SlotLink, th TerminationHandlerFunc, v interface{}) {
-	m.syncQueue.AddAsyncCallback(link, func(link SlotLink, _ DetachableSlotWorker) bool {
+func (m *SlotMachine) runTerminationHandler(ctx context.Context, th TerminationHandlerFunc, td TerminationData) {
+	if ctx == nil {
+		ctx = context.Background() // TODO provide a default context for SlotMachine?
+	}
+
+	m.syncQueue.AddAsyncCallback(td.Slot.SlotLink, func(_ SlotLink, _ DetachableSlotWorker) bool {
 		err := func() (err error) {
 			defer func() {
 				err = RecoverSlotPanicWithStack("termination handler", recover(), nil)
 			}()
-			th(v)
+			th(ctx, td)
 			return nil
 		}()
 		if err != nil {
-			m.defaultDeadSlotErrorHandler(link, err)
+			m.defaultDeadSlotErrorHandler(td.Slot.SlotLink, err)
 		}
 		return true
 	})
@@ -745,22 +764,30 @@ func (m *SlotMachine) runTerminationHandler(link SlotLink, th TerminationHandler
 
 /* -- Methods to create and start new machines ------------------------------ */
 
-func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
-	if ctx == nil {
+func (m *SlotMachine) AddNew(ctx context.Context, sm StateMachine, defValues CreateDefaultValues) SlotLink {
+	switch {
+	case ctx != nil:
+		defValues.Context = ctx
+	case defValues.Context == nil:
 		panic("illegal value")
 	}
-	link, ok := m._addNew(ctx, parent, sm)
+
+	link, ok := m.prepareNewSlotWithDefaults(nil, nil, sm, defValues)
 	if ok {
 		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
 	}
 	return link
 }
 
-func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
-	if ctx == nil {
+func (m *SlotMachine) AddNewByFunc(ctx context.Context, cf CreateFunc, defValues CreateDefaultValues) (SlotLink, bool) {
+	switch {
+	case ctx != nil:
+		defValues.Context = ctx
+	case defValues.Context == nil:
 		panic("illegal value")
 	}
-	link, ok := m._addNewWithFunc(ctx, parent, cf)
+
+	link, ok := m.prepareNewSlotWithDefaults(nil, cf, nil, defValues)
 	if ok {
 		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
 	}
@@ -768,102 +795,101 @@ func (m *SlotMachine) AddNewByFunc(ctx context.Context, parent SlotLink, cf Crea
 }
 
 func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
-	// TODO pass adapterId into injections
-	link, ok := m._addNewWithFunc(nil, parent, cf)
+	if parent.IsEmpty() {
+		panic("illegal value")
+	}
+	// TODO pass adapterId into injections?
+
+	link, ok := m.prepareNewSlot(nil, cf, nil,
+		prepareSlotValue{slotReplaceData: slotReplaceData{parent: parent}})
+
 	if ok {
 		m.syncQueue.AddAsyncUpdate(link, m._startAddedSlot)
 	}
 	return link, ok
 }
 
-func (m *SlotMachine) _addNew(ctx context.Context, parent SlotLink, sm StateMachine) (SlotLink, bool) {
-	if sm == nil {
-		panic("illegal value")
-	}
-	link, ok := m._addNewAllocate(ctx, parent)
-	if ok {
-		ok = m.prepareNewSlot(link.s, nil, nil, sm, false)
-	}
-	return link, ok
+type prepareSlotValue struct {
+	slotReplaceData
+	stepLogger    StateMachineStepLoggerFunc
+	overrides     map[string]interface{}
+	terminate     TerminationHandlerFunc
+	isReplacement bool
 }
 
-func (m *SlotMachine) _addNewWithFunc(ctx context.Context, parent SlotLink, fn CreateFunc) (SlotLink, bool) {
-	if fn == nil {
-		panic("illegal value")
-	}
-	link, ok := m._addNewAllocate(ctx, parent)
-	if ok {
-		ok = m.prepareNewSlot(link.s, nil, fn, nil, false)
-	}
-	return link, ok
+func (m *SlotMachine) prepareNewSlotWithDefaults(creator *Slot, fn CreateFunc, sm StateMachine, defValues CreateDefaultValues) (SlotLink, bool) {
+	return m.prepareNewSlot(creator, fn, sm, prepareSlotValue{
+		slotReplaceData: slotReplaceData{
+			parent: defValues.Parent,
+			ctx:    defValues.Context,
+		},
+		stepLogger: defValues.StepLogger,
+		overrides:  defValues.OverriddenDependencies,
+		terminate:  defValues.TerminationHandler,
+	})
 }
 
-func (m *SlotMachine) _addNewAllocate(ctx context.Context, parent SlotLink) (SlotLink, bool) {
-	if !m.IsActive() {
+// caller MUST be busy-holder of both creator and slot, then this method is SAFE for concurrent use
+func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachine, defValues prepareSlotValue) (SlotLink, bool) {
+	switch {
+	case (fn == nil) == (sm == nil):
+		panic("illegal value")
+	case !m.IsActive():
 		return SlotLink{}, false
 	}
 
-	newSlot := m.allocateSlot()
-	newSlot.parent = parent
-	switch {
-	case ctx != nil:
-		newSlot.ctx = ctx
-	case parent.IsValid():
-		// can be racy?
-		newSlot.ctx = parent.s.ctx
-	default:
-		newSlot.ctx = context.Background()
-	}
-	return newSlot.NewLink(), true
-}
-
-// TODO allocate a new slot inside?
-// caller MUST be busy-holder of both creator and slot, then this method is SAFE for concurrent use
-func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm StateMachine, inherit bool) bool {
+	slot := m.allocateSlot()
 	defer func() {
-		recovered := recover()
-		if recovered != nil {
-			m.recycleEmptySlot(slot) // SAFE for concurrent use
-			panic(recovered)
+		if slot != nil {
+			m.recycleEmptySlot(slot, nil) // all construction errors are reported to caller
 		}
 	}()
 
-	var dInjector injector.DependencyInjector
+	slot.slotReplaceData = defValues.slotReplaceData
+	slot.defTerminate = defValues.terminate // terminate handler must be executed even if construction has failed
+
+	switch {
+	case slot.ctx != nil:
+	case creator != nil:
+		slot.ctx = creator.ctx
+	case slot.parent.IsValid():
+		// TODO this can be racy when the parent is from another SlotMachine running under a different worker ...
+		slot.ctx = slot.parent.s.ctx
+	}
+	if slot.ctx == nil {
+		slot.ctx = context.Background() // TODO provide SlotMachine context?
+	}
+
+	cc := constructionContext{s: slot}
+	if defValues.isReplacement {
+		cc.inherit = InheritResolvedDependencies
+	}
+
 	if fn != nil {
-		if sm != nil {
-			panic("illegal value")
-		}
-		cc := constructionContext{s: slot, inherit: inherit}
 		sm = cc.executeCreate(fn)
 		if sm == nil {
-			m.recycleEmptySlot(slot) // SAFE for concurrent use
-			return false
+			return slot.NewLink(), false // slot will be released by defer
 		}
-
-		if cc.inherit && creator.injected != nil { // TODO copy all custom injects from creator
-			// use of FindLocalDependency for parentCopy of DependencyInjector
-			// allows to get a copy of creator's injects without keeping a reference
-			dInjector = injector.NewDependencyInjector(sm, m, creator.injected.FindLocalDependency)
-		} else {
-			dInjector = injector.NewDependencyInjector(sm, m, nil)
-		}
-		dInjector.ResolveAndPut(cc.injects)
-	} else {
-		dInjector = injector.NewDependencyInjector(sm, m, nil)
 	}
 
 	decl := sm.GetStateMachineDeclaration()
 	if decl == nil {
-		panic("illegal state")
+		panic(fmt.Errorf("illegal state - declaration is missing: %v", sm))
 	}
 	slot.declaration = decl
 
 	link := slot.NewLink()
-	decl.InjectDependencies(sm, link, &dInjector)
+
+	var localInjects []interface{}
+	slot.injected, localInjects = m.prepareInjects(creator, link, sm, cc.inherit, defValues.isReplacement,
+		cc.injects, defValues.injected)
+
+	// TODO redo stepLogger initialization
+	//slot.stepLogger = decl.GetStepLogger(slot.ctx, sm, defValues.stepLogger)
 
 	initFn := slot.declaration.GetInitStateFor(sm)
 	if initFn == nil {
-		panic("illegal value")
+		panic(fmt.Errorf("illegal state - initialization is missing: %v", sm))
 	}
 
 	if creator != nil {
@@ -875,13 +901,7 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 		slot.lastWorkScan = uint8(scanCount)
 	}
 
-	shadowMigrateFn := slot.declaration.GetShadowMigrateFor(sm)
-	if !dInjector.IsEmpty() {
-		localInjects := dInjector.CopyAsRegistryNoParent()
-		shadowMigrateFn = buildShadowMigrator(localInjects, shadowMigrateFn)
-		slot.injected = localInjects
-	}
-	slot.shadowMigrate = shadowMigrateFn
+	slot.shadowMigrate = buildShadowMigrator(localInjects, slot.declaration.GetShadowMigrateFor(sm))
 
 	slot.step = SlotStep{Transition: func(ctx ExecutionContext) StateUpdate {
 		ec := ctx.(*executionContext)
@@ -894,7 +914,72 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 		return su
 	}}
 
-	return true
+	slot = nil //protect from defer
+	return link, true
+}
+
+func (m *SlotMachine) prepareInjects(creator *Slot, link SlotLink, sm StateMachine, mode DependencyInheritanceMode, isReplacement bool,
+	constructorOverrides, defValuesInjects map[string]interface{},
+) (map[string]interface{}, []interface{}) {
+
+	var overrides []map[string]interface{}
+	if len(constructorOverrides) > 0 {
+		overrides = append(overrides, constructorOverrides)
+	}
+	if len(defValuesInjects) > 0 {
+		overrides = append(overrides, defValuesInjects)
+	}
+	if mode&InheritResolvedDependencies != 0 && creator != nil && len(creator.injected) > 0 {
+		overrides = append(overrides, creator.injected)
+	}
+
+	var localDeps injector.DependencyRegistryFunc
+	if len(overrides) > 0 {
+		localDeps = func(id string) (interface{}, bool) {
+			for _, om := range overrides {
+				if v, ok := om[id]; ok {
+					return v, true
+				}
+			}
+			return nil, false
+		}
+	}
+
+	var addedInjects []interface{}
+
+	dResolver := injector.NewDependencyResolver(sm, m, localDeps, func(_ string, v interface{}, from injector.DependencyOrigin) {
+		if from&(injector.DependencyFromLocal|injector.DependencyFromProvider) != 0 {
+			addedInjects = append(addedInjects, v)
+		}
+	})
+	dInjector := injector.NewDependencyInjectorFor(&dResolver)
+
+	link.s.declaration.InjectDependencies(sm, link, &dInjector)
+
+	switch {
+	case isReplacement:
+		// replacing SM should take all inherited dependencies, even if unused
+		if mode&copyAllDependencies != 0 {
+			for _, o := range overrides {
+				dResolver.ResolveAndMerge(o)
+			}
+		}
+		if mode&DiscardResolvedDependencies != 0 {
+			return nil, addedInjects
+		}
+
+	case mode&DiscardResolvedDependencies != 0:
+		return nil, addedInjects
+
+	case mode&copyAllDependencies != 0:
+		localInjects := addedInjects // keep only injects that were explicitly used
+		for _, o := range overrides {
+			dResolver.ResolveAndMerge(o)
+		}
+		return dResolver.Flush(), localInjects
+	}
+
+	return dResolver.Flush(), addedInjects
 }
 
 func (m *SlotMachine) startNewSlot(slot *Slot, worker FixedSlotWorker) {
@@ -1050,21 +1135,21 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 
 	canRecover := false
 	action := ErrorHandlerDefault
-	var slotResult interface{}
 
 	eh := slot.getErrorHandler()
-	if eh == nil {
-		slotResult = err
-	} else {
-		fc := failureContext{isPanic: isPanic, err: err}
+	if eh != nil {
+		fc := failureContext{isPanic: isPanic, err: err, result: slot.defResult}
 		if se, ok := err.(SlotPanicError); ok {
 			fc.isAsync = se.IsAsync
 		}
 		canRecover = fc.isAsync // || !fc.isPanic
 
 		fc.canRecover = canRecover
-		action, err = fc.executeFailure(eh)
-		slotResult = fc.result
+		ok := false
+		if ok, action, err = fc.executeFailure(eh); ok {
+			// do not change result on failure of the error handler
+			slot.defResult = fc.result
+		}
 	}
 
 	switch action {
@@ -1086,8 +1171,7 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 		m.defaultSlotErrorHandler(slot, false, err)
 	}
 
-	slot.defResult = slotResult // make the result available for termination handler
-	m.recycleSlot(slot, worker)
+	m.recycleSlotWithError(slot, worker, err)
 	return false
 }
 

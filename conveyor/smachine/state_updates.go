@@ -111,23 +111,8 @@ func init() {
 			},
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {
-				m := slot.machine
-
-				sm, ok := stateUpdate.param1.(StateMachine)
-				if !ok {
-					panic("illegal value")
-				}
-
-				newSlot := m.allocateSlot()
-				newSlot.slotReplaceData = slot.slotReplaceData.takeOutForReplace()
-				if m.prepareNewSlot(newSlot, slot, nil, sm, true) {
-					// prevent this slot from firing the termination handler
-					slot.defResultHandler = nil
-					slot.defResult = nil
-				}
-
+				stateUpdate.link = statePrepareDefaultReplace(slot, nil, stateUpdate.param1.(StateMachine))
 				stateUpdate.param1 = nil
-				stateUpdate.link = newSlot
 			},
 
 			apply: stateUpdateDefaultReplace,
@@ -139,22 +124,8 @@ func init() {
 			params: updParamVar,
 
 			prepare: func(slot *Slot, stateUpdate *StateUpdate) {
-				m := slot.machine
-
-				fn, ok := stateUpdate.param1.(CreateFunc)
-				if !ok {
-					panic("illegal value")
-				}
-				newSlot := m.allocateSlot()
-				newSlot.slotReplaceData = slot.slotReplaceData.takeOutForReplace()
-				if m.prepareNewSlot(newSlot, slot, fn, nil, true) {
-					// prevent this slot from firing the termination handler
-					slot.defResultHandler = nil
-					slot.defResult = nil
-				}
-
+				stateUpdate.link = statePrepareDefaultReplace(slot, stateUpdate.param1.(CreateFunc), nil)
 				stateUpdate.param1 = nil
-				stateUpdate.link = newSlot
 			},
 
 			apply: stateUpdateDefaultReplace,
@@ -418,6 +389,21 @@ func stateUpdateDefaultStop(slot *Slot, _ StateUpdate, worker FixedSlotWorker) (
 	m := slot.machine
 	m.recycleSlot(slot, worker)
 	return false, nil
+}
+
+func statePrepareDefaultReplace(creator *Slot, fn CreateFunc, sm StateMachine) *Slot {
+	m := creator.machine
+
+	def := prepareSlotValue{slotReplaceData: creator.slotReplaceData.takeOutForReplace(), isReplacement: true}
+	if link, ok := m.prepareNewSlot(creator, nil, sm, def); ok {
+		// handover the termination handler
+		link.s.defResult = creator.defResult
+		link.s.defTerminate = creator.defTerminate
+		creator.defTerminate = nil
+		creator.defResult = nil
+		return link.s
+	}
+	panic(errors.New("replacement SM was not created"))
 }
 
 func stateUpdateDefaultReplace(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {

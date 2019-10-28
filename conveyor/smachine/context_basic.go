@@ -226,32 +226,33 @@ func (p *slotContext) AffectedStep() SlotStep {
 	return p.s.step
 }
 
-func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
-	return p._newChild(ctx, fn, false)
+func (p *slotContext) NewChild(fn CreateFunc) SlotLink {
+	return p._newChild(fn, false, CreateDefaultValues{Context: p.s.ctx, Parent: p.s.NewLink()})
 }
 
-func (p *slotContext) InitChild(ctx context.Context, fn CreateFunc) SlotLink {
-	return p._newChild(ctx, fn, true)
+func (p *slotContext) NewChildExt(fn CreateFunc, defValues CreateDefaultValues) SlotLink {
+	return p._newChild(fn, false, defValues)
 }
 
-func (p *slotContext) _newChild(ctx context.Context, fn CreateFunc, runInit bool) SlotLink {
+func (p *slotContext) InitChild(fn CreateFunc) SlotLink {
+	return p._newChild(fn, true, CreateDefaultValues{Context: p.s.ctx, Parent: p.s.NewLink()})
+}
+
+func (p *slotContext) InitChildExt(fn CreateFunc, defValues CreateDefaultValues) SlotLink {
+	return p._newChild(fn, true, defValues)
+}
+
+func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDefaultValues) SlotLink {
 	p.ensureAny2(updCtxExec, updCtxFail)
 	if fn == nil {
 		panic("illegal value")
 	}
-	if ctx == nil {
-		panic("illegal value")
-	}
 
 	m := p.s.machine
-
-	newSlot := m.allocateSlot()
-	newSlot.ctx = ctx
-	newSlot.parent = p.s.NewLink()
-	link := newSlot.NewLink()
-
-	m.prepareNewSlot(newSlot, p.s, fn, nil, false)
-	m.startNewSlotByDetachable(newSlot, runInit, p.w)
+	link, ok := m.prepareNewSlotWithDefaults(p.s, fn, nil, defValues)
+	if ok {
+		m.startNewSlotByDetachable(link.s, runInit, p.w)
+	}
 	return link
 }
 

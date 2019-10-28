@@ -44,7 +44,7 @@ func main() {
 	//}
 
 	for i := 0; i < 1; i++ {
-		sm.AddNew(context.Background(), smachine.NoLink(), &example.StateMachine1{})
+		sm.AddNew(context.Background(), &example.StateMachine1{}, smachine.CreateDefaultValues{})
 	}
 
 	signal := tools.NewVersionedSignal()

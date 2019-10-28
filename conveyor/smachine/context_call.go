@@ -47,15 +47,18 @@ func (p adapterExecHelper) GetAdapterID() AdapterId {
 }
 
 func (p adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester {
-	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterSyncCallContext}
+	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, adapterId: p.adapterID,
+		executor: p.executor, mode: adapterSyncCallContext}
 }
 
 func (p adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester {
-	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
+	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, adapterId: p.adapterID,
+		executor: p.executor, mode: adapterAsyncCallContext, flags: AutoWakeUp}
 }
 
 func (p adapterExecHelper) PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester {
-	return &adapterNotifyRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
+	return &adapterNotifyRequest{ctx: ctx.(*executionContext), fn: fn,
+		executor: p.executor, mode: adapterAsyncCallContext}
 }
 
 const (
@@ -67,10 +70,11 @@ const (
 /* ============================================================== */
 
 type adapterCallRequest struct {
-	ctx      *executionContext
-	fn       AdapterCallFunc
-	executor AdapterExecutor
-	mode     uint8
+	ctx       *executionContext
+	fn        AdapterCallFunc
+	adapterId AdapterId
+	executor  AdapterExecutor
+	mode      uint8
 
 	flags    AsyncCallFlags
 	nestedFn CreateFactoryFunc
@@ -152,7 +156,7 @@ func (c *adapterCallRequest) _startAsync() {
 	}
 
 	stepLink := c.ctx.s.NewStepLink()
-	callback := NewAdapterCallback(stepLink, nil, c.flags, c.nestedFn)
+	callback := NewAdapterCallback(c.adapterId, stepLink, nil, c.flags, c.nestedFn)
 	cancelFn := c.executor.StartCall(c.fn, callback, c.cancel != nil)
 
 	if c.cancel != nil {
@@ -189,7 +193,7 @@ func (c *adapterCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
 	}
 	resultCh := make(chan resultType, 1)
 
-	callback := NewAdapterCallback(c.ctx.s.NewStepLink(), func(fn AsyncResultFunc, err error) {
+	callback := NewAdapterCallback(c.adapterId, c.ctx.s.NewStepLink(), func(fn AsyncResultFunc, err error) {
 		resultCh <- resultType{fn, err}
 		close(resultCh) // prevent repeated callbacks
 	}, 0, c.nestedFn)

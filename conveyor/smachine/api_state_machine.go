@@ -71,9 +71,13 @@ type StepLoggerData struct {
 	NextStep    SlotStep
 	UpdateType  string
 	Flags       StepLoggerFlags
+
+	// NB! This field can't be provided by SlotMachine and will be nil
+	// but it can be filled in by custom wrappers of StateMachineStepLoggerFunc
+	SM StateMachine
 }
 
-type StateMachineStepLoggerFunc func(StepLoggerData)
+type StateMachineStepLoggerFunc func(context.Context, StepLoggerData)
 
 // A template to include into SM to avoid hassle of creation of any methods but GetInitStateFor()
 type StateMachineDeclTemplate struct {
@@ -98,4 +102,24 @@ func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *i
 
 func (s *StateMachineDeclTemplate) GetStepLogger(context.Context, StateMachine) StateMachineStepLoggerFunc {
 	return nil
+}
+
+type TerminationHandlerFunc func(context.Context, TerminationData)
+
+type TerminationData struct {
+	Slot   StepLink
+	Parent SlotLink
+	Result interface{}
+	Error  error
+
+	// ===============
+	worker FixedSlotWorker
+}
+
+type CreateDefaultValues struct {
+	Context                context.Context
+	Parent                 SlotLink
+	OverriddenDependencies map[string]interface{}
+	TerminationHandler     TerminationHandlerFunc
+	StepLogger             StateMachineStepLoggerFunc
 }

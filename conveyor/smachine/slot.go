@@ -18,7 +18,6 @@ package smachine
 
 import (
 	"context"
-	"github.com/insolar/insolar/conveyor/injector"
 	"sync/atomic"
 )
 
@@ -51,6 +50,8 @@ type slotDeclarationData struct {
 	stepLogger      StateMachineStepLoggerFunc
 	defMigrate      MigrateFunc
 	defErrorHandler ErrorHandlerFunc
+	defTerminate    TerminationHandlerFunc
+	defResult       interface{}
 
 	slotReplaceData
 }
@@ -59,11 +60,8 @@ type slotDeclarationData struct {
 type slotReplaceData struct {
 	parent   SlotLink
 	ctx      context.Context
-	injected injector.LocalDependencyRegistry // TODO replace with struct ptr
-
-	defResultHandler TerminationHandlerFunc
-	defResult        interface{}
-	defFlags         StepFlags
+	injected map[string]interface{}
+	defFlags StepFlags
 }
 
 func (v slotReplaceData) takeOutForReplace() slotReplaceData {
@@ -445,10 +443,10 @@ func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags 
 
 	if prevStepNo <= 1 {
 		// nil all handlers as initialization transition can't be logged properly
-		stepData.CurrentStep = SlotStep{Flags: s.step.Flags}
+		stepData.CurrentStep = SlotStep{Flags: s.step.Flags | StepResetAllFlags}
 	}
 	stepData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
-	s.stepLogger(stepData)
+	s.stepLogger(s.ctx, stepData)
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {

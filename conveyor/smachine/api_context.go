@@ -28,7 +28,6 @@ type MigrateFunc func(ctx MigrationContext) StateUpdate
 type AsyncResultFunc func(ctx AsyncResultContext)
 type ErrorHandlerFunc func(ctx FailureContext)
 type ErrorHandlerAction uint8
-type TerminationHandlerFunc func(value interface{})
 
 const (
 	ErrorHandlerDefault ErrorHandlerAction = iota
@@ -47,15 +46,42 @@ type BasicContext interface {
 
 /*------------------  Contexts for in-order steps -----------------------*/
 
+type DependencyInheritanceMode uint8
+
+const (
+	// Only local overrides and dependencies provided by SlotMachine will be used for injections.
+	// And only factually injected dependencies will be inherited by children.
+	IgnoreInheritedDependencies DependencyInheritanceMode = 0
+
+	// for internal use
+	copyAllDependencies DependencyInheritanceMode = 1
+
+	// Injection will also use resolved dependencies from creator (NB! not from parent)
+	// And only factually injected dependencies will be inherited by children.
+	InheritResolvedDependencies DependencyInheritanceMode = 2
+
+	// Injection will also use resolved dependencies from creator (NB! not from parent)
+	// And all injected dependencies will be inherited by children.
+	InheritAllDependencies DependencyInheritanceMode = 3
+
+	// Can be combined with other modes to prevent inheritance by immediate children.
+	// This does NOT affect dependencies provided by SlotMachine.
+	DiscardResolvedDependencies DependencyInheritanceMode = 4
+)
+
 /* During construction SlotLink() will have correct SlotID, but MAY have INVALID status, as slot was not yet created */
 type ConstructionContext interface {
 	BasicContext
 
 	// Puts a dependency for injector. Value can be nil
 	OverrideDependency(id string, v interface{})
-	// When true - injector for the  constructed state machine will get access to dependencies of creator
-	// Precedence of dependencies (from the highest): 1) overrides in this context 2) inherited from creator 3) slot machine 4) other
-	InheritDependencies(bool)
+	// Precedence of dependencies (from the highest):
+	// 1) overrides in this context
+	// 2) provided via CreateDefaultValues
+	// 3) inherited from creator (when allowed by inheritance mode)
+	// 4) slot machine
+	// 5) provided to slot machine
+	SetDependencyInheritanceMode(DependencyInheritanceMode)
 
 	SetContext(context.Context)
 	SetParentLink(SlotLink)
@@ -66,8 +92,11 @@ type ConstructionContext interface {
 	// This handler is not directly accessible to SM.
 	// WARNING! This handler is UNSAFE to access another SM. Use BargeIn() to create a necessary handler.
 	SetTerminationHandler(TerminationHandlerFunc)
+	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
+	SetDefaultTerminationResult(interface{})
+
 	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
-	SetDefaultStepLogger(lf StateMachineStepLoggerFunc)
+	SetDefaultStepLogger(StateMachineStepLoggerFunc)
 }
 
 /* A context parent for all regular step contexts */
@@ -87,8 +116,9 @@ type InOrderStepContext interface {
 	SetDefaultTerminationResult(interface{})
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
+
 	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
-	SetDefaultStepLogger(StateMachineStepLoggerFunc)
+	// SetDefaultStepLogger(StateMachineStepLoggerFunc)
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate
@@ -196,17 +226,20 @@ type ExecutionContext interface {
 	// It is guaranteed that:
 	// 1) the child will start at the same migration state as the creator (caller of this function)
 	// 2) initialization of the new slot will happen before any migration
-	NewChild(context.Context, CreateFunc) SlotLink
+	NewChild(CreateFunc) SlotLink
+	NewChildExt(CreateFunc, CreateDefaultValues) SlotLink
 
 	// Same as NewChild, but also grantees that child's initialization will be completed before return.
 	// Please prefer NewChild() to avoid unnecessary dependency.
-	InitChild(context.Context, CreateFunc) SlotLink
+	InitChild(CreateFunc) SlotLink
+	InitChildExt(CreateFunc, CreateDefaultValues) SlotLink
 
 	// After completion of the current step, SM will be stopped and the new SM created/started.
 	// The new SM will by default inherit from this SM: parent, context, termination handler/result and injected dependencies.
 	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
 	// WARNING! Use of SetTerminationHandler() inside CreateFunc will replace the current handler, so it will never fire then.
 	Replace(CreateFunc) StateUpdate
+	//ReplaceExt(CreateFunc, CreateDefaultValues) StateUpdate
 	// See Replace()
 	ReplaceWith(StateMachine) StateUpdate
 
@@ -363,7 +396,7 @@ type FailureContext interface {
 	SetAction(action ErrorHandlerAction)
 
 	// See ExecutionContext
-	NewChild(context.Context, CreateFunc) SlotLink
+	NewChild(CreateFunc) SlotLink
 	// See ExecutionContext
-	InitChild(context.Context, CreateFunc) SlotLink
+	InitChild(CreateFunc) SlotLink
 }

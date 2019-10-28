@@ -46,7 +46,7 @@ func (p LocalObjectCatalog) GetOrCreate(ctx smachine.ExecutionContext, key longb
 		return v
 	}
 
-	ctx.InitChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.InitChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return NewVMObjectSM(key)
 	})
 

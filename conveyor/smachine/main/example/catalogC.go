@@ -74,7 +74,7 @@ func (p *catalogC) GetOrCreate(ctx smachine.ExecutionContext, key longbits.ByteS
 		return v
 	}
 
-	ctx.InitChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.InitChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &catalogEntryCSM{sharedState: CustomSharedState{
 			key:   key,
 			Mutex: smachine.NewExclusive(""),

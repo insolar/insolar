@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
@@ -25,11 +26,13 @@ import (
 
 type AdapterCallbackFunc func(AsyncResultFunc, error)
 
-func NewAdapterCallback(caller StepLink, callback AdapterCallbackFunc, flags AsyncCallFlags, nestedFn CreateFactoryFunc) *AdapterCallback {
-	return &AdapterCallback{caller, callback, nil, nestedFn, 0, flags}
+func NewAdapterCallback(adapterId AdapterId, caller StepLink, callback AdapterCallbackFunc, flags AsyncCallFlags,
+	nestedFn CreateFactoryFunc) *AdapterCallback {
+	return &AdapterCallback{adapterId, caller, callback, nil, nestedFn, 0, flags}
 }
 
 type AdapterCallback struct {
+	adapterId  AdapterId
 	caller     StepLink
 	callbackFn AdapterCallbackFunc
 	cancel     *syncrun.ChainedCancel
@@ -133,22 +136,46 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 	}, err)
 }
 
-func (c *AdapterCallback) SendNested(adapterId AdapterId, defaultFactoryFn CreateFactoryFunc, payload interface{}) bool {
-	if c.caller.getActiveMachine() == nil {
-		return false
+func (c *AdapterCallback) SendNested(defaultFactoryFn CreateFactoryFunc, payload interface{}) error {
+
+	m := c.caller.getActiveMachine()
+	if m == nil {
+		return fmt.Errorf("target SlotMachine is stopping/stopped")
 	}
-	return c._createNested(adapterId, c.nestedFn, payload) ||
-		c._createNested(adapterId, defaultFactoryFn, payload)
+
+	createFn := func(factoryFn CreateFactoryFunc) (bool, error) {
+		if factoryFn == nil {
+			return false, nil
+		}
+		if cf := factoryFn(payload); cf != nil {
+			switch link, ok := m.AddNested(c.adapterId, c.caller.SlotLink, cf); {
+			case ok:
+				return true, nil
+			case link.IsEmpty():
+				return true, fmt.Errorf("target SlotMachine is stopping/stopped")
+			default:
+				return true, fmt.Errorf("cancelled by constructor")
+			}
+		}
+		return false, nil
+	}
+
+	if ok, err := createFn(c.nestedFn); ok {
+		return err
+	}
+	if ok, err := createFn(defaultFactoryFn); ok {
+		return err
+	}
+	return fmt.Errorf("unknown payload for nested call")
 }
 
-func (c *AdapterCallback) _createNested(adapterId AdapterId, factoryFn CreateFactoryFunc, payload interface{}) bool {
-	if factoryFn == nil {
-		return false
+type NestedCallFunc func(interface{}) error
+
+func (c *AdapterCallback) getNestedCallHandler(defFactoryFn CreateFactoryFunc) NestedCallFunc {
+	if defFactoryFn == nil && c.nestedFn == nil {
+		return nil
 	}
-	createFn := factoryFn(payload)
-	if createFn == nil {
-		return false
+	return func(v interface{}) error {
+		return c.SendNested(defFactoryFn, v)
 	}
-	_, ok := c.caller.s.machine.AddNested(adapterId, c.caller.SlotLink, createFn)
-	return ok
 }

@@ -16,8 +16,6 @@
 
 package smachine
 
-import "github.com/insolar/insolar/conveyor/injector"
-
 func (s *Slot) activateSlot(worker FixedSlotWorker) {
 	s.machine.updateSlotQueue(s, worker, activateSlot)
 }
@@ -38,19 +36,18 @@ func (p StepLink) activateSlotStepWithSlotLink(_ SlotLink, worker FixedSlotWorke
 	p.activateSlotStep(worker)
 }
 
-func buildShadowMigrator(c injector.ReadOnlyContainer, defFn ShadowMigrateFunc) ShadowMigrateFunc {
-	count := c.Count()
+func buildShadowMigrator(localInjects []interface{}, defFn ShadowMigrateFunc) ShadowMigrateFunc {
+	count := len(localInjects)
 	if defFn != nil {
 		count++
 	}
 	shadowMigrates := make([]ShadowMigrateFunc, 0, count)
 
-	c.FilterLocalDependencies(func(id string, v interface{}) bool {
+	for _, v := range localInjects {
 		if smFn, ok := v.(ShadowMigrator); ok {
 			shadowMigrates = append(shadowMigrates, smFn.ShadowMigrate)
 		}
-		return false
-	})
+	}
 
 	switch {
 	case len(shadowMigrates) == 0:

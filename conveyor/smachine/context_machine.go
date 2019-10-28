@@ -41,18 +41,37 @@ func (p *machineCallContext) Stop() {
 	p.m.Stop()
 }
 
-func (p *machineCallContext) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
+func (p *machineCallContext) AddNew(ctx context.Context, sm StateMachine, defValues CreateDefaultValues) SlotLink {
 	p.ensureValid()
-	link, ok := p.m._addNew(ctx, parent, sm)
+	if sm == nil {
+		panic("illegal value")
+	}
+
+	switch {
+	case ctx != nil:
+		defValues.Context = ctx
+	case defValues.Context == nil:
+		panic("illegal value")
+	}
+
+	link, ok := p.m.prepareNewSlotWithDefaults(nil, nil, sm, defValues)
 	if ok {
 		p.m.startNewSlot(link.s, p.w)
 	}
 	return link
 }
 
-func (p *machineCallContext) AddNewByFunc(ctx context.Context, parent SlotLink, cf CreateFunc) (SlotLink, bool) {
+func (p *machineCallContext) AddNewByFunc(ctx context.Context, cf CreateFunc, defValues CreateDefaultValues) (SlotLink, bool) {
 	p.ensureValid()
-	link, ok := p.m._addNewWithFunc(ctx, parent, cf)
+
+	switch {
+	case ctx != nil:
+		defValues.Context = ctx
+	case defValues.Context == nil:
+		panic("illegal value")
+	}
+
+	link, ok := p.m.prepareNewSlotWithDefaults(nil, cf, nil, defValues)
 	if ok {
 		p.m.startNewSlot(link.s, p.w)
 	}

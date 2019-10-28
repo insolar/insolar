@@ -17,8 +17,6 @@
 package conveyor
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/pulse"
 )
@@ -34,38 +32,26 @@ type wrapEventSM struct {
 func (sm *wrapEventSM) stepTerminateEvent(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	// To properly propagate termination of this SM, we have to get termination of the to-be-SM we are wrapping.
 	// So we will run the intended creation procedure and capture its termination handler, but discard SM.
-	interceptor := &constructionInterceptor{parent: ctx.ParentLink(), createFn: sm.createFn}
-	ctx.NewChild(ctx.GetContext(), interceptor.Create)
 
 	defResult := ctx.GetDefaultTerminationResult()
-	if defResult != nil {
-		// we have a result, so lets use it
-		if interceptor.handlerFn != nil {
-			interceptor.handlerFn(defResult)
-		}
+	interceptor := &constructionInterceptor{createFn: sm.createFn, defResult: defResult}
 
-		if err, ok := defResult.(error); ok {
-			return ctx.Error(err)
-		}
-		return ctx.Stop()
+	ctx.NewChildExt(interceptor.Create, smachine.CreateDefaultValues{
+		Context: ctx.GetContext(),
+		Parent:  ctx.ParentLink(),
+	})
+
+	if v, ok := defResult.(error); ok {
+		return ctx.Error(v)
 	}
-
-	// otherwise will just throw an error
-	err := fmt.Errorf("event has incorrect pulse: pn=%v", sm.pn)
-	if interceptor.handlerFn != nil {
-		interceptor.handlerFn(err)
-	}
-
-	return ctx.Error(err)
+	return ctx.Stop()
 }
 
 type constructionInterceptor struct {
 	smachine.ConstructionContext
 
-	parent   smachine.SlotLink
-	createFn smachine.CreateFunc
-
-	handlerFn smachine.TerminationHandlerFunc
+	createFn  smachine.CreateFunc
+	defResult interface{}
 }
 
 func (p *constructionInterceptor) Create(ctx smachine.ConstructionContext) smachine.StateMachine {
@@ -73,13 +59,10 @@ func (p *constructionInterceptor) Create(ctx smachine.ConstructionContext) smach
 		panic("illegal state")
 	}
 	p.ConstructionContext = ctx
-	p.InheritDependencies(true)
-	p.SetParentLink(p.parent)
+	if p.defResult != nil {
+		p.SetDefaultTerminationResult(p.defResult)
+	}
 	_ = p.createFn(p) // we ignore the created SM
-	return nil        // stop creation process
-}
 
-func (p *constructionInterceptor) SetTerminationHandler(tf smachine.TerminationHandlerFunc) {
-	// capture the handler
-	p.handlerFn = tf
+	return nil // stop creation process and trigger termination
 }

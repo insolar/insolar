@@ -29,35 +29,22 @@ type AdapterCall struct {
 
 var ErrCancelledCall = errors.New("cancelled")
 
-type AdapterCallDelegateFunc func(callFn AdapterCallFunc, notify bool, chainCancel *syncrun.ChainedCancel) (AsyncResultFunc, error)
+type AdapterCallDelegateFunc func(
+	// Not nil
+	callFn AdapterCallFunc,
+	// Nil for notify calls and when there is no nested call factories are available.
+	// Returns false when nested call is impossible (outer call is cancelled or finished)
+	nestedCallFn NestedCallFunc,
+	// Nil when cancellation is not traced / not configured on SlotMachine adapter / and for notifications
+	chainCancel *syncrun.ChainedCancel) (AsyncResultFunc, error)
 
-func (c AdapterCall) DelegateAndSendResult(delegate AdapterCallDelegateFunc) error {
-	if delegate == nil {
+func (c AdapterCall) DelegateAndSendResult(defaultNestedFn CreateFactoryFunc, delegate AdapterCallDelegateFunc) error {
+	switch {
+	case delegate == nil:
 		panic("illegal value")
-	}
-
-	if c.Callback == nil {
-		result, err := func() (result AsyncResultFunc, err error) {
-			defer func() {
-				err = RecoverAsyncSlotPanicWithStack("async call", recover(), err)
-			}()
-			return delegate(c.CallFn, true, nil)
-		}()
-		switch {
-		case err == nil:
-			if result == nil {
-				return nil
-			}
-			return errors.New("result is unexpected")
-		case err == ErrCancelledCall:
-			// can't send cancel
-			return nil
-		default:
-			return err
-		}
-	}
-
-	if c.Callback.IsCancelled() {
+	case c.Callback == nil:
+		return c.delegateNotify(delegate)
+	case c.Callback.IsCancelled():
 		c.Callback.SendCancel()
 		return nil
 	}
@@ -66,8 +53,8 @@ func (c AdapterCall) DelegateAndSendResult(delegate AdapterCallDelegateFunc) err
 		defer func() {
 			err = RecoverAsyncSlotPanicWithStack("async call", recover(), err)
 		}()
-
-		return delegate(c.CallFn, false, c.Callback.ChainedCancel())
+		nestedCallFn := c.Callback.getNestedCallHandler(defaultNestedFn)
+		return delegate(c.CallFn, nestedCallFn, c.Callback.ChainedCancel())
 	}()
 
 	switch {
@@ -84,8 +71,30 @@ func (c AdapterCall) DelegateAndSendResult(delegate AdapterCallDelegateFunc) err
 	return nil
 }
 
+func (c AdapterCall) delegateNotify(delegate AdapterCallDelegateFunc) error {
+	result, err := func() (result AsyncResultFunc, err error) {
+		defer func() {
+			err = RecoverAsyncSlotPanicWithStack("async notify", recover(), err)
+		}()
+		return delegate(c.CallFn, nil, nil)
+	}()
+	switch {
+	case err == nil:
+		if result == nil {
+			return nil
+		}
+		return errors.New("result is unexpected")
+	case err == ErrCancelledCall:
+		// can't send cancel
+		return nil
+	default:
+		return err
+	}
+}
+
 func (c AdapterCall) RunAndSendResult(arg interface{}) error {
-	return c.DelegateAndSendResult(func(callFn AdapterCallFunc, _ bool, _ *syncrun.ChainedCancel) (AsyncResultFunc, error) {
-		return callFn(arg), nil
-	})
+	return c.DelegateAndSendResult(nil,
+		func(callFn AdapterCallFunc, _ NestedCallFunc, _ *syncrun.ChainedCancel) (AsyncResultFunc, error) {
+			return callFn(arg), nil
+		})
 }

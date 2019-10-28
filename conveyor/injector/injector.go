@@ -1,3 +1,19 @@
+//
+//    Copyright 2019 Insolar Technologies
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+//
+
 package injector
 
 import (
@@ -6,112 +22,28 @@ import (
 	"strings"
 )
 
-func NewDependencyInjector(target interface{}, parent DependencyRegistry, copyParent DependencyRegistryFunc) DependencyInjector {
-	if target == nil {
-		panic("illegal value")
-	}
-	return DependencyInjector{target: target, parent: parent, copyParent: copyParent}
+func NewDependencyInjector(target interface{}, globalParent DependencyRegistry, localParent DependencyRegistryFunc) DependencyInjector {
+	resolver := NewDependencyResolver(target, globalParent, localParent, nil)
+	return NewDependencyInjectorFor(&resolver)
 }
 
-var _ DependencyRegistry = &DependencyInjector{}
+func NewDependencyInjectorFor(resolver *DependencyResolver) DependencyInjector {
+	if resolver == nil || resolver.IsZero() {
+		panic("illegal value")
+	}
+	return DependencyInjector{resolver}
+}
 
 type DependencyInjector struct {
-	parent     DependencyRegistry
-	copyParent DependencyRegistryFunc
-	target     interface{}
-	resolved   map[string]interface{}
+	resolver *DependencyResolver
 }
 
 func (p *DependencyInjector) IsZero() bool {
-	return p.target == nil
+	return p.resolver.IsZero()
 }
 
 func (p *DependencyInjector) IsEmpty() bool {
-	return len(p.resolved) == 0
-}
-
-func (p *DependencyInjector) Count() int {
-	return len(p.resolved)
-}
-
-func (p *DependencyInjector) ResolveAndPut(overrides map[string]interface{}) {
-	for id, v := range overrides {
-		if id == "" {
-			panic("illegal value")
-		}
-		if dp, ok := v.(DependencyProviderFunc); ok {
-			v = dp(p.target, id, p)
-		}
-		p.putResolved(id, v)
-	}
-}
-
-func (p *DependencyInjector) FindDependency(id string) (interface{}, bool) {
-	if id == "" {
-		panic("illegal value")
-	}
-	if v, ok := p.resolved[id]; ok { // allows nil values
-		return v, true
-	}
-
-	v, ok, _ := p.getParent(id)
-	return v, ok
-}
-
-func (p *DependencyInjector) GetResolvedDependency(id string) (interface{}, bool) {
-	if id == "" {
-		panic("illegal value")
-	}
-	return p.getResolved(id)
-}
-
-func (p *DependencyInjector) PutResolvedDependency(id string, v interface{}) {
-	if id == "" {
-		panic("illegal value")
-	}
-	if _, ok := v.(DependencyProviderFunc); ok {
-		panic("illegal value")
-	}
-	p.putResolved(id, v)
-}
-
-func (p *DependencyInjector) getParent(id string) (interface{}, bool, bool) {
-	if p.copyParent != nil {
-		if v, ok := p.copyParent(id); ok {
-			return v, true, true
-		}
-	}
-	if p.parent != nil {
-		if v, ok := p.parent.FindDependency(id); ok {
-			return v, true, false
-		}
-	}
-	return nil, false, false
-}
-
-func (p *DependencyInjector) getResolved(id string) (interface{}, bool) {
-	if v, ok := p.resolved[id]; ok { // allows nil values
-		return v, true
-	}
-
-	if v, ok, cp := p.getParent(id); ok {
-		if dp, ok := v.(DependencyProviderFunc); ok {
-			v = dp(p.target, id, p)
-			p.putResolved(id, v)
-		} else if cp {
-			p.putResolved(id, v)
-		}
-		return v, true
-	}
-
-	return nil, false
-}
-
-func (p *DependencyInjector) putResolved(id string, v interface{}) {
-	if p.resolved == nil {
-		p.resolved = make(map[string]interface{})
-	}
-	p.resolved[id] = v
+	return p.resolver.IsEmpty()
 }
 
 func (p *DependencyInjector) MustInject(varRef interface{}) {
@@ -138,7 +70,7 @@ func (p *DependencyInjector) InjectById(id string, varRef interface{}) error {
 }
 
 func (p *DependencyInjector) InjectAll() error {
-	t := reflect.Indirect(reflect.ValueOf(p.target))
+	t := reflect.Indirect(reflect.ValueOf(p.resolver.Target()))
 	if t.Kind() != reflect.Struct {
 		panic("illegal value")
 	}
@@ -269,7 +201,7 @@ func (p *DependencyInjector) resolveNameAndSet(n string, v reflect.Value, vt ref
 		return false
 	}
 
-	switch val, ok := p.getResolved(n); {
+	switch val, ok := p.resolver.getResolved(n); {
 	case !ok:
 		return false
 	case nillable && val == nil:
@@ -283,15 +215,4 @@ func (p *DependencyInjector) resolveNameAndSet(n string, v reflect.Value, vt ref
 		v.Set(dv)
 		return true
 	}
-}
-
-func (p *DependencyInjector) CopyAsRegistryWithParent() ReadOnlyContainer {
-	if p.parent == nil {
-		return p.CopyAsRegistryNoParent()
-	}
-	return NewRegistryWithParent(p.parent.FindDependency, p.resolved)
-}
-
-func (p *DependencyInjector) CopyAsRegistryNoParent() ReadOnlyContainer {
-	return NewRegistry(p.resolved)
 }

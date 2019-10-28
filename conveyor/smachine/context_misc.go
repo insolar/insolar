@@ -26,12 +26,12 @@ type constructionContext struct {
 	contextTemplate
 	s       *Slot
 	injects map[string]interface{}
-	inherit bool
+	inherit DependencyInheritanceMode
 }
 
-func (p *constructionContext) InheritDependencies(b bool) {
+func (p *constructionContext) SetDependencyInheritanceMode(mode DependencyInheritanceMode) {
 	p.ensure(updCtxConstruction)
-	p.inherit = b
+	p.inherit = mode
 }
 
 func (p *constructionContext) OverrideDependency(id string, v interface{}) {
@@ -72,7 +72,12 @@ func (p *constructionContext) SetParentLink(parent SlotLink) {
 
 func (p *constructionContext) SetTerminationHandler(tf TerminationHandlerFunc) {
 	p.ensure(updCtxConstruction)
-	p.s.defResultHandler = tf
+	p.s.defTerminate = tf
+}
+
+func (p *constructionContext) SetDefaultTerminationResult(v interface{}) {
+	p.ensure(updCtxConstruction)
+	p.s.defResult = v
 }
 
 func (p *constructionContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
@@ -173,13 +178,12 @@ func (p *failureContext) SetAction(action ErrorHandlerAction) {
 	p.action = action
 }
 
-func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (result ErrorHandlerAction, err error) {
+func (p *failureContext) executeFailure(fn ErrorHandlerFunc) (ok bool, result ErrorHandlerAction, err error) {
 	p.setMode(updCtxFail)
 	defer func() {
 		p.discardAndCapture("failure handler", recover(), &err)
 	}()
-	p.result = p.err
 	err = p.err // ensure it will be included on panic
 	fn(p)
-	return p.action, err
+	return true, p.action, err
 }

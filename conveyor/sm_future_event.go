@@ -17,6 +17,7 @@
 package conveyor
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/pulse"
 )
@@ -52,7 +53,7 @@ func (sm *futureEventSM) stepInit(ctx smachine.InitializationContext) smachine.S
 func (sm *futureEventSM) stepWaitMigration(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
 	case !isAccepted:
-		return sm.stepTerminateEvent(ctx)
+		return sm.stepTerminate(ctx)
 	case isFuture: // make sure that this slot isn't late
 		return ctx.Sleep().ThenRepeat()
 	default:
@@ -63,12 +64,17 @@ func (sm *futureEventSM) stepWaitMigration(ctx smachine.ExecutionContext) smachi
 func (sm *futureEventSM) stepMigration(ctx smachine.MigrationContext) smachine.StateUpdate {
 	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
 	case !isAccepted:
-		return ctx.Jump(sm.stepTerminateEvent)
+		return ctx.Jump(sm.stepTerminate)
 	case isFuture: // make sure that this slot isn't late
 		panic("illegal state")
 	default:
 		return ctx.WakeUp()
 	}
+}
+
+func (sm *futureEventSM) stepTerminate(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	ctx.SetDefaultTerminationResult(fmt.Errorf("incorrect fulture pulse number: pn=%v", sm.pn))
+	return sm.wrapEventSM.stepTerminateEvent(ctx)
 }
 
 func (sm *futureEventSM) IsConsecutive(_, _ smachine.StateFunc) bool {

@@ -60,12 +60,10 @@ func (sm *antiqueEventSM) stepRequestOldPulseData(ctx smachine.ExecutionContext)
 func (sm *antiqueEventSM) stepGotAnswer(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	// check if data became available or and either run the event or kill it
 	if sm.ps.HasPulseData(sm.pn) {
-		// set a dependency?
+		// TODO set a dependency with the received PD?
 		return ctx.Replace(sm.createFn)
 	}
 
-	// use ctx.SetDefaultTerminationResult() to set proper result for termination
 	ctx.SetDefaultTerminationResult(fmt.Errorf("unable to find pulse data: pn=%v", sm.pn))
-
 	return sm.stepTerminateEvent(ctx)
 }

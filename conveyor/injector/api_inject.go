@@ -33,4 +33,4 @@ type DependencyContainer interface {
 	TryPutDependency(id string, v interface{}) bool
 }
 
-type DependencyProviderFunc func(target interface{}, id string, registry DependencyRegistry) interface{}
+type DependencyProviderFunc func(target interface{}, id string, resolveFn DependencyRegistryFunc) interface{}

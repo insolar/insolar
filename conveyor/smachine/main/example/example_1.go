@@ -139,10 +139,10 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 		return ctx.WaitAny().ThenRepeat()
 	}
 
-	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
 	})
-	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
 	})
 

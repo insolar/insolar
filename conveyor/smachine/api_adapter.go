@@ -37,7 +37,7 @@ type AsyncCallRequester interface {
 	// If this handler is nil or returns nil, then a default handler of the adapter will be in use.
 	// To block a nested event - return non-nil CreateFunc, and then return nil from CreateFunc.
 	WithNested(CreateFactoryFunc) AsyncCallRequester
-	// See AsyncCallFlags
+	// See AsyncCallFlags, set to AutoWakeUp by default.
 	WithFlags(flags AsyncCallFlags) AsyncCallRequester
 
 	// Starts async call
@@ -102,7 +102,11 @@ type AdapterExecutor interface {
 /* This is interface of a helper to facilitate implementation of service adapters. */
 type ExecutionAdapter interface {
 	GetAdapterID() AdapterId
+
 	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
+
+	// sets AutoWakeUp by default
 	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
+
 	PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester
 }
