@@ -27,7 +27,7 @@ import (
 )
 
 func TestWriteController_Open(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	t.Run("open for correct pulse", func(t *testing.T) {
 		t.Parallel()

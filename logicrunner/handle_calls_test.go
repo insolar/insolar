@@ -22,7 +22,6 @@ import (
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -43,10 +42,12 @@ import (
 )
 
 func TestHandleCall_Present(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	t.Run("happy path", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -97,7 +98,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("write accessor failed to fetch lock", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -156,7 +161,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("failed to authorize", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -204,7 +213,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("failed to register incoming request", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -251,7 +264,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -309,7 +326,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("object not found during request registration", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -358,7 +379,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("loop detected", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)

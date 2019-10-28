@@ -124,7 +124,11 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	s.NotNil(parsed)
 
 	s.T().Run("wrapper", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
@@ -137,7 +141,11 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	})
 
 	s.T().Run("proxy", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leakTestCheck(t)()
+		} else {
+			t.Parallel()
+		}
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
@@ -665,7 +673,11 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 		contract := contract
 
 		s.T().Run(contract, func(t *testing.T) {
-			t.Parallel()
+			if useLeakTest {
+				defer leakTestCheck(t)()
+			} else {
+				t.Parallel()
+			}
 			a, r := assert.New(t), require.New(t)
 
 			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeGoPlugin)
@@ -695,6 +707,10 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 }
 
 func TestPreprocessor(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leakTestCheck(t)()
+	} else {
+		t.Parallel()
+	}
 	suite.Run(t, new(PreprocessorSuite))
 }

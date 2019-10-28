@@ -598,6 +598,10 @@ func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 }
 
 func TestSagas(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leakTestCheck(t)()
+	} else {
+		t.Parallel()
+	}
 	suite.Run(t, new(SagasSuite))
 }
