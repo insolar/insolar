@@ -44,8 +44,8 @@ func TestConveyor(t *testing.T) {
 		return func(ctx smachine.ConstructionContext) smachine.StateMachine {
 			sm := &AppEventSM{eventValue: v, pn: pn}
 
-			ctx.SetDefaultStepLogger(func(data smachine.StepLoggerData) {
-				stepLogger(data, sm)
+			ctx.SetDefaultStepLogger(func(ctx context.Context, data smachine.StepLoggerData) {
+				stepLogger(ctx, data, sm)
 			})
 			return sm
 		}
@@ -85,7 +85,7 @@ func TestConveyor(t *testing.T) {
 	time.Sleep(time.Hour)
 }
 
-func stepLogger(data smachine.StepLoggerData, sm smachine.StateMachine) {
+func stepLogger(ctx context.Context, data smachine.StepLoggerData, sm smachine.StateMachine) {
 	migrate := ""
 	if data.Flags&smachine.StepLoggerMigrate != 0 {
 		migrate = "migrate "
