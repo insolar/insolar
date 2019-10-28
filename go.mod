@@ -14,7 +14,6 @@ require (
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gogo/protobuf v1.2.1
-	github.com/gojuno/minimock v1.9.2
 	github.com/gojuno/minimock/v3 v3.0.5
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
@@ -22,6 +21,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
+	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 	github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
 	github.com/insolar/x-crypto v0.0.0-20190527100132-f1d1a11a8799

@@ -18,7 +18,7 @@ package api
 
 import (
 	"context"
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 )
 

@@ -31,7 +31,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -163,7 +163,7 @@ func NewServer(
 		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 	}
 

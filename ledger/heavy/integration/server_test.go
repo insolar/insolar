@@ -31,9 +31,9 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesis"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -141,7 +141,7 @@ func NewServer(
 		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 	}
 
