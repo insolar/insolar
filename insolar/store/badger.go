@@ -60,6 +60,9 @@ func NewBadgerDB(opts badger.Options, extras ...BadgerOption) (*BadgerDB, error)
 
 	// always allow to truncate vlog if necessary (actually it should have been a default behavior)
 	opts.Truncate = true
+
+	opts.NumCompactors = 1
+
 	bdb, err := badger.Open(opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
