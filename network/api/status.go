@@ -60,7 +60,7 @@ func (s *ApiService) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Can't start listening")
 	}
 	go func() {
-		err := s.server.Serve(listener)
+		err = s.server.Serve(listener)
 		if err != nil {
 			logger.Error("Http server: ListenAndServe() error: ", err)
 

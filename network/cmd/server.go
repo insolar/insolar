@@ -68,6 +68,10 @@ func serve(cfgPath string) {
 	// 	defer jaegerFlush()
 	// }
 
+	gracefulStop := make(chan os.Signal, 1)
+	waitChannel := make(chan bool)
+	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
+
 	cm, stopWatermill := initComponents(
 		ctx,
 		*cfg,
@@ -78,16 +82,11 @@ func serve(cfgPath string) {
 		certManager,
 	)
 
-	var gracefulStop = make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-
-	var waitChannel = make(chan bool)
-
 	go func() {
 		sig := <-gracefulStop
 		logger.Debug("caught sig: ", sig)
 
+		log.Fatalf("Halt networkd")
 		logger.Warn("GRACEFUL STOP APP")
 		// th.Leave(ctx, 10) TODO: is actual ??
 		logger.Info("main leave ends ")

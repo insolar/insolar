@@ -133,7 +133,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	table := &routing.Table{}
 
-	n.cm.Inject(n,
+	n.cm.Inject(
+		api.NewApiService(n.cfg.AdminAPIRunner),
+		n,
 		table,
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
@@ -147,7 +149,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.Gatewayer,
 		storage.NewMemoryStorage(),
 		termination.NewHandler(n),
-		api.NewApiService(n.cfg.APIRunner),
 	)
 
 	err = n.cm.Init(ctx)

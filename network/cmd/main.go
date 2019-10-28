@@ -34,6 +34,7 @@ import (
 
 func main() {
 	var configPath string
+	var genesisConfigPath string
 
 	var rootCmd = &cobra.Command{
 		Use: "networkd",
@@ -43,6 +44,8 @@ func main() {
 		},
 	}
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
+
 	rootCmd.AddCommand(version.GetCommand("networkd"))
 	err := rootCmd.Execute()
 	if err != nil {
