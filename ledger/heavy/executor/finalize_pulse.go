@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"runtime/debug"
 	"sync"
 
 	"go.opencensus.io/stats"
@@ -55,6 +56,9 @@ func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
 	b.callCounter++
 	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
 		b.runner.RunValueGC(ctx)
+		inslogger.FromContext(ctx).Info("FreeOSMemory starts")
+		debug.FreeOSMemory()
+		inslogger.FromContext(ctx).Info("FreeOSMemory stop")
 	}
 }
 
