@@ -51,6 +51,8 @@ type SynchronizationContext interface {
 	// Panics on zero or incorrectly initialized value.
 	AcquireForThisStep(SyncLink) BoolDecision
 
+	// TODO AcquireAndRelease(SyncLink) BoolDecision
+
 	// Releases a holder of this SM for the given sync object.
 	// When there is no holder or the current holder belongs to a different sync object then operation is ignored and false is returned.
 	// NB! Some sync objects (e.g. conditionals) may release a passed holder automatically, hence this function will return false as well.
@@ -130,7 +132,7 @@ func (v SyncAdjustment) IsEmpty() bool {
 
 /* ============================================== */
 
-type SlotDependencyFlags uint32
+type SlotDependencyFlags uint8
 
 const (
 	syncForOneStep SlotDependencyFlags = 1 << iota

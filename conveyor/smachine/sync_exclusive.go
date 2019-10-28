@@ -141,7 +141,9 @@ func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFl
 
 	removeFn()
 	if f, step := p.queue.FirstValid(); f != nil {
-		return []StepLink{step}
+		if !f.ActivateStacked() {
+			return []StepLink{step}
+		}
 	}
 	return nil
 }

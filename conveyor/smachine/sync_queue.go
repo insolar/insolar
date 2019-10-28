@@ -20,6 +20,8 @@ import "sync/atomic"
 
 type DependencyQueueController interface {
 	GetName() string
+	//CanActivateTarget()
+
 	IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool
 	IsReleaseOnWorking(link SlotLink, flags SlotDependencyFlags) bool
 	Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink
@@ -270,4 +272,8 @@ func (p *dependencyQueueEntry) setQueue(head *DependencyQueueHead) {
 func (p *dependencyQueueEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
 	_, f := p.getFlags()
 	return f&flags == flags
+}
+
+func (p *dependencyQueueEntry) ActivateStacked() bool {
+	return false
 }

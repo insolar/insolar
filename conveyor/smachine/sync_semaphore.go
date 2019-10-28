@@ -230,7 +230,9 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 		} else {
 			f.removeFromQueue()
 			p.queue.AddLast(f)
-			links = append(links, step)
+			if !f.ActivateStacked() {
+				links = append(links, step)
+			}
 			n--
 		}
 	}
