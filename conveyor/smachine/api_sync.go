@@ -29,7 +29,7 @@ type SynchronizationContext interface {
 	// Panics on zero or incorrectly initialized value.
 	Check(SyncLink) Decision
 
-	// NB! This function RELEASES any previously acquired sync object before acquiring a new one.
+	// NB! This function RELEASES any previously acquired sync object after acquiring a new one.
 	//
 	// Acquires a holder of the sync object and returns status of the acquired holder:
 	//
