@@ -105,7 +105,12 @@ type defaultLogObjectMarshaller struct {
 	v reflect.Value
 }
 
-func (v defaultLogObjectMarshaller) MarshalLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
+func (v defaultLogObjectMarshaller) MarshalTextLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
+	return v.t.printFields(v.v, output, collector)
+}
+
+func (v defaultLogObjectMarshaller) MarshalBinaryLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
+	// TODO should use methods that ignore "fmt"/"raw" tags
 	return v.t.printFields(v.v, output, collector)
 }
 

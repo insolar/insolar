@@ -111,7 +111,7 @@ type Logger interface {
 	// Provides a copy of this logger with a filter set to lvl.
 	Level(lvl LogLevel) Logger
 
-	// DO NOT USE directly. Provides access to an embeddable methods of this logger.
+	// DO NOT USE directly. Provides access to embeddable methods of this logger.
 	Embeddable() EmbeddedLogger
 }
 
@@ -237,7 +237,8 @@ func (*LogObjectTemplate) GetLogObjectMarshaller() LogObjectMarshaller {
 }
 
 type LogObjectMarshaller interface {
-	MarshalLogObject(LogObjectWriter, LogObjectMetricCollector) string
+	MarshalTextLogObject(LogObjectWriter, LogObjectMetricCollector) string
+	MarshalBinaryLogObject(LogObjectWriter, LogObjectMetricCollector) string
 	MarshalMutedLogObject(LogObjectMetricCollector)
 }
 

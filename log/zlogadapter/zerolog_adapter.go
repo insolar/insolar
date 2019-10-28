@@ -233,7 +233,7 @@ func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface
 	obj, msgStr := z.config.MsgFormat.FmtLogObject(args...)
 	if obj != nil {
 		collector := z.config.Metrics.GetMetricsCollector()
-		msgStr = obj.MarshalLogObject(zerologMarshaller{event}, collector)
+		msgStr = obj.MarshalTextLogObject(zerologMarshaller{event}, collector)
 	}
 	event.Msg(msgStr)
 }
