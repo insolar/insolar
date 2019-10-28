@@ -99,8 +99,9 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 
 	case pulseState == Future:
 		// event for future need special handling
-		pulseSlotMachine.innerMachine.AddNew(ctx, smachine.NoLink(),
-			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
+		pulseSlotMachine.innerMachine.AddNew(ctx,
+			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn),
+			smachine.CreateDefaultValues{})
 		return nil
 
 	case pulseState == Antique:
@@ -110,8 +111,9 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 		if !p.pdm.IsRecentPastRange(pn) {
 			// for non-recent past HasPulseData() can be incorrect / incomplete
 			// we must use a longer procedure to get PulseData and utilize SM for it
-			pulseSlotMachine.innerMachine.AddNew(ctx, smachine.NoLink(),
-				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn))
+			pulseSlotMachine.innerMachine.AddNew(ctx,
+				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn),
+				smachine.CreateDefaultValues{})
 			return nil
 		}
 		fallthrough
@@ -120,7 +122,7 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 			return fmt.Errorf("unknown data for pulse : pn=%v event=%v", targetPN, event)
 		}
 	}
-	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, smachine.NoLink(), createFn); !ok {
+	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, createFn, smachine.CreateDefaultValues{}); !ok {
 		return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
 	}
 	return nil

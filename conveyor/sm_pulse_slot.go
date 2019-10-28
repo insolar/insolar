@@ -71,14 +71,14 @@ func (p *PulseSlotMachine) activate(workerCtx context.Context, m *smachine.SlotM
 	if !p.selfLink.IsEmpty() {
 		panic("illegal state")
 	}
-	p.selfLink = m.AddNew(workerCtx, smachine.NoLink(), p)
+	p.selfLink = m.AddNew(workerCtx, p, smachine.CreateDefaultValues{})
 }
 
 func (p *PulseSlotMachine) activateWithCtx(workerCtx context.Context, ctx smachine.MachineCallContext) {
 	if !p.selfLink.IsEmpty() {
 		panic("illegal state")
 	}
-	p.selfLink = ctx.AddNew(workerCtx, smachine.NoLink(), p)
+	p.selfLink = ctx.AddNew(workerCtx, p, smachine.CreateDefaultValues{})
 }
 
 func (p *PulseSlotMachine) setFuture(pd pulse.Data) {

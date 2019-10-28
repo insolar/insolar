@@ -395,7 +395,7 @@ func statePrepareDefaultReplace(creator *Slot, fn CreateFunc, sm StateMachine) *
 	m := creator.machine
 
 	def := prepareSlotValue{slotReplaceData: creator.slotReplaceData.takeOutForReplace(), isReplacement: true}
-	if link, ok := m.prepareNewSlot(creator, nil, sm, def); ok {
+	if link, ok := m.prepareNewSlot(creator, fn, sm, def); ok {
 		// handover the termination handler
 		link.s.defResult = creator.defResult
 		link.s.defTerminate = creator.defTerminate
