@@ -22,17 +22,18 @@ import (
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/pulse"
+
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -133,7 +134,9 @@ func TestHandleCall_Present(t *testing.T) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
 						require.NoError(t, err, "unmarshalType")
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
-						return nil, func() {}
+						c := make(chan *wmMessage.Message, 1)
+						c <- &wmMessage.Message{Payload: payload.MustMarshal(&payload.ID{})}
+						return c, func() {}
 					}),
 				ArtifactManager: artifacts.NewClientMock(mc),
 				JetStorage:      nil,
@@ -299,7 +302,9 @@ func TestHandleCall_Present(t *testing.T) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
 						require.NoError(t, err, "unmarshalType")
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
-						return nil, func() {}
+						c := make(chan *wmMessage.Message, 1)
+						c <- &wmMessage.Message{Payload: payload.MustMarshal(&payload.ID{})}
+						return c, func() {}
 					}),
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
