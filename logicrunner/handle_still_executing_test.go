@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/require"
 
@@ -32,6 +33,8 @@ import (
 )
 
 func TestHandleStillExecuting_Present(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (*HandleStillExecuting, flow.Flow)

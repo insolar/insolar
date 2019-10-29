@@ -600,6 +600,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
+	defer leaktest.Check(t)()
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},

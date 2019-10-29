@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +43,7 @@ func TestPulseToProto(t *testing.T) {
 		PrevPulseNumber:  22,
 		NextPulseNumber:  42,
 		PulseTimestamp:   111112,
-		EpochPulseNumber: 1,
+		EpochPulseNumber: pulse.EphemeralPulseEpoch,
 		OriginID:         [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1},
 		Entropy:          insolar.Entropy{123},
 		Signs:            signs,

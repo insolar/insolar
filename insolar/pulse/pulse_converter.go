@@ -18,6 +18,7 @@ package pulse
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/pulse"
 )
 
 func FromProto(p *PulseProto) *insolar.Pulse {
@@ -26,7 +27,7 @@ func FromProto(p *PulseProto) *insolar.Pulse {
 		PrevPulseNumber:  p.PrevPulseNumber,
 		NextPulseNumber:  p.NextPulseNumber,
 		PulseTimestamp:   p.PulseTimestamp,
-		EpochPulseNumber: int(p.EpochPulseNumber),
+		EpochPulseNumber: pulse.Epoch(p.EpochPulseNumber),
 		Entropy:          p.Entropy,
 		Signs:            map[string]insolar.PulseSenderConfirmation{},
 	}
