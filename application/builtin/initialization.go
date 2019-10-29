@@ -69,19 +69,19 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv := make(map[XXX_insolar.Reference]string, 13)
 
-	rv[shouldLoadRef("insolar:0AAAAyNrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")] = "account"
-	rv[shouldLoadRef("insolar:0AAAAyN3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record")] = "costcenter"
-	rv[shouldLoadRef("insolar:0AAAAyJWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record")] = "deposit"
-	rv[shouldLoadRef("insolar:0AAAAyB-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record")] = "helloworld"
-	rv[shouldLoadRef("insolar:0AAAAyIppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record")] = "member"
-	rv[shouldLoadRef("insolar:0AAAAyC0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record")] = "migrationadmin"
-	rv[shouldLoadRef("insolar:0AAAAyK4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record")] = "migrationdaemon"
-	rv[shouldLoadRef("insolar:0AAAAyC9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")] = "migrationshard"
-	rv[shouldLoadRef("insolar:0AAAAyK5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record")] = "nodedomain"
-	rv[shouldLoadRef("insolar:0AAAAyPLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")] = "noderecord"
-	rv[shouldLoadRef("insolar:0AAAAyBxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")] = "pkshard"
-	rv[shouldLoadRef("insolar:0AAAAyCprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")] = "rootdomain"
-	rv[shouldLoadRef("insolar:0AAAAyANCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")] = "wallet"
+	rv[shouldLoadRef("insolar:0AAABAtrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")] = "account"
+	rv[shouldLoadRef("insolar:0AAABAt3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record")] = "costcenter"
+	rv[shouldLoadRef("insolar:0AAABApWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record")] = "deposit"
+	rv[shouldLoadRef("insolar:0AAABAh-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record")] = "helloworld"
+	rv[shouldLoadRef("insolar:0AAABAoppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record")] = "member"
+	rv[shouldLoadRef("insolar:0AAABAi0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record")] = "migrationadmin"
+	rv[shouldLoadRef("insolar:0AAABAq4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record")] = "migrationdaemon"
+	rv[shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")] = "migrationshard"
+	rv[shouldLoadRef("insolar:0AAABAq5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record")] = "nodedomain"
+	rv[shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")] = "noderecord"
+	rv[shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")] = "pkshard"
+	rv[shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")] = "rootdomain"
+	rv[shouldLoadRef("insolar:0AAABAgNCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")] = "wallet"
 
 	return rv
 }
@@ -89,19 +89,19 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
 	rv := make(map[XXX_insolar.Reference]string, 13)
 
-	rv[shouldLoadRef("insolar:0AAAAyCjqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")] = "account"
-	rv[shouldLoadRef("insolar:0AAAAyCiIlRbDnHuBzCCo8E9V-kCUpb22kUkU2ebIsa8")] = "costcenter"
-	rv[shouldLoadRef("insolar:0AAAAyMPCPoB0_7TDBh7dydzcQcqFqlbDu0bDPGr27oY")] = "deposit"
-	rv[shouldLoadRef("insolar:0AAAAyPAGTBa9HaFtJEOYWD3KWeXJM8NSGx5-uok-VGM")] = "helloworld"
-	rv[shouldLoadRef("insolar:0AAAAyLZDDJnAoTN3EvlpVIvuANsDK7eBid_XU-qbZSU")] = "member"
-	rv[shouldLoadRef("insolar:0AAAAyP4b40_lF0ivLCNhzPcq1hKkHWpRSaZCfZuPDUU")] = "migrationadmin"
-	rv[shouldLoadRef("insolar:0AAAAyM7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")] = "migrationdaemon"
-	rv[shouldLoadRef("insolar:0AAAAyJ-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")] = "migrationshard"
-	rv[shouldLoadRef("insolar:0AAAAyEocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")] = "nodedomain"
-	rv[shouldLoadRef("insolar:0AAAAyAXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")] = "noderecord"
-	rv[shouldLoadRef("insolar:0AAAAyCGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")] = "pkshard"
-	rv[shouldLoadRef("insolar:0AAAAyO9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")] = "rootdomain"
-	rv[shouldLoadRef("insolar:0AAAAyAfNy9VkTWQBamlz1DPbynRrVLzRtsRo-X2YI6U")] = "wallet"
+	rv[shouldLoadRef("insolar:0AAABAijqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")] = "account"
+	rv[shouldLoadRef("insolar:0AAABAiiIlRbDnHuBzCCo8E9V-kCUpb22kUkU2ebIsa8")] = "costcenter"
+	rv[shouldLoadRef("insolar:0AAABAsPCPoB0_7TDBh7dydzcQcqFqlbDu0bDPGr27oY")] = "deposit"
+	rv[shouldLoadRef("insolar:0AAABAvAGTBa9HaFtJEOYWD3KWeXJM8NSGx5-uok-VGM")] = "helloworld"
+	rv[shouldLoadRef("insolar:0AAABArZDDJnAoTN3EvlpVIvuANsDK7eBid_XU-qbZSU")] = "member"
+	rv[shouldLoadRef("insolar:0AAABAv4b40_lF0ivLCNhzPcq1hKkHWpRSaZCfZuPDUU")] = "migrationadmin"
+	rv[shouldLoadRef("insolar:0AAABAs7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")] = "migrationdaemon"
+	rv[shouldLoadRef("insolar:0AAABAp-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")] = "migrationshard"
+	rv[shouldLoadRef("insolar:0AAABAkocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")] = "nodedomain"
+	rv[shouldLoadRef("insolar:0AAABAgXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")] = "noderecord"
+	rv[shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")] = "pkshard"
+	rv[shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")] = "rootdomain"
+	rv[shouldLoadRef("insolar:0AAABAgfNy9VkTWQBamlz1DPbynRrVLzRtsRo-X2YI6U")] = "wallet"
 
 	return rv
 }
@@ -113,79 +113,79 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyNrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAtrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record"),
 	))
 	// costcenter
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyN3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAt3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record"),
 	))
 	// deposit
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyJWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABApWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record"),
 	))
 	// helloworld
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyB-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAh-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record"),
 	))
 	// member
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyIppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAoppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record"),
 	))
 	// migrationadmin
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyC0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAi0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record"),
 	))
 	// migrationdaemon
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyK4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAq4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record"),
 	))
 	// migrationshard
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyC9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record"),
 	))
 	// nodedomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyK5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAq5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record"),
 	))
 	// noderecord
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyPLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record"),
 	))
 	// pkshard
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyBxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record"),
 	))
 	// rootdomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyCprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record"),
 	))
 	// wallet
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAAAyANCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record"),
+		/* ref:         */ shouldLoadRef("insolar:0AAABAgNCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record"),
 	))
 
 	return rv
@@ -195,8 +195,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	rv := make([]XXX_artifacts.PrototypeDescriptor, 0, 13)
 
 	{ // account
-		pRef := shouldLoadRef("insolar:0AAAAyCjqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")
-		cRef := shouldLoadRef("insolar:0AAAAyNrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")
+		pRef := shouldLoadRef("insolar:0AAABAijqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")
+		cRef := shouldLoadRef("insolar:0AAABAtrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -205,8 +205,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // costcenter
-		pRef := shouldLoadRef("insolar:0AAAAyCiIlRbDnHuBzCCo8E9V-kCUpb22kUkU2ebIsa8")
-		cRef := shouldLoadRef("insolar:0AAAAyN3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record")
+		pRef := shouldLoadRef("insolar:0AAABAiiIlRbDnHuBzCCo8E9V-kCUpb22kUkU2ebIsa8")
+		cRef := shouldLoadRef("insolar:0AAABAt3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -215,8 +215,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // deposit
-		pRef := shouldLoadRef("insolar:0AAAAyMPCPoB0_7TDBh7dydzcQcqFqlbDu0bDPGr27oY")
-		cRef := shouldLoadRef("insolar:0AAAAyJWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record")
+		pRef := shouldLoadRef("insolar:0AAABAsPCPoB0_7TDBh7dydzcQcqFqlbDu0bDPGr27oY")
+		cRef := shouldLoadRef("insolar:0AAABApWJDvbGfjDx2Qe8L-XfyFUZ1Ak-xcE6ViTULWw.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -225,8 +225,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // helloworld
-		pRef := shouldLoadRef("insolar:0AAAAyPAGTBa9HaFtJEOYWD3KWeXJM8NSGx5-uok-VGM")
-		cRef := shouldLoadRef("insolar:0AAAAyB-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record")
+		pRef := shouldLoadRef("insolar:0AAABAvAGTBa9HaFtJEOYWD3KWeXJM8NSGx5-uok-VGM")
+		cRef := shouldLoadRef("insolar:0AAABAh-sNo0R-Z_c8aGxU4eWpADxtvqML9_yXopmeEg.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -235,8 +235,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // member
-		pRef := shouldLoadRef("insolar:0AAAAyLZDDJnAoTN3EvlpVIvuANsDK7eBid_XU-qbZSU")
-		cRef := shouldLoadRef("insolar:0AAAAyIppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record")
+		pRef := shouldLoadRef("insolar:0AAABArZDDJnAoTN3EvlpVIvuANsDK7eBid_XU-qbZSU")
+		cRef := shouldLoadRef("insolar:0AAABAoppTQrrSQt5rQ883tMp-IoLRJ-LwDloc-_WiFs.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -245,8 +245,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // migrationadmin
-		pRef := shouldLoadRef("insolar:0AAAAyP4b40_lF0ivLCNhzPcq1hKkHWpRSaZCfZuPDUU")
-		cRef := shouldLoadRef("insolar:0AAAAyC0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record")
+		pRef := shouldLoadRef("insolar:0AAABAv4b40_lF0ivLCNhzPcq1hKkHWpRSaZCfZuPDUU")
+		cRef := shouldLoadRef("insolar:0AAABAi0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -255,8 +255,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // migrationdaemon
-		pRef := shouldLoadRef("insolar:0AAAAyM7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")
-		cRef := shouldLoadRef("insolar:0AAAAyK4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record")
+		pRef := shouldLoadRef("insolar:0AAABAs7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")
+		cRef := shouldLoadRef("insolar:0AAABAq4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -265,8 +265,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // migrationshard
-		pRef := shouldLoadRef("insolar:0AAAAyJ-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")
-		cRef := shouldLoadRef("insolar:0AAAAyC9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")
+		pRef := shouldLoadRef("insolar:0AAABAp-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")
+		cRef := shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -275,8 +275,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // nodedomain
-		pRef := shouldLoadRef("insolar:0AAAAyEocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")
-		cRef := shouldLoadRef("insolar:0AAAAyK5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record")
+		pRef := shouldLoadRef("insolar:0AAABAkocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")
+		cRef := shouldLoadRef("insolar:0AAABAq5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -285,8 +285,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // noderecord
-		pRef := shouldLoadRef("insolar:0AAAAyAXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")
-		cRef := shouldLoadRef("insolar:0AAAAyPLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")
+		pRef := shouldLoadRef("insolar:0AAABAgXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")
+		cRef := shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -295,8 +295,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // pkshard
-		pRef := shouldLoadRef("insolar:0AAAAyCGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
-		cRef := shouldLoadRef("insolar:0AAAAyBxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")
+		pRef := shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
+		cRef := shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -305,8 +305,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // rootdomain
-		pRef := shouldLoadRef("insolar:0AAAAyO9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")
-		cRef := shouldLoadRef("insolar:0AAAAyCprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")
+		pRef := shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")
+		cRef := shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
@@ -315,8 +315,8 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	}
 
 	{ // wallet
-		pRef := shouldLoadRef("insolar:0AAAAyAfNy9VkTWQBamlz1DPbynRrVLzRtsRo-X2YI6U")
-		cRef := shouldLoadRef("insolar:0AAAAyANCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")
+		pRef := shouldLoadRef("insolar:0AAABAgfNy9VkTWQBamlz1DPbynRrVLzRtsRo-X2YI6U")
+		cRef := shouldLoadRef("insolar:0AAABAgNCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),

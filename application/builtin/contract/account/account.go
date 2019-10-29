@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/application/builtin/proxy/deposit"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
@@ -38,11 +39,13 @@ func New(balance string) (*Account, error) {
 }
 
 type destination interface {
-	Accept(string) error
+	Accept(appfoundation.SagaAcceptInfo) error
 }
 
 // Transfer transfers funds to giver reference.
-func (a *Account) transfer(amountStr string, destinationObject destination) error {
+func (a *Account) transfer(
+	amountStr string, destinationObject destination, fromMember insolar.Reference, request insolar.Reference,
+) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("can't parse amountStr")
@@ -57,15 +60,19 @@ func (a *Account) transfer(amountStr string, destinationObject destination) erro
 		return fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 	a.Balance = newBalance.String()
-	return destinationObject.Accept(amountStr)
+	return destinationObject.Accept(appfoundation.SagaAcceptInfo{
+		Amount:     amountStr,
+		FromMember: fromMember,
+		Request:    request,
+	})
 }
 
 // Accept accepts transfer to balance.
 //ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
-func (a *Account) Accept(amountStr string) error {
+func (a *Account) Accept(arg appfoundation.SagaAcceptInfo) error {
 
 	amount := new(big.Int)
-	amount, ok := amount.SetString(amountStr, 10)
+	amount, ok := amount.SetString(arg.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse input amount")
 	}
@@ -110,15 +117,23 @@ func (a *Account) RollBack(amountStr string) error {
 }
 
 // TransferToDeposit transfers funds to deposit.
-func (a *Account) TransferToDeposit(amountStr string, toDeposit insolar.Reference) error {
+func (a *Account) TransferToDeposit(
+	amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+) error {
 	to := deposit.GetObject(toDeposit)
-	return a.transfer(amountStr, to)
+	return a.transfer(amountStr, to, fromMember, request)
 }
 
 // TransferToMember transfers funds to member.
-func (a *Account) TransferToMember(amountStr string, toMember insolar.Reference) error {
+func (a *Account) TransferToMember(
+	amountStr string, toMember insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+) error {
 	to := member.GetObject(toMember)
-	return to.Accept(amountStr)
+	return to.Accept(appfoundation.SagaAcceptInfo{
+		Amount:     amountStr,
+		FromMember: fromMember,
+		Request:    request,
+	})
 }
 
 // GetBalance gets total balance.
@@ -128,7 +143,10 @@ func (a *Account) GetBalance() (string, error) {
 }
 
 // Transfer transfers money to given member.
-func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (a *Account) Transfer(
+	rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference,
+	fromMember insolar.Reference, request insolar.Reference,
+) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
@@ -138,7 +156,7 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
-	ccRef := foundation.GetCostCenter()
+	ccRef := appfoundation.GetCostCenter()
 
 	cc := costcenter.GetObject(ccRef)
 	feeStr, err := cc.CalcFee(amountStr)
@@ -182,13 +200,13 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 	}
 	a.Balance = newBalance.String()
 
-	err = a.TransferToMember(amountStr, *toMember)
+	err = a.TransferToMember(amountStr, *toMember, fromMember, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer amount: %s", err.Error())
 	}
 
 	if feeStr != "0" {
-		err = a.TransferToMember(feeStr, *toFeeMember)
+		err = a.TransferToMember(feeStr, *toFeeMember, fromMember, request)
 		if err != nil {
 			return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
 		}

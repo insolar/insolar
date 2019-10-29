@@ -62,6 +62,12 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
+var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers]*User
+var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
+var Enterprise [application.GenesisAmountEnterpriseMembers]*User
+var Foundation [application.GenesisAmountFoundationMembers]*User
+var Funds [application.GenesisAmountFundsMembers]*User
+
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
 func Run(cb func() int) int {
@@ -83,11 +89,7 @@ func Run(cb func() int) int {
 		os.Exit(2)
 	}()
 
-	pulseWatcher, config, err := pulseWatcherPath()
-	if err != nil {
-		fmt.Println("PulseWatcher not found: ", err)
-		return 1
-	}
+	pulseWatcher, config := pulseWatcherPath()
 
 	code := cb()
 
@@ -224,6 +226,71 @@ func loadAllMembersKeys() error {
 		MigrationDaemons[i] = &md
 	}
 
+	for i := 0; i < application.GenesisAmountApplicationIncentivesMembers; i++ {
+		path, err := launchnetPath("configs", "application_incentives_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		ApplicationIncentives[i] = &md
+	}
+
+	for i := 0; i < application.GenesisAmountNetworkIncentivesMembers; i++ {
+		path, err := launchnetPath("configs", "network_incentives_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		NetworkIncentives[i] = &md
+	}
+
+	for i := 0; i < application.GenesisAmountFoundationMembers; i++ {
+		path, err := launchnetPath("configs", "foundation_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		Foundation[i] = &md
+	}
+
+	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
+		path, err := launchnetPath("configs", "funds_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		Funds[i] = &md
+	}
+
+	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
+		path, err := launchnetPath("configs", "enterprise_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		Enterprise[i] = &md
+	}
+
 	return nil
 }
 
@@ -318,7 +385,9 @@ func startNet() error {
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 	}
-	defer os.Chdir(cwd)
+	defer func() {
+		_ = os.Chdir(cwd)
+	}()
 
 	for cwd[len(cwd)-15:] != "insolar/insolar" {
 		err = os.Chdir("../")
@@ -437,13 +506,13 @@ func setup() error {
 	return nil
 }
 
-func pulseWatcherPath() (string, string, error) {
+func pulseWatcherPath() (string, string) {
 	insDir := insolar.RootModuleDir()
 	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
 
 	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
 	config := filepath.Join(baseDir, "pulsewatcher.yaml")
-	return pulseWatcher, config, nil
+	return pulseWatcher, config
 }
 
 func teardown() {

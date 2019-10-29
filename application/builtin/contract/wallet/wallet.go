@@ -58,13 +58,16 @@ func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 }
 
 // Transfer transfers money to given wallet.
-func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amountStr string, toMember *insolar.Reference) (interface{}, error) {
+func (w *Wallet) Transfer(
+	rootDomainRef insolar.Reference, assetName string, amountStr string,
+	toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+) (interface{}, error) {
 	accRef, err := w.GetAccount(assetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
-	return acc.Transfer(rootDomainRef, amountStr, toMember)
+	return acc.Transfer(rootDomainRef, amountStr, toMember, fromMember, request)
 }
 
 // GetBalance gets balance by asset name.

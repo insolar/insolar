@@ -17,6 +17,7 @@
 package pulse
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,21 +38,52 @@ func TestNewFirstPulsarData(t *testing.T) {
 	require.Zero(t, pd.DataExt.PrevPulseDelta)
 }
 
+func TestNewPulsarDataInvalid(t *testing.T) {
+	require.Panics(t, func() {
+		NewPulsarData(0, 1, 1, longbits.Bits256{})
+	})
+	require.Panics(t, func() {
+		NewPulsarData(1, 1, 1, longbits.Bits256{})
+	})
+	require.Panics(t, func() {
+		NewPulsarData(MinTimePulse-1, 1, 1, longbits.Bits256{})
+	})
+	require.Panics(t, func() {
+		NewPulsarData(MaxTimePulse+1, 1, 1, longbits.Bits256{})
+	})
+}
+
 func TestNewPulsarData(t *testing.T) {
-	pn := Number(1)
+	pn := Number(MinTimePulse)
 	deltaNext := uint16(2)
 	deltaPrev := uint16(3)
 	entropy := longbits.Bits256{4}
 	pd := NewPulsarData(pn, deltaNext, deltaPrev, entropy)
 	require.Equal(t, pn, pd.PulseNumber)
 
-	require.Equal(t, uint32(pn), pd.DataExt.PulseEpoch)
+	require.Equal(t, pn.AsEpoch(), pd.DataExt.PulseEpoch)
 
 	require.Equal(t, entropy, pd.DataExt.PulseEntropy)
 
 	require.Equal(t, deltaNext, pd.DataExt.NextPulseDelta)
 
 	require.Equal(t, deltaPrev, pd.PrevPulseDelta)
+}
+
+func Test_newPulsarData(t *testing.T) {
+	pn := Number(MinTimePulse)
+	delta := uint16(2)
+	entropy := longbits.Bits256{3}
+	pd := newPulsarData(pn, delta, entropy)
+	require.Panics(t, func() { NewFirstPulsarData(0, entropy) })
+
+	require.Equal(t, pn, pd.PulseNumber)
+
+	require.Equal(t, pn.AsEpoch(), pd.DataExt.PulseEpoch)
+
+	require.Equal(t, entropy, pd.DataExt.PulseEntropy)
+
+	require.Equal(t, delta, pd.DataExt.NextPulseDelta)
 }
 
 func TestNewFirstEphemeralData(t *testing.T) {
@@ -85,22 +117,6 @@ func TestString(t *testing.T) {
 	require.NotEmpty(t, pd.String())
 }
 
-func TestNnewPulsarData(t *testing.T) {
-	pn := Number(1)
-	delta := uint16(2)
-	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
-	require.Panics(t, func() { NewFirstPulsarData(0, entropy) })
-
-	require.Equal(t, pn, pd.PulseNumber)
-
-	require.Equal(t, uint32(pn), pd.DataExt.PulseEpoch)
-
-	require.Equal(t, entropy, pd.DataExt.PulseEntropy)
-
-	require.Equal(t, delta, pd.DataExt.NextPulseDelta)
-}
-
 func TestNewEphemeralData(t *testing.T) {
 	pn := Number(1)
 	pd := newEphemeralData(pn)
@@ -122,36 +138,53 @@ func TestFixedPulseEntropy(t *testing.T) {
 }
 
 func TestEnsurePulseData(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
 	require.Panics(t, func() { pd.EnsurePulseData() })
 
-	pd.PulseNumber = Number(MinTimePulse)
+	pd.PulseNumber = Number(MinTimePulse + 1)
+	pd.PulseEpoch = MinTimePulse - 1
+	require.Panics(t, func() { pd.EnsurePulseData() })
 	pd.PulseEpoch = MaxTimePulse + 1
 	require.Panics(t, func() { pd.EnsurePulseData() })
-
-	pd.PulseEpoch = MaxTimePulse
-	pd.NextPulseDelta = 0
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
 	require.Panics(t, func() { pd.EnsurePulseData() })
 
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch()
+	pd.EnsurePulseData()
+
+	pd.NextPulseDelta = 0
+	require.Panics(t, func() { pd.EnsurePulseData() })
 	pd.NextPulseDelta = 1
-	require.NotPanics(t, func() { pd.EnsurePulseData() })
+	pd.EnsurePulseData()
 }
 
 func TestIsValidPulseData(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
 	require.False(t, pd.IsValidPulseData())
 
 	pd.PulseNumber = Number(MinTimePulse)
-	pd.PulseEpoch = MaxTimePulse + 1
+
+	pd.PulseEpoch = EphemeralPulseEpoch
+	require.True(t, pd.IsValidPulseData())
+
+	pd.PulseEpoch = MinTimePulse - 1
 	require.False(t, pd.IsValidPulseData())
 
-	pd.PulseEpoch = MaxTimePulse
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch()
+	require.True(t, pd.IsValidPulseData())
+
+	pd.PulseEpoch++
+	require.False(t, pd.IsValidPulseData())
+
+	pd.PulseNumber++
+	require.True(t, pd.IsValidPulseData())
+
 	pd.NextPulseDelta = 0
 	require.False(t, pd.IsValidPulseData())
 
@@ -160,10 +193,9 @@ func TestIsValidPulseData(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
 	require.False(t, pd.IsEmpty())
 
 	pd.PulseNumber = Unknown
@@ -171,22 +203,63 @@ func TestIsEmpty(t *testing.T) {
 }
 
 func TestIsValidExpectedPulseData(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
+	pn := Number(MinTimePulse)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
 	pd := newPulsarData(pn, delta, entropy)
 	require.False(t, pd.IsValidExpectedPulseData())
 
-	pd.PulseNumber = Number(MinTimePulse)
-	pd.PulseEpoch = MaxTimePulse + 1
-	require.False(t, pd.IsValidExpectedPulseData())
+	pd = pd.CreateNextExpected()
+	require.True(t, pd.IsValidExpectedPulseData())
 
-	pd.PulseEpoch = MaxTimePulse
-	pd.PrevPulseDelta = 1
+	pd.NextPulseDelta = 1
 	require.False(t, pd.IsValidExpectedPulseData())
+	pd.NextPulseDelta = 0
 
 	pd.PrevPulseDelta = 0
 	require.True(t, pd.IsValidExpectedPulseData())
+
+	pd.PulseEpoch = MinTimePulse - 1
+	require.False(t, pd.IsValidExpectedPulseData())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
+	require.False(t, pd.IsValidExpectedPulseData())
+
+	pd.PulseEpoch = ArticulationPulseEpoch
+	require.True(t, pd.IsValidExpectedPulseData())
+
+	pd.PulseEpoch = EphemeralPulseEpoch
+	require.True(t, pd.IsValidExpectedPulseData())
+}
+
+func TestIsValidExpectedPulsarData(t *testing.T) {
+	pn := Number(MinTimePulse)
+	delta := uint16(2)
+	entropy := longbits.Bits256{3}
+	pd := newPulsarData(pn, delta, entropy)
+	require.False(t, pd.IsValidExpectedPulsarData())
+
+	pd = pd.CreateNextExpected()
+	require.True(t, pd.IsValidExpectedPulsarData())
+
+	pd.NextPulseDelta = 1
+	require.False(t, pd.IsValidExpectedPulsarData())
+	pd.NextPulseDelta = 0
+
+	pd.PrevPulseDelta = 0
+	require.True(t, pd.IsValidExpectedPulsarData())
+
+	pd.PulseEpoch = MinTimePulse - 1
+	require.False(t, pd.IsValidExpectedPulsarData())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
+	require.False(t, pd.IsValidExpectedPulsarData())
+
+	pd.PulseEpoch = ArticulationPulseEpoch
+	require.False(t, pd.IsValidExpectedPulsarData())
+
+	pd.PulseEpoch = EphemeralPulseEpoch
+	require.False(t, pd.IsValidExpectedPulsarData())
 }
 
 func TestEnsurePulsarData(t *testing.T) {
@@ -205,12 +278,18 @@ func TestEnsurePulsarData(t *testing.T) {
 	pd.PulseEpoch = MaxTimePulse + 1
 	require.Panics(t, func() { pd.EnsurePulsarData() })
 
-	pd.PulseEpoch = MaxTimePulse
+	pd.PulseEpoch = MinTimePulse - 1
+	require.Panics(t, func() { pd.EnsurePulsarData() })
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
+	require.Panics(t, func() { pd.EnsurePulsarData() })
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch()
 	pd.NextPulseDelta = 0
 	require.Panics(t, func() { pd.EnsurePulsarData() })
 
 	pd.NextPulseDelta = 1
-	require.NotPanics(t, func() { pd.EnsurePulsarData() })
+	pd.EnsurePulsarData()
 }
 
 func TestIsValidPulsarData(t *testing.T) {
@@ -229,7 +308,13 @@ func TestIsValidPulsarData(t *testing.T) {
 	pd.PulseEpoch = MaxTimePulse + 1
 	require.False(t, pd.IsValidPulsarData())
 
-	pd.PulseEpoch = MaxTimePulse
+	pd.PulseEpoch = MinTimePulse - 1
+	require.False(t, pd.IsValidPulsarData())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() - 1
+	require.False(t, pd.IsValidPulsarData())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch()
 	pd.NextPulseDelta = 0
 	require.False(t, pd.IsValidPulsarData())
 
@@ -268,10 +353,10 @@ func TestIsValidEphemeralData(t *testing.T) {
 }
 
 func TestIsFromPulsar(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
 	require.False(t, pd.IsFromPulsar())
 
 	pd.PulseNumber = MinTimePulse
@@ -283,10 +368,10 @@ func TestIsFromPulsar(t *testing.T) {
 }
 
 func TestIsFromEphemeral(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
 	pd.PulseEpoch = EphemeralPulseEpoch
 	require.False(t, pd.IsFromEphemeral())
 
@@ -299,16 +384,34 @@ func TestIsFromEphemeral(t *testing.T) {
 }
 
 func TestGetStartOfEpoch(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
-	pd.PulseEpoch = MaxTimePulse + 1
-	require.Equal(t, Number(1<<16), pd.GetStartOfEpoch())
+	pd := newPulsarData(MinTimePulse+1, delta, entropy)
+	require.Equal(t, pd.PulseNumber, pd.GetStartOfEpoch())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
+	require.Equal(t, pd.PulseNumber, pd.GetStartOfEpoch())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() - 1
+	require.Equal(t, pd.PulseNumber-1, pd.GetStartOfEpoch())
 
 	pd.PulseEpoch = MaxTimePulse
 	pd.PulseNumber = MaxTimePulse
-	require.Equal(t, Number(MaxTimePulse), pd.GetStartOfEpoch())
+	require.Equal(t, pd.PulseNumber, pd.GetStartOfEpoch())
+
+	pd.PulseNumber++
+	require.Equal(t, Unknown, pd.GetStartOfEpoch())
+
+	pd.PulseNumber = MaxTimePulse
+	pd.PulseEpoch = 0
+	require.Equal(t, pd.PulseNumber, pd.GetStartOfEpoch())
+
+	pd.PulseEpoch = MinTimePulse - 1
+	require.Equal(t, pd.PulseNumber, pd.GetStartOfEpoch())
+
+	pd.PulseEpoch = MinTimePulse
+	pd.PulseNumber = MinTimePulse - 1
+	require.Equal(t, Unknown, pd.GetStartOfEpoch())
 }
 
 func entropyGenTest() longbits.Bits256 {
@@ -316,10 +419,10 @@ func entropyGenTest() longbits.Bits256 {
 }
 
 func TestCreateNextPulse(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
 	require.Panics(t, func() { pd.CreateNextPulse(entropyGenTest) })
 
 	pd.PulseNumber = Number(MinTimePulse)
@@ -333,6 +436,12 @@ func TestCreateNextPulse(t *testing.T) {
 	d = pd.CreateNextPulse(entropyGenTest)
 	require.Equal(t, d.PrevPulseDelta, pd.NextPulseDelta)
 	require.NotZero(t, d.Timestamp)
+
+	pd.PulseEpoch = ArticulationPulseEpoch
+	require.Panics(t, func() { pd.CreateNextPulse(entropyGenTest) })
+
+	pd.PulseEpoch = 0
+	require.Panics(t, func() { pd.CreateNextPulse(entropyGenTest) })
 }
 
 func TestIsValidNext(t *testing.T) {
@@ -343,6 +452,10 @@ func TestIsValidNext(t *testing.T) {
 	pd2 := newPulsarData(pn+Number(delta), delta, entropy)
 	pd2.PrevPulseDelta = delta
 	require.True(t, pd1.IsValidNext(pd2))
+
+	pd2.PulseEpoch = 1
+	require.False(t, pd1.IsValidNext(pd2))
+	pd2.PulseEpoch = pd2.PulseNumber.AsEpoch()
 
 	pd2.PrevPulseDelta = 1
 	require.False(t, pd1.IsValidNext(pd2))
@@ -361,7 +474,7 @@ func TestIsValidNext(t *testing.T) {
 
 	pd2.PulseNumber = pn + 2
 	pd1.PulseNumber = MinTimePulse - 1
-	require.Panics(t, func() { pd1.IsValidNext(pd2) })
+	require.False(t, pd1.IsValidNext(pd2))
 
 	delta = 1
 	pd1 = newEphemeralData(pn)
@@ -379,6 +492,14 @@ func TestIsValidPrev(t *testing.T) {
 	pd1.PrevPulseDelta = delta
 	require.True(t, pd1.IsValidPrev(pd2))
 
+	pd2.PulseNumber = 1
+	require.False(t, pd1.IsValidPrev(pd2))
+
+	pd2.PulseNumber = pn - Number(delta)
+	pd2.PulseEpoch = 1
+	require.False(t, pd1.IsValidPrev(pd2))
+	pd2.PulseEpoch = pd2.PulseNumber.AsEpoch()
+
 	pd2.NextPulseDelta = 1
 	require.False(t, pd1.IsValidPrev(pd2))
 
@@ -395,7 +516,7 @@ func TestIsValidPrev(t *testing.T) {
 	require.False(t, pd1.IsValidPrev(pd2))
 
 	pd2.PulseNumber = MaxTimePulse + 1
-	require.Panics(t, func() { pd1.IsValidPrev(pd2) })
+	require.False(t, pd1.IsValidPrev(pd2))
 
 	delta = 1
 	pd1 = newEphemeralData(pn)
@@ -405,45 +526,99 @@ func TestIsValidPrev(t *testing.T) {
 }
 
 func TestGetNextPulseNumber(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
-	delta := uint16(2)
-	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	pd := newPulsarData(MinTimePulse, 2, longbits.Bits256{3})
 
-	pd.PulseNumber = MaxTimePulse + 1
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	pn, ok := pd.GetNextPulseNumber()
+	require.True(t, ok)
+	require.Equal(t, Number(MinTimePulse+2), pn)
 
-	pd.PulseNumber = MaxTimePulse - 1
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	epd := pd.CreateNextExpected()
+	pn, ok = epd.GetNextPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MinTimePulse+2), pn)
 
-	pd.NextPulseDelta = 0
-	require.Panics(t, func() { pd.GetNextPulseNumber() })
+	pd = newPulsarData(MaxTimePulse, 2, longbits.Bits256{3})
+	pn, ok = pd.GetNextPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MaxTimePulse), pn)
 
-	pd.NextPulseDelta = delta
-	pd.PulseNumber = MinTimePulse
-	require.Equal(t, MinTimePulse+Number(delta), pd.GetNextPulseNumber())
+	pd = newPulsarData(MaxTimePulse-1, 2, longbits.Bits256{3})
+	pn, ok = pd.GetNextPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MaxTimePulse), pn)
+
+	pd = newPulsarData(MaxTimePulse-2, 2, longbits.Bits256{3})
+	pn, ok = pd.GetNextPulseNumber()
+	require.True(t, ok)
+	require.Equal(t, Number(MaxTimePulse), pn)
 }
 
 func TestGetPrevPulseNumber(t *testing.T) {
-	pn := Number(MinTimePulse - 1)
+	pd := NewFirstEphemeralData()
+
+	pn, ok := pd.GetPrevPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MinTimePulse), pn)
+
+	pd = newPulsarData(MinTimePulse+2, 2, longbits.Bits256{3})
+	pd.PrevPulseDelta = 2
+	pn, ok = pd.GetPrevPulseNumber()
+	require.True(t, ok)
+	require.Equal(t, Number(MinTimePulse), pn)
+
+	pd = newPulsarData(MinTimePulse+1, 2, longbits.Bits256{3})
+	pd.PrevPulseDelta = 2
+	pn, ok = pd.GetPrevPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MinTimePulse), pn)
+
+	pd = newPulsarData(MinTimePulse, 2, longbits.Bits256{3})
+	pd.PrevPulseDelta = 2
+	pn, ok = pd.GetPrevPulseNumber()
+	require.False(t, ok)
+	require.Equal(t, Number(MinTimePulse), pn)
+}
+
+func TestNextPulseNumber(t *testing.T) {
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
-	pd := newPulsarData(pn, delta, entropy)
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
+	require.Panics(t, func() { pd.NextPulseNumber() })
 
 	pd.PulseNumber = MaxTimePulse + 1
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.NextPulseNumber() })
+
+	pd.PulseNumber = MaxTimePulse - 1
+	require.Panics(t, func() { pd.NextPulseNumber() })
+
+	pd.NextPulseDelta = 0
+	require.Panics(t, func() { pd.NextPulseNumber() })
+
+	pd.NextPulseDelta = delta
+	pd.PulseNumber = MinTimePulse
+	require.Equal(t, MinTimePulse+Number(delta), pd.NextPulseNumber())
+}
+
+func TestPrevPulseNumber(t *testing.T) {
+	delta := uint16(2)
+	entropy := longbits.Bits256{3}
+	pd := newPulsarData(MinTimePulse, delta, entropy)
+	pd.PulseNumber--
+	require.Panics(t, func() { pd.PrevPulseNumber() })
+
+	pd.PulseNumber = MaxTimePulse + 1
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PulseNumber = MinTimePulse + 1
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PrevPulseDelta = 0
-	require.Panics(t, func() { pd.GetPrevPulseNumber() })
+	require.Panics(t, func() { pd.PrevPulseNumber() })
 
 	pd.PrevPulseDelta = delta
 	pd.PulseNumber = MaxTimePulse
-	require.Equal(t, MaxTimePulse-Number(delta), pd.GetPrevPulseNumber())
+	require.Equal(t, MaxTimePulse-Number(delta), pd.PrevPulseNumber())
 }
 
 func TestCreateNextExpected(t *testing.T) {
@@ -465,6 +640,14 @@ func TestCreateNextExpected(t *testing.T) {
 	require.Equal(t, EphemeralPulseEpoch, cne.PulseEpoch)
 }
 
+func TestCreateNextExpectedAndValidated(t *testing.T) {
+	pn := Number(MinTimePulse)
+	delta := uint16(2)
+	entropy := longbits.Bits256{3}
+	pd := newPulsarData(pn, delta, entropy)
+	require.True(t, pd.CreateNextExpected().IsValidExpectedPulseData())
+}
+
 func TestCreateNextEphemeralPulse(t *testing.T) {
 	pn := Number(MinTimePulse)
 	delta := uint16(2)
@@ -479,7 +662,7 @@ func TestCreateNextEphemeralPulse(t *testing.T) {
 	require.Equal(t, pn+Number(delta), cne.PulseNumber)
 }
 
-func TestCcreateNextEphemeralPulse(t *testing.T) {
+func Test_createNextEphemeralPulse(t *testing.T) {
 	pn := Number(MinTimePulse)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
@@ -505,7 +688,7 @@ func TestCreateNextPulsarPulse(t *testing.T) {
 	require.Panics(t, func() { pd.CreateNextPulsarPulse(delta, entropyGenTest) })
 }
 
-func TestCcreateNextPulsarPulse(t *testing.T) {
+func Test_createNextPulsarPulse(t *testing.T) {
 	pn := Number(MinTimePulse)
 	delta := uint16(2)
 	entropy := longbits.Bits256{3}
@@ -548,7 +731,7 @@ func TestGetTimestamp(t *testing.T) {
 	entropy := longbits.Bits256{3}
 	pd := newPulsarData(pn, delta, entropy)
 	pd.Timestamp = 5
-	require.Equal(t, uint64(5), pd.GetTimestamp())
+	require.Equal(t, int64(5), pd.GetTimestamp())
 }
 
 func TestIsExpectedPulse(t *testing.T) {
@@ -580,4 +763,59 @@ func TestIsFirstPulse(t *testing.T) {
 
 	pd.PulseNumber = Number(MinTimePulse)
 	require.True(t, pd.IsFirstPulse())
+}
+
+func TestSort(t *testing.T) {
+	pdBefore := NewPulsarData(MinTimePulse<<1, 10, 1, longbits.Bits256{})
+	pdLeft := pdBefore.CreateNextPulse(emptyEntropyFn)
+	pd := pdLeft.CreateNextPulse(emptyEntropyFn)
+	pdAfter := pd.CreateNextPulse(emptyEntropyFn)
+
+	sorted := []Data{pdBefore, pdLeft, pd, pdAfter}
+	shuffled := append([]Data(nil), sorted...)
+
+	require.Equal(t, sorted, shuffled)
+	for {
+		rand.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+		if sorted[0] != shuffled[0] {
+			break
+		}
+	}
+	require.NotEqual(t, sorted, shuffled)
+	SortData(shuffled)
+	require.Equal(t, sorted, shuffled)
+}
+
+func TestAsPulse(t *testing.T) {
+	pd := NewPulsarData(MinTimePulse<<1, 10, 1, longbits.Bits256{})
+	require.Equal(t, pd, pd.AsRange().RightBoundData())
+}
+
+func TestData_IsEmptyCompatibleWith(t *testing.T) {
+	pd := Data{}
+
+	require.False(t, pd.IsEmptyCompatibleWith(InvalidPulseEpoch))
+	require.False(t, pd.IsEmptyCompatibleWith(EphemeralPulseEpoch))
+	require.False(t, pd.IsEmptyCompatibleWith(ArticulationPulseEpoch))
+	require.False(t, pd.IsEmptyCompatibleWith(MinTimePulse))
+
+	pd.PulseEpoch = EphemeralPulseEpoch
+	require.False(t, pd.IsEmptyCompatibleWith(InvalidPulseEpoch))
+	require.True(t, pd.IsEmptyCompatibleWith(EphemeralPulseEpoch))
+	require.False(t, pd.IsEmptyCompatibleWith(ArticulationPulseEpoch))
+	require.False(t, pd.IsEmptyCompatibleWith(MinTimePulse))
+}
+
+func TestData_HasValidTimeEpoch(t *testing.T) {
+	pd := NewPulsarData(MinTimePulse<<1, 10, 1, longbits.Bits256{})
+	require.True(t, pd.HasValidTimeEpoch())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() + 1
+	require.False(t, pd.HasValidTimeEpoch())
+
+	pd.PulseEpoch = pd.PulseNumber.AsEpoch() - 1
+	require.True(t, pd.HasValidTimeEpoch())
+
+	pd.PulseEpoch = EphemeralPulseEpoch
+	require.False(t, pd.HasValidTimeEpoch())
 }

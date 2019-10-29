@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/contract/account"
 	"github.com/insolar/insolar/application/builtin/contract/costcenter"
 	"github.com/insolar/insolar/application/builtin/contract/deposit"
@@ -182,7 +183,7 @@ func GetDepositGenesisContractState(
 	lockup int64,
 	vesting int64,
 	vestingStep int64,
-	vestingType foundation.VestingType,
+	vestingType appfoundation.VestingType,
 	pulseDepositUnHold insolar.PulseNumber,
 	name string, parent string,
 ) application.GenesisContractState {

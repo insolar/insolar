@@ -27,7 +27,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAAAyCGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromString("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
 
 // PKShard holds proxy type
 type PKShard struct {
