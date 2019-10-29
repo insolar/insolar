@@ -22,17 +22,19 @@ import (
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/pulse"
+
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -42,9 +44,12 @@ import (
 )
 
 func TestHandleCall_Present(t *testing.T) {
-
 	t.Run("happy path", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -95,7 +100,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("write accessor failed to fetch lock", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -126,7 +135,9 @@ func TestHandleCall_Present(t *testing.T) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
 						require.NoError(t, err, "unmarshalType")
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
-						return nil, func() {}
+						c := make(chan *wmMessage.Message, 1)
+						c <- &wmMessage.Message{Payload: payload.MustMarshal(&payload.ID{})}
+						return c, func() {}
 					}),
 				ArtifactManager: artifacts.NewClientMock(mc),
 				JetStorage:      nil,
@@ -154,7 +165,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("failed to authorize", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -202,7 +217,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("failed to register incoming request", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -249,7 +268,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -280,7 +303,9 @@ func TestHandleCall_Present(t *testing.T) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
 						require.NoError(t, err, "unmarshalType")
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
-						return nil, func() {}
+						c := make(chan *wmMessage.Message, 1)
+						c <- &wmMessage.Message{Payload: payload.MustMarshal(&payload.ID{})}
+						return c, func() {}
 					}),
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
@@ -307,7 +332,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("object not found during request registration", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
@@ -356,7 +385,11 @@ func TestHandleCall_Present(t *testing.T) {
 	})
 
 	t.Run("loop detected", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
