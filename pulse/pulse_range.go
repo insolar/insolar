@@ -33,11 +33,14 @@ type Range interface {
 	// Indicates that this range is a singular and contains only one pulse.
 	IsSingular() bool
 
-	// Iterates over both provided and articulated pulses within the range.
+	// Iterates from smaller to higher pulses, over both provided and articulated pulses within the range.
 	EnumNumbers(fn FindNumberFunc) bool
-	// Iterates over both provided and articulated pulse data within the range.
+	// Iterates from smaller to higher pulses, only over the provided pulse data within the range.
+	EnumNonArticulatedNumbers(fn FindNumberFunc) bool
+
+	// Iterates from smaller to higher pulses, over both provided and articulated pulse data within the range.
 	EnumData(func(Data) bool) bool
-	// Iterates only over the provided pulse data within the range.
+	// Iterates from smaller to higher pulses, only over the provided pulse data within the range.
 	EnumNonArticulatedData(func(Data) bool) bool
 
 	// Return true then the given range is next immediate range
@@ -125,13 +128,18 @@ func checkSequence(data []Data) bool {
 
 /* ===================================================== */
 
-var _ Range = onePulseRange{}
+var _ Range = OnePulseRange{}
 
-type onePulseRange struct {
+func NewOnePulseRange(data Data) OnePulseRange {
+	data.EnsurePulseData()
+	return OnePulseRange{data}
+}
+
+type OnePulseRange struct {
 	data Data
 }
 
-func (p onePulseRange) IsValidNext(a Range) bool {
+func (p OnePulseRange) IsValidNext(a Range) bool {
 	if p.data.NextPulseDelta != a.LeftPrevDelta() {
 		return false
 	}
@@ -141,39 +149,43 @@ func (p onePulseRange) IsValidNext(a Range) bool {
 	return false
 }
 
-func (p onePulseRange) IsValidPrev(a Range) bool {
+func (p OnePulseRange) IsValidPrev(a Range) bool {
 	return a.IsValidNext(p)
 }
 
-func (p onePulseRange) EnumNumbers(fn FindNumberFunc) bool {
+func (p OnePulseRange) EnumNumbers(fn FindNumberFunc) bool {
 	return fn(p.data.PulseNumber, p.data.PrevPulseDelta, p.data.NextPulseDelta)
 }
 
-func (p onePulseRange) EnumData(fn func(Data) bool) bool {
+func (p OnePulseRange) EnumData(fn func(Data) bool) bool {
 	return fn(p.data)
 }
 
-func (p onePulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+func (p OnePulseRange) EnumNonArticulatedNumbers(fn FindNumberFunc) bool {
+	return fn(p.data.PulseNumber, p.data.PrevPulseDelta, p.data.NextPulseDelta)
+}
+
+func (p OnePulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
 	return fn(p.data)
 }
 
-func (p onePulseRange) RightBoundData() Data {
+func (p OnePulseRange) RightBoundData() Data {
 	return p.data
 }
 
-func (p onePulseRange) IsSingular() bool {
+func (p OnePulseRange) IsSingular() bool {
 	return true
 }
 
-func (p onePulseRange) IsArticulated() bool {
+func (p OnePulseRange) IsArticulated() bool {
 	return false
 }
 
-func (p onePulseRange) LeftBoundNumber() Number {
+func (p OnePulseRange) LeftBoundNumber() Number {
 	return p.data.PulseNumber
 }
 
-func (p onePulseRange) LeftPrevDelta() uint16 {
+func (p OnePulseRange) LeftPrevDelta() uint16 {
 	return p.data.PrevPulseDelta
 }
 
@@ -213,6 +225,10 @@ func (p gapPulseRange) EnumNumbers(fn FindNumberFunc) bool {
 	if _enumSegments(p.start, p.prevDelta, p.end.PrevPulseNumber(), p.end.PrevPulseDelta, fn) {
 		return true
 	}
+	return fn(p.end.PulseNumber, p.end.PrevPulseDelta, p.end.NextPulseDelta)
+}
+
+func (p gapPulseRange) EnumNonArticulatedNumbers(fn FindNumberFunc) bool {
 	return fn(p.end.PulseNumber, p.end.PrevPulseDelta, p.end.NextPulseDelta)
 }
 
@@ -264,6 +280,13 @@ func (p seqPulseRange) IsValidPrev(a Range) bool {
 }
 
 func (p seqPulseRange) EnumNumbers(fn FindNumberFunc) bool {
+	return p.EnumNonArticulatedNumbers(fn)
+}
+
+func (p seqPulseRange) EnumNonArticulatedNumbers(fn FindNumberFunc) bool {
+	if fn == nil {
+		panic("illegal value")
+	}
 	for _, d := range p.data {
 		if fn(d.PulseNumber, d.PrevPulseDelta, d.NextPulseDelta) {
 			return true
@@ -273,15 +296,13 @@ func (p seqPulseRange) EnumNumbers(fn FindNumberFunc) bool {
 }
 
 func (p seqPulseRange) EnumData(fn func(Data) bool) bool {
-	for _, d := range p.data {
-		if fn(d) {
-			return true
-		}
-	}
-	return false
+	return p.EnumNonArticulatedData(fn)
 }
 
 func (p seqPulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+	if fn == nil {
+		panic("illegal value")
+	}
 	for _, d := range p.data {
 		if fn(d) {
 			return true
@@ -335,6 +356,10 @@ func (p sparsePulseRange) EnumNumbers(fn FindNumberFunc) bool {
 		prevDelta uint16
 	)
 
+	if fn == nil {
+		panic("illegal value")
+	}
+
 	switch first := p.data[0]; {
 	case first.NextPulseDelta == 0: // expected pulse
 		next, prevDelta = first.PulseNumber, first.PrevPulseDelta
@@ -365,6 +390,10 @@ func (p sparsePulseRange) EnumData(fn func(Data) bool) bool {
 		prevDelta uint16
 	)
 
+	if fn == nil {
+		panic("illegal value")
+	}
+
 	switch first := p.data[0]; {
 	case first.NextPulseDelta == 0: // expected pulse
 		next, prevDelta = first.PulseNumber, first.PrevPulseDelta
@@ -382,7 +411,29 @@ func (p sparsePulseRange) EnumData(fn func(Data) bool) bool {
 	return false
 }
 
+func (p sparsePulseRange) EnumNonArticulatedNumbers(fn FindNumberFunc) bool {
+	if fn == nil {
+		panic("illegal value")
+	}
+
+	startIdx := 0
+	if p.data[0].NextPulseDelta == 0 {
+		startIdx++
+	}
+
+	for _, d := range p.data[startIdx:] {
+		if fn(d.PulseNumber, d.PrevPulseDelta, d.NextPulseDelta) {
+			return true
+		}
+	}
+	return false
+}
+
 func (p sparsePulseRange) EnumNonArticulatedData(fn func(Data) bool) bool {
+	if fn == nil {
+		panic("illegal value")
+	}
+
 	startIdx := 0
 	if p.data[0].NextPulseDelta == 0 {
 		startIdx++

@@ -394,8 +394,7 @@ func (r Data) AsPulseData() Data {
 }
 
 func (r Data) AsRange() Range {
-	r.EnsurePulseData()
-	return onePulseRange{r}
+	return NewOnePulseRange(r)
 }
 
 func SortData(data []Data) {

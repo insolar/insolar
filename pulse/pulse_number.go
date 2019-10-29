@@ -100,6 +100,20 @@ func (n Number) IsEqOrAfter(pn Number) bool {
 	return n >= pn && n <= MaxTimePulse
 }
 
+func (n Number) IsEqOrOut(pn Number, prevDelta, nextDelta uint16) bool {
+	switch {
+	case !n.IsTimePulse() || !pn.IsTimePulse():
+		return false
+	case n == pn:
+		return true
+	case pn <= n-Number(prevDelta): // is safe from underflow
+		return true
+	case pn >= n+Number(nextDelta): // is safe from overflow
+		return true
+	}
+	return false
+}
+
 func (n Number) AsUint32() uint32 {
 	return uint32(n)
 }

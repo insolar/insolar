@@ -35,14 +35,14 @@ func TestNewLeftGapRange(t *testing.T) {
 	rg := NewLeftGapRange(pd.PulseNumber, pd.PrevPulseDelta, pd)
 	require.True(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdLeft}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	rg = NewLeftGapRange(pdLeft.PulseNumber, pdLeft.PrevPulseDelta, pd)
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	require.Panics(t, func() { NewLeftGapRange(pdAfter.PulseNumber, pdAfter.PrevPulseDelta, pd) })
 }
@@ -58,21 +58,21 @@ func TestNewSequenceRange(t *testing.T) {
 	rg := NewSequenceRange([]Data{pd})
 	require.True(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdLeft}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	rg = NewSequenceRange([]Data{pdLeft, pd})
 	require.False(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 	require.IsType(t, seqPulseRange{}, rg)
 
 	rg = NewSequenceRange([]Data{pdLeft, pd, pdAfter})
 	require.False(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
 	require.IsType(t, seqPulseRange{}, rg)
 
 	require.Panics(t, func() { NewSequenceRange([]Data{pdLeft, pdAfter}) })
@@ -100,28 +100,28 @@ func TestNewPulseRange(t *testing.T) {
 	rg := NewPulseRange([]Data{pd})
 	require.True(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdLeft}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	rg = NewPulseRange([]Data{pdLeft, pd})
 	require.False(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 	require.IsType(t, seqPulseRange{}, rg)
 
 	rg = NewPulseRange([]Data{pdLeft, pd, pdAfter})
 	require.False(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
 	require.IsType(t, seqPulseRange{}, rg)
 
 	rg = NewPulseRange([]Data{pdLeft, pdAfter})
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
 	require.IsType(t, sparsePulseRange{}, rg)
 
 	withExpected := []Data{
@@ -141,23 +141,23 @@ func TestNewPulseRange(t *testing.T) {
 	rg = NewPulseRange(withExpected)
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 	require.IsType(t, gapPulseRange{}, rg)
 
 	rg = NewPulseRange(append(withExpected, pdAfter))
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
 	require.IsType(t, sparsePulseRange{}, rg)
 
 	withExpected[1] = pdAfter
 	rg = NewPulseRange(withExpected)
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter.CreateNextPulse(emptyEntropyFn)}))
 	require.IsType(t, gapPulseRange{}, rg)
 }
 
@@ -206,25 +206,27 @@ func Test_onePulseRange(t *testing.T) {
 	pd := pdLeft.CreateNextPulse(emptyEntropyFn)
 	pdAfter := pd.CreateNextPulse(emptyEntropyFn)
 
-	rg := onePulseRange{pd}
+	rg := OnePulseRange{pd}
 	require.Equal(t, pd, rg.RightBoundData())
 	require.Equal(t, pd.PulseNumber, rg.LeftBoundNumber())
 	require.Equal(t, pd.PrevPulseDelta, rg.LeftPrevDelta())
 	require.True(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
 
+	require.Equal(t, []Number{pd.PulseNumber}, testRangeEnumNonArticulatedSegments(t, rg))
 	require.Equal(t, []Data{pd}, testRangeEnumNonArticulatedData(t, rg))
+
 	require.Equal(t, []Number{pd.PulseNumber}, testRangeEnumSegments(t, rg))
 	require.Equal(t, []Data{pd}, testRangeEnumData(t, rg))
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdLeft}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	pdLeft.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdLeft}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
 
 	pdAfter.PulseNumber++
-	require.False(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.False(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 }
 
 func Test_gapPulseRange(t *testing.T) {
@@ -241,6 +243,7 @@ func Test_gapPulseRange(t *testing.T) {
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
 
+	require.Equal(t, []Number{pd.PulseNumber}, testRangeEnumNonArticulatedSegments(t, rg))
 	require.Equal(t, []Data{pd}, testRangeEnumNonArticulatedData(t, rg))
 
 	require.Equal(t, []Number{pdLeft.PulseNumber, pd.PulseNumber},
@@ -254,14 +257,14 @@ func Test_gapPulseRange(t *testing.T) {
 		},
 	}, pd}, testRangeEnumData(t, rg))
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	pdBefore.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	pdAfter.PulseNumber++
-	require.False(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.False(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 }
 
 func Test_gapPulseRange_wideGap(t *testing.T) {
@@ -278,7 +281,7 @@ func Test_gapPulseRange_wideGap(t *testing.T) {
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PulseNumber, pd.PulseNumber},
 		testRangeEnumSegments(t, rg))
@@ -299,7 +302,7 @@ func Test_gapPulseRange_wideGap(t *testing.T) {
 		pd}, testRangeEnumData(t, rg))
 
 	pdLeft.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdLeft}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
 }
 
 func Test_gapPulseRange_wideGap2(t *testing.T) {
@@ -316,7 +319,7 @@ func Test_gapPulseRange_wideGap2(t *testing.T) {
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PulseNumber - minSegmentPulseDelta, pdInterim.PulseNumber, pd.PulseNumber},
 		testRangeEnumSegments(t, rg))
@@ -343,7 +346,7 @@ func Test_gapPulseRange_wideGap2(t *testing.T) {
 		pd}, testRangeEnumData(t, rg))
 
 	pdLeft.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdLeft}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdLeft}))
 }
 
 func Test_seqPulseRange(t *testing.T) {
@@ -361,20 +364,23 @@ func Test_seqPulseRange(t *testing.T) {
 	require.False(t, rg.IsSingular())
 	require.False(t, rg.IsArticulated())
 
+	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PulseNumber, pd.PulseNumber},
+		testRangeEnumNonArticulatedSegments(t, rg))
+
 	require.Equal(t, []Data{pdLeft, pdInterim, pd}, testRangeEnumNonArticulatedData(t, rg))
 	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PulseNumber, pd.PulseNumber},
 		testRangeEnumSegments(t, rg))
 
 	require.Equal(t, []Data{pdLeft, pdInterim, pd}, testRangeEnumData(t, rg))
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	pdBefore.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	pdAfter.PulseNumber++
-	require.False(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.False(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 }
 
 func Test_sparsePulseRange(t *testing.T) {
@@ -391,6 +397,9 @@ func Test_sparsePulseRange(t *testing.T) {
 	require.Equal(t, pdLeft.PrevPulseDelta, rg.LeftPrevDelta())
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
+
+	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PulseNumber, pd.PulseNumber},
+		testRangeEnumNonArticulatedSegments(t, rg))
 
 	require.Equal(t, []Data{pdLeft, pdInterim, pd}, testRangeEnumNonArticulatedData(t, rg))
 
@@ -414,14 +423,14 @@ func Test_sparsePulseRange(t *testing.T) {
 		pdInterim,
 		pd}, testRangeEnumData(t, rg))
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	pdBefore.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	pdAfter.PulseNumber++
-	require.False(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.False(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 }
 
 func Test_sparsePulseRange_leftGap(t *testing.T) {
@@ -443,6 +452,7 @@ func Test_sparsePulseRange_leftGap(t *testing.T) {
 	require.False(t, rg.IsSingular())
 	require.True(t, rg.IsArticulated())
 
+	require.Equal(t, []Number{pdInterim.PulseNumber, pd.PulseNumber}, testRangeEnumNonArticulatedSegments(t, rg))
 	require.Equal(t, []Data{pdInterim, pd}, testRangeEnumNonArticulatedData(t, rg))
 
 	require.Equal(t, []Number{pdLeft.PulseNumber, pdInterim.PrevPulseNumber(), pdInterim.PulseNumber, pd.PulseNumber},
@@ -464,14 +474,14 @@ func Test_sparsePulseRange_leftGap(t *testing.T) {
 		pdInterim,
 		pd}, testRangeEnumData(t, rg))
 
-	require.True(t, rg.IsValidPrev(onePulseRange{pdBefore}))
-	require.True(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.True(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
+	require.True(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 
 	pdBefore.PulseNumber--
-	require.False(t, rg.IsValidPrev(onePulseRange{pdBefore}))
+	require.False(t, rg.IsValidPrev(OnePulseRange{pdBefore}))
 
 	pdAfter.PulseNumber++
-	require.False(t, rg.IsValidNext(onePulseRange{pdAfter}))
+	require.False(t, rg.IsValidNext(OnePulseRange{pdAfter}))
 }
 
 func Test_enumSegmentData(t *testing.T) {
@@ -665,13 +675,15 @@ func testRangeEnumSegments(t *testing.T, rg Range) []Number {
 	return nums
 }
 
-//type numCollector struct {
-//	nums []Number
-//}
-//
-//func (p *numCollector) collect(n Number) {
-//	p.nums = append(p.nums, n)
-//}
+func testRangeEnumNonArticulatedSegments(t *testing.T, rg Range) []Number {
+	var nums []Number
+	rg.EnumNonArticulatedNumbers(func(n Number, prevDelta, nextDelta uint16) bool {
+		require.Greater(t, nextDelta, uint16(0))
+		nums = append(nums, n)
+		return false
+	})
+	return nums
+}
 
 func n(numbers ...Number) []Number {
 	return numbers
