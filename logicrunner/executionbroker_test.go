@@ -26,6 +26,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,7 +88,7 @@ func finishedCount(args ...interface{}) bool {
 }
 
 func TestExecutionBroker_AddFreshRequest(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	objectRef := gen.Reference()
 
@@ -188,7 +189,7 @@ func sendOK(ch chan<- *message.Message) {
 }
 
 func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	mc := minimock.NewController(t)
 
@@ -289,7 +290,7 @@ func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 }
 
 func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -351,7 +352,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	randTranscript := func(ctx context.Context) *common.Transcript {
 		reqRef := gen.RecordReference()
@@ -457,7 +458,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 }
 
 func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	objectRef := gen.Reference()
 
@@ -573,7 +574,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -599,7 +600,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -615,7 +616,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 }
 
 func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	mc := minimock.NewController(t)
 
@@ -683,7 +684,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 }
 
 func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	objectRef := gen.Reference()
 

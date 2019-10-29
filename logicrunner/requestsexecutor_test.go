@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,7 @@ import (
 )
 
 func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -105,7 +106,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 }
 
 func TestRequestsExecutor_Execute(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -185,7 +186,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 }
 
 func TestRequestsExecutor_Save(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -319,7 +320,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 }
 
 func TestRequestsExecutor_SendReply(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	reqRef := gen.Reference()
 

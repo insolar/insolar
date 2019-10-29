@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ import (
 )
 
 func TestHandlePendingFinished_Present(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	tests := []struct {
 		name  string

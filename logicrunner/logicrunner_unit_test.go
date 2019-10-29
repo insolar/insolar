@@ -61,13 +61,6 @@ var _ insolar.LogicRunner = &LogicRunner{}
 
 const useLeakTest = false
 
-func leakTestCheck(t *testing.T) func() {
-	if useLeakTest {
-		return leaktest.Check(t)
-	}
-	return func() {}
-}
-
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
 

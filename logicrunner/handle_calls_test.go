@@ -22,6 +22,7 @@ import (
 	"time"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -45,7 +46,7 @@ import (
 func TestHandleCall_Present(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -100,7 +101,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("write accessor failed to fetch lock", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -165,7 +166,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("failed to authorize", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -217,7 +218,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("failed to register incoming request", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -268,7 +269,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -332,7 +333,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("object not found during request registration", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}
@@ -385,7 +386,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 	t.Run("loop detected", func(t *testing.T) {
 		if useLeakTest {
-			defer leakTestCheck(t)()
+			defer leaktest.Check(t)()
 		} else {
 			t.Parallel()
 		}

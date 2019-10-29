@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 
 	"github.com/insolar/insolar/insolar"
@@ -52,7 +53,7 @@ func sendTargetHelper(
 }
 
 func TestResultsMatcher_AddStillExecution(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	tests := []struct {
 		name  string
@@ -110,7 +111,7 @@ func TestResultsMatcher_AddStillExecution(t *testing.T) {
 }
 
 func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	tests := []struct {
 		name  string
@@ -191,7 +192,7 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 }
 
 func TestResultsMatcher_Clear(t *testing.T) {
-	defer leakTestCheck(t)()
+	defer leaktest.Check(t)()
 
 	tests := []struct {
 		name  string
