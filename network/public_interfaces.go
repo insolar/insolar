@@ -53,6 +53,8 @@ package network
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 )
@@ -72,10 +74,15 @@ type MessageResponder interface {
 // Message represents a message header and payload
 type Message struct {
 	payload payload.Meta
+	raw     *message.Message
 }
 
-func (m Message) Reply(replyMsg *Message) (CorrelationID, error) {
+func (m *Message) Reply(replyMsg *Message) (CorrelationID, error) {
 	panic("implement me")
+}
+
+func (m *Message) Raw() *message.Message {
+	return m.raw
 }
 
 // MessengerFactory interface creates a new Messenger with topic
@@ -106,7 +113,7 @@ const (
 )
 
 type Update interface {
-	// prepare/ cancel/ commit pulse change
+	//todo: prepare/ cancel/ commit pulse change
 	Pulse() insolar.Pulse
 	// State returns current network state
 	State() State

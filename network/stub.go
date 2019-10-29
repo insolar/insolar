@@ -48,4 +48,25 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package skeleton
+package network
+
+import (
+	"context"
+
+	"github.com/insolar/insolar/insolar"
+)
+
+type Stub struct {
+}
+
+func (m Stub) SubscribeToMessages(ctx context.Context, topic string) (<-chan Message, error) {
+	panic("implement me")
+}
+
+func (m Stub) SendRole(ctx context.Context, msg *Message, role insolar.DynamicRole, object insolar.Reference) (CorrelationID, error) {
+	panic("implement me")
+}
+
+func (m Stub) SendTarget(ctx context.Context, msg *Message, target insolar.Reference) (CorrelationID, error) {
+	panic("implement me")
+}
