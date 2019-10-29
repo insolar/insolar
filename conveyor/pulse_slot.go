@@ -18,11 +18,17 @@ type PulseSlot struct {
 }
 
 func (p *PulseSlot) State() PulseSlotState {
-	return p.pulseData.State()
+	_, ps := p.pulseData.PulseRange()
+	return ps
 }
 
 func (p *PulseSlot) PulseData() pulse.Data {
-	return p.pulseData.PulseData()
+	pd, _ := p.pulseData.PulseData()
+	if pd.IsEmpty() {
+		// possible incorrect injection for SM in the Antique slot
+		panic("illegal state - not initialized")
+	}
+	return pd
 }
 
 func (p *PulseSlot) IsAcceptedFutureOrPresent(pn pulse.Number) (isFuture, isAccepted bool) {
@@ -34,8 +40,7 @@ func (p *PulseSlot) IsAcceptedFutureOrPresent(pn pulse.Number) (isFuture, isAcce
 }
 
 func (p *PulseSlot) HasPulseData(pn pulse.Number) bool {
-	pd := p.pulseData.PulseData()
-	if pn == pd.PulseNumber && pd.IsValidPulsarData() {
+	if pr, _ := p.pulseData.PulseRange(); pr != nil {
 		return true
 	}
 	return p.pulseManager.HasPulseData(pn)

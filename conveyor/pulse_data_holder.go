@@ -23,73 +23,80 @@ import (
 )
 
 type pulseDataHolder interface {
-	PulseData() pulse.Data
-	State() PulseSlotState
+	// range is nil for Future and Antique
+	PulseRange() (pulse.Range, PulseSlotState)
+	// data is expected for Future, and empty for Antique
+	PulseData() (pulse.Data, PulseSlotState)
 
-	MakePresent(pd pulse.Data)
+	MakePresent(pr pulse.Range)
 	MakePast()
 }
 
 var _ pulseDataHolder = &futurePulseDataHolder{}
 
 type futurePulseDataHolder struct {
-	mutex  sync.RWMutex
-	pd     pulse.Data
-	isPast bool
+	mutex    sync.RWMutex
+	expected pulse.Data
+	pr       pulse.Range
+	isPast   bool
 }
 
-func (p *futurePulseDataHolder) PulseData() pulse.Data {
+func (p *futurePulseDataHolder) PulseData() (pulse.Data, PulseSlotState) {
 	p.mutex.RLock()
-	pd := p.pd
-	p.mutex.RUnlock()
-	return pd
-}
+	defer p.mutex.RUnlock()
 
-func (p *futurePulseDataHolder) State() PulseSlotState {
-	p.mutex.RLock()
 	switch {
+	case p.pr == nil:
+		switch {
+		case p.expected.IsEmpty():
+			return pulse.Data{}, 0
+		case p.isPast:
+			panic("illegal state")
+		}
+		return p.expected, Future
 	case p.isPast:
-		p.mutex.RUnlock()
-		return Past
-	case p.pd.IsEmpty():
-		p.mutex.RUnlock()
-		return 0
-	case p.pd.IsExpectedPulse():
-		p.mutex.RUnlock()
-		return Future
+		return p.pr.RightBoundData(), Past
 	default:
-		p.mutex.RUnlock()
-		return Present
+		return p.pr.RightBoundData(), Present
 	}
 }
 
-func (p *futurePulseDataHolder) MakePresent(pd pulse.Data) {
-	pd.EnsurePulsarData()
+func (p *futurePulseDataHolder) PulseRange() (pulse.Range, PulseSlotState) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 
-	switch p.State() {
-	case Future:
-		break
-	case Present:
-		return
+	switch {
+	case p.pr == nil:
+		switch {
+		case p.expected.IsEmpty():
+			return nil, 0
+		case p.isPast:
+			panic("illegal state")
+		}
+		return p.pr, Future
+	case p.isPast:
+		return p.pr, Past
 	default:
+		return p.pr, Present
+	}
+}
+
+func (p *futurePulseDataHolder) MakePresent(pr pulse.Range) {
+	pr.RightBoundData().EnsurePulsarData()
+
+	if _, ps := p.PulseRange(); ps != Future {
 		panic("illegal state")
 	}
 
 	p.mutex.Lock()
-	p.pd = pd
+	p.pr = pr
 	p.mutex.Unlock()
 }
 
 func (p *futurePulseDataHolder) MakePast() {
-	switch p.State() {
-	case Present:
-		break
-	case Past:
-		return
-	default:
+	if _, ps := p.PulseRange(); ps != Present {
 		panic("illegal state")
 	}
-
 	p.mutex.Lock()
 	p.isPast = true
 	p.mutex.Unlock()
@@ -98,12 +105,16 @@ func (p *futurePulseDataHolder) MakePast() {
 var _ pulseDataHolder = &presentPulseDataHolder{}
 
 type presentPulseDataHolder struct {
-	pd     pulse.Data
+	pr     pulse.Range
 	isPast uint32 //atomic
 }
 
-func (p *presentPulseDataHolder) PulseData() pulse.Data {
-	return p.pd
+func (p *presentPulseDataHolder) PulseData() (pulse.Data, PulseSlotState) {
+	return p.pr.RightBoundData(), p.State()
+}
+
+func (p *presentPulseDataHolder) PulseRange() (pulse.Range, PulseSlotState) {
+	return p.pr, p.State()
 }
 
 func (p *presentPulseDataHolder) State() PulseSlotState {
@@ -113,36 +124,31 @@ func (p *presentPulseDataHolder) State() PulseSlotState {
 	return Past
 }
 
-func (p *presentPulseDataHolder) MakePresent(pd pulse.Data) {
-	if p.State() != Present {
-		panic("illegal state")
-	}
-	if p.pd != pd {
-		panic("illegal value")
-	}
+func (p *presentPulseDataHolder) MakePresent(pulse.Range) {
+	panic("illegal state")
 }
 
 func (p *presentPulseDataHolder) MakePast() {
 	atomic.StoreUint32(&p.isPast, 1)
 }
 
-var _ pulseDataHolder = &antiquePulseDataHolder{}
+var _ pulseDataHolder = &antiqueNoPulseDataHolder{}
 
-type antiquePulseDataHolder struct {
+type antiqueNoPulseDataHolder struct {
 }
 
-func (p antiquePulseDataHolder) PulseData() pulse.Data {
+func (p antiqueNoPulseDataHolder) PulseData() (pulse.Data, PulseSlotState) {
+	return pulse.Data{}, Antique
+}
+
+func (p antiqueNoPulseDataHolder) PulseRange() (pulse.Range, PulseSlotState) {
+	return nil, Antique
+}
+
+func (p antiqueNoPulseDataHolder) MakePresent(pulse.Range) {
 	panic("illegal state")
 }
 
-func (p antiquePulseDataHolder) State() PulseSlotState {
-	return Antique
-}
-
-func (p antiquePulseDataHolder) MakePresent(pd pulse.Data) {
-	panic("illegal state")
-}
-
-func (p antiquePulseDataHolder) MakePast() {
+func (p antiqueNoPulseDataHolder) MakePast() {
 	panic("illegal state")
 }

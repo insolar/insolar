@@ -92,6 +92,7 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 	}
 
 	createFn := p.factoryFn(targetPN, event)
+	var createDefaults smachine.CreateDefaultValues
 
 	switch {
 	case createFn == nil:
@@ -100,29 +101,29 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 	case pulseState == Future:
 		// event for future need special handling
 		pulseSlotMachine.innerMachine.AddNew(ctx,
-			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn),
-			smachine.CreateDefaultValues{})
+			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn), createDefaults)
 		return nil
 
 	case pulseState == Antique:
-		if p.pdm.TouchPulseData(targetPN) {
-			break // go forward
+		if cps, ok := p.pdm.getCachedPulseSlot(targetPN); ok {
+			createDefaults.PutOverride(injector.GetDefaultInjectionId(cps), cps)
+			break // add SM
 		}
+
 		if !p.pdm.IsRecentPastRange(pn) {
 			// for non-recent past HasPulseData() can be incorrect / incomplete
 			// we must use a longer procedure to get PulseData and utilize SM for it
 			pulseSlotMachine.innerMachine.AddNew(ctx,
-				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn),
-				smachine.CreateDefaultValues{})
+				newAntiqueEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn), createDefaults)
 			return nil
 		}
 		fallthrough
-	default: //pulseState == Past or Present:
-		if !p.pdm.TouchPulseData(targetPN) { // make sure - for PAST we should always have the data ...
-			return fmt.Errorf("unknown data for pulse : pn=%v event=%v", targetPN, event)
-		}
+
+	case !p.pdm.TouchPulseData(targetPN): // make sure - for PAST and PRESENT we must always have the data ...
+		return fmt.Errorf("unknown data for pulse: pn=%v event=%v", targetPN, event)
 	}
-	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, createFn, smachine.CreateDefaultValues{}); !ok {
+
+	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, createFn, createDefaults); !ok {
 		return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
 	}
 	return nil
@@ -139,12 +140,54 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 		if psm := p.getPulseSlotMachine(presentPN); psm != nil {
 			return psm, presentPN, Present, nil
 		}
-		// present slot must be present ;)
+		// present slot must be present
 		panic("illegal state")
 	case pn < presentPN:
+		// this can be either a past/antique slot, or a part of the present range
 		if psm := p.getPulseSlotMachine(pn); psm != nil {
 			return psm, pn, Past, nil
 		}
+
+		if psm := p.getPulseSlotMachine(presentPN); psm == nil {
+			// present slot must be present
+			panic("illegal state")
+		} else {
+			var isProhibited bool
+			switch pr, ps := psm.pulseSlot.pulseData.PulseRange(); {
+			case ps == Past:
+				// pulse has changed - then we handle the packet as usual
+				break
+			case ps != Present:
+				panic("illegal state")
+			case pr.IsSingular() || pr.LeftBoundNumber() > pn:
+				// pn belongs to Past or Antique for sure
+				break
+			case !pr.EnumNonArticulatedNumbers(func(n pulse.Number, prevDelta, nextDelta uint16) bool {
+				switch {
+				case n == pn:
+				case pn.IsEqOrOut(n, prevDelta, nextDelta):
+					return pn < n // stop search, as EnumNumbers from smaller to higher pulses
+				default:
+					// this number is explicitly prohibited by a known pulse data
+					isProhibited = true
+					// and stop now
+				}
+				return true
+			}):
+				// we've seen neither positive nor negative match
+				if pr.IsArticulated() {
+					// Present range is articulated, so anything that is not wrong - can be valid as present
+					return psm, presentPN, Present, nil
+				}
+				fallthrough
+			case isProhibited: // Present range is articulated, so anything that is not wrong - can be valid
+				return nil, 0, 0, fmt.Errorf("pulse number is not allowed: pn=%v", pn)
+			default:
+				// we found a match in a range of the present slot
+				return psm, presentPN, Present, nil
+			}
+		}
+
 		if !pn.IsTimePulse() {
 			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 		}
@@ -210,7 +253,7 @@ func (p *PulseConveyor) _publishPulseSlotMachine(pn pulse.Number, psm *PulseSlot
 		}
 		return psm
 	}
-	psm.activate(p.workerCtx, p.slotMachine)
+	psm.activate(p.workerCtx, p.slotMachine.AddNew)
 	psm.setPulseForUnpublish(p.slotMachine, pn)
 
 	return psm
@@ -260,40 +303,45 @@ func (p *PulseConveyor) CancelPulseChange() error {
 	})
 }
 
-func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) error {
+func (p *PulseConveyor) CommitPulseChange(pr pulse.Range) error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
 		p.pdm.unsetPreparingPulse()
-		p._promotePulseSlots(ctx, pd)
+		p._promotePulseSlots(ctx, pr)
 		ctx.Migrate()
 	})
 }
 
-func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd pulse.Data) {
+func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr pulse.Range) {
+	pd := pr.RightBoundData()
 	pd.EnsurePulsarData()
 	prevPresentPN, prevFuturePN := p.pdm.GetPresentPulse()
 
 	if p.presentMachine == nil {
-		if prevFuturePN != uninitializedFuture {
+		switch {
+		case prevFuturePN != uninitializedFuture:
 			panic("illegal state")
-		}
-		if p.getPulseSlotMachine(prevPresentPN) != nil {
+		case p.getPulseSlotMachine(prevPresentPN) != nil:
 			panic("illegal state")
 		}
 	} else {
-		if p.getPulseSlotMachine(prevPresentPN) != p.presentMachine {
+		switch {
+		case p.getPulseSlotMachine(prevPresentPN) != p.presentMachine:
 			panic("illegal state")
-		}
-		if prevPresentPN >= pd.PulseNumber || pd.PulseNumber < prevFuturePN {
+		case pr.LeftBoundNumber() != prevFuturePN:
+			panic("illegal state")
+		case prevPresentPN.Next(pr.LeftPrevDelta()) != pr.LeftBoundNumber():
 			panic("illegal state")
 		}
 		p.presentMachine.setPast()
 	}
-	p.pdm.putPulseData(pd) // add to the recent cache
+	pr.EnumNonArticulatedData(func(data pulse.Data) bool {
+		p.pdm.putPulseData(data) // add to the recent cache
+		return false
+	})
 
 	if p.unpublishPulse.IsTimePulse() {
 		// we know what we do - right!?
-		p.slotMachine.TryUnsafeUnpublish(pd.PulseNumber)
-
+		p.slotMachine.TryUnsafeUnpublish(p.unpublishPulse)
 		p.unpublishPulse = pulse.Unknown
 	}
 
@@ -303,17 +351,17 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 	activatePresent := false
 
 	if prevFuture != nil {
-		prevFuture.setPresent(pd)
+		prevFuture.setPresent(pr)
 		p.presentMachine = prevFuture
 
 		if prevFuturePN != pd.PulseNumber {
-			// to avoid unnecessary synchronization the alias will be unpublished on commit of a next pulse
+			// avoids unnecessary synchronization the alias will be unpublished on commit of a next pulse
 			p.unpublishPulse = prevFuturePN
 			republishPresent = true
 		}
 	} else {
 		psm := p.newPulseSlotMachine()
-		psm.setPresent(pd)
+		psm.setPresent(pr)
 		p.presentMachine = psm
 		activatePresent = true
 	}
@@ -327,7 +375,7 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pd p
 	}
 
 	if activatePresent {
-		p.presentMachine.activateWithCtx(p.workerCtx, ctx)
+		p.presentMachine.activate(p.workerCtx, ctx.AddNew)
 	}
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
 }

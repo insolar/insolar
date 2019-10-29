@@ -19,6 +19,7 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/pulse"
 )
@@ -50,18 +51,16 @@ func (sm *antiqueEventSM) stepInit(ctx smachine.InitializationContext) smachine.
 
 func (sm *antiqueEventSM) stepRequestOldPulseData(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
-	sm.ps.pulseManager.PreparePulseDataRequest(ctx, sm.pn, func(_ bool, _ pulse.Data) {
+	return sm.ps.pulseManager.PreparePulseDataRequest(ctx, sm.pn, func(_ bool, _ pulse.Data) {
 		// we don't need to store PD as it will also be in the cache for a while
-	}).Start()
-
-	return ctx.Sleep().ThenJump(sm.stepGotAnswer)
+	}).DelayedStart().Sleep().ThenJump(sm.stepGotAnswer)
 }
 
 func (sm *antiqueEventSM) stepGotAnswer(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	// check if data became available or and either run the event or kill it
-	if sm.ps.HasPulseData(sm.pn) {
-		// TODO set a dependency with the received PD?
-		return ctx.Replace(sm.createFn)
+	if cps, ok := sm.ps.pulseManager.getCachedPulseSlot(sm.pn); ok {
+		var createDefaults smachine.CreateDefaultValues
+		createDefaults.PutOverride(injector.GetDefaultInjectionId(cps), cps)
+		return ctx.ReplaceExt(sm.createFn, createDefaults)
 	}
 
 	ctx.SetDefaultTerminationResult(fmt.Errorf("unable to find pulse data: pn=%v", sm.pn))

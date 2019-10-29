@@ -38,11 +38,9 @@ func NewPulseSlotMachine(config PulseSlotConfig, pulseManager *PulseDataManager)
 	psm := &PulseSlotMachine{
 		pulseSlot: PulseSlot{pulseManager: pulseManager},
 	}
+	// TODO capture callbacks into a worker manager
 	psm.innerMachine = smachine.NewSlotMachine(config.config,
 		nil, nil, config.parentRegistry)
-	// TODO capture callbacks into a worker manager
-
-	psm.innerMachine.PutDependency(reflect.TypeOf(PulseSlot{}).String(), &psm.pulseSlot)
 
 	return psm
 }
@@ -67,18 +65,17 @@ func (p *PulseSlotMachine) SlotLink() smachine.SlotLink {
 
 /* ================ Conveyor control ================== */
 
-func (p *PulseSlotMachine) activate(workerCtx context.Context, m *smachine.SlotMachine) {
+func (p *PulseSlotMachine) activate(workerCtx context.Context,
+	addFn func(context.Context, smachine.StateMachine, smachine.CreateDefaultValues) smachine.SlotLink,
+) {
 	if !p.selfLink.IsEmpty() {
 		panic("illegal state")
 	}
-	p.selfLink = m.AddNew(workerCtx, p, smachine.CreateDefaultValues{})
-}
+	if p.pulseSlot.State() != Antique {
+		p.innerMachine.PutDependency(reflect.TypeOf(PulseSlot{}).String(), &p.pulseSlot)
+	}
 
-func (p *PulseSlotMachine) activateWithCtx(workerCtx context.Context, ctx smachine.MachineCallContext) {
-	if !p.selfLink.IsEmpty() {
-		panic("illegal state")
-	}
-	p.selfLink = ctx.AddNew(workerCtx, p, smachine.CreateDefaultValues{})
+	p.selfLink = addFn(workerCtx, p, smachine.CreateDefaultValues{})
 }
 
 func (p *PulseSlotMachine) setFuture(pd pulse.Data) {
@@ -88,39 +85,34 @@ func (p *PulseSlotMachine) setFuture(pd pulse.Data) {
 
 	switch {
 	case p.pulseSlot.pulseData == nil:
-		p.pulseSlot.pulseData = &futurePulseDataHolder{pd: pd}
+		p.pulseSlot.pulseData = &futurePulseDataHolder{expected: pd}
 	default:
 		panic("illegal state")
 	}
 }
 
-func (p *PulseSlotMachine) setPresent(pd pulse.Data) {
-	pd.EnsurePulsarData()
-
+func (p *PulseSlotMachine) setPresent(pr pulse.Range) {
 	switch {
 	case p.pulseSlot.pulseData == nil || p.innerMachine.IsEmpty():
-		p.pulseSlot.pulseData = &presentPulseDataHolder{pd: pd}
+		pr.RightBoundData().EnsurePulsarData()
+		p.pulseSlot.pulseData = &presentPulseDataHolder{pr: pr}
 	default:
-		p.pulseSlot.pulseData.MakePresent(pd)
+		p.pulseSlot.pulseData.MakePresent(pr)
 	}
 }
 
 func (p *PulseSlotMachine) setPast() {
-	switch {
-	case p.pulseSlot.pulseData == nil:
+	if p.pulseSlot.pulseData == nil {
 		panic("illegal state")
-	default:
-		p.pulseSlot.pulseData.MakePast()
 	}
+	p.pulseSlot.pulseData.MakePast()
 }
 
 func (p *PulseSlotMachine) setAntique() {
-	switch {
-	case p.pulseSlot.pulseData == nil:
-		p.pulseSlot.pulseData = &antiquePulseDataHolder{}
-	case p.pulseSlot.pulseData.State() != Antique:
+	if p.pulseSlot.pulseData != nil {
 		panic("illegal state")
 	}
+	p.pulseSlot.pulseData = &antiqueNoPulseDataHolder{}
 }
 
 func (p *PulseSlotMachine) setPulseForUnpublish(m *smachine.SlotMachine, pn pulse.Number) {

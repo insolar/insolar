@@ -28,20 +28,25 @@ import (
 // WARNING! Cache size is not directly limited.
 // TODO eviction function is not efficient for 100+ PDs and/or accessRotations > 10
 type PulseDataCache struct {
+	pdm       *PulseDataManager
 	mutex     sync.RWMutex
 	minRange  uint32
-	cache     map[pulse.Number]pulse.Data
+	cache     map[pulse.Number]*PulseSlot // enable reuse for SMs in Antique slot
 	access    []map[pulse.Number]struct{}
 	accessIdx int
 }
 
-func (p *PulseDataCache) Init(minRange uint32, accessRotations int) {
+func (p *PulseDataCache) Init(pdm *PulseDataManager, minRange uint32, accessRotations int) {
 	if p.access != nil {
 		panic("illegal state")
 	}
 	if accessRotations < 0 {
 		panic("illegal value")
 	}
+	if pdm == nil {
+		panic("illegal value")
+	}
+	p.pdm = pdm
 	p.minRange = minRange
 	p.access = make([]map[pulse.Number]struct{}, accessRotations)
 	p.access[0] = make(map[pulse.Number]struct{})
@@ -105,7 +110,9 @@ const (
 	hitNoTouch
 )
 
-func (p *PulseDataCache) getRO(pn pulse.Number) (pulse.Data, accessState) {
+var emptyCachePulseSlot = PulseSlot{nil, cachePulseDataHolder{}}
+
+func (p *PulseDataCache) getRO(pn pulse.Number) (*PulseSlot, accessState) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -117,10 +124,10 @@ func (p *PulseDataCache) getRO(pn pulse.Number) (pulse.Data, accessState) {
 			return pd, hitNoTouch
 		}
 	}
-	return pulse.Data{}, miss
+	return &emptyCachePulseSlot, miss
 }
 
-func (p *PulseDataCache) Get(pn pulse.Number) (pulse.Data, bool) {
+func (p *PulseDataCache) getAndTouch(pn pulse.Number) (*PulseSlot, bool) {
 	pd, m := p.getRO(pn)
 	if m != hitNoTouch {
 		return pd, m != miss
@@ -133,9 +140,14 @@ func (p *PulseDataCache) Get(pn pulse.Number) (pulse.Data, bool) {
 	return pd, true
 }
 
+func (p *PulseDataCache) Get(pn pulse.Number) (pulse.Data, bool) {
+	pd, ok := p.getAndTouch(pn)
+	return pd._cacheData(), ok
+}
+
 func (p *PulseDataCache) Check(pn pulse.Number) (pulse.Data, bool) {
 	pd, m := p.getRO(pn)
-	return pd, m != miss
+	return pd._cacheData(), m != miss
 }
 
 func (p *PulseDataCache) Contains(pn pulse.Number) bool {
@@ -160,8 +172,8 @@ func (p *PulseDataCache) Put(pd pulse.Data) {
 	switch epd, m := p.getRO(pd.PulseNumber); {
 	case m == miss:
 		//break
-	case pd != epd:
-		panic(fmt.Errorf("duplicate pulseData: before=%v after=%v", epd, pd))
+	case pd != epd._cacheData():
+		panic(fmt.Errorf("duplicate pulseData: before=%v after=%v", epd._cacheData(), pd))
 	case m == hitNoTouch:
 		p.mutex.Lock()
 		p._touch(pd.PulseNumber)
@@ -175,13 +187,13 @@ func (p *PulseDataCache) Put(pd pulse.Data) {
 	defer p.mutex.Unlock()
 
 	if p.cache == nil {
-		p.cache = make(map[pulse.Number]pulse.Data)
-		p.cache[pd.PulseNumber] = pd
+		p.cache = make(map[pulse.Number]*PulseSlot)
+		p.cache[pd.PulseNumber] = newCachePulseSlot(p.pdm, pd)
 	} else {
 		switch epd, ok := p.cache[pd.PulseNumber]; {
 		case !ok:
-			p.cache[pd.PulseNumber] = pd
-		case pd != epd:
+			p.cache[pd.PulseNumber] = newCachePulseSlot(p.pdm, pd)
+		case pd != epd._cacheData():
 			panic(fmt.Errorf("duplicate pulseData: before=%v after=%v", epd, pd))
 		}
 	}
@@ -210,4 +222,36 @@ func (p *PulseDataCache) _rotate() {
 	default:
 		p.access[p.accessIdx] = make(map[pulse.Number]struct{}, len(m))
 	}
+}
+
+func newCachePulseSlot(pdm *PulseDataManager, pd pulse.Data) *PulseSlot {
+	return &PulseSlot{pdm, cachePulseDataHolder{pulse.NewOnePulseRange(pd)}}
+}
+
+var _ pulseDataHolder = &cachePulseDataHolder{}
+var _ pulse.Range = &cachePulseDataHolder{}
+
+type cachePulseDataHolder struct {
+	pulse.OnePulseRange
+}
+
+func (p cachePulseDataHolder) PulseData() (pulse.Data, PulseSlotState) {
+	return p.RightBoundData(), Antique
+}
+
+func (p cachePulseDataHolder) PulseRange() (pulse.Range, PulseSlotState) {
+	return p, Antique
+}
+
+func (p cachePulseDataHolder) MakePresent(pulse.Range) {
+	panic("illegal state")
+}
+
+func (p cachePulseDataHolder) MakePast() {
+	panic("illegal state")
+}
+
+// WARNING! This is a hack - do not use anywhere else
+func (p *PulseSlot) _cacheData() pulse.Data {
+	return p.pulseData.(cachePulseDataHolder).RightBoundData()
 }

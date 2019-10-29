@@ -53,7 +53,7 @@ func (p *PulseDataManager) Init(minCachePulseAge, maxPastPulseAge uint32, maxFut
 	}
 	p.maxPastPulseAge = maxPastPulseAge
 	p.futureCycles = maxFutureCycles
-	p.cache.Init(minCachePulseAge, 2) // any pulse data stays in cache for at least 2 pulse cycles
+	p.cache.Init(p, minCachePulseAge, 2) // any pulse data stays in cache for at least 2 pulse cycles
 }
 
 const uninitializedFuture = pulse.LocalRelative
@@ -117,6 +117,10 @@ func (p *PulseDataManager) unsetPreparingPulse() {
 
 func (p *PulseDataManager) GetPulseData(pn pulse.Number) (pulse.Data, bool) {
 	return p.cache.Get(pn)
+}
+
+func (p *PulseDataManager) getCachedPulseSlot(pn pulse.Number) (*PulseSlot, bool) {
+	return p.cache.getAndTouch(pn)
 }
 
 // for non-recent past HasPulseData() can be incorrect / incomplete

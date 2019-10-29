@@ -58,7 +58,7 @@ func (sm *AppEventSM) stepInit(ctx smachine.InitializationContext) smachine.Stat
 }
 
 func (sm *AppEventSM) stepRun(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	fmt.Println("run: ", sm.eventValue, sm.pn)
+	fmt.Println("run: ", sm.eventValue, sm.pn, sm.pulseSlot.PulseData())
 	return ctx.Poll().ThenRepeat()
 }
 
