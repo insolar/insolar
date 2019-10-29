@@ -49,6 +49,7 @@ type Leaver interface {
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.CertificateGetter -o ../testutils -s _mock.go -g
 
+// CertificateGetter interface is used to create a certificate for a new network participant node
 type CertificateGetter interface {
 	// GetCert registers reference and returns new certificate for it
 	GetCert(context.Context, *Reference) (Certificate, error)
@@ -63,6 +64,7 @@ type PulseDistributor interface {
 }
 
 // NetworkState type for bootstrapping process
+// Deprecated: should be renamed to BootstrapState and moved no network gateway
 type NetworkState int
 
 //go:generate stringer -type=NetworkState
