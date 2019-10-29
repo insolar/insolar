@@ -42,6 +42,7 @@ type benchmark struct {
 	successes      uint32
 	errors         uint32
 	timeouts       uint32
+	insSDK         *sdk.SDK
 }
 
 type scenario interface {

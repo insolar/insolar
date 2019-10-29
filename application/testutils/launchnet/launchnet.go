@@ -89,7 +89,11 @@ func Run(cb func() int) int {
 		os.Exit(2)
 	}()
 
-	pulseWatcher, config := pulseWatcherPath()
+	pulseWatcher, config, err := pulseWatcherPath()
+	if err != nil {
+		fmt.Println("PulseWatcher not found: ", err)
+		return 1
+	}
 
 	code := cb()
 
@@ -385,9 +389,7 @@ func startNet() error {
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 	}
-	defer func() {
-		_ = os.Chdir(cwd)
-	}()
+	defer os.Chdir(cwd)
 
 	for cwd[len(cwd)-15:] != "insolar/insolar" {
 		err = os.Chdir("../")
@@ -506,13 +508,13 @@ func setup() error {
 	return nil
 }
 
-func pulseWatcherPath() (string, string) {
+func pulseWatcherPath() (string, string, error) {
 	insDir := insolar.RootModuleDir()
 	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
 
 	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
 	config := filepath.Join(baseDir, "pulsewatcher.yaml")
-	return pulseWatcher, config
+	return pulseWatcher, config, nil
 }
 
 func teardown() {

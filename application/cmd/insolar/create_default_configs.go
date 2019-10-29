@@ -25,7 +25,12 @@ import (
 	"github.com/insolar/insolar/application/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar/defaults"
 )
+
+func baseDir() string {
+	return defaults.LaunchnetDir()
+}
 
 func writePulsarConfig(outputDir string) {
 	pcfg := configuration.NewPulsarConfiguration()

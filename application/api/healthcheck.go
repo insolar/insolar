@@ -17,25 +17,24 @@
 package api
 
 import (
-	"net/http"
-
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
+	"net/http"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 // HealthChecker allows to check network status of a node.
 type HealthChecker struct {
 	CertificateManager insolar.CertificateManager
-	NodeNetwork        network.NodeNetwork // nolint: staticcheck
+	NodeNetwork        network.NodeNetwork
 	PulseAccessor      pulse.Accessor
 }
 
 // NewHealthChecker creates new HealthChecker.
-func NewHealthChecker(cm insolar.CertificateManager, nn network.NodeNetwork, pa pulse.Accessor) *HealthChecker { // nolint: staticcheck
+func NewHealthChecker(cm insolar.CertificateManager, nn network.NodeNetwork, pa pulse.Accessor) *HealthChecker {
 	return &HealthChecker{CertificateManager: cm, NodeNetwork: nn, PulseAccessor: pa}
 }
 
