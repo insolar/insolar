@@ -239,7 +239,7 @@ type ExecutionContext interface {
 	// When Replace() is successful, then stopping of this SM will not fire the termination handler.
 	// WARNING! Use of SetTerminationHandler() inside CreateFunc will replace the current handler, so it will never fire then.
 	Replace(CreateFunc) StateUpdate
-	//ReplaceExt(CreateFunc, CreateDefaultValues) StateUpdate
+	ReplaceExt(CreateFunc, CreateDefaultValues) StateUpdate
 	// See Replace()
 	ReplaceWith(StateMachine) StateUpdate
 

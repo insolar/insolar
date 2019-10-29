@@ -191,11 +191,26 @@ func (p *slotContext) Errorf(msg string, a ...interface{}) StateUpdate {
 }
 
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
-	return p.template(stateUpdReplace).newVar(fn)
+	tmpl := p.template(stateUpdReplace) // ensures state of this context
+
+	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	return tmpl.newVar(def)
+}
+
+func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) StateUpdate {
+	tmpl := p.template(stateUpdReplace) // ensures state of this context
+
+	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	mergeDefaultValues(&def.def, defValues)
+
+	return tmpl.newVar(def)
 }
 
 func (p *slotContext) ReplaceWith(sm StateMachine) StateUpdate {
-	return p.template(stateUpdReplaceWith).newVar(sm)
+	tmpl := p.template(stateUpdReplaceWith) // ensures state of this context
+
+	def := prepareReplaceData{sm: sm, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	return tmpl.newVar(def)
 }
 
 func (p *slotContext) Repeat(limit int) StateUpdate {

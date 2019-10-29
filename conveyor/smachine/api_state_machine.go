@@ -116,10 +116,22 @@ type TerminationData struct {
 	worker FixedSlotWorker
 }
 
+// See mergeDefaultValues() and prepareNewSlotWithDefaults()
 type CreateDefaultValues struct {
 	Context                context.Context
 	Parent                 SlotLink
 	OverriddenDependencies map[string]interface{}
 	TerminationHandler     TerminationHandlerFunc
 	StepLogger             StateMachineStepLoggerFunc
+}
+
+func (p *CreateDefaultValues) PutOverride(id string, v interface{}) {
+	if id == "" {
+		panic("illegal value")
+	}
+	if p.OverriddenDependencies == nil {
+		p.OverriddenDependencies = map[string]interface{}{id: v}
+	} else {
+		p.OverriddenDependencies[id] = v
+	}
 }

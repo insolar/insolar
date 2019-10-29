@@ -812,7 +812,6 @@ func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (Sl
 type prepareSlotValue struct {
 	slotReplaceData
 	stepLogger    StateMachineStepLoggerFunc
-	overrides     map[string]interface{}
 	terminate     TerminationHandlerFunc
 	isReplacement bool
 }
@@ -820,13 +819,38 @@ type prepareSlotValue struct {
 func (m *SlotMachine) prepareNewSlotWithDefaults(creator *Slot, fn CreateFunc, sm StateMachine, defValues CreateDefaultValues) (SlotLink, bool) {
 	return m.prepareNewSlot(creator, fn, sm, prepareSlotValue{
 		slotReplaceData: slotReplaceData{
-			parent: defValues.Parent,
-			ctx:    defValues.Context,
+			parent:   defValues.Parent,
+			ctx:      defValues.Context,
+			injected: defValues.OverriddenDependencies,
 		},
 		stepLogger: defValues.StepLogger,
-		overrides:  defValues.OverriddenDependencies,
 		terminate:  defValues.TerminationHandler,
 	})
+}
+
+func mergeDefaultValues(target *prepareSlotValue, source CreateDefaultValues) {
+	if source.Context != nil {
+		target.ctx = source.Context
+	}
+	if !source.Parent.IsEmpty() {
+		target.parent = source.Parent
+	}
+	if source.TerminationHandler != nil {
+		target.terminate = source.TerminationHandler
+	}
+	if source.StepLogger != nil {
+		target.stepLogger = source.StepLogger
+	}
+
+	switch {
+	case source.OverriddenDependencies == nil:
+	case target.injected == nil:
+		target.injected = source.OverriddenDependencies
+	default:
+		for k, v := range source.OverriddenDependencies {
+			target.injected[k] = v
+		}
+	}
 }
 
 // caller MUST be busy-holder of both creator and slot, then this method is SAFE for concurrent use
