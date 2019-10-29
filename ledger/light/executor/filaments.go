@@ -142,8 +142,8 @@ func (c *FilamentCalculatorDefault) Requests(
 	}
 
 	cache := c.cache.Get(objectID)
-	cache.RLock()
-	defer cache.RUnlock()
+	cache.Lock()
+	defer cache.Unlock()
 
 	iter := cache.NewIterator(ctx, from)
 	var segment []record.CompositeFilamentRecord
