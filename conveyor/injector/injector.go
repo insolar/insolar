@@ -22,6 +22,14 @@ import (
 	"strings"
 )
 
+func GetDefaultInjectionId(v interface{}) string {
+	return GetDefaultInjectionIdByType(reflect.TypeOf(v))
+}
+
+func GetDefaultInjectionIdByType(vt reflect.Type) string {
+	return strings.TrimLeft(vt.String(), "*")
+}
+
 func NewDependencyInjector(target interface{}, globalParent DependencyRegistry, localParent DependencyRegistryFunc) DependencyInjector {
 	resolver := NewDependencyResolver(target, globalParent, localParent, nil)
 	return NewDependencyInjectorFor(&resolver)
@@ -96,7 +104,7 @@ func (p *DependencyInjector) InjectAll() error {
 				continue
 			}
 		case typeName == "":
-			typeName = strings.TrimLeft(tt.String(), "*")
+			typeName = GetDefaultInjectionIdByType(tt)
 			fallthrough
 		default:
 			if p.resolveTypeAndSet(typeName, sf.Name, fv, sf.Type, isNillable) {
@@ -138,17 +146,15 @@ func (p *DependencyInjector) tryInjectVar(id string, varRef interface{}) error {
 
 	vt := v.Type()
 	isNillable, isSet := p.check(v, vt)
-	if isSet {
-		return fmt.Errorf("dependency is set: id=%s expectedType=%v", id, vt)
-	}
 
-	if id != "" {
+	switch {
+	case isSet:
+		return fmt.Errorf("dependency is set: id=%s expectedType=%v", id, vt)
+	case id != "":
 		if p.resolveNameAndSet(id, v, vt, isNillable) {
 			return nil
 		}
-	} else if p.resolveTypeAndSet(
-		strings.TrimLeft(vt.String(), "*"),
-		"", v, vt, isNillable) {
+	case p.resolveTypeAndSet(GetDefaultInjectionIdByType(vt), "", v, vt, isNillable):
 		return nil
 	}
 
