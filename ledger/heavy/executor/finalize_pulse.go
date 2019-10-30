@@ -18,7 +18,6 @@ package executor
 
 import (
 	"context"
-	"runtime/debug"
 	"sync"
 
 	"go.opencensus.io/stats"
@@ -40,26 +39,32 @@ type BadgerGCRunInfo struct {
 	runFrequency uint
 
 	callCounter uint
-	lock        sync.Mutex
+	tryLock     chan struct{}
 }
 
 func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
+	tryLock := make(chan struct{}, 1)
+	tryLock <- struct{}{}
 	return &BadgerGCRunInfo{
 		runner:       runner,
 		runFrequency: runFrequency,
+		tryLock:      tryLock,
 	}
 }
 
 func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.callCounter++
-	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
-		b.runner.RunValueGC(ctx)
-		inslogger.FromContext(ctx).Info("FreeOSMemory starts")
-		debug.FreeOSMemory()
-		inslogger.FromContext(ctx).Info("FreeOSMemory stop")
-	}
+	go func() {
+		select {
+		case v := <-b.tryLock:
+			b.callCounter++
+			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				b.runner.RunValueGC(ctx)
+			}
+			b.tryLock <- v
+		default:
+			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
+		}
+	}()
 }
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
