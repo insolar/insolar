@@ -61,6 +61,7 @@ func NewBadgerDB(opts badger.Options, extras ...BadgerOption) (*BadgerDB, error)
 	// always allow to truncate vlog if necessary (actually it should have been a default behavior)
 	opts.Truncate = true
 
+	// it should decrease pressure to disk
 	opts.NumCompactors = 1
 
 	bdb, err := badger.Open(opts)
