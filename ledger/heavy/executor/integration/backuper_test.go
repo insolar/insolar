@@ -59,27 +59,12 @@ func (t *testKey) Scope() store.Scope {
 	return store.ScopeJetDrop
 }
 
-func addLastBackupFile(t *testing.T, to string, lastBackupedVersion uint64) {
-	backupInfo := executor.LastBackupInfo{
-		LastBackupedVersion: lastBackupedVersion,
-	}
-	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
-	require.NoError(t, err)
-
-	err = ioutil.WriteFile(to, rawInfo, 0600)
-	println("============ addLastBackupFile: ", to)
-	require.NoError(t, err)
-}
-
 func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDBDir string) configuration.Ledger {
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		require.NoError(t, err)
 	}
-
-	lastBackupedVersionFile := badgerDir + "/last_version.json"
-	addLastBackupFile(t, lastBackupedVersionFile, 0)
 
 	tmpDir := "/tmp/BKP/"
 
@@ -93,7 +78,6 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDB
 		BackupFile:           "incr.bkp",
 		Enabled:              true,
 		PostProcessBackupCmd: []string{"bash", "-c", cwd + "/post_process_backup.sh" + " " + badgerDir + " " + recoverDBDir},
-		LastBackupInfoFile:   lastBackupedVersionFile,
 	}
 
 	err = os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -199,11 +183,6 @@ func TestBackuper(t *testing.T) {
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
-
-	// check last backuped version file
-	{
-		require.NotEqual(t, 0, loadLastBackupedVersion(t, cfg.Backup.LastBackupInfoFile))
-	}
 }
 
 func loadLastBackupedVersion(t *testing.T, fileName string) uint64 {
@@ -233,9 +212,9 @@ func init() {
 }
 
 // prepareBackup uses backupmanager utility to prepare backup for usage
-func prepareBackup(t *testing.T, dbDir string, lastBackupInfoFile string) {
+func prepareBackup(t *testing.T, dbDir string) {
 	println("=====> Start preparing backup")
-	cmd := exec.Command(binaryPath+"/backupmanager", "prepare_backup", "-d", dbDir, "-l", lastBackupInfoFile)
+	cmd := exec.Command(binaryPath+"/backupmanager", "prepare_backup", "-d", dbDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
@@ -391,7 +370,7 @@ func TestBackup_FullCycle(t *testing.T) {
 	err = bm.MakeBackup(ctx, testPulse)
 	require.NoError(t, err)
 
-	prepareBackup(t, recovTmpDir, filepath.Base(cfg.Backup.LastBackupInfoFile))
+	prepareBackup(t, recovTmpDir)
 	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
 	require.NoError(t, err)
 	defer recoveredDB.Stop(context.Background())
@@ -496,14 +475,8 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		require.NoError(t, err)
 
 		// -------------------- merge backup
-		// bkpFileName := filepath.Join(
-		// 	cfg.Backup.TargetDirectory,
-		// 	fmt.Sprintf(cfg.Backup.DirNameTemplate, nextPulse),
-		// 	cfg.Backup.BackupFile,
-		// )
-		//loadIncrementalBackup(t, backupTmpDir, bkpFileName)
 
-		prepareBackup(t, backupTmpDir, filepath.Base(cfg.Backup.LastBackupInfoFile))
+		prepareBackup(t, backupTmpDir)
 		recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(backupTmpDir))
 		require.NoError(t, err)
 		defer recoveredDB.Stop(context.Background())

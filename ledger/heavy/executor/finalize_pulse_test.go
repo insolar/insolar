@@ -33,14 +33,16 @@ import (
 )
 
 type TestBadgerGCRunner struct {
-	lock  sync.RWMutex
-	count uint
+	lock   sync.RWMutex
+	count  uint
+	called chan struct{}
 }
 
 func (t *TestBadgerGCRunner) RunValueGC(ctx context.Context) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	t.count++
+	t.called <- struct{}{}
 }
 
 func (t *TestBadgerGCRunner) getCount() uint {
@@ -56,10 +58,13 @@ func TestBadgerGCRunInfo(t *testing.T) {
 
 	t.Run("call every time if frequency equal 1", func(t *testing.T) {
 		t.Parallel()
-		runner := &TestBadgerGCRunner{}
+		runner := &TestBadgerGCRunner{
+			called: make(chan struct{}),
+		}
 		info := executor.NewBadgerGCRunInfo(runner, 1)
 		for i := 1; i < 5; i++ {
 			info.RunGCIfNeeded(ctx)
+			<-runner.called
 			require.Equal(t, uint(i), runner.getCount())
 		}
 	})
@@ -75,16 +80,20 @@ func TestBadgerGCRunInfo(t *testing.T) {
 	})
 	t.Run("call every second time if frequency equal 2", func(t *testing.T) {
 		t.Parallel()
-		runner := &TestBadgerGCRunner{}
+		runner := &TestBadgerGCRunner{
+			called: make(chan struct{}, 1),
+		}
 		frequency := uint(2)
 		info := executor.NewBadgerGCRunInfo(runner, frequency)
 		info.RunGCIfNeeded(ctx)
 		require.Equal(t, uint(0), runner.getCount())
 		info.RunGCIfNeeded(ctx)
+		<-runner.called
 		require.Equal(t, uint(1), runner.getCount())
 		info.RunGCIfNeeded(ctx)
 		require.Equal(t, uint(1), runner.getCount())
 		info.RunGCIfNeeded(ctx)
+		<-runner.called
 		require.Equal(t, uint(2), runner.getCount())
 	})
 }

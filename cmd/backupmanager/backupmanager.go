@@ -18,8 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"io/ioutil"
 	"math"
 	"os"
 	"runtime/pprof"
@@ -291,19 +289,6 @@ func parseCreateParams() *cobra.Command {
 	return createCmd
 }
 
-func writeLastBackupFile(to string, lastBackupedVersion uint64) error {
-	backupInfo := executor.LastBackupInfo{
-		LastBackupedVersion: lastBackupedVersion,
-	}
-	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
-	if err != nil {
-		return errors.Wrap(err, "failed to MarshalIndent")
-	}
-
-	err = ioutil.WriteFile(to, rawInfo, 0600)
-	return errors.Wrap(err, "failed to write to file")
-}
-
 func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
 	pulsesDB := pulse.NewDB(bdb)
 
@@ -350,8 +335,8 @@ func (nopWriter) Write(p []byte) (n int, err error) {
 // 1. finalize last pulse, since it comes not finalized ( since we set finalization after success of backup )
 // 2. gets last backuped version
 // 3. write 2. to file
-func prepareBackup(dbDir string, lastBackupedVersionFile string) {
-	log.Info("prepareBackup. dbDir: ", dbDir, ", lastBackupedVersionFile: ", lastBackupedVersionFile)
+func prepareBackup(dbDir string) {
+	log.Info("prepareBackup. dbDir: ", dbDir)
 
 	ops := badger.DefaultOptions(dbDir)
 	ops.Logger = badgerLogger
@@ -369,52 +354,29 @@ func prepareBackup(dbDir string, lastBackupedVersionFile string) {
 		stopDB(ctx, bdb, err)
 	}
 
-	lastVersion, err := bdb.Backup(nopWriter{}, 0)
-	if err != nil {
-		err = errors.Wrap(err, "failed to calculate last backuped version")
-		stopDB(ctx, bdb, err)
-	}
-	log.Info("Got last backup version: ", lastVersion)
-
-	if err := writeLastBackupFile(lastBackupedVersionFile, lastVersion); err != nil {
-		err = errors.Wrap(err, "failed to writeLastBackupFile")
-		stopDB(ctx, bdb, err)
-	}
-	log.Info("Write last backup version file: ", lastBackupedVersionFile)
-
 	stopDB(ctx, bdb, nil)
 	log.Info("New top sync pulse: ", topSyncPulse.String())
 }
 
 func parsePrepareBackupParams() *cobra.Command {
 	var (
-		dbDir                   string
-		lastBackupedVersionFile string
+		dbDir string
 	)
 	var prepareBackupCmd = &cobra.Command{
 		Use:   "prepare_backup",
 		Short: "prepare backup for usage",
 		Run: func(cmd *cobra.Command, args []string) {
-			prepareBackup(dbDir, dbDir+"/"+lastBackupedVersionFile)
+			prepareBackup(dbDir)
 		},
 	}
 
 	dbDirFlagName := "db-dir"
 	prepareBackupCmd.Flags().StringVarP(
 		&dbDir, dbDirFlagName, "d", "", "directory where new DB will be created (required)")
-	lastBackupFileFlagName := "last-backup-info"
-	prepareBackupCmd.Flags().StringVarP(
-		&lastBackupedVersionFile, lastBackupFileFlagName, "l", "", "file where last backup info will be stored (required)")
 
 	err := cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
 	if err != nil {
 		err = errors.Wrap(err, "failed to set required param: "+dbDirFlagName)
-		exitWithError(err)
-	}
-
-	err = cobra.MarkFlagRequired(prepareBackupCmd.Flags(), lastBackupFileFlagName)
-	if err != nil {
-		err = errors.Wrap(err, "failed to set required param: "+lastBackupFileFlagName)
 		exitWithError(err)
 	}
 

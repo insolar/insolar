@@ -107,16 +107,6 @@ func checkConfig(config configuration.Ledger) error {
 	if len(backupConfig.PostProcessBackupCmd) == 0 {
 		return errors.New("PostProcessBackupCmd can't be empty")
 	}
-	if len(backupConfig.LastBackupInfoFile) == 0 {
-		return errors.New("LastBackupInfoFile can't be empty")
-	}
-	if err := isPathExists(backupConfig.LastBackupInfoFile); err != nil {
-		return errors.Wrap(err, "check LastBackupInfoFile returns error")
-	}
-
-	if filepath.Dir(backupConfig.LastBackupInfoFile) != filepath.Clean(config.Storage.DataDirectory) {
-		return errors.New("LastBackupInfoFile must be in config.Storage.DataDirectory ")
-	}
 
 	return nil
 }
