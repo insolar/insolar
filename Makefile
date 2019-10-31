@@ -52,7 +52,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
 
 .PHONY: all
-all: clean submodule install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: clean submodule pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
 .PHONY: submodule
 submodule: ## init git submodule
@@ -79,19 +79,17 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	echo "skip install-build-tools"
-	#./scripts/build/install_build_tools.sh
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
 install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
-	echo "skip generate step"
-	#GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
 
 .PHONY: test_git_no_changes
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
@@ -158,10 +156,6 @@ $(HEALTHCHECK):
 .PHONY: $(KEEPERD)
 $(KEEPERD):
 	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
-
-.PHONY: $(BADGER)
-$(BADGER):
-	# GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
