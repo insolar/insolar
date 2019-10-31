@@ -303,7 +303,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 4)
+	args := make([]interface{}, 5)
 	var args0 string
 	args[0] = &args0
 	var args1 string
@@ -312,6 +312,8 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	args[2] = &args2
 	var args3 insolar.Reference
 	args[3] = &args3
+	var args4 insolar.Reference
+	args[4] = &args4
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -319,7 +321,7 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0 := self.Confirm(args0, args1, args2, args3)
+	ret0 := self.Confirm(args0, args1, args2, args3, args4)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -360,7 +362,7 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 4)
+	args := make([]interface{}, 5)
 	var args0 string
 	args[0] = &args0
 	var args1 insolar.Reference
@@ -369,6 +371,8 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 	args[2] = &args2
 	var args3 insolar.Reference
 	args[3] = &args3
+	var args4 insolar.Reference
+	args[4] = &args4
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -376,7 +380,7 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 		return nil, nil, e
 	}
 
-	ret0 := self.TransferToDeposit(args0, args1, args2, args3)
+	ret0 := self.TransferToDeposit(args0, args1, args2, args3, args4)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -511,19 +515,15 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 6)
-	var args0 insolar.Reference
+	args := make([]interface{}, 4)
+	var args0 string
 	args[0] = &args0
-	var args1 string
+	var args1 int64
 	args[1] = &args1
-	var args2 string
+	var args2 int64
 	args[2] = &args2
 	var args3 int64
 	args[3] = &args3
-	var args4 int64
-	args[4] = &args4
-	var args5 int64
-	args[5] = &args5
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -531,7 +531,7 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) ([]byte, []byte, err
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3, args4, args5)
+	ret0, ret1 := New(args0, args1, args2, args3)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}

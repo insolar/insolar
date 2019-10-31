@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -35,6 +36,8 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 )
+
+const useLeakTest = false
 
 type PreprocessorSuite struct {
 	suite.Suite
@@ -124,7 +127,11 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	s.NotNil(parsed)
 
 	s.T().Run("wrapper", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
@@ -137,7 +144,11 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	})
 
 	s.T().Run("proxy", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
@@ -664,7 +675,11 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 		contract := contract
 
 		s.T().Run(contract, func(t *testing.T) {
-			t.Parallel()
+			if useLeakTest {
+				defer leaktest.Check(t)()
+			} else {
+				t.Parallel()
+			}
 			a, r := assert.New(t), require.New(t)
 
 			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeGoPlugin)
@@ -694,6 +709,10 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 }
 
 func TestPreprocessor(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 	suite.Run(t, new(PreprocessorSuite))
 }

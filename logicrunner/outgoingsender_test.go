@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/insolar/go-actors/actor/errors"
 
 	"github.com/gojuno/minimock/v3"
@@ -65,7 +66,11 @@ func checkIncomingAndOutgoingMatch(t *testing.T, incoming *record.IncomingReques
 }
 
 func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	mc := minimock.NewController(t)
 	defer mc.Wait(2 * time.Minute)
@@ -99,7 +104,11 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 }
 
 func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	mc := minimock.NewController(t)
 	defer mc.Wait(2 * time.Minute)
@@ -135,7 +144,11 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 }
 
 func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	mc := minimock.NewController(t)
 	defer mc.Wait(2 * time.Minute)
@@ -162,7 +175,11 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 }
 
 func TestOutgoingSenderStop(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	mc := minimock.NewController(t)
 	defer mc.Wait(2 * time.Minute)
@@ -182,7 +199,11 @@ func TestOutgoingSenderStop(t *testing.T) {
 }
 
 func TestAbandonedSenderStop(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	mc := minimock.NewController(t)
 	defer mc.Wait(2 * time.Minute)

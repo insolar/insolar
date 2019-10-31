@@ -119,12 +119,11 @@ func (md *MigrationDaemon) depositMigration(
 		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
 
-	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
-
 	// If deposit doesn't exist - create new deposit
 	if !isFound {
+		var err error
 		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(caller, txHash, amount.String(), vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
+		dHolder := deposit.New(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -133,9 +132,9 @@ func (md *MigrationDaemon) depositMigration(
 		if err != nil {
 			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
-		return depositMigrationResult, nil
+		txDepositRef = &txDeposit.Reference
 	}
-	return addConfirmToDeposit(tokenHolderRef.String(), *txDepositRef, txHash, amount.String(), caller, request)
+	return addConfirmToDeposit(*tokenHolderRef, *txDepositRef, txHash, amount.String(), caller, request)
 }
 
 func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {
@@ -156,15 +155,19 @@ func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {
 }
 
 func addConfirmToDeposit(
-	tokenHolderRef string, txDepositRef insolar.Reference, txHash string,
-	amount string, caller insolar.Reference, request insolar.Reference,
+	tokenHolderRef insolar.Reference,
+	txDepositRef insolar.Reference,
+	txHash string,
+	amount string,
+	caller insolar.Reference,
+	request insolar.Reference,
 ) (*DepositMigrationResult, error) {
 	txDeposit := deposit.GetObject(txDepositRef)
 
-	err := txDeposit.Confirm(txHash, amount, caller, request)
+	err := txDeposit.Confirm(txHash, amount, caller, request, tokenHolderRef)
 	if err != nil {
 		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
 	}
 
-	return &DepositMigrationResult{Reference: tokenHolderRef}, nil
+	return &DepositMigrationResult{Reference: tokenHolderRef.String()}, nil
 }

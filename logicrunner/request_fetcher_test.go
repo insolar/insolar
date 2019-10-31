@@ -35,6 +35,8 @@ import (
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
 	require.NotNil(t, rf)
 }
