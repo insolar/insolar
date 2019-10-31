@@ -164,6 +164,12 @@ func (m *SlotMachine) FindDependency(id string) (interface{}, bool) {
 	return nil, false
 }
 
+func (m *SlotMachine) AddDependency(v interface{}) {
+	if !m.TryPutDependency(injector.GetDefaultInjectionId(v), v) {
+		panic(fmt.Errorf("duplicate dependency: %T %[1]v", v))
+	}
+}
+
 func (m *SlotMachine) PutDependency(id string, v interface{}) {
 	if id == "" {
 		panic("illegal key")

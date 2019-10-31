@@ -81,8 +81,23 @@ type PulseConveyor struct {
 	unpublishPulse pulse.Number
 }
 
-func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
+func (p *PulseConveyor) AddDependency(v interface{}) {
+	p.slotMachine.AddDependency(v)
+}
 
+func (p *PulseConveyor) FindDependency(id string) (interface{}, bool) {
+	return p.slotMachine.FindDependency(id)
+}
+
+func (p *PulseConveyor) PutDependency(id string, v interface{}) {
+	p.slotMachine.PutDependency(id, v)
+}
+
+func (p *PulseConveyor) TryPutDependency(id string, v interface{}) bool {
+	return p.slotMachine.TryPutDependency(id, v)
+}
+
+func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
 	pulseSlotMachine, targetPN, pulseState, err := p.mapToPulseSlotMachine(pn)
 	switch {
 	case err != nil:
