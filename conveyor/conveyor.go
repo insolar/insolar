@@ -142,55 +142,30 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 		}
 		// present slot must be present
 		panic("illegal state")
+	case !pn.IsTimePulse():
+		return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 	case pn < presentPN:
 		// this can be either a past/antique slot, or a part of the present range
 		if psm := p.getPulseSlotMachine(pn); psm != nil {
 			return psm, pn, Past, nil
 		}
 
+		// check if the pulse is within PRESENT range (as it may include some skipped pulses)
 		if psm := p.getPulseSlotMachine(presentPN); psm == nil {
 			// present slot must be present
 			panic("illegal state")
 		} else {
-			var isProhibited bool
-			switch pr, ps := psm.pulseSlot.pulseData.PulseRange(); {
+			switch ps, ok := psm.pulseSlot._isAcceptedPresent(presentPN, pn); {
 			case ps == Past:
 				// pulse has changed - then we handle the packet as usual
 				break
+			case !ok:
+				return nil, 0, 0, fmt.Errorf("pulse number is not allowed: pn=%v", pn)
 			case ps != Present:
 				panic("illegal state")
-			case pr.IsSingular() || pr.LeftBoundNumber() > pn:
-				// pn belongs to Past or Antique for sure
-				break
-			case !pr.EnumNonArticulatedNumbers(func(n pulse.Number, prevDelta, nextDelta uint16) bool {
-				switch {
-				case n == pn:
-				case pn.IsEqOrOut(n, prevDelta, nextDelta):
-					return pn < n // stop search, as EnumNumbers from smaller to higher pulses
-				default:
-					// this number is explicitly prohibited by a known pulse data
-					isProhibited = true
-					// and stop now
-				}
-				return true
-			}):
-				// we've seen neither positive nor negative match
-				if pr.IsArticulated() {
-					// Present range is articulated, so anything that is not wrong - can be valid as present
-					return psm, presentPN, Present, nil
-				}
-				fallthrough
-			case isProhibited: // Present range is articulated, so anything that is not wrong - can be valid
-				return nil, 0, 0, fmt.Errorf("pulse number is not allowed: pn=%v", pn)
-			default:
-				// we found a match in a range of the present slot
-				return psm, presentPN, Present, nil
 			}
 		}
 
-		if !pn.IsTimePulse() {
-			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
-		}
 		if !p.pdm.isAllowedPastSpan(presentPN, pn) {
 			return nil, 0, 0, fmt.Errorf("pulse number is too far in past: pn=%v, present=%v", pn, presentPN)
 		}

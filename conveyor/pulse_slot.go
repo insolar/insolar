@@ -1,6 +1,8 @@
 package conveyor
 
-import "github.com/insolar/insolar/pulse"
+import (
+	"github.com/insolar/insolar/pulse"
+)
 
 type PulseSlotState uint8
 
@@ -31,12 +33,51 @@ func (p *PulseSlot) PulseData() pulse.Data {
 	return pd
 }
 
-func (p *PulseSlot) IsAcceptedFutureOrPresent(pn pulse.Number) (isFuture, isAccepted bool) {
+func (p *PulseSlot) isAcceptedFutureOrPresent(pn pulse.Number) (isFuture, isAccepted bool) {
 	presentPN, futurePN := p.pulseManager.GetPresentPulse()
-	if p.State() == Future {
-		return true, pn >= futurePN
+	if ps, ok := p._isAcceptedPresent(presentPN, pn); ps != Future {
+		return false, ok
 	}
-	return false, pn == presentPN // TODO consider a set of pulse numbers when there is a skipped pulse
+	return true, pn >= futurePN
+}
+
+func (p *PulseSlot) _isAcceptedPresent(presentPN, pn pulse.Number) (PulseSlotState, bool) {
+	var isProhibited bool
+
+	switch pr, ps := p.pulseData.PulseRange(); {
+	case ps != Present:
+		return ps, false
+	case pn == presentPN:
+		return ps, true
+	case pn < pr.LeftBoundNumber():
+		// pn belongs to Past or Antique for sure
+		return Past, false
+	case pr.IsSingular():
+		return ps, false
+	case !pr.EnumNonArticulatedNumbers(func(n pulse.Number, prevDelta, nextDelta uint16) bool {
+		switch {
+		case n == pn:
+		case pn.IsEqOrOut(n, prevDelta, nextDelta):
+			return pn < n // stop search, as EnumNumbers from smaller to higher pulses
+		default:
+			// this number is explicitly prohibited by a known pulse data
+			isProhibited = true
+			// and stop now
+		}
+		return true
+	}):
+		// we've seen neither positive nor negative match
+		if pr.IsArticulated() {
+			// Present range is articulated, so anything that is not wrong - can be valid as present
+			return ps, true
+		}
+		fallthrough
+	case isProhibited: // Present range is articulated, so anything that is not wrong - can be valid
+		return ps, false
+	default:
+		// we found a match in a range of the present slot
+		return ps, true
+	}
 }
 
 func (p *PulseSlot) HasPulseData(pn pulse.Number) bool {

@@ -51,7 +51,7 @@ func (sm *futureEventSM) stepInit(ctx smachine.InitializationContext) smachine.S
 }
 
 func (sm *futureEventSM) stepWaitMigration(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
+	switch isFuture, isAccepted := sm.ps.isAcceptedFutureOrPresent(sm.pn); {
 	case !isAccepted:
 		return sm.stepTerminate(ctx)
 	case isFuture: // make sure that this slot isn't late
@@ -62,18 +62,18 @@ func (sm *futureEventSM) stepWaitMigration(ctx smachine.ExecutionContext) smachi
 }
 
 func (sm *futureEventSM) stepMigration(ctx smachine.MigrationContext) smachine.StateUpdate {
-	switch isFuture, isAccepted := sm.ps.IsAcceptedFutureOrPresent(sm.pn); {
+	switch isFuture, isAccepted := sm.ps.isAcceptedFutureOrPresent(sm.pn); {
 	case !isAccepted:
 		return ctx.Jump(sm.stepTerminate)
 	case isFuture: // make sure that this slot isn't late
-		panic("illegal state")
+		panic(fmt.Errorf("impossible state for future pulse number: pn=%v", sm.pn))
 	default:
 		return ctx.WakeUp()
 	}
 }
 
 func (sm *futureEventSM) stepTerminate(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	ctx.SetDefaultTerminationResult(fmt.Errorf("incorrect fulture pulse number: pn=%v", sm.pn))
+	ctx.SetDefaultTerminationResult(fmt.Errorf("incorrect future pulse number: pn=%v", sm.pn))
 	return sm.wrapEventSM.stepTerminateEvent(ctx)
 }
 

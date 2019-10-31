@@ -120,7 +120,7 @@ func (p *PulseDataManager) GetPulseData(pn pulse.Number) (pulse.Data, bool) {
 }
 
 func (p *PulseDataManager) getCachedPulseSlot(pn pulse.Number) (*PulseSlot, bool) {
-	return p.cache.getAndTouch(pn)
+	return p.cache.getPulseSlot(pn)
 }
 
 // for non-recent past HasPulseData() can be incorrect / incomplete

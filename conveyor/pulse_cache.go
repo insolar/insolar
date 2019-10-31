@@ -31,7 +31,7 @@ type PulseDataCache struct {
 	pdm       *PulseDataManager
 	mutex     sync.RWMutex
 	minRange  uint32
-	cache     map[pulse.Number]*PulseSlot // enable reuse for SMs in Antique slot
+	cache     map[pulse.Number]*cacheEntry // enable reuse for SMs in Antique slot
 	access    []map[pulse.Number]struct{}
 	accessIdx int
 }
@@ -110,9 +110,7 @@ const (
 	hitNoTouch
 )
 
-var emptyCachePulseSlot = PulseSlot{nil, cachePulseDataHolder{}}
-
-func (p *PulseDataCache) getRO(pn pulse.Number) (*PulseSlot, accessState) {
+func (p *PulseDataCache) getRO(pn pulse.Number) (*cacheEntry, accessState) {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 
@@ -124,10 +122,10 @@ func (p *PulseDataCache) getRO(pn pulse.Number) (*PulseSlot, accessState) {
 			return pd, hitNoTouch
 		}
 	}
-	return &emptyCachePulseSlot, miss
+	return nil, miss
 }
 
-func (p *PulseDataCache) getAndTouch(pn pulse.Number) (*PulseSlot, bool) {
+func (p *PulseDataCache) getAndTouch(pn pulse.Number) (*cacheEntry, bool) {
 	pd, m := p.getRO(pn)
 	if m != hitNoTouch {
 		return pd, m != miss
@@ -138,6 +136,13 @@ func (p *PulseDataCache) getAndTouch(pn pulse.Number) (*PulseSlot, bool) {
 	p.mutex.Unlock()
 
 	return pd, true
+}
+
+func (p *PulseDataCache) getPulseSlot(pn pulse.Number) (*PulseSlot, bool) {
+	if pd, ok := p.getAndTouch(pn); ok {
+		return &pd.ps, ok
+	}
+	return nil, false
 }
 
 func (p *PulseDataCache) Get(pn pulse.Number) (pulse.Data, bool) {
@@ -187,12 +192,12 @@ func (p *PulseDataCache) Put(pd pulse.Data) {
 	defer p.mutex.Unlock()
 
 	if p.cache == nil {
-		p.cache = make(map[pulse.Number]*PulseSlot)
-		p.cache[pd.PulseNumber] = newCachePulseSlot(p.pdm, pd)
+		p.cache = make(map[pulse.Number]*cacheEntry)
+		p.cache[pd.PulseNumber] = newCacheEntry(p.pdm, pd)
 	} else {
 		switch epd, ok := p.cache[pd.PulseNumber]; {
 		case !ok:
-			p.cache[pd.PulseNumber] = newCachePulseSlot(p.pdm, pd)
+			p.cache[pd.PulseNumber] = newCacheEntry(p.pdm, pd)
 		case pd != epd._cacheData():
 			panic(fmt.Errorf("duplicate pulseData: before=%v after=%v", epd, pd))
 		}
@@ -224,34 +229,36 @@ func (p *PulseDataCache) _rotate() {
 	}
 }
 
-func newCachePulseSlot(pdm *PulseDataManager, pd pulse.Data) *PulseSlot {
-	return &PulseSlot{pdm, cachePulseDataHolder{pulse.NewOnePulseRange(pd)}}
+func newCacheEntry(pdm *PulseDataManager, pd pulse.Data) *cacheEntry {
+	ce := &cacheEntry{pr: pulse.NewOnePulseRange(pd), ps: PulseSlot{pulseManager: pdm}}
+	ce.ps.pulseData = ce
+	return ce
 }
 
-var _ pulseDataHolder = &cachePulseDataHolder{}
-var _ pulse.Range = &cachePulseDataHolder{}
-
-type cachePulseDataHolder struct {
-	pulse.OnePulseRange
+type cacheEntry struct {
+	pr pulse.OnePulseRange
+	ps PulseSlot
 }
 
-func (p cachePulseDataHolder) PulseData() (pulse.Data, PulseSlotState) {
-	return p.RightBoundData(), Antique
+func (p cacheEntry) PulseData() (pulse.Data, PulseSlotState) {
+	return p.pr.RightBoundData(), Antique
 }
 
-func (p cachePulseDataHolder) PulseRange() (pulse.Range, PulseSlotState) {
-	return p, Antique
+func (p cacheEntry) PulseRange() (pulse.Range, PulseSlotState) {
+	return p.pr, Antique
 }
 
-func (p cachePulseDataHolder) MakePresent(pulse.Range) {
+func (p cacheEntry) MakePresent(pulse.Range) {
 	panic("illegal state")
 }
 
-func (p cachePulseDataHolder) MakePast() {
+func (p cacheEntry) MakePast() {
 	panic("illegal state")
 }
 
-// WARNING! This is a hack - do not use anywhere else
-func (p *PulseSlot) _cacheData() pulse.Data {
-	return p.pulseData.(cachePulseDataHolder).RightBoundData()
+func (p *cacheEntry) _cacheData() pulse.Data {
+	if p == nil {
+		return pulse.Data{}
+	}
+	return p.pr.RightBoundData()
 }
