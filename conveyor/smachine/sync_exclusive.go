@@ -98,41 +98,15 @@ func (p *exclusiveSync) AdjustLimit(limit int, absolute bool) (deps []StepLink, 
 var _ DependencyQueueController = &exclusiveQueueController{}
 
 type exclusiveQueueController struct {
-	name  string
-	queue DependencyQueueHead
+	queueControllerTemplate
 }
 
 func (p *exclusiveQueueController) Init(name string) {
-	if p.queue.controller != nil {
-		panic("illegal state")
-	}
-	p.name = name
-	p.queue.controller = p
-}
-
-func (p *exclusiveQueueController) IsEmpty() bool {
-	return p.queue.IsEmpty()
-}
-
-func (p *exclusiveQueueController) IsEmptyOrFirst(link SlotLink) bool {
-	f := p.queue.First()
-	return f == nil || f.link == link
-}
-
-func (p *exclusiveQueueController) GetName() string {
-	return p.name
+	p.queueControllerTemplate.Init(name, p)
 }
 
 func (p *exclusiveQueueController) IsOpen(sd SlotDependency) bool {
 	return p.queue.First() == sd
-}
-
-func (p *exclusiveQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
-	return false
-}
-
-func (p *exclusiveQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
-	return flags&syncForOneStep != 0
 }
 
 func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
@@ -153,8 +127,4 @@ func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFl
 	default:
 		return nil, []StepLink{step}
 	}
-}
-
-func (p *exclusiveQueueController) Contains(entry *dependencyQueueEntry) bool {
-	return entry.queue == &p.queue
 }

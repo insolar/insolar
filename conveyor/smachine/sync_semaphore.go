@@ -186,7 +186,11 @@ func (p *semaphoreSync) GetName() string {
 }
 
 type waitingQueueController struct {
-	exclusiveQueueController
+	queueControllerTemplate
+}
+
+func (p *waitingQueueController) Init(name string) {
+	p.queueControllerTemplate.Init(name, p)
 }
 
 func (p *waitingQueueController) IsOpen(SlotDependency) bool {
@@ -199,19 +203,14 @@ func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 }
 
 type workingQueueController struct {
-	exclusiveQueueController
+	queueControllerTemplate
 	workerLimit int
 	awaiters    waitingQueueController
 }
 
 func (p *workingQueueController) Init(name string) {
-	if p.queue.controller != nil {
-		panic("illegal state")
-	}
-	p.name = name
-	p.awaiters.name = name
-	p.queue.controller = p
-	p.awaiters.queue.controller = &p.awaiters
+	p.queueControllerTemplate.Init(name, p)
+	p.awaiters.Init(name)
 }
 
 func (p *workingQueueController) IsOpen(SlotDependency) bool {

@@ -141,8 +141,12 @@ func (p *conditionalSync) GetName() string {
 }
 
 type holdingQueueController struct {
-	waitingQueueController
+	queueControllerTemplate
 	state int
+}
+
+func (p *holdingQueueController) Init(name string) {
+	p.queueControllerTemplate.Init(name, p)
 }
 
 func (p *holdingQueueController) isOpen() bool {
@@ -165,8 +169,8 @@ func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlag
 	return p.isOpen()
 }
 
-func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
-	return flags&syncForOneStep != 0 || p.isOpen()
+func (p *holdingQueueController) IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool {
+	return p.isOpen() || p.queueControllerTemplate.IsReleaseOnStepping(link, flags)
 }
 
 func applyWrappedAdjustment(current, adjustment, min, max int, absolute bool) (bool, int) {

@@ -28,6 +28,44 @@ type DependencyQueueController interface {
 	Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink)
 }
 
+type queueControllerTemplate struct {
+	name  string
+	queue DependencyQueueHead
+}
+
+func (p *queueControllerTemplate) Init(name string, controller DependencyQueueController) {
+	if p.queue.controller != nil {
+		panic("illegal state")
+	}
+	p.name = name
+	p.queue.controller = controller
+}
+
+func (p *queueControllerTemplate) IsEmpty() bool {
+	return p.queue.IsEmpty()
+}
+
+func (p *queueControllerTemplate) IsEmptyOrFirst(link SlotLink) bool {
+	f := p.queue.First()
+	return f == nil || f.link == link
+}
+
+func (p *queueControllerTemplate) GetName() string {
+	return p.name
+}
+
+func (p *queueControllerTemplate) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
+	return false
+}
+
+func (p *queueControllerTemplate) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
+	return flags&syncForOneStep != 0
+}
+
+func (p *queueControllerTemplate) Contains(entry *dependencyQueueEntry) bool {
+	return entry.queue == &p.queue
+}
+
 type DependencyQueueHead struct {
 	controller DependencyQueueController
 	head       dependencyQueueEntry
