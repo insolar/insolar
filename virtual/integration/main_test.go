@@ -343,7 +343,7 @@ func NewServer(
 		contractRequester: contractRequester,
 		test:              t,
 		pm:                PulseManager,
-		componentManager:  &cm,
+		componentManager:  cm,
 		stopper:           stopper,
 		pulse:             *insolar.GenesisPulse,
 		clientSender:      ClientBus,
