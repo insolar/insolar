@@ -16,108 +16,84 @@
 
 package smachine
 
-import (
-	"fmt"
-)
+import "sync"
 
-func NewSyncHierarchy(parent, child SyncLink) SyncLink {
-	// needs no mutex
-	return SyncLink{newHierarchySync(parent.controller, child.controller)}
-}
-
-func newHierarchySync(parentCtl, childCtl DependencyController) *hierarchySync {
-	panic("not implemented")
+func newSemaphoreChild(parent *semaphoreSync, value int, name string) DependencyController {
+	if parent == nil {
+		panic("illegal value")
+	}
+	if value <= 0 {
+		panic("illegal value")
+	}
+	//panic("not implemented")
+	sema := &hierarchySync{parentCtl: parent}
+	sema.controller.parent = &parent.controller.awaiters.queue
+	sema.controller.workerLimit = value
+	sema.controller.Init(name, &parent.mutex, &sema.controller)
+	return sema
 }
 
 var _ DependencyController = &hierarchySync{}
-var _ dependencyStackController = &hierarchySync{}
 
 type hierarchySync struct {
-	name                string
-	parentCtl, childCtl DependencyController
+	parentCtl  *semaphoreSync
+	controller subQueueController
 }
 
-// ============== DependencyController ================
+func (p *hierarchySync) CheckState() BoolDecision {
+	p.controller.mutex.RLock()
+	defer p.controller.mutex.RUnlock()
 
-func (p *hierarchySync) CheckState() Decision {
-	if d := p.childCtl.CheckState(); !d.IsPassed() {
-		return d
+	if !p.controller.canPassThrough() {
+		return false
 	}
-	return p.parentCtl.CheckState()
+	return p.parentCtl.checkState()
 }
 
 func (p *hierarchySync) CheckDependency(dep SlotDependency) Decision {
-	if entry, ok := dep.(*dependencyStackEntry); ok {
-		switch {
-		case entry.controller != p:
-			return Impossible
-		case !entry.child.link.IsValid(): // just to make sure
-			return Impossible
-		}
+	p.controller.mutex.RLock()
+	defer p.controller.mutex.RUnlock()
 
-		if d := p.childCtl.CheckDependency(entry.child); !d.IsPassed() {
-			return d
-		}
-		if parent := entry.getParent(); parent != nil {
-			return p.parentCtl.CheckDependency(entry.parent)
-		}
-		return NotPassed
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
+		return p.checkDependency(entry)
 	}
 	return Impossible
 }
 
-func (p *hierarchySync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
-	if entry, ok := dep.(*dependencyStackEntry); ok {
-		switch {
-		case entry.controller != p:
-			return Impossible, nil
-		case !entry.child.link.IsValid(): // just to make sure
-			return Impossible, nil
-		case !entry.IsCompatibleWith(flags):
-			return Impossible, nil
-		}
-		if d := p.childCtl.CheckDependency(entry.child); !d.IsPassed() {
-			return d, nil
-		}
-		if parent := entry.getParent(); parent != nil {
-			return p.parentCtl.CheckDependency(entry.parent), nil
-		}
-		return NotPassed, nil
-	} else if d := p.childCtl.CheckDependency(dep); d.IsValid() {
-		// partial acquire
-		//child := dep.(*dependencyQueueEntry)
-		//if d.IsPassed() {
-		//	// create with parent
-		//	dd, parent := p.parentCtl.CreateDependency(child.link, flags)
-		//	return dd.GetDecision(), &dependencyStackEntry{p, child, parent, flags }
-		//}
-		panic("not implemented")
-		//
-		//p.childCtl.AttachAsChild(dep, *dependencyStackEntry)
-		//return NotPassed, &dependencyStackEntry{p, child, nil, flags }
-	} else {
-		return Impossible, nil
+func (p *hierarchySync) checkDependency(entry *dependencyQueueEntry) Decision {
+	switch {
+	case p.controller.contains(entry):
+		return NotPassed
+	case p.controller.stackedOn(entry):
+		return p.parentCtl.checkDependency(entry)
 	}
+	return Impossible
+}
+
+func (p *hierarchySync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	p.controller.mutex.RLock()
+	defer p.controller.mutex.RUnlock()
+
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
+		if d := p.checkDependency(entry); d.IsValid() && entry.IsCompatibleWith(flags) {
+			return d
+		}
+	}
+	return Impossible
 }
 
 func (p *hierarchySync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
-	panic("not implemented")
-	//cd, child := p.childCtl.CreateDependency(holder, flags)
-	//if !cd {
-	//	//p.childCtl.AttachAsChild(dep, *dependencyStackEntry)
-	//	//return NotPassed, &dependencyStackEntry{p, child, nil, flags }
-	//
-	//}
-	//pd, parent := p.parentCtl.CreateDependency(holder, flags)
-	//return pd, &dependencyStackEntry{p, child, parent, flags }
-}
+	p.controller.mutex.Lock()
+	defer p.controller.mutex.Unlock()
 
-func (p *hierarchySync) newStackEntry() {
-
+	if p.controller.canPassThrough() {
+		return p.parentCtl.createDependency(holder, flags)
+	}
+	return false, p.controller.queue.AddSlot(holder, flags)
 }
 
 func (p *hierarchySync) GetLimit() (limit int, isAdjustable bool) {
-	return -1, false
+	return p.controller.workerLimit, false
 }
 
 func (p *hierarchySync) AdjustLimit(limit int, absolute bool) (deps []StepLink, activate bool) {
@@ -125,26 +101,46 @@ func (p *hierarchySync) AdjustLimit(limit int, absolute bool) (deps []StepLink, 
 }
 
 func (p *hierarchySync) GetCounts() (active, inactive int) {
-	return -1, -1
+	p.controller.mutex.RLock()
+	defer p.controller.mutex.RUnlock()
+
+	return p.controller.workerCount, p.controller.queue.Count()
 }
 
 func (p *hierarchySync) GetName() string {
-	if len(p.name) != 0 {
-		return p.name
-	}
-	return fmt.Sprintf("sync-hierarchy-%p(%s -> %s)", p, p.childCtl.GetName(), p.parentCtl.GetName())
+	return p.controller.GetName()
 }
 
-// ========= dependencyStackController ============
+var _ DependencyQueueController = &subQueueController{}
+var _ dependencyStackController = &subQueueController{}
 
-func (p *hierarchySync) IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool {
-	panic("implement me")
+type subQueueController struct {
+	parent      *DependencyQueueHead
+	stacker     dependencyStackEntry
+	workerLimit int
+	workerCount int
+	waitingQueueController
 }
 
-func (p *hierarchySync) IsReleaseOnWorking(link SlotLink, flags SlotDependencyFlags) bool {
-	panic("implement me")
+func (p *subQueueController) Init(name string, mutex *sync.RWMutex, controller DependencyQueueController) {
+	p.waitingQueueController.Init(name, mutex, controller)
+	p.mutex = mutex
+	p.stacker.controller = controller.(dependencyStackController)
 }
 
-func (p *hierarchySync) AcquireParent(child *dependencyQueueEntry, flags SlotDependencyFlags) *dependencyQueueEntry {
-	panic("implement me")
+func (p *subQueueController) canPassThrough() bool {
+	return p.workerCount < p.workerLimit
+}
+
+func (p *subQueueController) stackedOn(entry *dependencyQueueEntry) bool {
+	return entry.stacker == &p.stacker
+}
+
+// MUST be under the same lock as the parent
+func (p *subQueueController) ReleaseStacked(releasedBy *dependencyQueueEntry, flags SlotDependencyFlags) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	p.workerCount--
+	p.workerCount += p.moveToInactive(p.workerLimit-p.workerCount, p.parent, &p.stacker)
 }

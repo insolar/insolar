@@ -104,7 +104,7 @@ func (p *machineCallContext) ApplyAdjustment(adj SyncAdjustment) bool {
 	return len(released) > 0
 }
 
-func (p *machineCallContext) Check(link SyncLink) Decision {
+func (p *machineCallContext) Check(link SyncLink) BoolDecision {
 	p.ensureValid()
 
 	if link.controller == nil {

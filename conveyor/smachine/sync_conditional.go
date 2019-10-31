@@ -18,12 +18,13 @@ package smachine
 
 import (
 	"math"
+	"sync"
 )
 
 // ConditionalBool allows Acquire() call to pass through when current value is >0
 func NewConditional(initial int, name string) ConditionalLink {
 	ctl := &conditionalSync{}
-	ctl.controller.Init(name)
+	ctl.controller.Init(name, &ctl.mutex, &ctl.controller)
 	deps, _ := ctl.AdjustLimit(initial, false)
 	if len(deps) != 0 {
 		panic("illegal state")
@@ -62,24 +63,28 @@ func (v ConditionalLink) SyncLink() SyncLink {
 }
 
 type conditionalSync struct {
+	mutex      sync.RWMutex
 	controller holdingQueueController
 }
 
-func (p *conditionalSync) CheckState() Decision {
-	if p.controller.isOpen() {
-		return Passed
-	}
-	return NotPassed
+func (p *conditionalSync) CheckState() BoolDecision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return BoolDecision(p.controller.canPassThrough())
 }
 
 func (p *conditionalSync) CheckDependency(dep SlotDependency) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
-		case !p.controller.Contains(entry):
+		case !p.controller.contains(entry):
 			return Impossible
-		case p.controller.isOpen():
+		case p.controller.canPassThrough():
 			return Passed
 		default:
 			return NotPassed
@@ -88,36 +93,48 @@ func (p *conditionalSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *conditionalSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
+func (p *conditionalSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
-			return Impossible, nil
+			return Impossible
 		case !entry.IsCompatibleWith(flags):
-			return Impossible, nil
-		case !p.controller.Contains(entry):
-			return Impossible, nil
-		case p.controller.isOpen():
-			return Passed, nil
+			return Impossible
+		case !p.controller.contains(entry):
+			return Impossible
+		case p.controller.canPassThrough():
+			return Passed
 		default:
-			return NotPassed, nil
+			return NotPassed
 		}
 	}
-	return Impossible, nil
+	return Impossible
 }
 
 func (p *conditionalSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
-	if p.controller.isOpen() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.controller.canPassThrough() {
 		return true, nil
 	}
 	return false, p.controller.queue.AddSlot(holder, flags)
 }
 
 func (p *conditionalSync) GetLimit() (limit int, isAdjustable bool) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return p.controller.state, true
 }
 
 func (p *conditionalSync) AdjustLimit(limit int, absolute bool) ([]StepLink, bool) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if ok, newState := applyWrappedAdjustment(p.controller.state, limit, math.MinInt32, math.MaxInt32, absolute); ok {
 		return p.setLimit(newState)
 	}
@@ -126,13 +143,16 @@ func (p *conditionalSync) AdjustLimit(limit int, absolute bool) ([]StepLink, boo
 
 func (p *conditionalSync) setLimit(limit int) ([]StepLink, bool) {
 	p.controller.state = limit
-	if !p.controller.isOpen() {
+	if !p.controller.canPassThrough() {
 		return nil, false
 	}
 	return p.controller.queue.FlushAllAsLinks(), true
 }
 
 func (p *conditionalSync) GetCounts() (active, inactive int) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return -1, p.controller.queue.Count()
 }
 
@@ -141,36 +161,47 @@ func (p *conditionalSync) GetName() string {
 }
 
 type holdingQueueController struct {
+	mutex *sync.RWMutex
 	queueControllerTemplate
 	state int
 }
 
-func (p *holdingQueueController) Init(name string) {
-	p.queueControllerTemplate.Init(name, p)
+func (p *holdingQueueController) Init(name string, mutex *sync.RWMutex, controller DependencyQueueController) {
+	p.queueControllerTemplate.Init(name, mutex, controller)
+	p.mutex = mutex
 }
 
-func (p *holdingQueueController) isOpen() bool {
+func (p *holdingQueueController) canPassThrough() bool {
 	return p.state > 0
 }
 
 func (p *holdingQueueController) IsOpen(SlotDependency) bool {
-	return p.isOpen()
+	return false // is still in queue ...
 }
 
 func (p *holdingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	removeFn()
-	if p.isOpen() && p.queue.Count() > 0 {
+	if p.canPassThrough() && p.queue.Count() > 0 {
 		panic("illegal state")
 	}
 	return nil, nil
 }
 
 func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
-	return p.isOpen()
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.canPassThrough()
 }
 
 func (p *holdingQueueController) IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool {
-	return p.isOpen() || p.queueControllerTemplate.IsReleaseOnStepping(link, flags)
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return flags&syncForOneStep != 0 || p.canPassThrough()
 }
 
 func applyWrappedAdjustment(current, adjustment, min, max int, absolute bool) (bool, int) {

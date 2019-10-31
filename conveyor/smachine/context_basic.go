@@ -286,7 +286,7 @@ func (p *slotContext) BargeInThisStepOnly() BargeInBuilder {
 	return &bargeInBuilder{p.clone(updCtxBargeIn), p, p.s.NewStepLink()}
 }
 
-func (p *slotContext) Check(link SyncLink) Decision {
+func (p *slotContext) Check(link SyncLink) BoolDecision {
 	p.ensureAtLeast(updCtxInit)
 
 	if link.controller == nil {
@@ -295,8 +295,7 @@ func (p *slotContext) Check(link SyncLink) Decision {
 
 	dep := p.s.dependency
 	if dep != nil {
-		d := link.controller.CheckDependency(dep)
-		if d.IsValid() {
+		if d, ok := link.controller.CheckDependency(dep).AsValid(); ok {
 			return d
 		}
 	}
@@ -327,11 +326,8 @@ func (p *slotContext) acquire(link SyncLink, autoRelease bool, flags SlotDepende
 		d, p.s.dependency = link.controller.CreateDependency(p.s.NewLink(), flags)
 		return d
 	}
-	if d, dep := link.controller.UseDependency(dep, flags); d.IsValid() {
-		if dep != nil {
-			p.s.dependency = dep
-		}
-		return BoolDecision(d.IsPassed())
+	if d, ok := link.controller.UseDependency(dep, flags).AsValid(); ok {
+		return d
 	}
 
 	if !autoRelease {
@@ -350,7 +346,7 @@ func (p *slotContext) acquire(link SyncLink, autoRelease bool, flags SlotDepende
 	return d
 }
 
-func (p *slotContext) ReleaseAny() bool {
+func (p *slotContext) ReleaseLast() bool {
 	p.ensureAtLeast(updCtxInit)
 	return p.release(nil)
 }

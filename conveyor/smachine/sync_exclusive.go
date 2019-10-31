@@ -16,31 +16,37 @@
 
 package smachine
 
+import "sync"
+
 func NewExclusive(name string) SyncLink {
 	ctl := &exclusiveSync{}
-	ctl.awaiters.Init(name)
+	ctl.awaiters.Init(name, &ctl.mutex, &ctl.awaiters)
 	return NewSyncLink(ctl)
 }
 
 type exclusiveSync struct {
+	mutex    sync.RWMutex
 	awaiters exclusiveQueueController
 }
 
-func (p *exclusiveSync) CheckState() Decision {
-	if p.awaiters.IsEmpty() {
-		return Passed
-	}
-	return NotPassed
+func (p *exclusiveSync) CheckState() BoolDecision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return BoolDecision(p.awaiters.isEmpty())
 }
 
 func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
 			return Impossible
-		case !p.awaiters.Contains(entry):
+		case !p.awaiters.contains(entry):
 			return Impossible
-		case p.awaiters.IsEmptyOrFirst(entry.link):
+		case p.awaiters.isEmptyOrFirst(entry.link):
 			return Passed
 		default:
 			return NotPassed
@@ -49,25 +55,31 @@ func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *exclusiveSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
+func (p *exclusiveSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
-			return Impossible, nil
-		case !p.awaiters.Contains(entry):
-			return Impossible, nil
+			return Impossible
+		case !p.awaiters.contains(entry):
+			return Impossible
 		case !entry.IsCompatibleWith(flags):
-			return Impossible, nil
-		case p.awaiters.IsEmptyOrFirst(entry.link):
-			return Passed, nil
+			return Impossible
+		case p.awaiters.isEmptyOrFirst(entry.link):
+			return Passed
 		default:
-			return NotPassed, nil
+			return NotPassed
 		}
 	}
-	return Impossible, nil
+	return Impossible
 }
 
 func (p *exclusiveSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	sd := p.awaiters.queue.AddSlot(holder, flags)
 	if f, _ := p.awaiters.queue.FirstValid(); f == sd {
 		return true, sd
@@ -76,6 +88,9 @@ func (p *exclusiveSync) CreateDependency(holder SlotLink, flags SlotDependencyFl
 }
 
 func (p *exclusiveSync) GetCounts() (active, inactive int) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	n := p.awaiters.queue.Count()
 	if n <= 0 {
 		return 0, n
@@ -98,18 +113,26 @@ func (p *exclusiveSync) AdjustLimit(limit int, absolute bool) (deps []StepLink, 
 var _ DependencyQueueController = &exclusiveQueueController{}
 
 type exclusiveQueueController struct {
+	mutex *sync.RWMutex
 	queueControllerTemplate
 }
 
-func (p *exclusiveQueueController) Init(name string) {
-	p.queueControllerTemplate.Init(name, p)
+func (p *exclusiveQueueController) Init(name string, mutex *sync.RWMutex, controller DependencyQueueController) {
+	p.queueControllerTemplate.Init(name, mutex, controller)
+	p.mutex = mutex
 }
 
 func (p *exclusiveQueueController) IsOpen(sd SlotDependency) bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return p.queue.First() == sd
 }
 
 func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if f, _ := p.queue.FirstValid(); f == nil || f.link != link {
 		removeFn()
 		return nil, nil
@@ -119,8 +142,8 @@ func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFl
 	switch f, step := p.queue.FirstValid(); {
 	case f == nil:
 		return nil, nil
-	case f.childOf != nil:
-		if postponed := f.childOf.ActivateStack(f, step); postponed != nil {
+	case f.stacker != nil:
+		if postponed := f.stacker.ActivateStack(f, step); postponed != nil {
 			return []PostponedDependency{postponed}, nil
 		}
 		fallthrough

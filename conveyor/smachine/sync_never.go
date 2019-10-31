@@ -21,7 +21,7 @@ import (
 )
 
 func NewInfiniteLock(name string) SyncLink {
-	return NewSyncLinkNoLock(&infiniteLock{name: name})
+	return NewSyncLink(&infiniteLock{name: name})
 }
 
 type infiniteLock struct {
@@ -29,8 +29,8 @@ type infiniteLock struct {
 	count int32 //atomic
 }
 
-func (p *infiniteLock) CheckState() Decision {
-	return NotPassed
+func (p *infiniteLock) CheckState() BoolDecision {
+	return false
 }
 
 func (p *infiniteLock) CheckDependency(dep SlotDependency) Decision {
@@ -40,16 +40,16 @@ func (p *infiniteLock) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *infiniteLock) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
+func (p *infiniteLock) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
 	if entry, ok := dep.(*infiniteLockEntry); ok {
 		switch {
 		case !entry.IsCompatibleWith(flags):
-			return Impossible, nil
+			return Impossible
 		case entry.ctl == p:
-			return NotPassed, nil
+			return NotPassed
 		}
 	}
-	return Impossible, nil
+	return Impossible
 }
 
 func (p *infiniteLock) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {

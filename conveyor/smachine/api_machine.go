@@ -38,5 +38,5 @@ type MachineCallContext interface {
 
 	//See SynchronizationContext
 	ApplyAdjustment(SyncAdjustment) bool
-	Check(SyncLink) Decision
+	Check(SyncLink) BoolDecision
 }

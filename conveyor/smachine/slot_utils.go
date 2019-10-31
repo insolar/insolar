@@ -75,3 +75,14 @@ func (s *Slot) _releaseDependency() []StepLink {
 	released = PostponedList(postponed).PostponedActivate(released)
 	return released
 }
+
+var _ PostponedDependency = &PostponedList{}
+
+type PostponedList []PostponedDependency
+
+func (p PostponedList) PostponedActivate(appendTo []StepLink) []StepLink {
+	for _, d := range p {
+		appendTo = d.PostponedActivate(appendTo)
+	}
+	return appendTo
+}

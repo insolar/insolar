@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"math"
+	"sync"
 )
 
 // Semaphore allows Acquire() call to pass through for a number of workers within the limit.
@@ -64,13 +65,21 @@ func (v SemaphoreLink) NewValue(value int) SyncAdjustment {
 	return SyncAdjustment{controller: v.ctl, adjustment: value, isAbsolute: true}
 }
 
+func (v SemaphoreLink) NewChild(childValue int, name string) SyncLink {
+	if childValue <= 0 {
+		return NewInfiniteLock(name)
+	}
+	return NewSyncLink(newSemaphoreChild(v.ctl, childValue, name))
+}
+
 func (v SemaphoreLink) SyncLink() SyncLink {
 	return NewSyncLink(v.ctl)
 }
 
 func newSemaphore(initialLimit int, isAdjustable bool, name string) *semaphoreSync {
 	ctl := &semaphoreSync{isAdjustable: true}
-	ctl.controller.Init(name)
+	ctl.controller.Init(name, &ctl.mutex, &ctl.controller)
+
 	deps, _ := ctl.AdjustLimit(initialLimit, false)
 	if len(deps) != 0 {
 		panic("illegal state")
@@ -80,59 +89,81 @@ func newSemaphore(initialLimit int, isAdjustable bool, name string) *semaphoreSy
 }
 
 type semaphoreSync struct {
+	mutex        sync.RWMutex
 	controller   workingQueueController
 	isAdjustable bool
 }
 
-func (p *semaphoreSync) CheckState() Decision {
-	if p.controller.isOpen() {
-		return Passed
-	}
-	return NotPassed
+func (p *semaphoreSync) CheckState() BoolDecision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.checkState()
+}
+
+func (p *semaphoreSync) checkState() BoolDecision {
+	return BoolDecision(p.controller.canPassThrough())
 }
 
 func (p *semaphoreSync) CheckDependency(dep SlotDependency) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
-		switch {
-		case !entry.link.IsValid(): // just to make sure
-			return Impossible
-		case p.controller.Contains(entry):
-			return Passed
-		case p.controller.ContainsInAwaiters(entry):
-			return NotPassed
+		return p.checkDependency(entry)
+	}
+	return Impossible
+}
+
+func (p *semaphoreSync) checkDependency(entry *dependencyQueueEntry) Decision {
+	switch {
+	case !entry.link.IsValid(): // just to make sure
+		return Impossible
+	case p.controller.contains(entry):
+		return Passed
+	case p.controller.containsInAwaiters(entry):
+		return NotPassed
+	}
+	return Impossible
+}
+
+func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	if entry, ok := dep.(*dependencyQueueEntry); ok {
+		if d := p.checkDependency(entry); d.IsValid() && entry.IsCompatibleWith(flags) {
+			return d
 		}
 	}
 	return Impossible
 }
 
-func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
-	if entry, ok := dep.(*dependencyQueueEntry); ok {
-		switch {
-		case !entry.link.IsValid(): // just to make sure
-			return Impossible, nil
-		case !entry.IsCompatibleWith(flags):
-			return Impossible, nil
-		case p.controller.Contains(entry):
-			return Passed, nil
-		case p.controller.ContainsInAwaiters(entry):
-			return NotPassed, nil
-		}
-	}
-	return Impossible, nil
-}
-
-func (p *semaphoreSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
-	if p.controller.isOpen() {
+func (p *semaphoreSync) createDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	if p.controller.canPassThrough() {
 		return true, p.controller.queue.AddSlot(holder, flags)
 	}
 	return false, p.controller.awaiters.queue.AddSlot(holder, flags)
 }
 
+func (p *semaphoreSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	return p.createDependency(holder, flags)
+}
+
 func (p *semaphoreSync) GetLimit() (limit int, isAdjustable bool) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return p.controller.workerLimit, p.isAdjustable
 }
 
 func (p *semaphoreSync) AdjustLimit(limit int, absolute bool) ([]StepLink, bool) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if !p.isAdjustable {
 		panic("illegal state")
 	}
@@ -178,6 +209,9 @@ func (p *semaphoreSync) AdjustLimit(limit int, absolute bool) ([]StepLink, bool)
 }
 
 func (p *semaphoreSync) GetCounts() (active, inactive int) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	return p.controller.queue.Count(), p.controller.awaiters.queue.Count()
 }
 
@@ -186,11 +220,13 @@ func (p *semaphoreSync) GetName() string {
 }
 
 type waitingQueueController struct {
+	mutex *sync.RWMutex
 	queueControllerTemplate
 }
 
-func (p *waitingQueueController) Init(name string) {
-	p.queueControllerTemplate.Init(name, p)
+func (p *waitingQueueController) Init(name string, mutex *sync.RWMutex, controller DependencyQueueController) {
+	p.queueControllerTemplate.Init(name, mutex, controller)
+	p.mutex = mutex
 }
 
 func (p *waitingQueueController) IsOpen(SlotDependency) bool {
@@ -198,33 +234,40 @@ func (p *waitingQueueController) IsOpen(SlotDependency) bool {
 }
 
 func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	removeFn()
 	return nil, nil
 }
 
-type workingQueueController struct {
-	queueControllerTemplate
-	workerLimit int
-	awaiters    waitingQueueController
+func (p *waitingQueueController) moveToInactive(n int, q *DependencyQueueHead, stacker *dependencyStackEntry) int {
+	if n <= 0 {
+		return 0
+	}
+
+	count := 0
+	for n > 0 {
+		if f, _ := p.queue.FirstValid(); f == nil {
+			break
+		} else {
+			f.removeFromQueue()
+			switch {
+			case stacker == nil:
+			case f.stacker != nil:
+				panic("illegal state")
+			default:
+				f.stacker = stacker
+			}
+			q.AddLast(f)
+			count++
+			n--
+		}
+	}
+	return count
 }
 
-func (p *workingQueueController) Init(name string) {
-	p.queueControllerTemplate.Init(name, p)
-	p.awaiters.Init(name)
-}
-
-func (p *workingQueueController) IsOpen(SlotDependency) bool {
-	return p.isOpen()
-}
-
-func (p *workingQueueController) isOpen() bool {
-	return p.queue.Count() < p.workerLimit
-}
-
-func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
-	removeFn()
-
-	n := p.workerLimit - p.queue.Count()
+func (p *waitingQueueController) moveToActive(n int, q *DependencyQueueHead) ([]PostponedDependency, []StepLink) {
 	if n <= 0 {
 		return nil, nil
 	}
@@ -232,12 +275,12 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 	var postponed []PostponedDependency
 	links := make([]StepLink, 0, n)
 	for n > 0 {
-		if f, step := p.awaiters.queue.FirstValid(); f == nil {
+		if f, step := p.queue.FirstValid(); f == nil {
 			break
 		} else {
 			f.removeFromQueue()
-			p.queue.AddLast(f)
-			if pp := f.childOf.ActivateStack(f, step); pp != nil {
+			q.AddLast(f)
+			if pp := f.stacker.ActivateStack(f, step); pp != nil {
 				postponed = append(postponed, pp)
 			} else {
 				links = append(links, step)
@@ -248,6 +291,33 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 	return postponed, links
 }
 
-func (p *workingQueueController) ContainsInAwaiters(entry *dependencyQueueEntry) bool {
-	return p.awaiters.Contains(entry)
+type workingQueueController struct {
+	queueControllerTemplate
+	workerLimit int
+	awaiters    waitingQueueController
+}
+
+func (p *workingQueueController) Init(name string, mutex *sync.RWMutex, controller DependencyQueueController) {
+	p.queueControllerTemplate.Init(name, mutex, controller)
+	p.awaiters.Init(name, mutex, &p.awaiters)
+}
+
+func (p *workingQueueController) IsOpen(SlotDependency) bool {
+	return true
+}
+
+func (p *workingQueueController) canPassThrough() bool {
+	return p.queue.Count() < p.workerLimit
+}
+
+func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
+	p.awaiters.mutex.Lock()
+	defer p.awaiters.mutex.Unlock()
+
+	removeFn()
+	return p.awaiters.moveToActive(p.workerLimit-p.queue.Count(), &p.queue)
+}
+
+func (p *workingQueueController) containsInAwaiters(entry *dependencyQueueEntry) bool {
+	return p.awaiters.contains(entry)
 }

@@ -25,7 +25,7 @@ type SynchronizationContext interface {
 	// When the sync was previously acquired, then this function returns SM's status of a sync object.
 	// When the sync was not previously acquired, then this function returns status of
 	// Panics on zero or incorrectly initialized value.
-	Check(SyncLink) Decision
+	Check(SyncLink) BoolDecision
 
 	// Acquires a holder of the sync object and returns status of the acquired holder:
 	//
@@ -61,9 +61,9 @@ type SynchronizationContext interface {
 	// Returns true when a holder of a sync object was released.
 	// NB! Some sync objects (e.g. conditionals) may release a passed holder automatically, hence this function will return false as well.
 	// Panics on zero or incorrectly initialized value.
-	ReleaseAny() bool
+	ReleaseLast() bool
 
-	ReleaseAll() bool
+	//ReleaseAll() bool
 
 	// Applies the given adjustment to a relevant sync object. SM doesn't need to acquire the relevant sync object.
 	// Returns true when at least one holder of the sync object was affected.
@@ -72,13 +72,6 @@ type SynchronizationContext interface {
 }
 
 func NewSyncLink(controller DependencyController) SyncLink {
-	if controller == nil {
-		panic("illegal value")
-	}
-	return SyncLink{&syncMutexWrapper{inner: controller}}
-}
-
-func NewSyncLinkNoLock(controller DependencyController) SyncLink {
 	if controller == nil {
 		panic("illegal value")
 	}
@@ -140,9 +133,9 @@ const (
 
 // Internals of a sync object
 type DependencyController interface {
-	CheckState() Decision
+	CheckState() BoolDecision // reduce down to BoolDecision
 	CheckDependency(dep SlotDependency) Decision
-	UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency)
+	UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision
 	CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency)
 
 	GetLimit() (limit int, isAdjustable bool)

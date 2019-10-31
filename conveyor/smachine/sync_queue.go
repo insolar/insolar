@@ -16,8 +16,12 @@
 
 package smachine
 
-import "sync/atomic"
+import (
+	"sync"
+	"sync/atomic"
+)
 
+// methods of this interfaces can be protected by mutex
 type DependencyQueueController interface {
 	GetName() string
 	IsOpen(SlotDependency) bool
@@ -33,7 +37,7 @@ type queueControllerTemplate struct {
 	queue DependencyQueueHead
 }
 
-func (p *queueControllerTemplate) Init(name string, controller DependencyQueueController) {
+func (p *queueControllerTemplate) Init(name string, _ *sync.RWMutex, controller DependencyQueueController) {
 	if p.queue.controller != nil {
 		panic("illegal state")
 	}
@@ -41,17 +45,17 @@ func (p *queueControllerTemplate) Init(name string, controller DependencyQueueCo
 	p.queue.controller = controller
 }
 
-func (p *queueControllerTemplate) IsEmpty() bool {
+func (p *queueControllerTemplate) isEmpty() bool {
 	return p.queue.IsEmpty()
 }
 
-func (p *queueControllerTemplate) IsEmptyOrFirst(link SlotLink) bool {
+func (p *queueControllerTemplate) isEmptyOrFirst(link SlotLink) bool {
 	f := p.queue.First()
 	return f == nil || f.link == link
 }
 
-func (p *queueControllerTemplate) GetName() string {
-	return p.name
+func (p *queueControllerTemplate) contains(entry *dependencyQueueEntry) bool {
+	return entry.queue == &p.queue
 }
 
 func (p *queueControllerTemplate) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
@@ -62,8 +66,8 @@ func (p *queueControllerTemplate) IsReleaseOnStepping(_ SlotLink, flags SlotDepe
 	return flags&syncForOneStep != 0
 }
 
-func (p *queueControllerTemplate) Contains(entry *dependencyQueueEntry) bool {
-	return entry.queue == &p.queue
+func (p *queueControllerTemplate) GetName() string {
+	return p.name
 }
 
 type DependencyQueueHead struct {
@@ -82,7 +86,7 @@ func (p *DependencyQueueHead) AddSlot(link SlotLink, flags SlotDependencyFlags) 
 }
 
 func (p *DependencyQueueHead) AddFirst(entry *dependencyQueueEntry) {
-	p.initEmpty()
+	p.initEmpty() // TODO move to controller's Init
 	entry.ensureNotInQueue()
 
 	p.head.nextInQueue._addQueuePrev(entry, entry)
@@ -196,11 +200,12 @@ const (
 var _ SlotDependency = &dependencyQueueEntry{}
 
 type dependencyQueueEntry struct {
-	queue                    *DependencyQueueHead
-	nextInQueue, prevInQueue *dependencyQueueEntry
-	childOf                  *dependencyStackEntry
-	slotFlags                uint32
-	link                     SlotLink
+	queue       *DependencyQueueHead
+	nextInQueue *dependencyQueueEntry
+	prevInQueue *dependencyQueueEntry
+	stacker     *dependencyStackEntry
+	slotFlags   uint32 // atomic
+	link        SlotLink
 }
 
 func (p *dependencyQueueEntry) getFlags() (bool, SlotDependencyFlags) {
@@ -229,16 +234,21 @@ func (p *dependencyQueueEntry) Release() (SlotDependency, []PostponedDependency,
 
 func (p *dependencyQueueEntry) ReleaseAll() ([]PostponedDependency, []StepLink) {
 	if inQueue, flags := p.getFlags(); inQueue {
-		return p.queue.controller.Release(p.link, flags, p.removeFromQueue)
+		d, s := p.queue.controller.Release(p.link, flags, p.removeFromQueue)
+		p.stacker.ReleasedBy(p, flags)
+		return d, s
 	}
 	return nil, nil
 }
 
-func (p *dependencyQueueEntry) isOpen() bool {
+func (p *dependencyQueueEntry) isOpen() Decision {
 	if inQueue, _ := p.getFlags(); inQueue {
-		return p.queue.controller.IsOpen(p)
+		if p.queue.controller.IsOpen(p) {
+			return Passed
+		}
+		return NotPassed
 	}
-	return true
+	return Impossible
 }
 
 func (p *dependencyQueueEntry) _addQueuePrev(chainHead, chainTail *dependencyQueueEntry) {

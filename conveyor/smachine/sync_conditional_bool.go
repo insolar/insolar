@@ -19,7 +19,8 @@ package smachine
 // ConditionalBool allows Acquire() call to pass through when current value is true
 func NewConditionalBool(isOpen bool, name string) BoolConditionalLink {
 	ctl := &boolConditionalSync{}
-	ctl.controller.Init(name)
+	ctl.controller.Init(name, &ctl.mutex, &ctl.controller)
+
 	deps, _ := ctl.AdjustLimit(boolToConditional(isOpen), false)
 	if len(deps) != 0 {
 		panic("illegal state")
@@ -69,6 +70,9 @@ type boolConditionalSync struct {
 }
 
 func (p *boolConditionalSync) AdjustLimit(limit int, absolute bool) ([]StepLink, bool) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	switch {
 	case absolute:
 		if limit > 0 {
