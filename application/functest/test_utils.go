@@ -387,7 +387,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 		CallParams: params,
 		PublicKey:  user.PubKey,
 		Reference:  user.Ref,
-		Test:       caller}, seed)
+		Test:       caller}, seed, 0)
 
 	if err != nil {
 		return nil, "", err

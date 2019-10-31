@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/application/api/codes"
 	"net/http"
 	"strings"
 
@@ -97,10 +98,12 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
 		logger.Error("[ NodeService.getSeed ] API is not available")
 
-		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+
+		//
+		instr.SetError(errors.New(codes.ServiceUnavailableErrorMessage), codes.ServiceUnavailableErrorShort)
 		return &json2.Error{
-			Code:    ServiceUnavailableError,
-			Message: ServiceUnavailableErrorMessage,
+			Code:    codes.ServiceUnavailableError,
+			Message: codes.ServiceUnavailableErrorMessage,
 			Data: requester.Data{
 				TraceID: instr.TraceID(),
 			},
@@ -111,10 +114,10 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if err != nil {
 		logger.Error("[ NodeService.getSeed ] failed to execute: ", err.Error())
 
-		instr.SetError(err, InternalErrorShort)
+		instr.SetError(err, codes.InternalErrorShort)
 		return &json2.Error{
-			Code:    InternalError,
-			Message: InternalErrorMessage,
+			Code:    codes.InternalError,
+			Message: codes.InternalErrorMessage,
 			Data: requester.Data{
 				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: instr.TraceID(),

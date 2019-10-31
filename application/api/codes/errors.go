@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package api
+package codes
 
 const (
 	ParseError                     = -31700

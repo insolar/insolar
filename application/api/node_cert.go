@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/application/api/codes"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -78,7 +79,7 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, requestBody *
 
 	err := s.get(ctx, r, args, requestBody, reply)
 	if err != nil {
-		instr.SetError(err, InternalErrorShort)
+		instr.SetError(err, codes.InternalErrorShort)
 		return errors.Wrap(err, "failed to execute NodeCertService.get")
 	}
 

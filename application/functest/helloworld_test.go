@@ -48,7 +48,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		CallSite:   "CreateHelloWorld",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
-		seed)
+		seed, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		CallSite:   "Greet",
 		CallParams: callParams,
 		PublicKey:  rootCfg.PublicKey},
-		seed)
+		seed, 0)
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +119,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		CallSite:   "Count",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
-		seed)
+		seed, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -163,7 +163,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		CallSite:   "CreateChild",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
-		seed)
+		seed, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		CallSite:   "ReturnObj",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
-		seed)
+		seed, 0)
 	if err != nil {
 		return nil, err
 	}

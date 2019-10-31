@@ -27,6 +27,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/application/api/codes"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
@@ -115,11 +116,16 @@ type Params struct {
 }
 
 // GetResponseBodyContract makes request to contract and extracts body
-func GetResponseBodyContract(url string, postP ContractRequest, signature string) ([]byte, error) {
+func GetResponseBodyContract(url string, postP ContractRequest, signature string, retryTime time.Duration) ([]byte, error) {
 	req, err := MakeContractRequest(url, postP, signature)
 	if err != nil {
 		return nil, err
 	}
+
+	if retryTime > 0 {
+		return doReqWithRetry(req, retryTime)
+	}
+
 	return doReq(req)
 }
 
@@ -142,7 +148,7 @@ func MakeContractRequest(url string, postP ContractRequest, signature string) (*
 }
 
 // GetResponseBodyContract makes request to platform and extracts body
-func GetResponseBodyPlatform(url string, method string, params interface{}) ([]byte, error) {
+func GetResponseBodyPlatform(url string, method string, params interface{}, retryTime time.Duration) ([]byte, error) {
 	request := PlatformRequest{
 		Request: Request{
 			Version: JSONRPCVersion,
@@ -157,7 +163,7 @@ func GetResponseBodyPlatform(url string, method string, params interface{}) ([]b
 		return nil, errors.Wrap(err, "problem with preparing platform request")
 	}
 
-	return doReq(req)
+	return doReqWithRetry(req, retryTime)
 }
 
 func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
@@ -173,6 +179,42 @@ func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
 	req.Header.Set(ContentType, "application/json")
 
 	return req, jsonValue, nil
+}
+
+func doReqWithRetry(req *http.Request, retryTime time.Duration) ([]byte, error) {
+	var body []byte
+	var err error
+
+	if retryTime == 0 {
+		return doReq(req)
+	}
+
+	for {
+		body, err := doReq(req)
+		if err != nil {
+			return nil, errors.Wrap(err, "doReq failed")
+		}
+
+		if body != nil {
+			var response Response
+			err = json.Unmarshal(body, &response)
+			if err != nil {
+				fmt.Println(string(body))
+				return nil, errors.Wrap(err, "doReqWithRetry failed to unmarshal")
+			}
+
+			if response.Error != nil && response.Error.Code == codes.ServiceUnavailableError {
+				fmt.Println("retry in doReqWithRetry")
+				time.Sleep(retryTime)
+				continue
+			}
+
+		}
+
+		break
+	}
+
+	return body, err
 }
 
 func doReq(req *http.Request) ([]byte, error) {
@@ -200,7 +242,7 @@ func doReq(req *http.Request) ([]byte, error) {
 
 // GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
-	body, err := GetResponseBodyPlatform(url, "node.getSeed", nil)
+	body, err := GetResponseBodyPlatform(url, "node.getSeed", nil, 1*time.Second)
 	if err != nil {
 		return "", errors.Wrap(err, "[ GetSeed ] seed request")
 	}
@@ -209,6 +251,7 @@ func GetSeed(url string) (string, error) {
 
 	err = json.Unmarshal(body, &seedResp)
 	if err != nil {
+		fmt.Println("'", seedResp, "'")
 		return "", errors.Wrap(err, "[ GetSeed ] Can't unmarshal")
 	}
 	if seedResp.Error != nil {
@@ -222,12 +265,20 @@ func GetSeed(url string) (string, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string, retryTime time.Duration) ([]byte, error) {
+	var err error
 	req, err := MakeRequestWithSeed(ctx, url, userCfg, params, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with creating target request")
 	}
-	b, err := doReq(req)
+
+	var b []byte
+	if retryTime > 0 {
+		b, err = doReqWithRetry(req, retryTime)
+	} else {
+		b, err = doReq(req)
+	}
+
 	return b, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 }
 
@@ -298,7 +349,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Para
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
-	response, err := SendWithSeed(ctx, url, userCfg, params, seed)
+	response, err := SendWithSeed(ctx, url, userCfg, params, seed, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
@@ -308,7 +359,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Para
 
 // Info makes rpc request to network.getInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	body, err := GetResponseBodyPlatform(url, "network.getInfo", nil)
+	body, err := GetResponseBodyPlatform(url, "network.getInfo", nil, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -328,7 +379,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to node.getStatus method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	body, err := GetResponseBodyPlatform(url, "node.getStatus", nil)
+	body, err := GetResponseBodyPlatform(url, "node.getStatus", nil, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}

@@ -105,7 +105,7 @@ type GetCertificateResponse struct {
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
-	response, err := requester.GetResponseBodyPlatform(g.API, "cert.get", map[string]string{"ref": ref.String()})
+	response, err := requester.GetResponseBodyPlatform(g.API, "cert.get", map[string]string{"ref": ref.String()}, 0)
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}

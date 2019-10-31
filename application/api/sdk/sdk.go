@@ -20,12 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
 	"strings"
 	"sync"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api/requester"
@@ -400,6 +399,7 @@ func (sdk *SDK) GetBalance(m Member) (*big.Int, []interface{}, error) {
 		map[string]interface{}{"reference": m.GetReference()},
 	)
 	if err != nil {
+		// fail here
 		return nil, nil, errors.Wrap(err, "request was failed ")
 	}
 

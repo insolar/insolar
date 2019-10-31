@@ -179,17 +179,17 @@ func TestGetSeed(t *testing.T) {
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
-	_, err := GetResponseBodyPlatform("test", "", nil)
+	_, err := GetResponseBodyPlatform("test", "", nil, 0)
 	require.EqualError(t, err, "problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
-	_, err := GetResponseBodyPlatform(URL+"TEST", "", nil)
+	_, err := GetResponseBodyPlatform(URL+"TEST", "", nil, 0)
 	require.EqualError(t, err, "bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL, ContractRequest{}, "")
+	data, err := GetResponseBodyContract(URL, ContractRequest{}, "", 0)
 	response := RPCResponse{}
 	_ = json.Unmarshal(data, &response)
 	require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqParams := readConfigs(t)
 	reqParams.CallSite = "member.create"
-	resp, err := SendWithSeed(ctx, URL, userConf, reqParams, TESTSEED)
+	resp, err := SendWithSeed(ctx, URL, userConf, reqParams, TESTSEED, 0)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -234,13 +234,13 @@ func TestSendWithSeed(t *testing.T) {
 func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
-	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
+	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED, 0)
 	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
-	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
+	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED, 0)
 	require.EqualError(t, err, "[ SendWithSeed ] Problem with creating target request: configs must be initialized")
 }
 

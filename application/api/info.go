@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/application/api/codes"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -141,7 +142,7 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 	if err != nil {
 		logger.Error("[ InfoService.getInfo ] failed to execute: ", err.Error())
 		err = errors.Wrap(err, "Failed to execute InfoService.getInfo")
-		instr.SetError(err, InternalErrorShort)
+		instr.SetError(err, codes.InternalErrorShort)
 	}
 	return err
 }

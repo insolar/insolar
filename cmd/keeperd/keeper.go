@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sync"
@@ -134,10 +136,16 @@ func (k *Keeper) checkMetric(ctx context.Context, query string) bool {
 
 func (k *Keeper) startServer(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	rand.Seed(time.Now().UTC().UnixNano())
 	http.HandleFunc("/check", func(writer http.ResponseWriter, request *http.Request) {
+		available := rand.Intn(10)
 		response := KeeperRsp{
-			Available: atomic.LoadUint32(&k.isAvailable) > 0,
+			//Available: atomic.LoadUint32(&k.isAvailable) > 0,
+			Available: available > 1,
 		}
+
+		fmt.Println("AVAILABLE: ", available)
+
 		writer.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(writer).Encode(response)
 		if err != nil {

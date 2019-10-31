@@ -56,7 +56,7 @@ func TestBadSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
-		"MTExMQ==")
+		"MTExMQ==", 0)
 	require.NoError(t, err)
 	var resData = requester.Response{}
 	err = json.Unmarshal(res, &resData)
@@ -71,7 +71,7 @@ func TestIncorrectSeed(t *testing.T) {
 	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
-		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
+		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=", 0)
 	require.NoError(t, err)
 	var resData = requester.Response{}
 	err = json.Unmarshal(res, &resData)
@@ -126,7 +126,7 @@ func TestIncorrectSign(t *testing.T) {
 			},
 			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
-		"invalidSignature",
+		"invalidSignature", 0,
 	)
 	require.NoError(t, err)
 	var res requester.ContractResponse
@@ -154,7 +154,7 @@ func TestEmptySign(t *testing.T) {
 			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey,
 				CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
-		"",
+		"", 0,
 	)
 	require.NoError(t, err)
 	var res requester.ContractResponse
@@ -195,6 +195,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 		launchnet.TestRPCUrl,
 		request,
 		signature,
+		0,
 	)
 	require.NoError(t, err)
 
@@ -218,6 +219,7 @@ func TestIncorrectMethodName(t *testing.T) {
 			},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
+		0,
 	)
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")

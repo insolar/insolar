@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/application/api/codes"
 	"net/http"
 	"strings"
 
@@ -38,10 +39,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 	if !runner.AvailabilityChecker.IsAvailable(ctx) {
 		logger.Error("API is not available")
 
-		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+		instr.SetError(errors.New(codes.ServiceUnavailableErrorMessage), codes.ServiceUnavailableErrorShort)
 		return &json2.Error{
-			Code:    ServiceUnavailableError,
-			Message: ServiceUnavailableErrorMessage,
+			Code:    codes.ServiceUnavailableError,
+			Message: codes.ServiceUnavailableErrorMessage,
 			Data: requester.Data{
 				TraceID: traceID,
 			},
@@ -51,10 +52,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
 		logger.Warnf("CallSite '%s' is not in list of allowed methods", args.CallSite)
-		instr.SetError(errors.New(MethodNotFoundErrorMessage), MethodNotFoundErrorShort)
+		instr.SetError(errors.New(codes.MethodNotFoundErrorMessage), codes.MethodNotFoundErrorShort)
 		return &json2.Error{
-			Code:    MethodNotFoundError,
-			Message: MethodNotFoundErrorMessage,
+			Code:    codes.MethodNotFoundError,
+			Message: codes.MethodNotFoundErrorMessage,
 			Data: requester.Data{
 				TraceID: traceID,
 			},
@@ -69,10 +70,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
 		logger.Warn("validateRequestHeaders return error: ", err.Error())
-		instr.SetError(err, InvalidParamsErrorShort)
+		instr.SetError(err, codes.InvalidParamsErrorShort)
 		return &json2.Error{
-			Code:    InvalidParamsError,
-			Message: InvalidParamsErrorMessage,
+			Code:    codes.InvalidParamsError,
+			Message: codes.InvalidParamsErrorMessage,
 			Data: requester.Data{
 				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: traceID,
@@ -83,10 +84,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
 		logger.Warn("checkSeed returned error: ", err.Error())
-		instr.SetError(err, InvalidRequestErrorShort)
+		instr.SetError(err, codes.InvalidRequestErrorShort)
 		return &json2.Error{
-			Code:    InvalidRequestError,
-			Message: InvalidRequestErrorMessage,
+			Code:    codes.InvalidRequestError,
+			Message: codes.InvalidRequestErrorMessage,
 			Data: requester.Data{
 				Trace:   []string{err.Error()},
 				TraceID: traceID,
@@ -107,10 +108,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 		// TODO: white list of errors that doesnt require log
 		logger.Error("API return error: ", err.Error())
 		if strings.Contains(err.Error(), "invalid signature") {
-			instr.SetError(err, UnauthorizedErrorShort)
+			instr.SetError(err, codes.UnauthorizedErrorShort)
 			return &json2.Error{
-				Code:    UnauthorizedError,
-				Message: UnauthorizedErrorMessage,
+				Code:    codes.UnauthorizedError,
+				Message: codes.UnauthorizedErrorMessage,
 				Data: requester.Data{
 					Trace:            strings.Split(err.Error(), ": "),
 					TraceID:          traceID,
@@ -120,10 +121,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 		}
 
 		if strings.Contains(err.Error(), "failed to parse") {
-			instr.SetError(err, ParseErrorShort)
+			instr.SetError(err, codes.ParseErrorShort)
 			return &json2.Error{
-				Code:    ParseError,
-				Message: ParseErrorMessage,
+				Code:    codes.ParseError,
+				Message: codes.ParseErrorMessage,
 				Data: requester.Data{
 					Trace:            strings.Split(err.Error(), ": "),
 					TraceID:          traceID,
@@ -132,10 +133,10 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 			}
 		}
 
-		instr.SetError(err, ExecutionErrorShort)
+		instr.SetError(err, codes.ExecutionErrorShort)
 		return &json2.Error{
-			Code:    ExecutionError,
-			Message: ExecutionErrorMessage,
+			Code:    codes.ExecutionError,
+			Message: codes.ExecutionErrorMessage,
 			Data: requester.Data{
 				Trace:            strings.Split(err.Error(), ": "),
 				TraceID:          traceID,

@@ -217,8 +217,10 @@ func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
 		retries := createMemberRetries
 		for retries > 0 {
 			if migration {
+				fmt.Println(">>> MigrationCreateMember")
 				member, traceID, err = insSDK.MigrationCreateMember()
 			} else {
+				fmt.Println(">>> CreateMember")
 				member, traceID, err = insSDK.CreateMember()
 			}
 			if err == nil {
