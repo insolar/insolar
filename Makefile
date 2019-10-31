@@ -82,7 +82,7 @@ install-build-tools: ## install tools for codegen
 	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
-install-deps: install-build-tools ## install dep and codegen tools
+install-deps: ensure install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
 pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
