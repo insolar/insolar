@@ -18,8 +18,6 @@ package smachine
 
 import (
 	"sync/atomic"
-
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 )
 
 func NewInfiniteLock(name string) SyncLink {
@@ -42,19 +40,19 @@ func (p *infiniteLock) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *infiniteLock) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (p *infiniteLock) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
 	if entry, ok := dep.(*infiniteLockEntry); ok {
 		switch {
 		case !entry.IsCompatibleWith(flags):
-			return Impossible
+			return Impossible, nil
 		case entry.ctl == p:
-			return NotPassed
+			return NotPassed, nil
 		}
 	}
-	return Impossible
+	return Impossible, nil
 }
 
-func (p *infiniteLock) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
+func (p *infiniteLock) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
 	atomic.AddInt32(&p.count, 1)
 	return false, &infiniteLockEntry{p, flags}
 }
@@ -90,9 +88,14 @@ func (infiniteLockEntry) IsReleaseOnWorking() bool {
 	return false
 }
 
-func (v infiniteLockEntry) Release() []StepLink {
+func (v infiniteLockEntry) Release() (SlotDependency, []PostponedDependency, []StepLink) {
+	v.ReleaseAll()
+	return nil, nil, nil
+}
+
+func (v infiniteLockEntry) ReleaseAll() ([]PostponedDependency, []StepLink) {
 	atomic.AddInt32(&v.ctl.count, -1)
-	return nil
+	return nil, nil
 }
 
 func (v infiniteLockEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {

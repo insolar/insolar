@@ -17,7 +17,6 @@
 package smachine
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 	"math"
 )
 
@@ -86,7 +85,7 @@ type semaphoreSync struct {
 }
 
 func (p *semaphoreSync) CheckState() Decision {
-	if p.controller.IsOpen() {
+	if p.controller.isOpen() {
 		return Passed
 	}
 	return NotPassed
@@ -106,27 +105,27 @@ func (p *semaphoreSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
-			return Impossible
+			return Impossible, nil
 		case !entry.IsCompatibleWith(flags):
-			return Impossible
+			return Impossible, nil
 		case p.controller.Contains(entry):
-			return Passed
+			return Passed, nil
 		case p.controller.ContainsInAwaiters(entry):
-			return NotPassed
+			return NotPassed, nil
 		}
 	}
-	return Impossible
+	return Impossible, nil
 }
 
-func (p *semaphoreSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
-	if p.controller.IsOpen() {
-		return true, p.controller.queue.AddSlot(slot.NewLink(), flags)
+func (p *semaphoreSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	if p.controller.isOpen() {
+		return true, p.controller.queue.AddSlot(holder, flags)
 	}
-	return false, p.controller.awaiters.queue.AddSlot(slot.NewLink(), flags)
+	return false, p.controller.awaiters.queue.AddSlot(holder, flags)
 }
 
 func (p *semaphoreSync) GetLimit() (limit int, isAdjustable bool) {
@@ -190,9 +189,13 @@ type waitingQueueController struct {
 	exclusiveQueueController
 }
 
-func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+func (p *waitingQueueController) IsOpen(SlotDependency) bool {
+	return false
+}
+
+func (p *waitingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
 	removeFn()
-	return nil
+	return nil, nil
 }
 
 type workingQueueController struct {
@@ -211,18 +214,23 @@ func (p *workingQueueController) Init(name string) {
 	p.awaiters.queue.controller = &p.awaiters
 }
 
-func (p *workingQueueController) IsOpen() bool {
+func (p *workingQueueController) IsOpen(SlotDependency) bool {
+	return p.isOpen()
+}
+
+func (p *workingQueueController) isOpen() bool {
 	return p.queue.Count() < p.workerLimit
 }
 
-func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
 	removeFn()
 
 	n := p.workerLimit - p.queue.Count()
 	if n <= 0 {
-		return nil
+		return nil, nil
 	}
 
+	var postponed []PostponedDependency
 	links := make([]StepLink, 0, n)
 	for n > 0 {
 		if f, step := p.awaiters.queue.FirstValid(); f == nil {
@@ -230,13 +238,15 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 		} else {
 			f.removeFromQueue()
 			p.queue.AddLast(f)
-			if !f.ActivateStacked() {
+			if pp := f.childOf.ActivateStack(f, step); pp != nil {
+				postponed = append(postponed, pp)
+			} else {
 				links = append(links, step)
 			}
 			n--
 		}
 	}
-	return links
+	return postponed, links
 }
 
 func (p *workingQueueController) ContainsInAwaiters(entry *dependencyQueueEntry) bool {

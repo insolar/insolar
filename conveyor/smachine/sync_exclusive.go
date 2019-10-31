@@ -16,8 +16,6 @@
 
 package smachine
 
-import "github.com/insolar/insolar/network/consensus/common/rwlock"
-
 func NewExclusive(name string) SyncLink {
 	ctl := &exclusiveSync{}
 	ctl.awaiters.Init(name)
@@ -51,26 +49,26 @@ func (p *exclusiveSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *exclusiveSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (p *exclusiveSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
-			return Impossible
+			return Impossible, nil
 		case !p.awaiters.Contains(entry):
-			return Impossible
+			return Impossible, nil
 		case !entry.IsCompatibleWith(flags):
-			return Impossible
+			return Impossible, nil
 		case p.awaiters.IsEmptyOrFirst(entry.link):
-			return Passed
+			return Passed, nil
 		default:
-			return NotPassed
+			return NotPassed, nil
 		}
 	}
-	return Impossible
+	return Impossible, nil
 }
 
-func (p *exclusiveSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
-	sd := p.awaiters.queue.AddSlot(slot.NewLink(), flags)
+func (p *exclusiveSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	sd := p.awaiters.queue.AddSlot(holder, flags)
 	if f, _ := p.awaiters.queue.FirstValid(); f == sd {
 		return true, sd
 	}
@@ -125,6 +123,10 @@ func (p *exclusiveQueueController) GetName() string {
 	return p.name
 }
 
+func (p *exclusiveQueueController) IsOpen(sd SlotDependency) bool {
+	return p.queue.First() == sd
+}
+
 func (p *exclusiveQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
 	return false
 }
@@ -133,19 +135,24 @@ func (p *exclusiveQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDep
 	return flags&syncForOneStep != 0
 }
 
-func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
 	if f, _ := p.queue.FirstValid(); f == nil || f.link != link {
 		removeFn()
-		return nil
+		return nil, nil
 	}
 
 	removeFn()
-	if f, step := p.queue.FirstValid(); f != nil {
-		if !f.ActivateStacked() {
-			return []StepLink{step}
+	switch f, step := p.queue.FirstValid(); {
+	case f == nil:
+		return nil, nil
+	case f.childOf != nil:
+		if postponed := f.childOf.ActivateStack(f, step); postponed != nil {
+			return []PostponedDependency{postponed}, nil
 		}
+		fallthrough
+	default:
+		return nil, []StepLink{step}
 	}
-	return nil
 }
 
 func (p *exclusiveQueueController) Contains(entry *dependencyQueueEntry) bool {

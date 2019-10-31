@@ -304,31 +304,48 @@ func (p *slotContext) Check(link SyncLink) Decision {
 }
 
 func (p *slotContext) AcquireForThisStep(link SyncLink) BoolDecision {
-	return p.acquire(link, syncForOneStep)
+	return p.acquire(link, false, syncForOneStep)
 }
 
 func (p *slotContext) Acquire(link SyncLink) BoolDecision {
-	return p.acquire(link, 0)
+	return p.acquire(link, false, 0)
 }
 
-func (p *slotContext) acquire(link SyncLink, flags SlotDependencyFlags) (d BoolDecision) {
+func (p *slotContext) AcquireAndRelease(link SyncLink) BoolDecision {
+	return p.acquire(link, true, 0)
+}
+
+func (p *slotContext) AcquireForThisStepAndRelease(link SyncLink) BoolDecision {
+	return p.acquire(link, true, 0)
+}
+
+func (p *slotContext) acquire(link SyncLink, autoRelease bool, flags SlotDependencyFlags) (d BoolDecision) {
 	p.ensureAtLeast(updCtxInit)
 
 	dep := p.s.dependency
 	if dep == nil {
-		d, p.s.dependency = link.controller.CreateDependency(p.s, flags, nil)
+		d, p.s.dependency = link.controller.CreateDependency(p.s.NewLink(), flags)
 		return d
 	}
-
-	if b, isValid := link.controller.UseDependency(dep, flags).AsValid(); isValid {
-		return b
+	if d, dep := link.controller.UseDependency(dep, flags); d.IsValid() {
+		if dep != nil {
+			p.s.dependency = dep
+		}
+		return BoolDecision(d.IsPassed())
 	}
 
-	p.s.dependency = nil
-	d, p.s.dependency = link.controller.CreateDependency(p.s, flags, nil)
+	if !autoRelease {
+		panic("SM has already acquired another sync or the same one but with an incompatible mode")
+	}
 
-	released := dep.Release()
-	p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
+	slotLink := p.s.NewLink()
+	p.s.dependency = nil
+	d, p.s.dependency = link.controller.CreateDependency(slotLink, flags)
+
+	postponed, released := dep.ReleaseAll()
+	released = PostponedList(postponed).PostponedActivate(released)
+
+	p.s.machine.activateDependantByDetachable(released, slotLink, p.w)
 
 	return d
 }
@@ -347,6 +364,22 @@ func (p *slotContext) Release(link SyncLink) bool {
 	return p.release(link.controller)
 }
 
+func (p *slotContext) ReleaseAll() bool {
+	p.ensureAtLeast(updCtxInit)
+
+	dep := p.s.dependency
+	if dep == nil {
+		return false
+	}
+
+	p.s.dependency = nil
+	postponed, released := dep.ReleaseAll()
+	released = PostponedList(postponed).PostponedActivate(released)
+
+	p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
+	return true
+}
+
 func (p *slotContext) release(controller DependencyController) bool {
 	dep := p.s.dependency
 	if dep == nil {
@@ -357,8 +390,7 @@ func (p *slotContext) release(controller DependencyController) bool {
 		return false
 	}
 
-	p.s.dependency = nil
-	released := dep.Release()
+	released := p.s._releaseDependency()
 	p.s.machine.activateDependantByDetachable(released, p.s.NewLink(), p.w)
 	return true
 }

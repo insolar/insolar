@@ -20,11 +20,12 @@ import "sync/atomic"
 
 type DependencyQueueController interface {
 	GetName() string
+	IsOpen(SlotDependency) bool
 	//CanActivateTarget()
 
 	IsReleaseOnStepping(link SlotLink, flags SlotDependencyFlags) bool
 	IsReleaseOnWorking(link SlotLink, flags SlotDependencyFlags) bool
-	Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink
+	Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink)
 }
 
 type DependencyQueueHead struct {
@@ -149,21 +150,24 @@ func (p *DependencyQueueHead) FlushAllAsLinks() []StepLink {
 	return deps
 }
 
-const flagsOffset = 1
-const atomicInQueue = 1 << (flagsOffset - 1)
+const (
+	atomicInQueue = 1 << iota
+	flagsOffset   = iota
+)
 
 var _ SlotDependency = &dependencyQueueEntry{}
 
 type dependencyQueueEntry struct {
 	queue                    *DependencyQueueHead
 	nextInQueue, prevInQueue *dependencyQueueEntry
+	childOf                  *dependencyStackEntry
 	slotFlags                uint32
 	link                     SlotLink
 }
 
 func (p *dependencyQueueEntry) getFlags() (bool, SlotDependencyFlags) {
 	v := atomic.LoadUint32(&p.slotFlags)
-	return v&atomicInQueue != 0, SlotDependencyFlags(v >> 1)
+	return v&atomicInQueue != 0, SlotDependencyFlags(v >> flagsOffset)
 }
 
 func (p *dependencyQueueEntry) IsReleaseOnStepping() bool {
@@ -180,11 +184,23 @@ func (p *dependencyQueueEntry) IsReleaseOnWorking() bool {
 	return true
 }
 
-func (p *dependencyQueueEntry) Release() []StepLink {
+func (p *dependencyQueueEntry) Release() (SlotDependency, []PostponedDependency, []StepLink) {
+	d, s := p.ReleaseAll()
+	return nil, d, s
+}
+
+func (p *dependencyQueueEntry) ReleaseAll() ([]PostponedDependency, []StepLink) {
 	if inQueue, flags := p.getFlags(); inQueue {
 		return p.queue.controller.Release(p.link, flags, p.removeFromQueue)
 	}
-	return nil
+	return nil, nil
+}
+
+func (p *dependencyQueueEntry) isOpen() bool {
+	if inQueue, _ := p.getFlags(); inQueue {
+		return p.queue.controller.IsOpen(p)
+	}
+	return true
 }
 
 func (p *dependencyQueueEntry) _addQueuePrev(chainHead, chainTail *dependencyQueueEntry) {
@@ -272,8 +288,4 @@ func (p *dependencyQueueEntry) setQueue(head *DependencyQueueHead) {
 func (p *dependencyQueueEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
 	_, f := p.getFlags()
 	return f&flags == flags
-}
-
-func (p *dependencyQueueEntry) ActivateStacked() bool {
-	return false
 }

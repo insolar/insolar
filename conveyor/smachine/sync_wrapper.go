@@ -17,7 +17,6 @@
 package smachine
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 	"sync"
 )
 
@@ -40,16 +39,16 @@ func (w *syncMutexWrapper) CheckDependency(dep SlotDependency) Decision {
 	return w.inner.CheckDependency(dep)
 }
 
-func (w *syncMutexWrapper) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (w *syncMutexWrapper) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
 	return w.inner.UseDependency(dep, flags)
 }
 
-func (w *syncMutexWrapper) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
+func (w *syncMutexWrapper) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-	return w.inner.CreateDependency(slot, flags, &w.mutex)
+	return w.inner.CreateDependency(holder, flags)
 }
 
 func (w *syncMutexWrapper) GetLimit() (limit int, isAdjustable bool) {

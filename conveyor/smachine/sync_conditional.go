@@ -17,7 +17,6 @@
 package smachine
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 	"math"
 )
 
@@ -67,7 +66,7 @@ type conditionalSync struct {
 }
 
 func (p *conditionalSync) CheckState() Decision {
-	if p.controller.IsOpen() {
+	if p.controller.isOpen() {
 		return Passed
 	}
 	return NotPassed
@@ -80,7 +79,7 @@ func (p *conditionalSync) CheckDependency(dep SlotDependency) Decision {
 			return Impossible
 		case !p.controller.Contains(entry):
 			return Impossible
-		case p.controller.IsOpen():
+		case p.controller.isOpen():
 			return Passed
 		default:
 			return NotPassed
@@ -89,29 +88,29 @@ func (p *conditionalSync) CheckDependency(dep SlotDependency) Decision {
 	return Impossible
 }
 
-func (p *conditionalSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) Decision {
+func (p *conditionalSync) UseDependency(dep SlotDependency, flags SlotDependencyFlags) (Decision, SlotDependency) {
 	if entry, ok := dep.(*dependencyQueueEntry); ok {
 		switch {
 		case !entry.link.IsValid(): // just to make sure
-			return Impossible
+			return Impossible, nil
 		case !entry.IsCompatibleWith(flags):
-			return Impossible
+			return Impossible, nil
 		case !p.controller.Contains(entry):
-			return Impossible
-		case p.controller.IsOpen():
-			return Passed
+			return Impossible, nil
+		case p.controller.isOpen():
+			return Passed, nil
 		default:
-			return NotPassed
+			return NotPassed, nil
 		}
 	}
-	return Impossible
+	return Impossible, nil
 }
 
-func (p *conditionalSync) CreateDependency(slot *Slot, flags SlotDependencyFlags, syncer rwlock.RWLocker) (BoolDecision, SlotDependency) {
-	if p.controller.IsOpen() {
+func (p *conditionalSync) CreateDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+	if p.controller.isOpen() {
 		return true, nil
 	}
-	return false, p.controller.queue.AddSlot(slot.NewLink(), flags)
+	return false, p.controller.queue.AddSlot(holder, flags)
 }
 
 func (p *conditionalSync) GetLimit() (limit int, isAdjustable bool) {
@@ -127,7 +126,7 @@ func (p *conditionalSync) AdjustLimit(limit int, absolute bool) ([]StepLink, boo
 
 func (p *conditionalSync) setLimit(limit int) ([]StepLink, bool) {
 	p.controller.state = limit
-	if !p.controller.IsOpen() {
+	if !p.controller.isOpen() {
 		return nil, false
 	}
 	return p.controller.queue.FlushAllAsLinks(), true
@@ -146,24 +145,28 @@ type holdingQueueController struct {
 	state int
 }
 
-func (p *holdingQueueController) IsOpen() bool {
+func (p *holdingQueueController) isOpen() bool {
 	return p.state > 0
 }
 
-func (p *holdingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) []StepLink {
+func (p *holdingQueueController) IsOpen(SlotDependency) bool {
+	return p.isOpen()
+}
+
+func (p *holdingQueueController) Release(link SlotLink, flags SlotDependencyFlags, removeFn func()) ([]PostponedDependency, []StepLink) {
 	removeFn()
-	if p.IsOpen() && p.queue.Count() > 0 {
+	if p.isOpen() && p.queue.Count() > 0 {
 		panic("illegal state")
 	}
-	return nil
+	return nil, nil
 }
 
 func (p *holdingQueueController) IsReleaseOnWorking(SlotLink, SlotDependencyFlags) bool {
-	return p.IsOpen()
+	return p.isOpen()
 }
 
 func (p *holdingQueueController) IsReleaseOnStepping(_ SlotLink, flags SlotDependencyFlags) bool {
-	return flags&syncForOneStep != 0 || p.IsOpen()
+	return flags&syncForOneStep != 0 || p.isOpen()
 }
 
 func applyWrappedAdjustment(current, adjustment, min, max int, absolute bool) (bool, int) {

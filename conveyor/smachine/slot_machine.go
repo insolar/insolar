@@ -304,8 +304,8 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker AttachedSlotWorker, loopLimit int) (hasSignal bool, loopCount int) {
 
 	if dep := slot.dependency; dep != nil && dep.IsReleaseOnWorking() {
-		slot.dependency = nil
-		m.activateDependants(dep.Release(), slot.NewLink(), worker)
+		released := slot._releaseDependency()
+		m.activateDependants(released, slot.NewLink(), worker)
 	}
 	slot.slotFlags &^= slotWokenUp
 
@@ -664,10 +664,9 @@ func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, e
 
 	{
 		// cleanup synchronization dependency
-		dep := slot.dependency
-		if dep != nil {
-			slot.dependency = nil
-			m.activateDependants(dep.Release(), link.SlotLink, worker)
+		if slot.dependency != nil {
+			released := slot._releaseDependency()
+			m.activateDependants(released, link.SlotLink, worker)
 		}
 	}
 
@@ -811,6 +810,7 @@ func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (Sl
 
 type prepareSlotValue struct {
 	slotReplaceData
+	overrides     map[string]interface{}
 	stepLogger    StateMachineStepLoggerFunc
 	terminate     TerminationHandlerFunc
 	isReplacement bool
@@ -819,10 +819,10 @@ type prepareSlotValue struct {
 func (m *SlotMachine) prepareNewSlotWithDefaults(creator *Slot, fn CreateFunc, sm StateMachine, defValues CreateDefaultValues) (SlotLink, bool) {
 	return m.prepareNewSlot(creator, fn, sm, prepareSlotValue{
 		slotReplaceData: slotReplaceData{
-			parent:   defValues.Parent,
-			ctx:      defValues.Context,
-			injected: defValues.OverriddenDependencies,
+			parent: defValues.Parent,
+			ctx:    defValues.Context,
 		},
+		overrides:  defValues.OverriddenDependencies,
 		stepLogger: defValues.StepLogger,
 		terminate:  defValues.TerminationHandler,
 	})
@@ -844,11 +844,11 @@ func mergeDefaultValues(target *prepareSlotValue, source CreateDefaultValues) {
 
 	switch {
 	case source.OverriddenDependencies == nil:
-	case target.injected == nil:
-		target.injected = source.OverriddenDependencies
+	case target.overrides == nil:
+		target.overrides = source.OverriddenDependencies
 	default:
 		for k, v := range source.OverriddenDependencies {
-			target.injected[k] = v
+			target.overrides[k] = v
 		}
 	}
 }
@@ -884,7 +884,7 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 		slot.ctx = context.Background() // TODO provide SlotMachine context?
 	}
 
-	cc := constructionContext{s: slot}
+	cc := constructionContext{s: slot, injects: defValues.overrides}
 	if defValues.isReplacement {
 		cc.inherit = InheritResolvedDependencies
 	}
@@ -905,8 +905,8 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 	link := slot.NewLink()
 
 	var localInjects []interface{}
-	slot.injected, localInjects = m.prepareInjects(creator, link, sm, cc.inherit, defValues.isReplacement,
-		cc.injects, defValues.injected)
+	slot.inheritable, localInjects = m.prepareInjects(creator, link, sm, cc.inherit, defValues.isReplacement,
+		cc.injects, defValues.inheritable)
 
 	// TODO redo stepLogger initialization
 	//slot.stepLogger = decl.GetStepLogger(slot.ctx, sm, defValues.stepLogger)
@@ -953,8 +953,8 @@ func (m *SlotMachine) prepareInjects(creator *Slot, link SlotLink, sm StateMachi
 	if len(defValuesInjects) > 0 {
 		overrides = append(overrides, defValuesInjects)
 	}
-	if mode&InheritResolvedDependencies != 0 && creator != nil && len(creator.injected) > 0 {
-		overrides = append(overrides, creator.injected)
+	if mode&InheritResolvedDependencies != 0 && creator != nil && len(creator.inheritable) > 0 {
+		overrides = append(overrides, creator.inheritable)
 	}
 
 	var localDeps injector.DependencyRegistryFunc
@@ -1429,8 +1429,8 @@ func (m *SlotMachine) stopSlotWorking(slot *Slot, prevStepNo uint32, worker Fixe
 		return
 	}
 
-	slot.dependency = nil
-	m.activateDependants(dep.Release(), slot.NewLink(), worker)
+	released := slot._releaseDependency()
+	m.activateDependants(released, slot.NewLink(), worker)
 }
 
 func (m *SlotMachine) _activateDependantChain(chain *Slot, worker FixedSlotWorker) {

@@ -58,9 +58,12 @@ type slotDeclarationData struct {
 
 // transferred with Replace()
 type slotReplaceData struct {
-	parent   SlotLink
-	ctx      context.Context
-	injected map[string]interface{}
+	parent SlotLink
+	ctx    context.Context
+
+	// DO NOT modify
+	inheritable map[string]interface{}
+
 	defFlags StepFlags
 }
 
@@ -94,7 +97,12 @@ type SlotDependency interface {
 	IsReleaseOnWorking() bool
 	IsReleaseOnStepping() bool
 
-	Release() []StepLink
+	Release() (SlotDependency, []PostponedDependency, []StepLink)
+	ReleaseAll() ([]PostponedDependency, []StepLink)
+}
+
+type PostponedDependency interface {
+	PostponedActivate(appendTo []StepLink) []StepLink
 }
 
 const (

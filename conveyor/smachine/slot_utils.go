@@ -65,3 +65,13 @@ func buildShadowMigrator(localInjects []interface{}, defFn ShadowMigrateFunc) Sh
 		}
 	}
 }
+
+func (s *Slot) _releaseDependency() []StepLink {
+	dep := s.dependency
+	s.dependency = nil
+	replace, postponed, released := dep.Release()
+	s.dependency = replace
+
+	released = PostponedList(postponed).PostponedActivate(released)
+	return released
+}
