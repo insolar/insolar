@@ -87,7 +87,10 @@ func (p *hierarchySync) CreateDependency(holder SlotLink, flags SlotDependencyFl
 	defer p.controller.mutex.Unlock()
 
 	if p.controller.canPassThrough() {
-		return p.parentCtl.createDependency(holder, flags)
+		d, entry := p.parentCtl.createDependency(holder, flags)
+		entry.stacker = &p.controller.stacker
+		p.controller.workerCount++
+		return d, entry
 	}
 	return false, p.controller.queue.AddSlot(holder, flags)
 }

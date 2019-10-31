@@ -139,7 +139,7 @@ func (p *semaphoreSync) UseDependency(dep SlotDependency, flags SlotDependencyFl
 	return Impossible
 }
 
-func (p *semaphoreSync) createDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, SlotDependency) {
+func (p *semaphoreSync) createDependency(holder SlotLink, flags SlotDependencyFlags) (BoolDecision, *dependencyQueueEntry) {
 	if p.controller.canPassThrough() {
 		return true, p.controller.queue.AddSlot(holder, flags)
 	}
