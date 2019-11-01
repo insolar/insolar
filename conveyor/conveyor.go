@@ -296,8 +296,9 @@ func (p *PulseConveyor) CancelPulseChange() error {
 func (p *PulseConveyor) CommitPulseChange(pr pulse.Range) error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
 		p.pdm.unsetPreparingPulse()
-		p._promotePulseSlots(ctx, pr)
-		ctx.Migrate()
+		ctx.Migrate(func() {
+			p._promotePulseSlots(ctx, pr)
+		})
 	})
 }
 

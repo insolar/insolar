@@ -481,7 +481,15 @@ func (m *SlotMachine) MigrateNested(outerCtx MigrationContext) {
 }
 
 func (m *SlotMachine) migrate(worker FixedSlotWorker) {
+	m.migrateWithBefore(worker, nil)
+}
+
+func (m *SlotMachine) migrateWithBefore(worker FixedSlotWorker, beforeFn func()) {
 	migrateCount := m.incMigrateCount()
+
+	if beforeFn != nil {
+		beforeFn()
+	}
 
 	for _, fn := range m.migrators {
 		fn(migrateCount)

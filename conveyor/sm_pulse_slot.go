@@ -205,13 +205,16 @@ const presentSlotCycleBoost = 1
 func (p *PulseSlotMachine) stepPresentLoop(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, 0, 0, p.innerWorker)
 
-	if repeatNow {
+	switch {
+	case repeatNow:
 		return ctx.Repeat(presentSlotCycleBoost)
-	}
-	if nextPollTime.IsZero() {
+	case !nextPollTime.IsZero():
+		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
+	case p.innerMachine.IsEmpty():
+		return ctx.Poll().ThenRepeat() // TODO may cause a small delay on processing of a first request
+	default:
 		return ctx.Yield().ThenRepeat()
 	}
-	return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
 }
 
 // Conveyor direct barge-in

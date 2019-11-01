@@ -32,7 +32,7 @@ type MachineCallContext interface {
 	GetPublished(key interface{}) interface{}
 	GetPublishedLink(key interface{}) SharedDataLink
 
-	Migrate()
+	Migrate(beforeFn func())
 	Cleanup()
 	Stop()
 

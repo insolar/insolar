@@ -26,9 +26,9 @@ type machineCallContext struct {
 	w FixedSlotWorker
 }
 
-func (p *machineCallContext) Migrate() {
+func (p *machineCallContext) Migrate(beforeFn func()) {
 	p.ensureValid()
-	p.m.migrate(p.w)
+	p.m.migrateWithBefore(p.w, beforeFn)
 }
 
 func (p *machineCallContext) Cleanup() {
