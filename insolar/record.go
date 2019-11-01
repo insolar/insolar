@@ -75,6 +75,18 @@ func NewObjectReferenceFromString(input string) (*Reference, error) {
 	return global, nil
 }
 
+// NewRecordReferenceFromString deserializes reference from base64 encoded string and checks if it record reference
+func NewRecordReferenceFromString(input string) (*Reference, error) {
+	global, err := NewReferenceFromString(input)
+	if err != nil {
+		return nil, err
+	}
+	if !global.IsRecordScope() {
+		return nil, errors.New("provided reference is not record")
+	}
+	return global, nil
+}
+
 // NewReferenceFromString deserializes reference from base64 encoded string
 func NewReferenceFromString(input string) (*Reference, error) {
 	global, err := reference.DefaultDecoder().Decode(input)

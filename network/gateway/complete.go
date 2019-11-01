@@ -53,17 +53,16 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"go.opencensus.io/stats"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
-	"go.opencensus.io/stats"
-
-	"github.com/insolar/insolar/certificate"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/reply"
@@ -216,21 +215,24 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse) {
 	g.Base.OnPulseFromConsensus(ctx, pulse)
 
-	done := make(chan struct{})
-	defer close(done)
-	pulseProcessingWatchdog(ctx, g.Base, pulse, done)
+	// OnPulseFromConsensus should be fast, but PulseManager.Set() takes unpredictable time
+	go func() {
+		done := make(chan struct{})
+		defer close(done)
+		pulseProcessingWatchdog(ctx, g.Base, pulse, done)
 
-	logger := inslogger.FromContext(ctx)
+		logger := inslogger.FromContext(ctx)
 
-	logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
-	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
-	span.SetTag("pulse.PulseNumber", int64(pulse.PulseNumber))
-	defer span.Finish()
+		logger.Infof("Got new pulse number: %d", pulse.PulseNumber)
+		ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
+		span.SetTag("pulse.PulseNumber", int64(pulse.PulseNumber))
+		defer span.Finish()
 
-	err := g.PulseManager.Set(ctx, pulse)
-	if err != nil {
-		logger.Fatalf("Failed to set new pulse: %s", err.Error())
-	}
-	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
-	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
+		err := g.PulseManager.Set(ctx, pulse)
+		if err != nil {
+			logger.Fatalf("Failed to set new pulse: %s", err.Error())
+		}
+		logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+		stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
+	}()
 }
