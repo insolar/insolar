@@ -78,24 +78,6 @@ func TestBadgerGCRunInfo(t *testing.T) {
 			require.Equal(t, uint(0), runner.getCount())
 		}
 	})
-	t.Run("call every second time if frequency equal 2", func(t *testing.T) {
-		t.Parallel()
-		runner := &TestBadgerGCRunner{
-			called: make(chan struct{}, 1),
-		}
-		frequency := uint(2)
-		info := executor.NewBadgerGCRunInfo(runner, frequency)
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(0), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		<-runner.called
-		require.Equal(t, uint(1), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(1), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		<-runner.called
-		require.Equal(t, uint(2), runner.getCount())
-	})
 }
 
 func TestFinalizePulse_HappyPath(t *testing.T) {
