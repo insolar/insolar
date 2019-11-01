@@ -256,7 +256,7 @@ func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef inso
 
 	inslogger.FromContext(ctx).Debug("registering outgoing request result")
 
-	//  Register result of the outgoing method
+	// Register result of the outgoing method
 	reqResult := requestresult.New(result, outgoing.Caller)
 	err = a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
 	if err != nil {

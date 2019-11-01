@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_contract_requester"
@@ -90,7 +89,7 @@ func (s *ExecuteOutgoingSagaRequest) Init(ctx smachine.InitializationContext) sm
 }
 
 func (s *ExecuteOutgoingSagaRequest) stepSendCallMethod(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	incoming := logicrunner.BuildIncomingRequestFromOutgoing(s.Request)
+	incoming := BuildIncomingRequestFromOutgoing(s.Request)
 	pulseNumber := s.pulseSlot.PulseData().PulseNumber
 
 	pl := &payload.CallMethod{
@@ -111,7 +110,10 @@ func (s *ExecuteOutgoingSagaRequest) stepSendCallMethod(ctx smachine.ExecutionCo
 }
 
 func (s *ExecuteOutgoingSagaRequest) stepCheckSendCallMethod(ctx smachine.ExecutionContext) smachine.StateUpdate {
-
+	// if strings.Contains(s.internalError.Error(), "flow cancelled") {
+	// 	return ctx.Jump(s.stepSendCallMethod)
+	// }
+	return ctx.Jump(s.stepSaveResult)
 }
 
 func (s *ExecuteOutgoingSagaRequest) stepSaveResult(ctx smachine.ExecutionContext) smachine.StateUpdate {

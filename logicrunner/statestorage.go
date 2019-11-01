@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 )
 
@@ -48,7 +49,7 @@ type stateStorage struct {
 	sync.RWMutex
 
 	publisher        watermillMsg.Publisher
-	requestsExecutor RequestsExecutor
+	requestsExecutor requestexecutor.RequestExecutor
 	sender           bus.Sender
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
@@ -62,7 +63,7 @@ type stateStorage struct {
 
 func NewStateStorage(
 	publisher watermillMsg.Publisher,
-	requestsExecutor RequestsExecutor,
+	requestsExecutor requestexecutor.RequestExecutor,
 	sender bus.Sender,
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,

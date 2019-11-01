@@ -42,8 +42,6 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/logicexecutor"
-	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -190,9 +188,6 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
-		logicrunner.NewRequestsExecutor(),
-		machinesmanager.NewMachinesManager(),
 		APIWrapper,
 		availabilityChecker,
 		nw,
@@ -204,9 +199,9 @@ func initComponents(
 		publisher,
 		contractRequester,
 		artifactsClient,
-		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
+
 		jet.NewStore(),
 		node.NewStorage(),
 	}

@@ -22,14 +22,18 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/sm_execute_request"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
@@ -42,9 +46,7 @@ type ProxyImplementation interface {
 }
 
 type RPCMethods struct {
-	ss         StateStorage
-	execution  ProxyImplementation
-	validation ProxyImplementation
+	execution ProxyImplementation
 }
 
 func getRequestReference(info *payload.RequestInfo) *insolar.Reference {
@@ -52,55 +54,45 @@ func getRequestReference(info *payload.RequestInfo) *insolar.Reference {
 }
 
 func NewRPCMethods(
-	am artifacts.Client,
 	dc artifacts.DescriptorsCache,
-	cr insolar.ContractRequester,
-	ss StateStorage,
-	outgoingSender OutgoingRequestSender,
+	pc conveyor.AddInputer,
+	pa pulse.Accessor,
 ) *RPCMethods {
 	return &RPCMethods{
-		ss:         ss,
-		execution:  NewExecutionProxyImplementation(dc, cr, am, outgoingSender),
-		validation: NewValidationProxyImplementation(dc),
+		execution: NewExecutionProxyImplementation(dc, pc, pa),
 	}
 }
 
 func (m *RPCMethods) getCurrent(
-	obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
+// obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
 ) (
 	ProxyImplementation, *common.Transcript, error,
 ) {
-	switch mode {
-	case insolar.ExecuteCallMode:
-		registry := m.ss.GetExecutionRegistry(obj)
-		if registry == nil {
-			return nil, nil, errors.New("No execution registry in the state")
-		}
-
-		transcript := registry.GetActiveTranscript(reqRef)
-		if transcript == nil {
-			return nil, nil, errors.New("No transcript in the execution registry")
-		}
-
-		return m.execution, transcript, nil
-	default:
-		panic("not implemented")
+	// won't work for goplugins
+	transcript := foundation.GetTranscript()
+	if transcript == nil {
+		return nil, nil, errors.New("no transcript in the gls")
 	}
+	return m.execution, transcript, nil
 }
 
 // GetCode is an RPC retrieving a code by its reference
 func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, rep *rpctypes.UpGetCodeResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
-	if err != nil {
-		return errors.Wrap(err, "Failed to fetch current execution")
-	}
-
-	return impl.GetCode(current.Context, current, req, rep)
+	// won't work for goplugins
+	panic("unreachable, for now")
+	// impl, current, err := m.getCurrent()
+	// if err != nil {
+	// 	return errors.Wrap(err, "Failed to fetch current execution")
+	// }
+	//
+	// req.Callee
+	//
+	// return impl.GetCode(current.Context, current, req, rep)
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
+	impl, current, err := m.getCurrent()
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
 	}
@@ -110,7 +102,7 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
+	impl, current, err := m.getCurrent()
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
 	}
@@ -120,7 +112,7 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) error {
-	impl, current, err := m.getCurrent(req.Callee, req.Mode, req.Request)
+	impl, current, err := m.getCurrent()
 	if err != nil {
 		return errors.Wrap(err, "Failed to fetch current execution")
 	}
@@ -129,23 +121,20 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 }
 
 type executionProxyImplementation struct {
-	dc             artifacts.DescriptorsCache
-	cr             insolar.ContractRequester
-	am             artifacts.Client
-	outgoingSender OutgoingRequestSender
+	dc       artifacts.DescriptorsCache
+	conveyor conveyor.AddInputer
+	pa       pulse.Accessor
 }
 
 func NewExecutionProxyImplementation(
 	dc artifacts.DescriptorsCache,
-	cr insolar.ContractRequester,
-	am artifacts.Client,
-	outgoingSender OutgoingRequestSender,
+	conveyor conveyor.AddInputer,
+	pa pulse.Accessor,
 ) ProxyImplementation {
 	return &executionProxyImplementation{
-		dc:             dc,
-		cr:             cr,
-		am:             am,
-		outgoingSender: outgoingSender,
+		dc:       dc,
+		pa:       pa,
+		conveyor: conveyor,
 	}
 }
 
@@ -174,69 +163,87 @@ func (m *executionProxyImplementation) GetCode(
 func (m *executionProxyImplementation) RouteCall(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug(
-		"call to others contract method ", req.Method,
-		" on object ", req.Object,
-	)
-
-	logger = logger.WithFields(map[string]interface{}{
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"call_to":   req.Method,
-		"on_object": req.Object,
+		"on_object": req.Object.String(),
 	})
-
-	outgoing := buildOutgoingRequest(ctx, current, req)
-
-	// Step 1. Register outgoing request.
-
-	logger.Debug("registering outgoing request")
+	logger.Debug("call to other contract")
 
 	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
 		TraceID: []byte(inslogger.TraceID(ctx)),
 		SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
 	})
 
-	// If pulse changes during registering of OutgoingRequest we don't care because
-	// we _already_ are processing the request. We should continue to execute and
-	// the next executor will wait for us in pending state. For this reason Flow is not
-	// used for registering the outgoing request.
-	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	ctx, span := instracer.StartSpan(ctx, "RPC.RouteCall")
+	defer span.Finish()
+
+	pulseObject, err := m.pa.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain last pulse")
+	}
+
+	event := &sm_execute_request.SMEventSendOutgoing{
+		Request: buildOutgoingRequest(ctx, current, req),
+	}
+	err = m.conveyor.AddInput(ctx, pulseObject.PulseNumber, event)
+	if err != nil {
+		return errors.Wrap(err, "failed to send event to slot machine")
+	}
+
+	rep.Result, err = event.WaitResult()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("registered outgoing request")
-
-	if req.Saga {
-		// Saga methods are not executed right away. LME will send a method
-		// to the VE when current object finishes the execution and validation.
-		if outReqInfo.Result != nil {
-			return errors.New("RegisterOutgoingRequest returns Result for Saga Call")
-		}
-		return nil
-	}
-
-	// if we replay abandoned request after node was down we can already have Result
-	if outReqInfo.Result != nil {
-		returns, err := unwrapResult(ctx, outReqInfo.Result)
-		if err != nil {
-			return errors.Wrap(err, "couldn't unwrap result from ledger")
-		}
-		rep.Result = returns
-		return nil
-	}
-
-	logger.Debug("sending outgoing request")
-
-	// Step 2. Send the request and register the result (both is done by outgoingSender)
-	rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
-	if err != nil {
-		err = errors.Wrap(err, "failed to send outgoing request")
-		logger.Error(err)
-		return err
-	}
-
-	logger.Debug("got result of outgoing request")
+	// outgoing := buildOutgoingRequest(ctx, current, req)
+	//
+	// // Step 1. Register outgoing request.
+	//
+	// logger.Debug("registering outgoing request")
+	//
+	//
+	//
+	// // If pulse changes during registering of OutgoingRequest we don't care because
+	// // we _already_ are processing the request. We should continue to execute and
+	// // the next executor will wait for us in pending state. For this reason Flow is not
+	// // used for registering the outgoing request.
+	// outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// logger.Debug("registered outgoing request")
+	//
+	// if req.Saga {
+	// 	// Saga methods are not executed right away. LME will send a method
+	// 	// to the VE when current object finishes the execution and validation.
+	// 	if outReqInfo.Result != nil {
+	// 		return errors.New("RegisterOutgoingRequest returns Result for Saga Call")
+	// 	}
+	// 	return nil
+	// }
+	//
+	// // if we replay abandoned request after node was down we can already have Result
+	// if outReqInfo.Result != nil {
+	// 	returns, err := unwrapResult(ctx, outReqInfo.Result)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "couldn't unwrap result from ledger")
+	// 	}
+	// 	rep.Result = returns
+	// 	return nil
+	// }
+	//
+	// logger.Debug("sending outgoing request")
+	//
+	// // Step 2. Send the request and register the result (both is done by outgoingSender)
+	// rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
+	// if err != nil {
+	// 	err = errors.Wrap(err, "failed to send outgoing request")
+	// 	logger.Error(err)
+	// 	return err
+	// }
+	//
+	// logger.Debug("got result of outgoing request")
 
 	return nil
 }
@@ -245,11 +252,11 @@ func (m *executionProxyImplementation) RouteCall(
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Debug(
-		"call to others contract constructor ", req.ConstructorName,
-		" on prototype ", req.Prototype.String(),
-	)
+	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"call_to":   req.ConstructorName,
+		"on_object": req.Prototype.String(),
+	})
+	logger.Debug("call to other contract constructor")
 
 	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
 		TraceID: []byte(inslogger.TraceID(ctx)),
@@ -259,45 +266,60 @@ func (m *executionProxyImplementation) SaveAsChild(
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.Finish()
 
-	logger = logger.WithFields(map[string]interface{}{
-		"call_to":   req.ConstructorName,
-		"on_object": req.Prototype,
-	})
+	logger = logger
 
-	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	pulseObject, err := m.pa.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain last pulse")
+	}
 
-	logger.Debug("registering outgoing request")
+	event := &sm_execute_request.SMEventSendOutgoing{
+		Request: buildOutgoingSaveAsChildRequest(ctx, current, req),
+	}
+	err = m.conveyor.AddInput(ctx, pulseObject.PulseNumber, event)
+	if err != nil {
+		return errors.Wrap(err, "failed to send event to slot machine")
+	}
 
-	// Register outgoing request
-	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	rep.Result, err = event.WaitResult()
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("registered outgoing request")
-
-	// if we replay abandoned request after node was down we can already have Result
-	if outReqInfo.Result != nil {
-		returns, err := unwrapResult(ctx, outReqInfo.Result)
-		if err != nil {
-			return errors.Wrap(err, "couldn't unwrap result from ledger")
-		}
-		rep.Result = returns
-		return nil
-	}
-
-	// Register result of the outgoing method
-	outgoingReqRef := *getRequestReference(outReqInfo)
-
-	logger.Debug("sending outgoing request")
-
-	var incoming *record.IncomingRequest
-	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
-	if incoming != nil {
-		current.AddOutgoingRequest(ctx, *incoming, rep.Result, err)
-	}
-
-	logger.Debug("got result of outgoing request")
+	// outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+	//
+	// logger.Debug("registering outgoing request")
+	//
+	// // Register outgoing request
+	// outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// logger.Debug("registered outgoing request")
+	//
+	// // if we replay abandoned request after node was down we can already have Result
+	// if outReqInfo.Result != nil {
+	// 	returns, err := unwrapResult(ctx, outReqInfo.Result)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "couldn't unwrap result from ledger")
+	// 	}
+	// 	rep.Result = returns
+	// 	return nil
+	// }
+	//
+	// // Register result of the outgoing method
+	// outgoingReqRef := *getRequestReference(outReqInfo)
+	//
+	// logger.Debug("sending outgoing request")
+	//
+	// var incoming *record.IncomingRequest
+	// rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
+	// if incoming != nil {
+	// 	current.AddOutgoingRequest(ctx, *incoming, rep.Result, err)
+	// }
+	//
+	// logger.Debug("got result of outgoing request")
 
 	return err
 }
@@ -305,84 +327,8 @@ func (m *executionProxyImplementation) SaveAsChild(
 func (m *executionProxyImplementation) DeactivateObject(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
-	inslogger.FromContext(ctx).Debug("contract deactivating itself")
-
-	current.Deactivate = true
-
-	return nil
-}
-
-type validationProxyImplementation struct {
-	dc artifacts.DescriptorsCache
-}
-
-func NewValidationProxyImplementation(
-	dc artifacts.DescriptorsCache,
-) ProxyImplementation {
-	return &validationProxyImplementation{
-		dc: dc,
-	}
-}
-
-func (m *validationProxyImplementation) GetCode(
-	ctx context.Context, current *common.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
-) error {
-	codeDescriptor, err := m.dc.GetCode(ctx, req.Code)
-	if err != nil {
-		return errors.Wrap(err, "couldn't get code descriptor")
-	}
-
-	reply.Code, err = codeDescriptor.Code()
-	if err != nil {
-		return errors.Wrap(err, "couldn't get code content")
-	}
-	return nil
-}
-
-func (m *validationProxyImplementation) RouteCall(
-	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
-) error {
-	if current.Request.Immutable {
-		return errors.New("immutable method can't make calls")
-	}
-
-	outgoing := buildOutgoingRequest(ctx, current, req)
-	incoming := BuildIncomingRequestFromOutgoing(outgoing)
-
-	reqRes := current.HasOutgoingRequest(ctx, *incoming)
-	if reqRes == nil {
-		return errors.New("unexpected outgoing call during validation")
-	}
-	if reqRes.Error != nil {
-		return reqRes.Error
-	}
-
-	rep.Result = reqRes.Response
-
-	return nil
-}
-
-func (m *validationProxyImplementation) SaveAsChild(
-	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
-) error {
-	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := BuildIncomingRequestFromOutgoing(outgoing)
-
-	reqRes := current.HasOutgoingRequest(ctx, *incoming)
-	if reqRes == nil {
-		return errors.New("unexpected outgoing call during validation")
-	}
-	if reqRes.Error != nil {
-		return reqRes.Error
-	}
-
-	return nil
-}
-
-func (m *validationProxyImplementation) DeactivateObject(
-	ctx context.Context, current *common.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
-) error {
-
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("contract deactivating itself")
 	current.Deactivate = true
 
 	return nil

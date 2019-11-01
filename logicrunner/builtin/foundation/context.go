@@ -17,12 +17,16 @@
 package foundation
 
 import (
+	"fmt"
+
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
-const glsCallContextKey = "callCtx"
+const glsTranscriptKey = "[gls.transcript]"
+const glsCallContextKey = "[gls.callContext]"
 
 // GetLogicalContext returns current calling context.
 func GetLogicalContext() *insolar.LogicCallContext {
@@ -41,6 +45,23 @@ func GetLogicalContext() *insolar.LogicCallContext {
 // SetLogicalContext saves current calling context
 func SetLogicalContext(ctx *insolar.LogicCallContext) {
 	gls.Set(glsCallContextKey, ctx)
+}
+
+func GetTranscript() *common.Transcript {
+	rawTranscript := gls.Get(glsTranscriptKey)
+	if rawTranscript == nil {
+		panic("object has no rawTranscript")
+	}
+
+	if transcript, ok := rawTranscript.(*common.Transcript); ok {
+		return transcript
+	}
+
+	panic(fmt.Sprintf("wrong type of transcript: %T", rawTranscript))
+}
+
+func SetTranscript(ctx *insolar.LogicCallContext) {
+	gls.Set(glsTranscriptKey, ctx)
 }
 
 // ClearContext clears underlying gls context

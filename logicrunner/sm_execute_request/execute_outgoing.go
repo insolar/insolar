@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_contract_requester"
@@ -53,6 +52,58 @@ type ExecuteOutgoingRequest struct {
 	Result                 *record.Result
 
 	callReply insolar.Reply
+
+	// output
+	Output ResultSender
+}
+
+/* -------- Access ------------------ */
+
+type SMEventSendOutgoing struct {
+	Request *record.OutgoingRequest
+
+	output chan interface{}
+}
+
+func (event *SMEventSendOutgoing) WaitResult() ([]byte, error) {
+	result, ok := <-event.output
+	if !ok {
+		return nil, errors.New("failed to wait for result")
+	}
+	switch rv := result.(type) {
+	case []byte:
+		return rv, nil
+	case error:
+		return nil, rv
+	default:
+		return nil, errors.Errorf("bad result, expected error or []byte, got %T", result)
+	}
+}
+
+func (event *SMEventSendOutgoing) SendResult(val interface{}) {
+	if event != nil {
+		event.output <- val
+	}
+}
+
+func (event *SMEventSendOutgoing) Close() {
+	if event != nil {
+		close(event.output)
+	}
+}
+
+type ResultSender interface {
+	SendResult(interface{})
+	Close()
+}
+
+func HandlerFactoryOutgoingSender(inputEvent *SMEventSendOutgoing) smachine.CreateFunc {
+	return func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &ExecuteOutgoingRequest{
+			Request: inputEvent.Request,
+			Output:  inputEvent,
+		}
+	}
 }
 
 /* -------- Declaration ------------- */
@@ -169,7 +220,7 @@ func (s *ExecuteOutgoingRequest) stepSendCallMethod(ctx smachine.ExecutionContex
 		return ctx.Jump(s.stepStop)
 	}
 
-	incoming := logicrunner.BuildIncomingRequestFromOutgoing(s.Request)
+	incoming := BuildIncomingRequestFromOutgoing(s.Request)
 	pulseNumber := s.pulseSlot.PulseData().PulseNumber
 
 	pl := &payload.CallMethod{
@@ -238,11 +289,15 @@ func (s *ExecuteOutgoingRequest) stepStop(ctx smachine.ExecutionContext) smachin
 		return ctx.Jump(s.stepError)
 	}
 
+	s.Output.SendResult(s.Result)
 	return ctx.Stop()
 }
 
 func (s *ExecuteOutgoingRequest) stepError(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	inslogger.FromContext(ctx.GetContext()).Error("Failed to execute outgoing requests: ", s.internalError)
+	goCtx := ctx.GetContext()
+	logger := inslogger.FromContext(goCtx)
+	logger.Error(errors.Wrap(s.internalError, "failed to execute outgoing requests").Error())
 
+	s.Output.SendResult(s.internalError)
 	return ctx.Error(s.internalError)
 }

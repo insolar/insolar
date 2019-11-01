@@ -19,22 +19,11 @@ package sm_request
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/pulse"
 )
 
-func DefaultHandlersFactory(_ pulse.Number, input conveyor.InputEvent) smachine.CreateFunc {
-	switch inputConverted := input.(type) {
-	case *payload.Meta:
-		return metaHandlerFactory(inputConverted)
-	default:
-		panic(fmt.Sprintf("unknoen event type, got %T", input))
-	}
-}
-
-func metaHandlerFactory(messageMeta *payload.Meta) smachine.CreateFunc {
+func HandlerFactoryMeta(messageMeta *payload.Meta) smachine.CreateFunc {
 	payloadBytes := messageMeta.Payload
 	payloadType, err := payload.UnmarshalType(payloadBytes)
 	if err != nil {

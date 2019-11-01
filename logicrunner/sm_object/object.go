@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
-	"github.com/insolar/insolar/logicrunner/s_contract_runner"
 	"github.com/insolar/insolar/logicrunner/s_sender"
 )
 
@@ -36,12 +35,11 @@ type ObjectInfo struct {
 
 	ArtifactClient   *s_artifact.ArtifactClientServiceAdapter
 	Sender           *s_sender.SenderServiceAdapter
-	ContractRunner   *s_contract_runner.ContractRunnerServiceAdapter
 	ServiceCallError error
 
-	ObjectLatestDescriptor      artifacts.ObjectDescriptor
-	ObjectLatestProtoDescriptor artifacts.PrototypeDescriptor
-	ObjectLatestCodeDescriptor  artifacts.CodeDescriptor
+	ObjectLatestDescriptor artifacts.ObjectDescriptor
+	// ObjectLatestProtoDescriptor artifacts.PrototypeDescriptor
+	// ObjectLatestCodeDescriptor  artifacts.CodeDescriptor
 
 	ImmutableExecute smachine.SyncLink
 	MutableExecute   smachine.SyncLink
@@ -77,7 +75,6 @@ type ObjectSM struct {
 
 func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	injector.MustInject(&sm.ArtifactClient)
-	injector.MustInject(&sm.ContractRunner)
 	injector.MustInject(&sm.Sender)
 }
 
@@ -201,27 +198,27 @@ func (sm *ObjectSM) stateGetLatestValidatedStatePrototypeAndCode(ctx smachine.Ex
 			return failCallback
 		}
 
-		prototypeReference, err := objectDescriptor.Prototype()
-		if err != nil {
-			err = errors.Wrap(err, "Failed to obtain prototype reference from object descriptor")
-			return failCallback
-		}
-		prototypeDescriptor, err := svc.GetPrototype(ctx.GetContext(), *prototypeReference)
-		if err != nil {
-			err = errors.Wrap(err, "Failed to obtain prototype descriptor")
-			return failCallback
-		}
-
-		codeDescriptor, err := svc.GetCode(ctx.GetContext(), *prototypeDescriptor.Code())
-		if err != nil {
-			err = errors.Wrap(err, "Failed to obtain code descriptor")
-			return failCallback
-		}
+		// prototypeReference, err := objectDescriptor.Prototype()
+		// if err != nil {
+		// 	err = errors.Wrap(err, "Failed to obtain prototype reference from object descriptor")
+		// 	return failCallback
+		// }
+		// prototypeDescriptor, err := svc.GetPrototype(ctx.GetContext(), *prototypeReference)
+		// if err != nil {
+		// 	err = errors.Wrap(err, "Failed to obtain prototype descriptor")
+		// 	return failCallback
+		// }
+		//
+		// codeDescriptor, err := svc.GetCode(ctx.GetContext(), *prototypeDescriptor.Code())
+		// if err != nil {
+		// 	err = errors.Wrap(err, "Failed to obtain code descriptor")
+		// 	return failCallback
+		// }
 
 		return func(ctx smachine.AsyncResultContext) {
 			sm.ObjectLatestDescriptor = objectDescriptor
-			sm.ObjectLatestCodeDescriptor = codeDescriptor
-			sm.ObjectLatestProtoDescriptor = prototypeDescriptor
+			// sm.ObjectLatestCodeDescriptor = codeDescriptor
+			// sm.ObjectLatestProtoDescriptor = prototypeDescriptor
 			sm.IsReadyToWork = true
 		}
 	})

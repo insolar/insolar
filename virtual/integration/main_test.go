@@ -51,9 +51,9 @@ import (
 	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -245,13 +245,11 @@ func NewServer(
 		IncomingPubSub,
 		contractRequester,
 		artifacts.NewClient(ClientBus),
-		artifacts.NewDescriptorsCache(),
 		Pulses,
 		Jets,
 		Nodes,
 
-		logicexecutor.NewLogicExecutor(),
-		logicrunner.NewRequestsExecutor(),
+		requestexecutor.NewRequestsExecutor(),
 		mManager,
 		NodeNetwork,
 		PulseManager)

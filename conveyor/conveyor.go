@@ -31,10 +31,25 @@ type PreparedState = struct{}
 type InputEvent = interface{}
 type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
+type AddInputer interface {
+	AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error
+}
+
+type PulseChanger interface {
+	PreparePulseChange(out PreparePulseChangeChannel) error
+	CancelPulseChange() error
+	CommitPulseChange(pd pulse.Data) error
+}
+
 //type StepLoggerFactoryFunc
 
-func NewPulseConveyor(ctx context.Context, conveyorMachineConfig smachine.SlotMachineConfig, factoryFn PulseEventFactoryFunc,
-	slotMachineConfig smachine.SlotMachineConfig, registry injector.DependencyRegistry) *PulseConveyor {
+func NewPulseConveyor(
+	ctx context.Context,
+	conveyorMachineConfig smachine.SlotMachineConfig,
+	factoryFn PulseEventFactoryFunc,
+	slotMachineConfig smachine.SlotMachineConfig,
+	registry injector.DependencyRegistry,
+) *PulseConveyor {
 
 	r := &PulseConveyor{
 		workerCtx: ctx,

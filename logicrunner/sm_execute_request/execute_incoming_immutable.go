@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/s_contract_runner"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
 
@@ -76,7 +77,17 @@ func (s *ExecuteIncomingImmutableRequest) stepTakeLock(ctx smachine.ExecutionCon
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	// TODO[bigbes]: execute immutable call here
+	transcript := s.contractTranscript
+
+	s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
+		ctx := ctx.GetContext()
+
+		result, err := svc.Execute(ctx, transcript)
+		return func(ctx smachine.AsyncResultContext) {
+			s.internalError = err
+			s.executionResult = result
+		}
+	})
 
 	return ctx.Sleep().ThenJump(s.stepRegisterResult)
 }

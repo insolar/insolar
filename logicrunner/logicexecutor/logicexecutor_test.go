@@ -38,7 +38,7 @@ import (
 )
 
 func TestLogicExecutor_New(t *testing.T) {
-	le := NewLogicExecutor()
+	le := NewLogicExecutor(nil, nil)
 	require.NotNil(t, le)
 }
 

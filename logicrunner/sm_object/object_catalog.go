@@ -32,8 +32,7 @@ func (p ObjectPair) String() string {
 	return fmt.Sprintf("object-%d-%s", p.Pulse, p.ObjectReference)
 }
 
-type LocalObjectCatalog struct {
-}
+type LocalObjectCatalog struct{}
 
 func (p LocalObjectCatalog) Get(ctx smachine.ExecutionContext, pair ObjectPair) SharedObjectStateAccessor {
 	if v, ok := p.TryGet(ctx, pair); ok {
@@ -54,7 +53,7 @@ func (p LocalObjectCatalog) GetOrCreate(ctx smachine.ExecutionContext, pair Obje
 		return v
 	}
 
-	ctx.InitChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.InitChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return NewObjectSM(pair.ObjectReference)
 	})
 

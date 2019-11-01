@@ -27,12 +27,12 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/go-actors/actor/system"
-
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/injector"
+	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -43,33 +43,45 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
+	"github.com/insolar/insolar/logicrunner/s_artifact"
+	"github.com/insolar/insolar/logicrunner/s_contract_requester"
+	"github.com/insolar/insolar/logicrunner/s_contract_runner"
+	"github.com/insolar/insolar/logicrunner/s_sender"
 	"github.com/insolar/insolar/logicrunner/shutdown"
-	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/logicrunner/sm_object"
+	statemachine_go "github.com/insolar/insolar/logicrunner/statemachine"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	ContractRequester          insolar.ContractRequester          `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	ContractRequester          insolar.ContractRequester          `inject:""`
 	PulseAccessor              insolarPulse.Accessor              `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
-	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	RequestsExecutor           RequestsExecutor                   `inject:""`
-	MachinesManager            machinesmanager.MachinesManager    `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
-	Publisher                  watermillMsg.Publisher
-	Sender                     bus.Sender
-	SenderWithRetry            *bus.WaitOKSender
-	StateStorage               StateStorage
-	ResultsMatcher             ResultMatcher
-	OutgoingSender             OutgoingRequestSender
-	WriteController            writecontroller.WriteController
-	FlowDispatcher             dispatcher.Dispatcher
-	ShutdownFlag               shutdown.Flag
+
+	LogicExecutor    logicexecutor.LogicExecutor
+	DescriptorsCache artifacts.DescriptorsCache
+	RequestsExecutor requestexecutor.RequestExecutor
+	MachinesManager  machinesmanager.MachinesManager
+	Publisher        watermillMsg.Publisher
+	Sender           bus.Sender
+	SenderWithRetry  *bus.WaitOKSender
+	ResultsMatcher   ResultMatcher
+	FlowDispatcher   dispatcher.Dispatcher
+	ShutdownFlag     shutdown.Flag
+
+	Conveyor                 *conveyor.PulseConveyor
+	ObjectCatalog            *sm_object.LocalObjectCatalog
+	ArtifactClientService    *s_artifact.ArtifactClientServiceAdapter
+	ContractRequesterService *s_contract_requester.ContractRequesterServiceAdapter
+	ContractRunnerService    *s_contract_runner.ContractRunnerServiceAdapter
+	SenderService            *s_sender.SenderServiceAdapter
 
 	Cfg *configuration.LogicRunner
 
@@ -94,80 +106,44 @@ func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
-
-	as := system.New()
-	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager, lr.PulseAccessor)
-
-	lr.StateStorage = NewStateStorage(
-		lr.Publisher,
-		lr.RequestsExecutor,
-		lr.Sender,
-		lr.JetCoordinator,
-		lr.PulseAccessor,
-		lr.ArtifactManager,
-		lr.OutgoingSender,
-		lr.ShutdownFlag,
-	)
 	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
+	lr.MachinesManager = machinesmanager.NewMachinesManager()
+	lr.DescriptorsCache = artifacts.NewDescriptorsCache(lr.ArtifactManager)
+	lr.LogicExecutor = logicexecutor.NewLogicExecutor(lr.MachinesManager, lr.DescriptorsCache)
+	lr.RequestsExecutor = requestexecutor.NewRequestsExecutor(lr.Sender, lr.LogicExecutor, lr.ArtifactManager, lr.PulseAccessor)
 
-	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(
-			lr.ArtifactManager,
-			lr.DescriptorsCache,
-			lr.ContractRequester,
-			lr.StateStorage,
-			lr.OutgoingSender,
-		),
-		lr.Cfg,
-	)
-
-	lr.WriteController = writecontroller.NewWriteController()
-	err := lr.WriteController.Open(ctx, pulse.MinTimePulse)
-	if err != nil {
-		return errors.Wrap(err, "failed to initialize write controller")
+	// configuration steps for slot machine
+	machineConfig := smachine.SlotMachineConfig{
+		SlotPageSize:    1000,
+		PollingPeriod:   500 * time.Millisecond,
+		PollingTruncate: 1 * time.Millisecond,
+		ScanCountLimit:  100000,
 	}
 
-	lr.initHandlers()
+	lr.ObjectCatalog = &sm_object.LocalObjectCatalog{}
+	lr.ArtifactClientService = s_artifact.CreateArtifactClientService(lr.Sender)
+	lr.ContractRequesterService = s_contract_requester.CreateContractRequesterService(lr.ContractRequester)
+	lr.ContractRunnerService = s_contract_runner.CreateContractRunnerService(lr.LogicExecutor, lr.MachinesManager)
+	lr.SenderService = s_sender.CreateSenderService(lr.Sender, lr.PulseAccessor)
 
+	di := injector.SyncReadWriteContainer{}
+	di.PutDependency("sm_object.LocalObjectCatalog", lr.ObjectCatalog)
+	di.PutDependency("s_artifact.ArtifactClientServiceAdapter", lr.ArtifactClientService)
+	di.PutDependency("s_contract_requester.ContractRequesterServiceAdapter", lr.ContractRequesterService)
+	di.PutDependency("s_contract_runner.ContractRunnerServiceAdapter", lr.ContractRunnerService)
+	di.PutDependency("s_sender.SenderServiceAdapter", lr.SenderService)
+
+	defaultHandlers := statemachine_go.DefaultHandlersFactory
+	lr.Conveyor = conveyor.NewPulseConveyor(ctx, machineConfig, defaultHandlers, machineConfig, di)
+
+	rpcMethods := NewRPCMethods(lr.DescriptorsCache, lr.Conveyor, lr.PulseAccessor)
+	lr.rpc = lrCommon.NewRPC(rpcMethods, lr.Cfg)
 	return nil
 }
 
-func (lr *LogicRunner) initHandlers() {
-	dep := &Dependencies{
-		ArtifactManager:  lr.ArtifactManager,
-		Publisher:        lr.Publisher,
-		StateStorage:     lr.StateStorage,
-		ResultsMatcher:   lr.ResultsMatcher,
-		Sender:           lr.Sender,
-		JetStorage:       lr.JetStorage,
-		JetCoordinator:   lr.JetCoordinator,
-		WriteAccessor:    lr.WriteController,
-		OutgoingSender:   lr.OutgoingSender,
-		RequestsExecutor: lr.RequestsExecutor,
-		PulseAccessor:    lr.PulseAccessor,
-	}
-
-	initHandle := func(msg *watermillMsg.Message) *Init {
-		return &Init{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(lr.PulseAccessor,
-		func(msg *watermillMsg.Message) flow.Handle {
-			return initHandle(msg).Present
-		}, func(msg *watermillMsg.Message) flow.Handle {
-			return initHandle(msg).Future
-		}, func(msg *watermillMsg.Message) flow.Handle {
-			return initHandle(msg).Past
-		})
-}
-
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
-	bi := builtin.NewBuiltIn(
-		lr.ArtifactManager,
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
-	)
+	rpcMethods := NewRPCMethods(lr.DescriptorsCache, lr.Conveyor, lr.PulseAccessor)
+	bi := builtin.NewBuiltIn(lr.ArtifactManager, rpcMethods)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
 	}
@@ -219,9 +195,9 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
-	if lr.OutgoingSender != nil {
-		lr.OutgoingSender.Stop(ctx)
-	}
+	// if lr.OutgoingSender != nil {
+	// 	lr.OutgoingSender.Stop(ctx)
+	// }
 	if err := lr.rpc.Stop(ctx); err != nil {
 		return err
 	}
@@ -245,22 +221,22 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 		span.Finish()
 	}(ctx)
 
-	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "failed to close pulse on write controller")
-	}
+	// err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to close pulse on write controller")
+	// }
 
 	lr.ResultsMatcher.Clear(ctx)
 
-	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "failed to start new pulse on write controller")
-	}
+	// messages := lr.StateStorage.OnPulse(ctx, newPulse)
+	// err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to start new pulse on write controller")
+	// }
 
-	if len(messages) > 0 {
-		go lr.sendOnPulseMessagesAsync(ctx, messages)
-	}
+	// if len(messages) > 0 {
+	// 	go lr.sendOnPulseMessagesAsync(ctx, messages)
+	// }
 
 	lr.stopIfNeeded(ctx)
 
@@ -268,9 +244,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	lr.ShutdownFlag.Done(ctx, func() bool {
-		return lr.StateStorage.IsEmpty()
-	})
+	// lr.ShutdownFlag.Done(ctx, func() bool {
+	// 	return lr.StateStorage.IsEmpty()
+	// })
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages map[insolar.Reference][]payload.Payload) {
@@ -318,14 +294,14 @@ func contextWithServiceData(ctx context.Context, data *payload.ServiceData) cont
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
 	m := msg.(*payload.ReturnResults)
-	done, err := lr.WriteController.Begin(ctx, flow.Pulse(ctx))
-	if err != nil {
-		if err == writecontroller.ErrWriteClosed {
-			return flow.ErrCancelled
-		}
-		return errors.Wrap(err, "couldn't obtain writecontroller lock")
-	}
-	defer done()
+	// done, err := lr.WriteController.Begin(ctx, flow.Pulse(ctx))
+	// if err != nil {
+	// 	if err == writecontroller.ErrWriteClosed {
+	// 		return flow.ErrCancelled
+	// 	}
+	// 	return errors.Wrap(err, "couldn't obtain writecontroller lock")
+	// }
+	// defer done()
 
 	lr.ResultsMatcher.AddUnwantedResponse(ctx, *m)
 	return nil

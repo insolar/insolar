@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
+	common2 "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
@@ -94,6 +95,8 @@ func (s *ExecuteIncomingRequest) stepClassifyCall(ctx smachine.ExecutionContext)
 	s.ContractRunner.PrepareSync(ctx, func(svc s_contract_runner.ContractRunnerService) {
 		callType = svc.ClassifyCall(incomingRequest)
 	}).Call()
+
+	s.contractTranscript = common2.NewTranscript(ctx.GetContext(), s.RequestReference, *s.Request)
 
 	common := s.ExecuteIncomingCommon
 

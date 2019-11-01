@@ -29,7 +29,7 @@ import (
 )
 
 func TestNewDescriptorsCache(t *testing.T) {
-	dc := NewDescriptorsCache()
+	dc := NewDescriptorsCache(nil)
 	require.NotNil(t, dc)
 }
 

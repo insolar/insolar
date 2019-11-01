@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package requestexecutor
 
 import (
 	"context"
@@ -34,32 +34,42 @@ import (
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/requestexecutor.RequestExecutor -o ./ -s _mock.go -g
 
-type RequestsExecutor interface {
+type RequestExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)
 	Execute(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)
 	Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) error
 	SendReply(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)
 }
 
-type requestsExecutor struct {
-	Sender          bus.Sender                  `inject:""`
-	LogicExecutor   logicexecutor.LogicExecutor `inject:""`
-	ArtifactManager artifacts.Client            `inject:""`
-	PulseAccessor   pulse.Accessor              `inject:""`
+type requestExecutor struct {
+	Sender          bus.Sender
+	LogicExecutor   logicexecutor.LogicExecutor
+	ArtifactManager artifacts.Client
+	PulseAccessor   pulse.Accessor
 }
 
-func NewRequestsExecutor() RequestsExecutor {
-	return &requestsExecutor{}
+func NewRequestsExecutor(
+	sender bus.Sender,
+	executor logicexecutor.LogicExecutor,
+	client artifacts.Client,
+	accessor pulse.Accessor,
+) RequestExecutor {
+	return &requestExecutor{
+		Sender:          sender,
+		LogicExecutor:   executor,
+		ArtifactManager: client,
+		PulseAccessor:   accessor,
+	}
 }
 
-func (e *requestsExecutor) ExecuteAndSave(
+func (e *requestExecutor) ExecuteAndSave(
 	ctx context.Context, transcript *common.Transcript,
 ) (
 	artifacts.RequestResult, error,
 ) {
-	ctx, span := instracer.StartSpan(ctx, "RequestsExecutor.ExecuteAndSave")
+	ctx, span := instracer.StartSpan(ctx, "RequestExecutor.ExecuteAndSave")
 	defer span.Finish()
 
 	result, err := e.Execute(ctx, transcript)
@@ -75,7 +85,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 	return result, nil
 }
 
-func (e *requestsExecutor) Execute(
+func (e *requestExecutor) Execute(
 	ctx context.Context, transcript *common.Transcript,
 ) (
 	artifacts.RequestResult, error,
@@ -93,7 +103,7 @@ func (e *requestsExecutor) Execute(
 	return result, nil
 }
 
-func (e *requestsExecutor) Save(
+func (e *requestExecutor) Save(
 	ctx context.Context, transcript *common.Transcript, res artifacts.RequestResult,
 ) error {
 	inslogger.FromContext(ctx).Debug("registering IncomingRequest result")
@@ -108,7 +118,7 @@ func (e *requestsExecutor) Save(
 	return nil
 }
 
-func (e *requestsExecutor) SendReply(
+func (e *requestExecutor) SendReply(
 	ctx context.Context,
 	reqRef insolar.Reference, req record.IncomingRequest,
 	re insolar.Reply, err error,
@@ -153,7 +163,7 @@ func (e *requestsExecutor) SendReply(
 	go e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
 }
 
-func (e *requestsExecutor) sendToCaller(
+func (e *requestExecutor) sendToCaller(
 	ctx context.Context,
 	reqRef insolar.Reference, req record.IncomingRequest,
 	re []byte, errStr string,
@@ -177,7 +187,7 @@ func (e *requestsExecutor) sendToCaller(
 	sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, req.Caller)
 }
 
-func (e *requestsExecutor) sendToAPINode(
+func (e *requestExecutor) sendToAPINode(
 	ctx context.Context,
 	reqRef insolar.Reference, req record.IncomingRequest,
 	re []byte, errStr string,

@@ -25,15 +25,18 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+var _ DescriptorsCache = &descriptorsCache{}
+
 type descriptorsCache struct {
-	Client Client `inject:""`
+	Client Client
 
 	codeCache  cache
 	protoCache cache
 }
 
-func NewDescriptorsCache() DescriptorsCache {
+func NewDescriptorsCache(client Client) DescriptorsCache {
 	return &descriptorsCache{
+		Client:     client,
 		codeCache:  newSingleFlightCache(),
 		protoCache: newSingleFlightCache(),
 	}

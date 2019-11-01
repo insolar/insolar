@@ -47,6 +47,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
@@ -71,7 +72,7 @@ type LogicRunnerCommonTestSuite struct {
 	jc     *jet.CoordinatorMock
 	mm     machinesmanager.MachinesManager
 	lr     *LogicRunner
-	re     *RequestsExecutorMock
+	re     *requestexecutor.RequestsExecutorMock
 	ps     *insolarPulse.AccessorMock
 	mle    *testutils.MachineLogicExecutorMock
 	nn     *network.NodeNetworkMock
@@ -90,7 +91,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mm = machinesmanager.NewMachinesManager()
-	suite.re = NewRequestsExecutorMock(suite.mc)
+	suite.re = requestexecutor.NewRequestsExecutorMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = insolarPulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)

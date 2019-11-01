@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
 	"github.com/insolar/insolar/logicrunner/s_sender"
@@ -46,14 +47,16 @@ type ExecuteIncomingCommon struct {
 	internalError error
 
 	// input
-	MessageMeta            *payload.Meta
+	MessageMeta *payload.Meta
+	Request     *record.IncomingRequest
+
+	// values to pass between steps
 	RequestReference       insolar.Reference
 	RequestObjectReference insolar.Reference
 	RequestDeduplicated    bool
-	Request                *record.IncomingRequest
 	DeduplicatedResult     *record.Result
 
-	// values to pass between steps
+	contractTranscript  *common.Transcript
 	executionResult     artifacts.RequestResult
 	newObjectDescriptor artifacts.ObjectDescriptor
 }

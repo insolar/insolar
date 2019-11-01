@@ -43,6 +43,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/pulse"
 )
@@ -131,7 +132,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 						Reason:       gen.RecordReference(),
 						Caller:       gen.Reference(),
 					}, nil)
-				re := NewRequestsExecutorMock(t).
+				re := requestexecutor.NewRequestsExecutorMock(t).
 					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
 					wg.Done()
 					require.NoError(t, err)
@@ -317,7 +318,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	re := NewRequestsExecutorMock(mc)
+	re := requestexecutor.NewRequestsExecutorMock(mc)
 	broker := NewExecutionBroker(objectRef, nil, re, senderOKMock(t, nil), am, er, nil, pa)
 
 	immutableRequestRef1 := gen.RecordReference()
@@ -524,7 +525,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 					Reason:       gen.RecordReference(),
 					Caller:       gen.Reference(),
 				}, nil)
-				re := NewRequestsExecutorMock(t).
+				re := requestexecutor.NewRequestsExecutorMock(t).
 					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
 				})
 				sender := senderOKMock(t, nil)

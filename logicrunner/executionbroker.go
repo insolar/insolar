@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 )
 
 var (
@@ -83,7 +84,7 @@ type ExecutionBroker struct {
 	pulseAccessor pulse.Accessor
 
 	sender           bus.Sender
-	requestsExecutor RequestsExecutor
+	requestsExecutor requestexecutor.RequestExecutor
 	artifactsManager artifacts.Client
 
 	pending              insolar.PendingState
@@ -96,7 +97,7 @@ type ExecutionBroker struct {
 func NewExecutionBroker(
 	ref insolar.Reference,
 	_ watermillMsg.Publisher,
-	requestsExecutor RequestsExecutor,
+	requestsExecutor requestexecutor.RequestExecutor,
 	sender bus.Sender,
 	artifactsManager artifacts.Client,
 	executionRegistry executionregistry.ExecutionRegistry,
@@ -455,11 +456,11 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	messages := make([]payload.Payload, 0)
 
 	if sendExecResults {
-		messages = append(messages, &payload.ExecutorResults{
-			RecordRef:             q.Ref,
-			Pending:               q.pending,
-			LedgerHasMoreRequests: q.ledgerHasMoreRequests,
-		})
+		// messages = append(messages, &payload.ExecutorResults{
+		// 	RecordRef:             q.Ref,
+		// 	Pending:               q.pending,
+		// 	LedgerHasMoreRequests: q.ledgerHasMoreRequests,
+		// })
 	}
 
 	return messages

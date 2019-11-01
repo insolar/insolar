@@ -42,12 +42,15 @@ type LogicExecutor interface {
 }
 
 type logicExecutor struct {
-	MachinesManager  machinesmanager.MachinesManager `inject:""`
-	DescriptorsCache artifacts.DescriptorsCache      `inject:""`
+	MachinesManager  machinesmanager.MachinesManager
+	DescriptorsCache artifacts.DescriptorsCache
 }
 
-func NewLogicExecutor() LogicExecutor {
-	return &logicExecutor{}
+func NewLogicExecutor(manager machinesmanager.MachinesManager, cache artifacts.DescriptorsCache) LogicExecutor {
+	return &logicExecutor{
+		MachinesManager:  manager,
+		DescriptorsCache: cache,
+	}
 }
 
 func (le *logicExecutor) Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
@@ -94,7 +97,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	transcript.LogicContext = GenerateCallContext(ctx, transcript, protoDesc, codeDesc)
 
 	newData, result, err := executor.CallMethod(
 		ctx, transcript.LogicContext, *codeDesc.Ref(), objDesc.Memory(), request.Method, request.Arguments,
@@ -152,7 +155,7 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	transcript.LogicContext = GenerateCallContext(ctx, transcript, protoDesc, codeDesc)
 
 	newData, result, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
@@ -169,7 +172,7 @@ func (le *logicExecutor) ExecuteConstructor(
 	return res, nil
 }
 
-func (le *logicExecutor) genLogicCallContext(
+func GenerateCallContext(
 	ctx context.Context,
 	transcript *common.Transcript,
 	protoDesc artifacts.PrototypeDescriptor,

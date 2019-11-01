@@ -21,6 +21,9 @@ import (
 
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 )
 
@@ -37,7 +40,7 @@ type CallResult interface{}
 
 type ContractRunnerService interface {
 	ClassifyCall(request *record.IncomingRequest) ContractCallType
-	// CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult
+	Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error)
 }
 
 type ContractRunnerServiceAdapter struct {
@@ -59,16 +62,21 @@ func (a *ContractRunnerServiceAdapter) PrepareAsync(ctx smachine.ExecutionContex
 }
 
 type contractRunnerService struct {
+	LogicExecutor   logicexecutor.LogicExecutor
 	MachinesManager machinesmanager.MachinesManager
 }
 
-func CreateContractRunnerService(manager machinesmanager.MachinesManager) *ContractRunnerServiceAdapter {
+func CreateContractRunnerService(
+	executor logicexecutor.LogicExecutor,
+	manager machinesmanager.MachinesManager,
+) *ContractRunnerServiceAdapter {
 	ctx := context.Background()
 	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
 	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &ContractRunnerServiceAdapter{
 		svc: contractRunnerService{
+			LogicExecutor:   executor,
 			MachinesManager: manager,
 		},
 		exec: smachine.NewExecutionAdapter("ArtifactClientService", ae),
@@ -91,9 +99,6 @@ func (c contractRunnerService) ClassifyCall(request *record.IncomingRequest) Con
 	return ContractCallMutable
 }
 
-// func (c contractRunnerService) CallMethod() {}
-// func (c contractRunnerService) CallImmutableMethod(code ArtifactBinary, method string, state ArtifactBinary) CallResult {
-//  panic("implement me")
-// }
-//
-// func (c contractRunnerService) CallMutableMethod(code ArtifactBinary) {}
+func (c contractRunnerService) Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
+	return c.LogicExecutor.Execute(ctx, transcript)
+}

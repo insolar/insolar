@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
@@ -36,12 +35,12 @@ type HandleExecutorResults struct {
 }
 
 func checkPayloadExecutorResults(ctx context.Context, results payload.ExecutorResults) error {
-	if !results.Caller.IsEmpty() && !results.Caller.IsObjectReference() {
-		return errors.Errorf("results.Caller should be ObjectReference; ref=%s", results.Caller.String())
-	}
-	if !results.RecordRef.IsObjectReference() {
-		return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
-	}
+	// if !results.Caller.IsEmpty() && !results.Caller.IsObjectReference() {
+	// 	return errors.Errorf("results.Caller should be ObjectReference; ref=%s", results.Caller.String())
+	// }
+	// if !results.RecordRef.IsObjectReference() {
+	// 	return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
+	// }
 
 	return nil
 }
@@ -53,8 +52,8 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "object", message.RecordRef.String())
-	logger.Debug("handling ExecutorResults")
+	// ctx, logger := inslogger.WithField(ctx, "object", message.RecordRef.String())
+	// logger.Debug("handling ExecutorResults")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
 	defer span.Finish()
@@ -76,12 +75,12 @@ func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.E
 	}
 	defer done()
 
-	broker := h.dep.StateStorage.UpsertExecutionState(msg.RecordRef)
-	broker.PrevExecutorPendingResult(ctx, msg.Pending)
+	// broker := h.dep.StateStorage.UpsertExecutionState(msg.RecordRef)
+	// broker.PrevExecutorPendingResult(ctx, msg.Pending)
 
-	if msg.LedgerHasMoreRequests {
-		broker.HasMoreRequests(ctx)
-	}
+	// if msg.LedgerHasMoreRequests {
+	// 	broker.HasMoreRequests(ctx)
+	// }
 
 	return nil
 }

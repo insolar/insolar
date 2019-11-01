@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/logicrunner/requestexecutor"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/insolar/insolar/insolar/bus"
@@ -50,7 +51,7 @@ type Dependencies struct {
 	JetCoordinator   jet.Coordinator
 	WriteAccessor    writecontroller.Accessor
 	OutgoingSender   OutgoingRequestSender
-	RequestsExecutor RequestsExecutor
+	RequestsExecutor requestexecutor.RequestExecutor
 	PulseAccessor    pulse.Accessor
 }
 
@@ -152,6 +153,17 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		span.Finish()
 	}()
 
+	// new-style handlers
+	switch payloadType {
+	case payload.TypeCallMethod:
+		h := &HandleCall{
+			dep:     s.dep,
+			Message: originMeta,
+		}
+		err = f.Handle(ctx, h.Present)
+	}
+
+	// old-style handlers
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
 		h := &HandleSagaCallAcceptNotification{
@@ -185,12 +197,6 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeStillExecuting:
 		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: originMeta,
-		}
-		err = f.Handle(ctx, h.Present)
-	case payload.TypeCallMethod:
-		h := &HandleCall{
 			dep:     s.dep,
 			Message: originMeta,
 		}
