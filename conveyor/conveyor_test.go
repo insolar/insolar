@@ -62,12 +62,14 @@ func TestConveyor(t *testing.T) {
 	require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
 	eventCount := 0
 
+	time.Sleep(100 * time.Millisecond)
+
 	for i := 0; i < 100; i++ {
 		pd = pd.CreateNextPulsarPulse(10, func() longbits.Bits256 {
 			return longbits.Bits256{}
 		})
+		fmt.Println("================================== ", pd, " ====================================")
 		require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
-		fmt.Println("==================================== ", pd, " ====================================")
 
 		if eventCount < math.MaxInt32 {
 			eventCount++
