@@ -95,8 +95,10 @@ type ConstructionContext interface {
 	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
 	SetDefaultTerminationResult(interface{})
 
-	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
-	SetDefaultStepLogger(StateMachineStepLoggerFunc)
+	// Overrides default step logger.
+	// SetDefaultStepLogger(nil, false) will panic, as StateMachine is no longer available for the default implementation.
+	// See StateMachineDeclaration.GetStepLogger() for additional details.
+	SetDefaultStepLogger(fn StepLoggerFunc, isOutput bool)
 }
 
 /* A context parent for all regular step contexts */
@@ -117,8 +119,8 @@ type InOrderStepContext interface {
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
 
-	// Overrides default step logger. See StateMachineDeclaration.GetStepLogger()
-	// SetDefaultStepLogger(StateMachineStepLoggerFunc)
+	// Overrides default step logger. See ConstructionContext.SetDefaultStepLogger()
+	SetDefaultStepLogger(fn StepLoggerFunc, isOutput bool)
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate

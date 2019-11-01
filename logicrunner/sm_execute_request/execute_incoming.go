@@ -47,7 +47,7 @@ func (s ExecuteIncomingRequest) GetShadowMigrateFor(smachine.StateMachine) smach
 	panic("implement me")
 }
 
-func (s ExecuteIncomingRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
+func (s ExecuteIncomingRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
 	panic("implement me")
 }
 

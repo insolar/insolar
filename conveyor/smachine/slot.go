@@ -47,7 +47,7 @@ type slotDeclarationData struct {
 	declaration StateMachineDeclaration
 
 	shadowMigrate   ShadowMigrateFunc
-	stepLogger      StateMachineStepLoggerFunc
+	stepLogger      StepLoggerFunc
 	defMigrate      MigrateFunc
 	defErrorHandler ErrorHandlerFunc
 	defTerminate    TerminationHandlerFunc
@@ -454,7 +454,7 @@ func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags 
 		stepData.CurrentStep = SlotStep{Flags: s.step.Flags | StepResetAllFlags}
 	}
 	stepData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
-	s.stepLogger(s.ctx, stepData)
+	s.stepLogger(&stepData)
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {

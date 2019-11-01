@@ -38,7 +38,8 @@ type SlotMachineConfig struct {
 	ScanCountLimit       int
 	CleanupWeakOnMigrate bool
 
-	SlotIdGenerateFn func() SlotID
+	SlotIdGenerateFn    func() SlotID
+	StepLoggerFactoryFn StepLoggerFactoryFunc
 }
 
 const maxLoopCount = 10000
@@ -49,6 +50,9 @@ func NewSlotMachine(config SlotMachineConfig,
 ) *SlotMachine {
 	if config.ScanCountLimit <= 0 || config.ScanCountLimit > maxLoopCount {
 		config.ScanCountLimit = maxLoopCount
+	}
+	if config.StepLoggerFactoryFn == nil {
+		config.StepLoggerFactoryFn = func(context.Context) StepLoggerFunc { return nil }
 	}
 
 	m := &SlotMachine{
@@ -817,7 +821,7 @@ func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (Sl
 type prepareSlotValue struct {
 	slotReplaceData
 	overrides     map[string]interface{}
-	stepLogger    StateMachineStepLoggerFunc
+	stepLogger    StepLoggerFunc
 	terminate     TerminationHandlerFunc
 	isReplacement bool
 }
@@ -914,8 +918,10 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 	slot.inheritable, localInjects = m.prepareInjects(creator, link, sm, cc.inherit, defValues.isReplacement,
 		cc.injects, defValues.inheritable)
 
-	// TODO redo stepLogger initialization
-	//slot.stepLogger = decl.GetStepLogger(slot.ctx, sm, defValues.stepLogger)
+	{
+		loggerFn, isFinal := decl.GetStepLogger(slot.ctx, sm)
+		slot.stepLogger = m._getStepLogger(slot.ctx, loggerFn, isFinal, sm)
+	}
 
 	initFn := slot.declaration.GetInitStateFor(sm)
 	if initFn == nil {
@@ -946,6 +952,29 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 
 	slot = nil //protect from defer
 	return link, true
+}
+
+func (m *SlotMachine) _getStepLogger(ctx context.Context, loggerFn StepLoggerFunc, isOutput bool, sm StateMachine) StepLoggerFunc {
+	if isOutput {
+		return loggerFn
+	}
+	switch postLoggerFn := m.config.StepLoggerFactoryFn(ctx); {
+	case postLoggerFn == nil:
+		return loggerFn
+	case loggerFn == nil:
+		if sm == nil {
+			panic("illegal value")
+		}
+		return func(data *StepLoggerData) {
+			data.SM = sm
+			postLoggerFn(data)
+		}
+	default:
+		return func(data *StepLoggerData) {
+			loggerFn(data)
+			postLoggerFn(data)
+		}
+	}
 }
 
 func (m *SlotMachine) prepareInjects(creator *Slot, link SlotLink, sm StateMachine, mode DependencyInheritanceMode, isReplacement bool,

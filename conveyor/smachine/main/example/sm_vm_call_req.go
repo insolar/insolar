@@ -43,8 +43,8 @@ var declCallRequest smachine.StateMachineDeclaration = declarationCallRequest{}
 
 type declarationCallRequest struct{}
 
-func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationCallRequest) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

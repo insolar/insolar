@@ -80,9 +80,9 @@ func (p *constructionContext) SetDefaultTerminationResult(v interface{}) {
 	p.s.defResult = v
 }
 
-func (p *constructionContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
+func (p *constructionContext) SetDefaultStepLogger(lf StepLoggerFunc, isOutput bool) {
 	p.ensure(updCtxConstruction)
-	p.s.stepLogger = lf
+	p.s.stepLogger = p.s.machine._getStepLogger(p.s.ctx, lf, isOutput, nil) // sm == nil disallows use of non-final nil handler
 }
 
 func (p *constructionContext) executeCreate(nextCreate CreateFunc) StateMachine {

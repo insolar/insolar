@@ -165,9 +165,9 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 	return p.s.defResult
 }
 
-func (p *slotContext) SetDefaultStepLogger(lf StateMachineStepLoggerFunc) {
+func (p *slotContext) SetDefaultStepLogger(lf StepLoggerFunc, isOutput bool) {
 	p.ensureAtLeast(updCtxInit)
-	p.s.stepLogger = lf
+	p.s.stepLogger = p.s.machine._getStepLogger(p.s.ctx, lf, isOutput, nil) // sm == nil disallows use of non-final nil handler
 }
 
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
