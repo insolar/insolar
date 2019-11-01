@@ -190,12 +190,12 @@ test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of coverage file
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=count $(TESTED_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=count $(TESTED_PACKAGES)
 	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
@@ -203,29 +203,29 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
 
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
