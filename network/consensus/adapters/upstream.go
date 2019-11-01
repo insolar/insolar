@@ -148,7 +148,7 @@ func (u *UpstreamController) CommitPulseChange(report api.UpstreamReport, pulseD
 	ctx := ReportContext(report)
 	p := NewPulse(pulseData)
 
-	go u.pulseChanger.ChangePulse(ctx, p)
+	u.pulseChanger.ChangePulse(ctx, p)
 }
 
 func (u *UpstreamController) CancelPulseChange() {

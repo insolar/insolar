@@ -24,6 +24,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
@@ -598,6 +599,10 @@ func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 }
 
 func TestSagas(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 	suite.Run(t, new(SagasSuite))
 }

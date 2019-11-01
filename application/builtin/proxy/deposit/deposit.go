@@ -102,14 +102,12 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lockup int64, vesting int64, vestingStep int64) *ContractConstructorHolder {
-	var args [6]interface{}
-	args[0] = migrationDaemonRef
-	args[1] = txHash
-	args[2] = amount
-	args[3] = lockup
-	args[4] = vesting
-	args[5] = vestingStep
+func New(txHash string, lockup int64, vesting int64, vestingStep int64) *ContractConstructorHolder {
+	var args [4]interface{}
+	args[0] = txHash
+	args[1] = lockup
+	args[2] = vesting
+	args[3] = vestingStep
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -497,12 +495,13 @@ func (r *Deposit) Itself() (interface{}, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference) error {
-	var args [4]interface{}
+func (r *Deposit) Confirm(txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference, toMember insolar.Reference) error {
+	var args [5]interface{}
 	args[0] = txHash
 	args[1] = amountStr
 	args[2] = fromMember
 	args[3] = request
+	args[4] = toMember
 
 	var argsSerialized []byte
 
@@ -538,12 +537,13 @@ func (r *Deposit) Confirm(txHash string, amountStr string, fromMember insolar.Re
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference) error {
-	var args [4]interface{}
+func (r *Deposit) ConfirmAsImmutable(txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference, toMember insolar.Reference) error {
+	var args [5]interface{}
 	args[0] = txHash
 	args[1] = amountStr
 	args[2] = fromMember
 	args[3] = request
+	args[4] = toMember
 
 	var argsSerialized []byte
 
@@ -579,12 +579,13 @@ func (r *Deposit) ConfirmAsImmutable(txHash string, amountStr string, fromMember
 }
 
 // TransferToDeposit is proxy generated method
-func (r *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference) error {
-	var args [4]interface{}
+func (r *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference, toMember insolar.Reference) error {
+	var args [5]interface{}
 	args[0] = amountStr
 	args[1] = toDeposit
 	args[2] = fromMember
 	args[3] = request
+	args[4] = toMember
 
 	var argsSerialized []byte
 
@@ -620,12 +621,13 @@ func (r *Deposit) TransferToDeposit(amountStr string, toDeposit insolar.Referenc
 }
 
 // TransferToDepositAsImmutable is proxy generated method
-func (r *Deposit) TransferToDepositAsImmutable(amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference) error {
-	var args [4]interface{}
+func (r *Deposit) TransferToDepositAsImmutable(amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference, toMember insolar.Reference) error {
+	var args [5]interface{}
 	args[0] = amountStr
 	args[1] = toDeposit
 	args[2] = fromMember
 	args[3] = request
+	args[4] = toMember
 
 	var argsSerialized []byte
 
