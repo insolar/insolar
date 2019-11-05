@@ -9,7 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -145,15 +145,15 @@ func (mmBeginPulse *DispatcherMock) BeginPulse(ctx context.Context, pulse insola
 		mmBeginPulse.inspectFuncBeginPulse(ctx, pulse)
 	}
 
-	params := &DispatcherMockBeginPulseParams{ctx, pulse}
+	mm_params := &DispatcherMockBeginPulseParams{ctx, pulse}
 
 	// Record call args
 	mmBeginPulse.BeginPulseMock.mutex.Lock()
-	mmBeginPulse.BeginPulseMock.callArgs = append(mmBeginPulse.BeginPulseMock.callArgs, params)
+	mmBeginPulse.BeginPulseMock.callArgs = append(mmBeginPulse.BeginPulseMock.callArgs, mm_params)
 	mmBeginPulse.BeginPulseMock.mutex.Unlock()
 
 	for _, e := range mmBeginPulse.BeginPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -161,10 +161,10 @@ func (mmBeginPulse *DispatcherMock) BeginPulse(ctx context.Context, pulse insola
 
 	if mmBeginPulse.BeginPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBeginPulse.BeginPulseMock.defaultExpectation.Counter, 1)
-		want := mmBeginPulse.BeginPulseMock.defaultExpectation.params
-		got := DispatcherMockBeginPulseParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBeginPulse.t.Errorf("DispatcherMock.BeginPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBeginPulse.BeginPulseMock.defaultExpectation.params
+		mm_got := DispatcherMockBeginPulseParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBeginPulse.t.Errorf("DispatcherMock.BeginPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -333,15 +333,15 @@ func (mmClosePulse *DispatcherMock) ClosePulse(ctx context.Context, pulse insola
 		mmClosePulse.inspectFuncClosePulse(ctx, pulse)
 	}
 
-	params := &DispatcherMockClosePulseParams{ctx, pulse}
+	mm_params := &DispatcherMockClosePulseParams{ctx, pulse}
 
 	// Record call args
 	mmClosePulse.ClosePulseMock.mutex.Lock()
-	mmClosePulse.ClosePulseMock.callArgs = append(mmClosePulse.ClosePulseMock.callArgs, params)
+	mmClosePulse.ClosePulseMock.callArgs = append(mmClosePulse.ClosePulseMock.callArgs, mm_params)
 	mmClosePulse.ClosePulseMock.mutex.Unlock()
 
 	for _, e := range mmClosePulse.ClosePulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -349,10 +349,10 @@ func (mmClosePulse *DispatcherMock) ClosePulse(ctx context.Context, pulse insola
 
 	if mmClosePulse.ClosePulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClosePulse.ClosePulseMock.defaultExpectation.Counter, 1)
-		want := mmClosePulse.ClosePulseMock.defaultExpectation.params
-		got := DispatcherMockClosePulseParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmClosePulse.t.Errorf("DispatcherMock.ClosePulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmClosePulse.ClosePulseMock.defaultExpectation.params
+		mm_got := DispatcherMockClosePulseParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClosePulse.t.Errorf("DispatcherMock.ClosePulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -546,15 +546,15 @@ func (mmProcess *DispatcherMock) Process(msg *message.Message) (err error) {
 		mmProcess.inspectFuncProcess(msg)
 	}
 
-	params := &DispatcherMockProcessParams{msg}
+	mm_params := &DispatcherMockProcessParams{msg}
 
 	// Record call args
 	mmProcess.ProcessMock.mutex.Lock()
-	mmProcess.ProcessMock.callArgs = append(mmProcess.ProcessMock.callArgs, params)
+	mmProcess.ProcessMock.callArgs = append(mmProcess.ProcessMock.callArgs, mm_params)
 	mmProcess.ProcessMock.mutex.Unlock()
 
 	for _, e := range mmProcess.ProcessMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -562,17 +562,17 @@ func (mmProcess *DispatcherMock) Process(msg *message.Message) (err error) {
 
 	if mmProcess.ProcessMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmProcess.ProcessMock.defaultExpectation.Counter, 1)
-		want := mmProcess.ProcessMock.defaultExpectation.params
-		got := DispatcherMockProcessParams{msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmProcess.t.Errorf("DispatcherMock.Process got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmProcess.ProcessMock.defaultExpectation.params
+		mm_got := DispatcherMockProcessParams{msg}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmProcess.t.Errorf("DispatcherMock.Process got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmProcess.ProcessMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmProcess.ProcessMock.defaultExpectation.results
+		if mm_results == nil {
 			mmProcess.t.Fatal("No results are set for the DispatcherMock.Process")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmProcess.funcProcess != nil {
 		return mmProcess.funcProcess(msg)

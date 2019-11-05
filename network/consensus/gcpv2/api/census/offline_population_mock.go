@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
@@ -151,15 +151,15 @@ func (mmFindRegisteredProfile *OfflinePopulationMock) FindRegisteredProfile(iden
 		mmFindRegisteredProfile.inspectFuncFindRegisteredProfile(identity)
 	}
 
-	params := &OfflinePopulationMockFindRegisteredProfileParams{identity}
+	mm_params := &OfflinePopulationMockFindRegisteredProfileParams{identity}
 
 	// Record call args
 	mmFindRegisteredProfile.FindRegisteredProfileMock.mutex.Lock()
-	mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs = append(mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs, params)
+	mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs = append(mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs, mm_params)
 	mmFindRegisteredProfile.FindRegisteredProfileMock.mutex.Unlock()
 
 	for _, e := range mmFindRegisteredProfile.FindRegisteredProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.h1
 		}
@@ -167,17 +167,17 @@ func (mmFindRegisteredProfile *OfflinePopulationMock) FindRegisteredProfile(iden
 
 	if mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.Counter, 1)
-		want := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.params
-		got := OfflinePopulationMockFindRegisteredProfileParams{identity}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFindRegisteredProfile.t.Errorf("OfflinePopulationMock.FindRegisteredProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.params
+		mm_got := OfflinePopulationMockFindRegisteredProfileParams{identity}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFindRegisteredProfile.t.Errorf("OfflinePopulationMock.FindRegisteredProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFindRegisteredProfile.t.Fatal("No results are set for the OfflinePopulationMock.FindRegisteredProfile")
 		}
-		return (*results).h1
+		return (*mm_results).h1
 	}
 	if mmFindRegisteredProfile.funcFindRegisteredProfile != nil {
 		return mmFindRegisteredProfile.funcFindRegisteredProfile(identity)

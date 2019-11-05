@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // IteratorMock implements Iterator
@@ -273,11 +273,11 @@ func (mmKey *IteratorMock) Key() (ba1 []byte) {
 	if mmKey.KeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmKey.KeyMock.defaultExpectation.Counter, 1)
 
-		results := mmKey.KeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmKey.KeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmKey.t.Fatal("No results are set for the IteratorMock.Key")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmKey.funcKey != nil {
 		return mmKey.funcKey()
@@ -416,11 +416,11 @@ func (mmNext *IteratorMock) Next() (b1 bool) {
 	if mmNext.NextMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNext.NextMock.defaultExpectation.Counter, 1)
 
-		results := mmNext.NextMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmNext.NextMock.defaultExpectation.results
+		if mm_results == nil {
 			mmNext.t.Fatal("No results are set for the IteratorMock.Next")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmNext.funcNext != nil {
 		return mmNext.funcNext()
@@ -560,11 +560,11 @@ func (mmValue *IteratorMock) Value() (ba1 []byte, err error) {
 	if mmValue.ValueMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmValue.ValueMock.defaultExpectation.Counter, 1)
 
-		results := mmValue.ValueMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmValue.ValueMock.defaultExpectation.results
+		if mm_results == nil {
 			mmValue.t.Fatal("No results are set for the IteratorMock.Value")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmValue.funcValue != nil {
 		return mmValue.funcValue()

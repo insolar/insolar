@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"

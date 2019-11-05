@@ -20,14 +20,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/node"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/insolar/insolar/insolar/node"
+
 	"github.com/insolar/insolar/insolar"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 type pulseStreamMock struct {
@@ -79,7 +80,7 @@ func TestPulseServer_Export(t *testing.T) {
 		}
 		stream := pulseStreamMock{checker: pulseGatherer}
 
-		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator := insolarPulse.NewCalculatorMock(t)
 		pulseCalculator.ForwardsMock.When(context.TODO(), pulse.MinTimePulse, 1).Then(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}, nil)
 		pulseCalculator.ForwardsMock.When(context.TODO(), pulse.MinTimePulse+1, 1).Then(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
 
@@ -110,7 +111,7 @@ func TestPulseServer_Export(t *testing.T) {
 		}
 		stream := pulseStreamMock{checker: pulseGatherer}
 
-		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator := insolarPulse.NewCalculatorMock(t)
 		pulseCalculator.ForwardsMock.When(context.TODO(), pulse.MinTimePulse, 1).Then(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}, nil)
 
 		jetKeeper := executor.NewJetKeeperMock(t)
@@ -138,7 +139,7 @@ func TestPulseServer_Export(t *testing.T) {
 		}
 		stream := pulseStreamMock{checker: pulseGatherer}
 
-		pulseCalculator := network.NewPulseCalculatorMock(t)
+		pulseCalculator := insolarPulse.NewCalculatorMock(t)
 		pulseCalculator.ForwardsMock.When(context.TODO(), pulse.MinTimePulse, 1).Then(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}, nil)
 
 		jetKeeper := executor.NewJetKeeperMock(t)

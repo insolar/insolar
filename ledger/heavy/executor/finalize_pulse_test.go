@@ -21,15 +21,16 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 )
 
 type TestBadgerGCRunner struct {
@@ -86,7 +87,7 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 	targetPulse := testPulse + 1
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
 
 	bkp := executor.NewBackupMakerMock(t)
@@ -158,7 +159,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	jk.HasAllJetConfirmsMock.Return(true)
 	jk.TopSyncPulseMock.Return(testPulse)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{}, errors.New("Test"))
 
 	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse, testBadgerGCInfo())
@@ -178,7 +179,7 @@ func TestFinalizePulse_BackupError(t *testing.T) {
 	js.AllMock.Return(nil)
 	jk.StorageMock.Return(js)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
 
 	bkp := executor.NewBackupMakerMock(t)
@@ -196,7 +197,7 @@ func TestFinalizePulse_NotNextPulse(t *testing.T) {
 	jk.HasAllJetConfirmsMock.Return(true)
 	jk.TopSyncPulseMock.Return(testPulse)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: testPulse}, nil)
 
 	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse+10, testBadgerGCInfo())

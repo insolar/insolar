@@ -63,7 +63,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
@@ -184,7 +184,7 @@ func TestCalculatorHashes(t *testing.T) {
 
 	th := testutils.NewTerminationHandlerMock(t)
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 	cm.Inject(th, op, &stater, calculator, service, scheme)
 
 	require.NotNil(t, calculator.Stater)

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // DataSignerMock implements DataSigner
@@ -159,11 +159,11 @@ func (mmGetDigestMethod *DataSignerMock) GetDigestMethod() (d1 DigestMethod) {
 	if mmGetDigestMethod.GetDigestMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDigestMethod.t.Fatal("No results are set for the DataSignerMock.GetDigestMethod")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetDigestMethod.funcGetDigestMethod != nil {
 		return mmGetDigestMethod.funcGetDigestMethod()
@@ -335,15 +335,15 @@ func (mmGetDigestOf *DataSignerMock) GetDigestOf(reader io.Reader) (d1 Digest) {
 		mmGetDigestOf.inspectFuncGetDigestOf(reader)
 	}
 
-	params := &DataSignerMockGetDigestOfParams{reader}
+	mm_params := &DataSignerMockGetDigestOfParams{reader}
 
 	// Record call args
 	mmGetDigestOf.GetDigestOfMock.mutex.Lock()
-	mmGetDigestOf.GetDigestOfMock.callArgs = append(mmGetDigestOf.GetDigestOfMock.callArgs, params)
+	mmGetDigestOf.GetDigestOfMock.callArgs = append(mmGetDigestOf.GetDigestOfMock.callArgs, mm_params)
 	mmGetDigestOf.GetDigestOfMock.mutex.Unlock()
 
 	for _, e := range mmGetDigestOf.GetDigestOfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.d1
 		}
@@ -351,17 +351,17 @@ func (mmGetDigestOf *DataSignerMock) GetDigestOf(reader io.Reader) (d1 Digest) {
 
 	if mmGetDigestOf.GetDigestOfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDigestOf.GetDigestOfMock.defaultExpectation.Counter, 1)
-		want := mmGetDigestOf.GetDigestOfMock.defaultExpectation.params
-		got := DataSignerMockGetDigestOfParams{reader}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetDigestOf.t.Errorf("DataSignerMock.GetDigestOf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetDigestOf.GetDigestOfMock.defaultExpectation.params
+		mm_got := DataSignerMockGetDigestOfParams{reader}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetDigestOf.t.Errorf("DataSignerMock.GetDigestOf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetDigestOf.GetDigestOfMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDigestOf.GetDigestOfMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDigestOf.t.Fatal("No results are set for the DataSignerMock.GetDigestOf")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetDigestOf.funcGetDigestOf != nil {
 		return mmGetDigestOf.funcGetDigestOf(reader)
@@ -517,11 +517,11 @@ func (mmGetSignMethod *DataSignerMock) GetSignMethod() (s1 SignMethod) {
 	if mmGetSignMethod.GetSignMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignMethod.GetSignMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignMethod.t.Fatal("No results are set for the DataSignerMock.GetSignMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignMethod.funcGetSignMethod != nil {
 		return mmGetSignMethod.funcGetSignMethod()
@@ -660,11 +660,11 @@ func (mmGetSignatureMethod *DataSignerMock) GetSignatureMethod() (s1 SignatureMe
 	if mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureMethod.t.Fatal("No results are set for the DataSignerMock.GetSignatureMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureMethod.funcGetSignatureMethod != nil {
 		return mmGetSignatureMethod.funcGetSignatureMethod()
@@ -836,15 +836,15 @@ func (mmSignData *DataSignerMock) SignData(reader io.Reader) (s1 SignedDigest) {
 		mmSignData.inspectFuncSignData(reader)
 	}
 
-	params := &DataSignerMockSignDataParams{reader}
+	mm_params := &DataSignerMockSignDataParams{reader}
 
 	// Record call args
 	mmSignData.SignDataMock.mutex.Lock()
-	mmSignData.SignDataMock.callArgs = append(mmSignData.SignDataMock.callArgs, params)
+	mmSignData.SignDataMock.callArgs = append(mmSignData.SignDataMock.callArgs, mm_params)
 	mmSignData.SignDataMock.mutex.Unlock()
 
 	for _, e := range mmSignData.SignDataMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -852,17 +852,17 @@ func (mmSignData *DataSignerMock) SignData(reader io.Reader) (s1 SignedDigest) {
 
 	if mmSignData.SignDataMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSignData.SignDataMock.defaultExpectation.Counter, 1)
-		want := mmSignData.SignDataMock.defaultExpectation.params
-		got := DataSignerMockSignDataParams{reader}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSignData.t.Errorf("DataSignerMock.SignData got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSignData.SignDataMock.defaultExpectation.params
+		mm_got := DataSignerMockSignDataParams{reader}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSignData.t.Errorf("DataSignerMock.SignData got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSignData.SignDataMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSignData.SignDataMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSignData.t.Fatal("No results are set for the DataSignerMock.SignData")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmSignData.funcSignData != nil {
 		return mmSignData.funcSignData(reader)
@@ -1051,15 +1051,15 @@ func (mmSignDigest *DataSignerMock) SignDigest(digest Digest) (s1 Signature) {
 		mmSignDigest.inspectFuncSignDigest(digest)
 	}
 
-	params := &DataSignerMockSignDigestParams{digest}
+	mm_params := &DataSignerMockSignDigestParams{digest}
 
 	// Record call args
 	mmSignDigest.SignDigestMock.mutex.Lock()
-	mmSignDigest.SignDigestMock.callArgs = append(mmSignDigest.SignDigestMock.callArgs, params)
+	mmSignDigest.SignDigestMock.callArgs = append(mmSignDigest.SignDigestMock.callArgs, mm_params)
 	mmSignDigest.SignDigestMock.mutex.Unlock()
 
 	for _, e := range mmSignDigest.SignDigestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -1067,17 +1067,17 @@ func (mmSignDigest *DataSignerMock) SignDigest(digest Digest) (s1 Signature) {
 
 	if mmSignDigest.SignDigestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSignDigest.SignDigestMock.defaultExpectation.Counter, 1)
-		want := mmSignDigest.SignDigestMock.defaultExpectation.params
-		got := DataSignerMockSignDigestParams{digest}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSignDigest.t.Errorf("DataSignerMock.SignDigest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSignDigest.SignDigestMock.defaultExpectation.params
+		mm_got := DataSignerMockSignDigestParams{digest}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSignDigest.t.Errorf("DataSignerMock.SignDigest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSignDigest.SignDigestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSignDigest.SignDigestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSignDigest.t.Fatal("No results are set for the DataSignerMock.SignDigest")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmSignDigest.funcSignDigest != nil {
 		return mmSignDigest.funcSignDigest(digest)

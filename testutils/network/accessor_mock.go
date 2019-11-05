@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -193,15 +193,15 @@ func (mmGetActiveNode *AccessorMock) GetActiveNode(ref insolar.Reference) (n1 in
 		mmGetActiveNode.inspectFuncGetActiveNode(ref)
 	}
 
-	params := &AccessorMockGetActiveNodeParams{ref}
+	mm_params := &AccessorMockGetActiveNodeParams{ref}
 
 	// Record call args
 	mmGetActiveNode.GetActiveNodeMock.mutex.Lock()
-	mmGetActiveNode.GetActiveNodeMock.callArgs = append(mmGetActiveNode.GetActiveNodeMock.callArgs, params)
+	mmGetActiveNode.GetActiveNodeMock.callArgs = append(mmGetActiveNode.GetActiveNodeMock.callArgs, mm_params)
 	mmGetActiveNode.GetActiveNodeMock.mutex.Unlock()
 
 	for _, e := range mmGetActiveNode.GetActiveNodeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n1
 		}
@@ -209,17 +209,17 @@ func (mmGetActiveNode *AccessorMock) GetActiveNode(ref insolar.Reference) (n1 in
 
 	if mmGetActiveNode.GetActiveNodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetActiveNode.GetActiveNodeMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveNode.GetActiveNodeMock.defaultExpectation.params
-		got := AccessorMockGetActiveNodeParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveNode.t.Errorf("AccessorMock.GetActiveNode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetActiveNode.GetActiveNodeMock.defaultExpectation.params
+		mm_got := AccessorMockGetActiveNodeParams{ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetActiveNode.t.Errorf("AccessorMock.GetActiveNode got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetActiveNode.GetActiveNodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetActiveNode.GetActiveNodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetActiveNode.t.Fatal("No results are set for the AccessorMock.GetActiveNode")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetActiveNode.funcGetActiveNode != nil {
 		return mmGetActiveNode.funcGetActiveNode(ref)
@@ -408,15 +408,15 @@ func (mmGetActiveNodeByAddr *AccessorMock) GetActiveNodeByAddr(address string) (
 		mmGetActiveNodeByAddr.inspectFuncGetActiveNodeByAddr(address)
 	}
 
-	params := &AccessorMockGetActiveNodeByAddrParams{address}
+	mm_params := &AccessorMockGetActiveNodeByAddrParams{address}
 
 	// Record call args
 	mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.mutex.Lock()
-	mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.callArgs = append(mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.callArgs, params)
+	mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.callArgs = append(mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.callArgs, mm_params)
 	mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.mutex.Unlock()
 
 	for _, e := range mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n1
 		}
@@ -424,17 +424,17 @@ func (mmGetActiveNodeByAddr *AccessorMock) GetActiveNodeByAddr(address string) (
 
 	if mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation.params
-		got := AccessorMockGetActiveNodeByAddrParams{address}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveNodeByAddr.t.Errorf("AccessorMock.GetActiveNodeByAddr got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation.params
+		mm_got := AccessorMockGetActiveNodeByAddrParams{address}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetActiveNodeByAddr.t.Errorf("AccessorMock.GetActiveNodeByAddr got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetActiveNodeByAddr.GetActiveNodeByAddrMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetActiveNodeByAddr.t.Fatal("No results are set for the AccessorMock.GetActiveNodeByAddr")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetActiveNodeByAddr.funcGetActiveNodeByAddr != nil {
 		return mmGetActiveNodeByAddr.funcGetActiveNodeByAddr(address)
@@ -623,15 +623,15 @@ func (mmGetActiveNodeByShortID *AccessorMock) GetActiveNodeByShortID(shortID ins
 		mmGetActiveNodeByShortID.inspectFuncGetActiveNodeByShortID(shortID)
 	}
 
-	params := &AccessorMockGetActiveNodeByShortIDParams{shortID}
+	mm_params := &AccessorMockGetActiveNodeByShortIDParams{shortID}
 
 	// Record call args
 	mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.mutex.Lock()
-	mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.callArgs = append(mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.callArgs, params)
+	mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.callArgs = append(mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.callArgs, mm_params)
 	mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.mutex.Unlock()
 
 	for _, e := range mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n1
 		}
@@ -639,17 +639,17 @@ func (mmGetActiveNodeByShortID *AccessorMock) GetActiveNodeByShortID(shortID ins
 
 	if mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation.params
-		got := AccessorMockGetActiveNodeByShortIDParams{shortID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveNodeByShortID.t.Errorf("AccessorMock.GetActiveNodeByShortID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation.params
+		mm_got := AccessorMockGetActiveNodeByShortIDParams{shortID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetActiveNodeByShortID.t.Errorf("AccessorMock.GetActiveNodeByShortID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetActiveNodeByShortID.GetActiveNodeByShortIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetActiveNodeByShortID.t.Fatal("No results are set for the AccessorMock.GetActiveNodeByShortID")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetActiveNodeByShortID.funcGetActiveNodeByShortID != nil {
 		return mmGetActiveNodeByShortID.funcGetActiveNodeByShortID(shortID)
@@ -805,11 +805,11 @@ func (mmGetActiveNodes *AccessorMock) GetActiveNodes() (na1 []insolar.NetworkNod
 	if mmGetActiveNodes.GetActiveNodesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetActiveNodes.GetActiveNodesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetActiveNodes.GetActiveNodesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetActiveNodes.GetActiveNodesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetActiveNodes.t.Fatal("No results are set for the AccessorMock.GetActiveNodes")
 		}
-		return (*results).na1
+		return (*mm_results).na1
 	}
 	if mmGetActiveNodes.funcGetActiveNodes != nil {
 		return mmGetActiveNodes.funcGetActiveNodes()
@@ -981,15 +981,15 @@ func (mmGetWorkingNode *AccessorMock) GetWorkingNode(ref insolar.Reference) (n1 
 		mmGetWorkingNode.inspectFuncGetWorkingNode(ref)
 	}
 
-	params := &AccessorMockGetWorkingNodeParams{ref}
+	mm_params := &AccessorMockGetWorkingNodeParams{ref}
 
 	// Record call args
 	mmGetWorkingNode.GetWorkingNodeMock.mutex.Lock()
-	mmGetWorkingNode.GetWorkingNodeMock.callArgs = append(mmGetWorkingNode.GetWorkingNodeMock.callArgs, params)
+	mmGetWorkingNode.GetWorkingNodeMock.callArgs = append(mmGetWorkingNode.GetWorkingNodeMock.callArgs, mm_params)
 	mmGetWorkingNode.GetWorkingNodeMock.mutex.Unlock()
 
 	for _, e := range mmGetWorkingNode.GetWorkingNodeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n1
 		}
@@ -997,17 +997,17 @@ func (mmGetWorkingNode *AccessorMock) GetWorkingNode(ref insolar.Reference) (n1 
 
 	if mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation.Counter, 1)
-		want := mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation.params
-		got := AccessorMockGetWorkingNodeParams{ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetWorkingNode.t.Errorf("AccessorMock.GetWorkingNode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation.params
+		mm_got := AccessorMockGetWorkingNodeParams{ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetWorkingNode.t.Errorf("AccessorMock.GetWorkingNode got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetWorkingNode.GetWorkingNodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetWorkingNode.t.Fatal("No results are set for the AccessorMock.GetWorkingNode")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetWorkingNode.funcGetWorkingNode != nil {
 		return mmGetWorkingNode.funcGetWorkingNode(ref)
@@ -1163,11 +1163,11 @@ func (mmGetWorkingNodes *AccessorMock) GetWorkingNodes() (na1 []insolar.NetworkN
 	if mmGetWorkingNodes.GetWorkingNodesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetWorkingNodes.GetWorkingNodesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetWorkingNodes.GetWorkingNodesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetWorkingNodes.GetWorkingNodesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetWorkingNodes.t.Fatal("No results are set for the AccessorMock.GetWorkingNodes")
 		}
-		return (*results).na1
+		return (*mm_results).na1
 	}
 	if mmGetWorkingNodes.funcGetWorkingNodes != nil {
 		return mmGetWorkingNodes.funcGetWorkingNodes()

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmAppend *AppenderMock) Append(ctx context.Context, pulse insolar.Pulse) (
 		mmAppend.inspectFuncAppend(ctx, pulse)
 	}
 
-	params := &AppenderMockAppendParams{ctx, pulse}
+	mm_params := &AppenderMockAppendParams{ctx, pulse}
 
 	// Record call args
 	mmAppend.AppendMock.mutex.Lock()
-	mmAppend.AppendMock.callArgs = append(mmAppend.AppendMock.callArgs, params)
+	mmAppend.AppendMock.callArgs = append(mmAppend.AppendMock.callArgs, mm_params)
 	mmAppend.AppendMock.mutex.Unlock()
 
 	for _, e := range mmAppend.AppendMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmAppend *AppenderMock) Append(ctx context.Context, pulse insolar.Pulse) (
 
 	if mmAppend.AppendMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAppend.AppendMock.defaultExpectation.Counter, 1)
-		want := mmAppend.AppendMock.defaultExpectation.params
-		got := AppenderMockAppendParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAppend.t.Errorf("AppenderMock.Append got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAppend.AppendMock.defaultExpectation.params
+		mm_got := AppenderMockAppendParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAppend.t.Errorf("AppenderMock.Append got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAppend.AppendMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAppend.AppendMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAppend.t.Fatal("No results are set for the AppenderMock.Append")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAppend.funcAppend != nil {
 		return mmAppend.funcAppend(ctx, pulse)

@@ -66,8 +66,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/gateway/bootstrap"

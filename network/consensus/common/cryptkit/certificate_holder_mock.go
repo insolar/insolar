@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // CertificateHolderMock implements CertificateHolder
@@ -124,11 +124,11 @@ func (mmGetPublicKey *CertificateHolderMock) GetPublicKey() (s1 SignatureKeyHold
 	if mmGetPublicKey.GetPublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKey.GetPublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKey.t.Fatal("No results are set for the CertificateHolderMock.GetPublicKey")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetPublicKey.funcGetPublicKey != nil {
 		return mmGetPublicKey.funcGetPublicKey()
@@ -300,15 +300,15 @@ func (mmIsValidForHostAddress *CertificateHolderMock) IsValidForHostAddress(Host
 		mmIsValidForHostAddress.inspectFuncIsValidForHostAddress(HostAddress)
 	}
 
-	params := &CertificateHolderMockIsValidForHostAddressParams{HostAddress}
+	mm_params := &CertificateHolderMockIsValidForHostAddressParams{HostAddress}
 
 	// Record call args
 	mmIsValidForHostAddress.IsValidForHostAddressMock.mutex.Lock()
-	mmIsValidForHostAddress.IsValidForHostAddressMock.callArgs = append(mmIsValidForHostAddress.IsValidForHostAddressMock.callArgs, params)
+	mmIsValidForHostAddress.IsValidForHostAddressMock.callArgs = append(mmIsValidForHostAddress.IsValidForHostAddressMock.callArgs, mm_params)
 	mmIsValidForHostAddress.IsValidForHostAddressMock.mutex.Unlock()
 
 	for _, e := range mmIsValidForHostAddress.IsValidForHostAddressMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -316,17 +316,17 @@ func (mmIsValidForHostAddress *CertificateHolderMock) IsValidForHostAddress(Host
 
 	if mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation.Counter, 1)
-		want := mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation.params
-		got := CertificateHolderMockIsValidForHostAddressParams{HostAddress}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsValidForHostAddress.t.Errorf("CertificateHolderMock.IsValidForHostAddress got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation.params
+		mm_got := CertificateHolderMockIsValidForHostAddressParams{HostAddress}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsValidForHostAddress.t.Errorf("CertificateHolderMock.IsValidForHostAddress got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsValidForHostAddress.IsValidForHostAddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsValidForHostAddress.t.Fatal("No results are set for the CertificateHolderMock.IsValidForHostAddress")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsValidForHostAddress.funcIsValidForHostAddress != nil {
 		return mmIsValidForHostAddress.funcIsValidForHostAddress(HostAddress)

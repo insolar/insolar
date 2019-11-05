@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -169,15 +169,15 @@ func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponse(ctx context.Co
 		mmAddUnwantedResponse.inspectFuncAddUnwantedResponse(ctx, msg)
 	}
 
-	params := &LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
+	mm_params := &LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
 
 	// Record call args
 	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Lock()
-	mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs = append(mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs, params)
+	mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs = append(mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs, mm_params)
 	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Unlock()
 
 	for _, e := range mmAddUnwantedResponse.AddUnwantedResponseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -185,17 +185,17 @@ func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponse(ctx context.Co
 
 	if mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.Counter, 1)
-		want := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.params
-		got := LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddUnwantedResponse.t.Errorf("LogicRunnerMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.params
+		mm_got := LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddUnwantedResponse.t.Errorf("LogicRunnerMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddUnwantedResponse.t.Fatal("No results are set for the LogicRunnerMock.AddUnwantedResponse")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAddUnwantedResponse.funcAddUnwantedResponse != nil {
 		return mmAddUnwantedResponse.funcAddUnwantedResponse(ctx, msg)
@@ -521,15 +521,15 @@ func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pul
 		mmOnPulse.inspectFuncOnPulse(ctx, p1, p2)
 	}
 
-	params := &LogicRunnerMockOnPulseParams{ctx, p1, p2}
+	mm_params := &LogicRunnerMockOnPulseParams{ctx, p1, p2}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
-	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, params)
+	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, mm_params)
 	mmOnPulse.OnPulseMock.mutex.Unlock()
 
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -537,17 +537,17 @@ func (mmOnPulse *LogicRunnerMock) OnPulse(ctx context.Context, p1 mm_insolar.Pul
 
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
-		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := LogicRunnerMockOnPulseParams{ctx, p1, p2}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOnPulse.t.Errorf("LogicRunnerMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOnPulse.OnPulseMock.defaultExpectation.params
+		mm_got := LogicRunnerMockOnPulseParams{ctx, p1, p2}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOnPulse.t.Errorf("LogicRunnerMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOnPulse.OnPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOnPulse.OnPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOnPulse.t.Fatal("No results are set for the LogicRunnerMock.OnPulse")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx, p1, p2)

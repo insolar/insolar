@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // FactoryMock implements Factory
@@ -176,15 +176,15 @@ func (mmCreateBriefIntroProfile *FactoryMock) CreateBriefIntroProfile(candidate 
 		mmCreateBriefIntroProfile.inspectFuncCreateBriefIntroProfile(candidate)
 	}
 
-	params := &FactoryMockCreateBriefIntroProfileParams{candidate}
+	mm_params := &FactoryMockCreateBriefIntroProfileParams{candidate}
 
 	// Record call args
 	mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.mutex.Lock()
-	mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.callArgs = append(mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.callArgs, params)
+	mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.callArgs = append(mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.callArgs, mm_params)
 	mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.mutex.Unlock()
 
 	for _, e := range mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -192,17 +192,17 @@ func (mmCreateBriefIntroProfile *FactoryMock) CreateBriefIntroProfile(candidate 
 
 	if mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation.Counter, 1)
-		want := mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation.params
-		got := FactoryMockCreateBriefIntroProfileParams{candidate}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCreateBriefIntroProfile.t.Errorf("FactoryMock.CreateBriefIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation.params
+		mm_got := FactoryMockCreateBriefIntroProfileParams{candidate}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCreateBriefIntroProfile.t.Errorf("FactoryMock.CreateBriefIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCreateBriefIntroProfile.CreateBriefIntroProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCreateBriefIntroProfile.t.Fatal("No results are set for the FactoryMock.CreateBriefIntroProfile")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmCreateBriefIntroProfile.funcCreateBriefIntroProfile != nil {
 		return mmCreateBriefIntroProfile.funcCreateBriefIntroProfile(candidate)
@@ -391,15 +391,15 @@ func (mmCreateFullIntroProfile *FactoryMock) CreateFullIntroProfile(candidate Ca
 		mmCreateFullIntroProfile.inspectFuncCreateFullIntroProfile(candidate)
 	}
 
-	params := &FactoryMockCreateFullIntroProfileParams{candidate}
+	mm_params := &FactoryMockCreateFullIntroProfileParams{candidate}
 
 	// Record call args
 	mmCreateFullIntroProfile.CreateFullIntroProfileMock.mutex.Lock()
-	mmCreateFullIntroProfile.CreateFullIntroProfileMock.callArgs = append(mmCreateFullIntroProfile.CreateFullIntroProfileMock.callArgs, params)
+	mmCreateFullIntroProfile.CreateFullIntroProfileMock.callArgs = append(mmCreateFullIntroProfile.CreateFullIntroProfileMock.callArgs, mm_params)
 	mmCreateFullIntroProfile.CreateFullIntroProfileMock.mutex.Unlock()
 
 	for _, e := range mmCreateFullIntroProfile.CreateFullIntroProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -407,17 +407,17 @@ func (mmCreateFullIntroProfile *FactoryMock) CreateFullIntroProfile(candidate Ca
 
 	if mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation.Counter, 1)
-		want := mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation.params
-		got := FactoryMockCreateFullIntroProfileParams{candidate}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCreateFullIntroProfile.t.Errorf("FactoryMock.CreateFullIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation.params
+		mm_got := FactoryMockCreateFullIntroProfileParams{candidate}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCreateFullIntroProfile.t.Errorf("FactoryMock.CreateFullIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCreateFullIntroProfile.CreateFullIntroProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCreateFullIntroProfile.t.Fatal("No results are set for the FactoryMock.CreateFullIntroProfile")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmCreateFullIntroProfile.funcCreateFullIntroProfile != nil {
 		return mmCreateFullIntroProfile.funcCreateFullIntroProfile(candidate)
@@ -606,15 +606,15 @@ func (mmCreateUpgradableIntroProfile *FactoryMock) CreateUpgradableIntroProfile(
 		mmCreateUpgradableIntroProfile.inspectFuncCreateUpgradableIntroProfile(candidate)
 	}
 
-	params := &FactoryMockCreateUpgradableIntroProfileParams{candidate}
+	mm_params := &FactoryMockCreateUpgradableIntroProfileParams{candidate}
 
 	// Record call args
 	mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.mutex.Lock()
-	mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.callArgs = append(mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.callArgs, params)
+	mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.callArgs = append(mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.callArgs, mm_params)
 	mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.mutex.Unlock()
 
 	for _, e := range mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -622,17 +622,17 @@ func (mmCreateUpgradableIntroProfile *FactoryMock) CreateUpgradableIntroProfile(
 
 	if mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation.Counter, 1)
-		want := mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation.params
-		got := FactoryMockCreateUpgradableIntroProfileParams{candidate}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCreateUpgradableIntroProfile.t.Errorf("FactoryMock.CreateUpgradableIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation.params
+		mm_got := FactoryMockCreateUpgradableIntroProfileParams{candidate}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCreateUpgradableIntroProfile.t.Errorf("FactoryMock.CreateUpgradableIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCreateUpgradableIntroProfile.CreateUpgradableIntroProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCreateUpgradableIntroProfile.t.Fatal("No results are set for the FactoryMock.CreateUpgradableIntroProfile")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmCreateUpgradableIntroProfile.funcCreateUpgradableIntroProfile != nil {
 		return mmCreateUpgradableIntroProfile.funcCreateUpgradableIntroProfile(candidate)
@@ -822,15 +822,15 @@ func (mmTryConvertUpgradableIntroProfile *FactoryMock) TryConvertUpgradableIntro
 		mmTryConvertUpgradableIntroProfile.inspectFuncTryConvertUpgradableIntroProfile(profile)
 	}
 
-	params := &FactoryMockTryConvertUpgradableIntroProfileParams{profile}
+	mm_params := &FactoryMockTryConvertUpgradableIntroProfileParams{profile}
 
 	// Record call args
 	mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.mutex.Lock()
-	mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.callArgs = append(mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.callArgs, params)
+	mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.callArgs = append(mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.callArgs, mm_params)
 	mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.mutex.Unlock()
 
 	for _, e := range mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1, e.results.b1
 		}
@@ -838,17 +838,17 @@ func (mmTryConvertUpgradableIntroProfile *FactoryMock) TryConvertUpgradableIntro
 
 	if mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation.Counter, 1)
-		want := mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation.params
-		got := FactoryMockTryConvertUpgradableIntroProfileParams{profile}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmTryConvertUpgradableIntroProfile.t.Errorf("FactoryMock.TryConvertUpgradableIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation.params
+		mm_got := FactoryMockTryConvertUpgradableIntroProfileParams{profile}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmTryConvertUpgradableIntroProfile.t.Errorf("FactoryMock.TryConvertUpgradableIntroProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmTryConvertUpgradableIntroProfile.TryConvertUpgradableIntroProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmTryConvertUpgradableIntroProfile.t.Fatal("No results are set for the FactoryMock.TryConvertUpgradableIntroProfile")
 		}
-		return (*results).s1, (*results).b1
+		return (*mm_results).s1, (*mm_results).b1
 	}
 	if mmTryConvertUpgradableIntroProfile.funcTryConvertUpgradableIntroProfile != nil {
 		return mmTryConvertUpgradableIntroProfile.funcTryConvertUpgradableIntroProfile(profile)

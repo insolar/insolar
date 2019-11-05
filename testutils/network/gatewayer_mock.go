@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
 )
@@ -127,11 +127,11 @@ func (mmGateway *GatewayerMock) Gateway() (g1 mm_network.Gateway) {
 	if mmGateway.GatewayMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGateway.GatewayMock.defaultExpectation.Counter, 1)
 
-		results := mmGateway.GatewayMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGateway.GatewayMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGateway.t.Fatal("No results are set for the GatewayerMock.Gateway")
 		}
-		return (*results).g1
+		return (*mm_results).g1
 	}
 	if mmGateway.funcGateway != nil {
 		return mmGateway.funcGateway()
@@ -279,15 +279,15 @@ func (mmSwitchState *GatewayerMock) SwitchState(ctx context.Context, state insol
 		mmSwitchState.inspectFuncSwitchState(ctx, state, pulse)
 	}
 
-	params := &GatewayerMockSwitchStateParams{ctx, state, pulse}
+	mm_params := &GatewayerMockSwitchStateParams{ctx, state, pulse}
 
 	// Record call args
 	mmSwitchState.SwitchStateMock.mutex.Lock()
-	mmSwitchState.SwitchStateMock.callArgs = append(mmSwitchState.SwitchStateMock.callArgs, params)
+	mmSwitchState.SwitchStateMock.callArgs = append(mmSwitchState.SwitchStateMock.callArgs, mm_params)
 	mmSwitchState.SwitchStateMock.mutex.Unlock()
 
 	for _, e := range mmSwitchState.SwitchStateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -295,10 +295,10 @@ func (mmSwitchState *GatewayerMock) SwitchState(ctx context.Context, state insol
 
 	if mmSwitchState.SwitchStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSwitchState.SwitchStateMock.defaultExpectation.Counter, 1)
-		want := mmSwitchState.SwitchStateMock.defaultExpectation.params
-		got := GatewayerMockSwitchStateParams{ctx, state, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSwitchState.t.Errorf("GatewayerMock.SwitchState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSwitchState.SwitchStateMock.defaultExpectation.params
+		mm_got := GatewayerMockSwitchStateParams{ctx, state, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSwitchState.t.Errorf("GatewayerMock.SwitchState got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

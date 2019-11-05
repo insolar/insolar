@@ -19,7 +19,7 @@ package cryptography
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
@@ -70,7 +70,7 @@ func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) insolar.Crypto
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	cryptographyService := NewCryptographyService()
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	cm.Register(platformCryptographyScheme)
 	cm.Inject(keyStore, cryptographyService, keyProcessor)
@@ -86,7 +86,7 @@ func NewStorageBoundCryptographyService(path string) (insolar.CryptographyServic
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	cryptographyService := NewCryptographyService()
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	cm.Register(platformCryptographyScheme, keyStore)
 	cm.Inject(cryptographyService, keyProcessor)

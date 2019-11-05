@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -126,15 +126,15 @@ func (mmDistribute *PulseDistributorMock) Distribute(ctx context.Context, p1 mm_
 		mmDistribute.inspectFuncDistribute(ctx, p1)
 	}
 
-	params := &PulseDistributorMockDistributeParams{ctx, p1}
+	mm_params := &PulseDistributorMockDistributeParams{ctx, p1}
 
 	// Record call args
 	mmDistribute.DistributeMock.mutex.Lock()
-	mmDistribute.DistributeMock.callArgs = append(mmDistribute.DistributeMock.callArgs, params)
+	mmDistribute.DistributeMock.callArgs = append(mmDistribute.DistributeMock.callArgs, mm_params)
 	mmDistribute.DistributeMock.mutex.Unlock()
 
 	for _, e := range mmDistribute.DistributeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -142,10 +142,10 @@ func (mmDistribute *PulseDistributorMock) Distribute(ctx context.Context, p1 mm_
 
 	if mmDistribute.DistributeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDistribute.DistributeMock.defaultExpectation.Counter, 1)
-		want := mmDistribute.DistributeMock.defaultExpectation.params
-		got := PulseDistributorMockDistributeParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDistribute.t.Errorf("PulseDistributorMock.Distribute got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDistribute.DistributeMock.defaultExpectation.params
+		mm_got := PulseDistributorMockDistributeParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDistribute.t.Errorf("PulseDistributorMock.Distribute got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

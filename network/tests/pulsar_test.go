@@ -59,7 +59,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -115,7 +115,7 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 		return errors.Wrap(err, "Failed to create pulse distributor")
 	}
 
-	tp.cm = &component.Manager{}
+	tp.cm = component.NewManager(nil)
 	if UseFakeTransport {
 		tp.cm.Register(transport.NewFakeFactory(configuration.NewHostNetwork().Transport))
 	} else {

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar/payload"
 )
 
@@ -144,15 +144,15 @@ func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Cont
 		mmAddStillExecution.inspectFuncAddStillExecution(ctx, msg)
 	}
 
-	params := &ResultMatcherMockAddStillExecutionParams{ctx, msg}
+	mm_params := &ResultMatcherMockAddStillExecutionParams{ctx, msg}
 
 	// Record call args
 	mmAddStillExecution.AddStillExecutionMock.mutex.Lock()
-	mmAddStillExecution.AddStillExecutionMock.callArgs = append(mmAddStillExecution.AddStillExecutionMock.callArgs, params)
+	mmAddStillExecution.AddStillExecutionMock.callArgs = append(mmAddStillExecution.AddStillExecutionMock.callArgs, mm_params)
 	mmAddStillExecution.AddStillExecutionMock.mutex.Unlock()
 
 	for _, e := range mmAddStillExecution.AddStillExecutionMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -160,10 +160,10 @@ func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Cont
 
 	if mmAddStillExecution.AddStillExecutionMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddStillExecution.AddStillExecutionMock.defaultExpectation.Counter, 1)
-		want := mmAddStillExecution.AddStillExecutionMock.defaultExpectation.params
-		got := ResultMatcherMockAddStillExecutionParams{ctx, msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddStillExecution.t.Errorf("ResultMatcherMock.AddStillExecution got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddStillExecution.AddStillExecutionMock.defaultExpectation.params
+		mm_got := ResultMatcherMockAddStillExecutionParams{ctx, msg}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddStillExecution.t.Errorf("ResultMatcherMock.AddStillExecution got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -332,15 +332,15 @@ func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.
 		mmAddUnwantedResponse.inspectFuncAddUnwantedResponse(ctx, msg)
 	}
 
-	params := &ResultMatcherMockAddUnwantedResponseParams{ctx, msg}
+	mm_params := &ResultMatcherMockAddUnwantedResponseParams{ctx, msg}
 
 	// Record call args
 	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Lock()
-	mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs = append(mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs, params)
+	mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs = append(mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs, mm_params)
 	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Unlock()
 
 	for _, e := range mmAddUnwantedResponse.AddUnwantedResponseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -348,10 +348,10 @@ func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.
 
 	if mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.Counter, 1)
-		want := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.params
-		got := ResultMatcherMockAddUnwantedResponseParams{ctx, msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddUnwantedResponse.t.Errorf("ResultMatcherMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.params
+		mm_got := ResultMatcherMockAddUnwantedResponseParams{ctx, msg}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddUnwantedResponse.t.Errorf("ResultMatcherMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -519,15 +519,15 @@ func (mmClear *ResultMatcherMock) Clear(ctx context.Context) {
 		mmClear.inspectFuncClear(ctx)
 	}
 
-	params := &ResultMatcherMockClearParams{ctx}
+	mm_params := &ResultMatcherMockClearParams{ctx}
 
 	// Record call args
 	mmClear.ClearMock.mutex.Lock()
-	mmClear.ClearMock.callArgs = append(mmClear.ClearMock.callArgs, params)
+	mmClear.ClearMock.callArgs = append(mmClear.ClearMock.callArgs, mm_params)
 	mmClear.ClearMock.mutex.Unlock()
 
 	for _, e := range mmClear.ClearMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -535,10 +535,10 @@ func (mmClear *ResultMatcherMock) Clear(ctx context.Context) {
 
 	if mmClear.ClearMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClear.ClearMock.defaultExpectation.Counter, 1)
-		want := mmClear.ClearMock.defaultExpectation.params
-		got := ResultMatcherMockClearParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmClear.t.Errorf("ResultMatcherMock.Clear got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmClear.ClearMock.defaultExpectation.params
+		mm_got := ResultMatcherMockClearParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClear.t.Errorf("ResultMatcherMock.Clear got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

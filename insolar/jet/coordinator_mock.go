@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -268,15 +268,15 @@ func (mmHeavy *CoordinatorMock) Heavy(ctx context.Context) (rp1 *insolar.Referen
 		mmHeavy.inspectFuncHeavy(ctx)
 	}
 
-	params := &CoordinatorMockHeavyParams{ctx}
+	mm_params := &CoordinatorMockHeavyParams{ctx}
 
 	// Record call args
 	mmHeavy.HeavyMock.mutex.Lock()
-	mmHeavy.HeavyMock.callArgs = append(mmHeavy.HeavyMock.callArgs, params)
+	mmHeavy.HeavyMock.callArgs = append(mmHeavy.HeavyMock.callArgs, mm_params)
 	mmHeavy.HeavyMock.mutex.Unlock()
 
 	for _, e := range mmHeavy.HeavyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -284,17 +284,17 @@ func (mmHeavy *CoordinatorMock) Heavy(ctx context.Context) (rp1 *insolar.Referen
 
 	if mmHeavy.HeavyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHeavy.HeavyMock.defaultExpectation.Counter, 1)
-		want := mmHeavy.HeavyMock.defaultExpectation.params
-		got := CoordinatorMockHeavyParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmHeavy.t.Errorf("CoordinatorMock.Heavy got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmHeavy.HeavyMock.defaultExpectation.params
+		mm_got := CoordinatorMockHeavyParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmHeavy.t.Errorf("CoordinatorMock.Heavy got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmHeavy.HeavyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHeavy.HeavyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHeavy.t.Fatal("No results are set for the CoordinatorMock.Heavy")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmHeavy.funcHeavy != nil {
 		return mmHeavy.funcHeavy(ctx)
@@ -488,15 +488,15 @@ func (mmIsAuthorized *CoordinatorMock) IsAuthorized(ctx context.Context, role in
 		mmIsAuthorized.inspectFuncIsAuthorized(ctx, role, obj, pulse, node)
 	}
 
-	params := &CoordinatorMockIsAuthorizedParams{ctx, role, obj, pulse, node}
+	mm_params := &CoordinatorMockIsAuthorizedParams{ctx, role, obj, pulse, node}
 
 	// Record call args
 	mmIsAuthorized.IsAuthorizedMock.mutex.Lock()
-	mmIsAuthorized.IsAuthorizedMock.callArgs = append(mmIsAuthorized.IsAuthorizedMock.callArgs, params)
+	mmIsAuthorized.IsAuthorizedMock.callArgs = append(mmIsAuthorized.IsAuthorizedMock.callArgs, mm_params)
 	mmIsAuthorized.IsAuthorizedMock.mutex.Unlock()
 
 	for _, e := range mmIsAuthorized.IsAuthorizedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1, e.results.err
 		}
@@ -504,17 +504,17 @@ func (mmIsAuthorized *CoordinatorMock) IsAuthorized(ctx context.Context, role in
 
 	if mmIsAuthorized.IsAuthorizedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsAuthorized.IsAuthorizedMock.defaultExpectation.Counter, 1)
-		want := mmIsAuthorized.IsAuthorizedMock.defaultExpectation.params
-		got := CoordinatorMockIsAuthorizedParams{ctx, role, obj, pulse, node}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsAuthorized.t.Errorf("CoordinatorMock.IsAuthorized got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsAuthorized.IsAuthorizedMock.defaultExpectation.params
+		mm_got := CoordinatorMockIsAuthorizedParams{ctx, role, obj, pulse, node}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsAuthorized.t.Errorf("CoordinatorMock.IsAuthorized got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsAuthorized.IsAuthorizedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsAuthorized.IsAuthorizedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsAuthorized.t.Fatal("No results are set for the CoordinatorMock.IsAuthorized")
 		}
-		return (*results).b1, (*results).err
+		return (*mm_results).b1, (*mm_results).err
 	}
 	if mmIsAuthorized.funcIsAuthorized != nil {
 		return mmIsAuthorized.funcIsAuthorized(ctx, role, obj, pulse, node)
@@ -705,15 +705,15 @@ func (mmIsBeyondLimit *CoordinatorMock) IsBeyondLimit(ctx context.Context, targe
 		mmIsBeyondLimit.inspectFuncIsBeyondLimit(ctx, targetPN)
 	}
 
-	params := &CoordinatorMockIsBeyondLimitParams{ctx, targetPN}
+	mm_params := &CoordinatorMockIsBeyondLimitParams{ctx, targetPN}
 
 	// Record call args
 	mmIsBeyondLimit.IsBeyondLimitMock.mutex.Lock()
-	mmIsBeyondLimit.IsBeyondLimitMock.callArgs = append(mmIsBeyondLimit.IsBeyondLimitMock.callArgs, params)
+	mmIsBeyondLimit.IsBeyondLimitMock.callArgs = append(mmIsBeyondLimit.IsBeyondLimitMock.callArgs, mm_params)
 	mmIsBeyondLimit.IsBeyondLimitMock.mutex.Unlock()
 
 	for _, e := range mmIsBeyondLimit.IsBeyondLimitMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1, e.results.err
 		}
@@ -721,17 +721,17 @@ func (mmIsBeyondLimit *CoordinatorMock) IsBeyondLimit(ctx context.Context, targe
 
 	if mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation.Counter, 1)
-		want := mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation.params
-		got := CoordinatorMockIsBeyondLimitParams{ctx, targetPN}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsBeyondLimit.t.Errorf("CoordinatorMock.IsBeyondLimit got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation.params
+		mm_got := CoordinatorMockIsBeyondLimitParams{ctx, targetPN}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsBeyondLimit.t.Errorf("CoordinatorMock.IsBeyondLimit got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsBeyondLimit.IsBeyondLimitMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsBeyondLimit.t.Fatal("No results are set for the CoordinatorMock.IsBeyondLimit")
 		}
-		return (*results).b1, (*results).err
+		return (*mm_results).b1, (*mm_results).err
 	}
 	if mmIsBeyondLimit.funcIsBeyondLimit != nil {
 		return mmIsBeyondLimit.funcIsBeyondLimit(ctx, targetPN)
@@ -923,15 +923,15 @@ func (mmIsMeAuthorizedNow *CoordinatorMock) IsMeAuthorizedNow(ctx context.Contex
 		mmIsMeAuthorizedNow.inspectFuncIsMeAuthorizedNow(ctx, role, obj)
 	}
 
-	params := &CoordinatorMockIsMeAuthorizedNowParams{ctx, role, obj}
+	mm_params := &CoordinatorMockIsMeAuthorizedNowParams{ctx, role, obj}
 
 	// Record call args
 	mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.mutex.Lock()
-	mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.callArgs = append(mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.callArgs, params)
+	mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.callArgs = append(mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.callArgs, mm_params)
 	mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.mutex.Unlock()
 
 	for _, e := range mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1, e.results.err
 		}
@@ -939,17 +939,17 @@ func (mmIsMeAuthorizedNow *CoordinatorMock) IsMeAuthorizedNow(ctx context.Contex
 
 	if mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation.Counter, 1)
-		want := mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation.params
-		got := CoordinatorMockIsMeAuthorizedNowParams{ctx, role, obj}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsMeAuthorizedNow.t.Errorf("CoordinatorMock.IsMeAuthorizedNow got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation.params
+		mm_got := CoordinatorMockIsMeAuthorizedNowParams{ctx, role, obj}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsMeAuthorizedNow.t.Errorf("CoordinatorMock.IsMeAuthorizedNow got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsMeAuthorizedNow.IsMeAuthorizedNowMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsMeAuthorizedNow.t.Fatal("No results are set for the CoordinatorMock.IsMeAuthorizedNow")
 		}
-		return (*results).b1, (*results).err
+		return (*mm_results).b1, (*mm_results).err
 	}
 	if mmIsMeAuthorizedNow.funcIsMeAuthorizedNow != nil {
 		return mmIsMeAuthorizedNow.funcIsMeAuthorizedNow(ctx, role, obj)
@@ -1141,15 +1141,15 @@ func (mmLightExecutorForJet *CoordinatorMock) LightExecutorForJet(ctx context.Co
 		mmLightExecutorForJet.inspectFuncLightExecutorForJet(ctx, jetID, pulse)
 	}
 
-	params := &CoordinatorMockLightExecutorForJetParams{ctx, jetID, pulse}
+	mm_params := &CoordinatorMockLightExecutorForJetParams{ctx, jetID, pulse}
 
 	// Record call args
 	mmLightExecutorForJet.LightExecutorForJetMock.mutex.Lock()
-	mmLightExecutorForJet.LightExecutorForJetMock.callArgs = append(mmLightExecutorForJet.LightExecutorForJetMock.callArgs, params)
+	mmLightExecutorForJet.LightExecutorForJetMock.callArgs = append(mmLightExecutorForJet.LightExecutorForJetMock.callArgs, mm_params)
 	mmLightExecutorForJet.LightExecutorForJetMock.mutex.Unlock()
 
 	for _, e := range mmLightExecutorForJet.LightExecutorForJetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -1157,17 +1157,17 @@ func (mmLightExecutorForJet *CoordinatorMock) LightExecutorForJet(ctx context.Co
 
 	if mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation.Counter, 1)
-		want := mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation.params
-		got := CoordinatorMockLightExecutorForJetParams{ctx, jetID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLightExecutorForJet.t.Errorf("CoordinatorMock.LightExecutorForJet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation.params
+		mm_got := CoordinatorMockLightExecutorForJetParams{ctx, jetID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLightExecutorForJet.t.Errorf("CoordinatorMock.LightExecutorForJet got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLightExecutorForJet.LightExecutorForJetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLightExecutorForJet.t.Fatal("No results are set for the CoordinatorMock.LightExecutorForJet")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmLightExecutorForJet.funcLightExecutorForJet != nil {
 		return mmLightExecutorForJet.funcLightExecutorForJet(ctx, jetID, pulse)
@@ -1359,15 +1359,15 @@ func (mmLightExecutorForObject *CoordinatorMock) LightExecutorForObject(ctx cont
 		mmLightExecutorForObject.inspectFuncLightExecutorForObject(ctx, objID, pulse)
 	}
 
-	params := &CoordinatorMockLightExecutorForObjectParams{ctx, objID, pulse}
+	mm_params := &CoordinatorMockLightExecutorForObjectParams{ctx, objID, pulse}
 
 	// Record call args
 	mmLightExecutorForObject.LightExecutorForObjectMock.mutex.Lock()
-	mmLightExecutorForObject.LightExecutorForObjectMock.callArgs = append(mmLightExecutorForObject.LightExecutorForObjectMock.callArgs, params)
+	mmLightExecutorForObject.LightExecutorForObjectMock.callArgs = append(mmLightExecutorForObject.LightExecutorForObjectMock.callArgs, mm_params)
 	mmLightExecutorForObject.LightExecutorForObjectMock.mutex.Unlock()
 
 	for _, e := range mmLightExecutorForObject.LightExecutorForObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -1375,17 +1375,17 @@ func (mmLightExecutorForObject *CoordinatorMock) LightExecutorForObject(ctx cont
 
 	if mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation.Counter, 1)
-		want := mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation.params
-		got := CoordinatorMockLightExecutorForObjectParams{ctx, objID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLightExecutorForObject.t.Errorf("CoordinatorMock.LightExecutorForObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation.params
+		mm_got := CoordinatorMockLightExecutorForObjectParams{ctx, objID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLightExecutorForObject.t.Errorf("CoordinatorMock.LightExecutorForObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLightExecutorForObject.LightExecutorForObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLightExecutorForObject.t.Fatal("No results are set for the CoordinatorMock.LightExecutorForObject")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmLightExecutorForObject.funcLightExecutorForObject != nil {
 		return mmLightExecutorForObject.funcLightExecutorForObject(ctx, objID, pulse)
@@ -1577,15 +1577,15 @@ func (mmLightValidatorsForJet *CoordinatorMock) LightValidatorsForJet(ctx contex
 		mmLightValidatorsForJet.inspectFuncLightValidatorsForJet(ctx, jetID, pulse)
 	}
 
-	params := &CoordinatorMockLightValidatorsForJetParams{ctx, jetID, pulse}
+	mm_params := &CoordinatorMockLightValidatorsForJetParams{ctx, jetID, pulse}
 
 	// Record call args
 	mmLightValidatorsForJet.LightValidatorsForJetMock.mutex.Lock()
-	mmLightValidatorsForJet.LightValidatorsForJetMock.callArgs = append(mmLightValidatorsForJet.LightValidatorsForJetMock.callArgs, params)
+	mmLightValidatorsForJet.LightValidatorsForJetMock.callArgs = append(mmLightValidatorsForJet.LightValidatorsForJetMock.callArgs, mm_params)
 	mmLightValidatorsForJet.LightValidatorsForJetMock.mutex.Unlock()
 
 	for _, e := range mmLightValidatorsForJet.LightValidatorsForJetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ra1, e.results.err
 		}
@@ -1593,17 +1593,17 @@ func (mmLightValidatorsForJet *CoordinatorMock) LightValidatorsForJet(ctx contex
 
 	if mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation.Counter, 1)
-		want := mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation.params
-		got := CoordinatorMockLightValidatorsForJetParams{ctx, jetID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLightValidatorsForJet.t.Errorf("CoordinatorMock.LightValidatorsForJet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation.params
+		mm_got := CoordinatorMockLightValidatorsForJetParams{ctx, jetID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLightValidatorsForJet.t.Errorf("CoordinatorMock.LightValidatorsForJet got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLightValidatorsForJet.LightValidatorsForJetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLightValidatorsForJet.t.Fatal("No results are set for the CoordinatorMock.LightValidatorsForJet")
 		}
-		return (*results).ra1, (*results).err
+		return (*mm_results).ra1, (*mm_results).err
 	}
 	if mmLightValidatorsForJet.funcLightValidatorsForJet != nil {
 		return mmLightValidatorsForJet.funcLightValidatorsForJet(ctx, jetID, pulse)
@@ -1795,15 +1795,15 @@ func (mmLightValidatorsForObject *CoordinatorMock) LightValidatorsForObject(ctx 
 		mmLightValidatorsForObject.inspectFuncLightValidatorsForObject(ctx, objID, pulse)
 	}
 
-	params := &CoordinatorMockLightValidatorsForObjectParams{ctx, objID, pulse}
+	mm_params := &CoordinatorMockLightValidatorsForObjectParams{ctx, objID, pulse}
 
 	// Record call args
 	mmLightValidatorsForObject.LightValidatorsForObjectMock.mutex.Lock()
-	mmLightValidatorsForObject.LightValidatorsForObjectMock.callArgs = append(mmLightValidatorsForObject.LightValidatorsForObjectMock.callArgs, params)
+	mmLightValidatorsForObject.LightValidatorsForObjectMock.callArgs = append(mmLightValidatorsForObject.LightValidatorsForObjectMock.callArgs, mm_params)
 	mmLightValidatorsForObject.LightValidatorsForObjectMock.mutex.Unlock()
 
 	for _, e := range mmLightValidatorsForObject.LightValidatorsForObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ra1, e.results.err
 		}
@@ -1811,17 +1811,17 @@ func (mmLightValidatorsForObject *CoordinatorMock) LightValidatorsForObject(ctx 
 
 	if mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation.Counter, 1)
-		want := mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation.params
-		got := CoordinatorMockLightValidatorsForObjectParams{ctx, objID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLightValidatorsForObject.t.Errorf("CoordinatorMock.LightValidatorsForObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation.params
+		mm_got := CoordinatorMockLightValidatorsForObjectParams{ctx, objID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLightValidatorsForObject.t.Errorf("CoordinatorMock.LightValidatorsForObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLightValidatorsForObject.LightValidatorsForObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLightValidatorsForObject.t.Fatal("No results are set for the CoordinatorMock.LightValidatorsForObject")
 		}
-		return (*results).ra1, (*results).err
+		return (*mm_results).ra1, (*mm_results).err
 	}
 	if mmLightValidatorsForObject.funcLightValidatorsForObject != nil {
 		return mmLightValidatorsForObject.funcLightValidatorsForObject(ctx, objID, pulse)
@@ -1977,11 +1977,11 @@ func (mmMe *CoordinatorMock) Me() (r1 insolar.Reference) {
 	if mmMe.MeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMe.MeMock.defaultExpectation.Counter, 1)
 
-		results := mmMe.MeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMe.MeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMe.t.Fatal("No results are set for the CoordinatorMock.Me")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmMe.funcMe != nil {
 		return mmMe.funcMe()
@@ -2156,15 +2156,15 @@ func (mmNodeForJet *CoordinatorMock) NodeForJet(ctx context.Context, jetID insol
 		mmNodeForJet.inspectFuncNodeForJet(ctx, jetID, targetPN)
 	}
 
-	params := &CoordinatorMockNodeForJetParams{ctx, jetID, targetPN}
+	mm_params := &CoordinatorMockNodeForJetParams{ctx, jetID, targetPN}
 
 	// Record call args
 	mmNodeForJet.NodeForJetMock.mutex.Lock()
-	mmNodeForJet.NodeForJetMock.callArgs = append(mmNodeForJet.NodeForJetMock.callArgs, params)
+	mmNodeForJet.NodeForJetMock.callArgs = append(mmNodeForJet.NodeForJetMock.callArgs, mm_params)
 	mmNodeForJet.NodeForJetMock.mutex.Unlock()
 
 	for _, e := range mmNodeForJet.NodeForJetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -2172,17 +2172,17 @@ func (mmNodeForJet *CoordinatorMock) NodeForJet(ctx context.Context, jetID insol
 
 	if mmNodeForJet.NodeForJetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNodeForJet.NodeForJetMock.defaultExpectation.Counter, 1)
-		want := mmNodeForJet.NodeForJetMock.defaultExpectation.params
-		got := CoordinatorMockNodeForJetParams{ctx, jetID, targetPN}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNodeForJet.t.Errorf("CoordinatorMock.NodeForJet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNodeForJet.NodeForJetMock.defaultExpectation.params
+		mm_got := CoordinatorMockNodeForJetParams{ctx, jetID, targetPN}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNodeForJet.t.Errorf("CoordinatorMock.NodeForJet got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmNodeForJet.NodeForJetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmNodeForJet.NodeForJetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmNodeForJet.t.Fatal("No results are set for the CoordinatorMock.NodeForJet")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmNodeForJet.funcNodeForJet != nil {
 		return mmNodeForJet.funcNodeForJet(ctx, jetID, targetPN)
@@ -2374,15 +2374,15 @@ func (mmNodeForObject *CoordinatorMock) NodeForObject(ctx context.Context, objec
 		mmNodeForObject.inspectFuncNodeForObject(ctx, objectID, targetPN)
 	}
 
-	params := &CoordinatorMockNodeForObjectParams{ctx, objectID, targetPN}
+	mm_params := &CoordinatorMockNodeForObjectParams{ctx, objectID, targetPN}
 
 	// Record call args
 	mmNodeForObject.NodeForObjectMock.mutex.Lock()
-	mmNodeForObject.NodeForObjectMock.callArgs = append(mmNodeForObject.NodeForObjectMock.callArgs, params)
+	mmNodeForObject.NodeForObjectMock.callArgs = append(mmNodeForObject.NodeForObjectMock.callArgs, mm_params)
 	mmNodeForObject.NodeForObjectMock.mutex.Unlock()
 
 	for _, e := range mmNodeForObject.NodeForObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -2390,17 +2390,17 @@ func (mmNodeForObject *CoordinatorMock) NodeForObject(ctx context.Context, objec
 
 	if mmNodeForObject.NodeForObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNodeForObject.NodeForObjectMock.defaultExpectation.Counter, 1)
-		want := mmNodeForObject.NodeForObjectMock.defaultExpectation.params
-		got := CoordinatorMockNodeForObjectParams{ctx, objectID, targetPN}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNodeForObject.t.Errorf("CoordinatorMock.NodeForObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNodeForObject.NodeForObjectMock.defaultExpectation.params
+		mm_got := CoordinatorMockNodeForObjectParams{ctx, objectID, targetPN}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNodeForObject.t.Errorf("CoordinatorMock.NodeForObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmNodeForObject.NodeForObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmNodeForObject.NodeForObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmNodeForObject.t.Fatal("No results are set for the CoordinatorMock.NodeForObject")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmNodeForObject.funcNodeForObject != nil {
 		return mmNodeForObject.funcNodeForObject(ctx, objectID, targetPN)
@@ -2593,15 +2593,15 @@ func (mmQueryRole *CoordinatorMock) QueryRole(ctx context.Context, role insolar.
 		mmQueryRole.inspectFuncQueryRole(ctx, role, obj, pulse)
 	}
 
-	params := &CoordinatorMockQueryRoleParams{ctx, role, obj, pulse}
+	mm_params := &CoordinatorMockQueryRoleParams{ctx, role, obj, pulse}
 
 	// Record call args
 	mmQueryRole.QueryRoleMock.mutex.Lock()
-	mmQueryRole.QueryRoleMock.callArgs = append(mmQueryRole.QueryRoleMock.callArgs, params)
+	mmQueryRole.QueryRoleMock.callArgs = append(mmQueryRole.QueryRoleMock.callArgs, mm_params)
 	mmQueryRole.QueryRoleMock.mutex.Unlock()
 
 	for _, e := range mmQueryRole.QueryRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ra1, e.results.err
 		}
@@ -2609,17 +2609,17 @@ func (mmQueryRole *CoordinatorMock) QueryRole(ctx context.Context, role insolar.
 
 	if mmQueryRole.QueryRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmQueryRole.QueryRoleMock.defaultExpectation.Counter, 1)
-		want := mmQueryRole.QueryRoleMock.defaultExpectation.params
-		got := CoordinatorMockQueryRoleParams{ctx, role, obj, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmQueryRole.t.Errorf("CoordinatorMock.QueryRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmQueryRole.QueryRoleMock.defaultExpectation.params
+		mm_got := CoordinatorMockQueryRoleParams{ctx, role, obj, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmQueryRole.t.Errorf("CoordinatorMock.QueryRole got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmQueryRole.QueryRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmQueryRole.QueryRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmQueryRole.t.Fatal("No results are set for the CoordinatorMock.QueryRole")
 		}
-		return (*results).ra1, (*results).err
+		return (*mm_results).ra1, (*mm_results).err
 	}
 	if mmQueryRole.funcQueryRole != nil {
 		return mmQueryRole.funcQueryRole(ctx, role, obj, pulse)
@@ -2811,15 +2811,15 @@ func (mmVirtualExecutorForObject *CoordinatorMock) VirtualExecutorForObject(ctx 
 		mmVirtualExecutorForObject.inspectFuncVirtualExecutorForObject(ctx, objID, pulse)
 	}
 
-	params := &CoordinatorMockVirtualExecutorForObjectParams{ctx, objID, pulse}
+	mm_params := &CoordinatorMockVirtualExecutorForObjectParams{ctx, objID, pulse}
 
 	// Record call args
 	mmVirtualExecutorForObject.VirtualExecutorForObjectMock.mutex.Lock()
-	mmVirtualExecutorForObject.VirtualExecutorForObjectMock.callArgs = append(mmVirtualExecutorForObject.VirtualExecutorForObjectMock.callArgs, params)
+	mmVirtualExecutorForObject.VirtualExecutorForObjectMock.callArgs = append(mmVirtualExecutorForObject.VirtualExecutorForObjectMock.callArgs, mm_params)
 	mmVirtualExecutorForObject.VirtualExecutorForObjectMock.mutex.Unlock()
 
 	for _, e := range mmVirtualExecutorForObject.VirtualExecutorForObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.rp1, e.results.err
 		}
@@ -2827,17 +2827,17 @@ func (mmVirtualExecutorForObject *CoordinatorMock) VirtualExecutorForObject(ctx 
 
 	if mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation.Counter, 1)
-		want := mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation.params
-		got := CoordinatorMockVirtualExecutorForObjectParams{ctx, objID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmVirtualExecutorForObject.t.Errorf("CoordinatorMock.VirtualExecutorForObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation.params
+		mm_got := CoordinatorMockVirtualExecutorForObjectParams{ctx, objID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmVirtualExecutorForObject.t.Errorf("CoordinatorMock.VirtualExecutorForObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmVirtualExecutorForObject.VirtualExecutorForObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmVirtualExecutorForObject.t.Fatal("No results are set for the CoordinatorMock.VirtualExecutorForObject")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmVirtualExecutorForObject.funcVirtualExecutorForObject != nil {
 		return mmVirtualExecutorForObject.funcVirtualExecutorForObject(ctx, objID, pulse)
@@ -3029,15 +3029,15 @@ func (mmVirtualValidatorsForObject *CoordinatorMock) VirtualValidatorsForObject(
 		mmVirtualValidatorsForObject.inspectFuncVirtualValidatorsForObject(ctx, objID, pulse)
 	}
 
-	params := &CoordinatorMockVirtualValidatorsForObjectParams{ctx, objID, pulse}
+	mm_params := &CoordinatorMockVirtualValidatorsForObjectParams{ctx, objID, pulse}
 
 	// Record call args
 	mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.mutex.Lock()
-	mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.callArgs = append(mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.callArgs, params)
+	mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.callArgs = append(mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.callArgs, mm_params)
 	mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.mutex.Unlock()
 
 	for _, e := range mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ra1, e.results.err
 		}
@@ -3045,17 +3045,17 @@ func (mmVirtualValidatorsForObject *CoordinatorMock) VirtualValidatorsForObject(
 
 	if mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation.Counter, 1)
-		want := mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation.params
-		got := CoordinatorMockVirtualValidatorsForObjectParams{ctx, objID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmVirtualValidatorsForObject.t.Errorf("CoordinatorMock.VirtualValidatorsForObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation.params
+		mm_got := CoordinatorMockVirtualValidatorsForObjectParams{ctx, objID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmVirtualValidatorsForObject.t.Errorf("CoordinatorMock.VirtualValidatorsForObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmVirtualValidatorsForObject.VirtualValidatorsForObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmVirtualValidatorsForObject.t.Fatal("No results are set for the CoordinatorMock.VirtualValidatorsForObject")
 		}
-		return (*results).ra1, (*results).err
+		return (*mm_results).ra1, (*mm_results).err
 	}
 	if mmVirtualValidatorsForObject.funcVirtualValidatorsForObject != nil {
 		return mmVirtualValidatorsForObject.funcVirtualValidatorsForObject(ctx, objID, pulse)

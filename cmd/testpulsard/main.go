@@ -25,7 +25,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar/utils"
@@ -119,7 +119,7 @@ func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) *pul
 		panic(err)
 	}
 
-	cm := &component.Manager{}
+	cm := component.NewManager(nil)
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, transport.NewFactory(cfg.Pulsar.DistributionTransport))
 	cm.Inject(cryptographyService, pulseDistributor)
 

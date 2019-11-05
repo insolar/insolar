@@ -33,7 +33,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -135,7 +135,7 @@ func NewServer(
 		mManager = machinesmanager.NewMachinesManager()
 	}
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	// Cryptography.
 	var (
@@ -343,7 +343,7 @@ func NewServer(
 		contractRequester: contractRequester,
 		test:              t,
 		pm:                PulseManager,
-		componentManager:  &cm,
+		componentManager:  cm,
 		stopper:           stopper,
 		pulse:             *insolar.GenesisPulse,
 		clientSender:      ClientBus,

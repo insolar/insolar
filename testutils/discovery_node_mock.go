@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -140,11 +140,11 @@ func (mmGetHost *DiscoveryNodeMock) GetHost() (s1 string) {
 	if mmGetHost.GetHostMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetHost.GetHostMock.defaultExpectation.Counter, 1)
 
-		results := mmGetHost.GetHostMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetHost.GetHostMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetHost.t.Fatal("No results are set for the DiscoveryNodeMock.GetHost")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetHost.funcGetHost != nil {
 		return mmGetHost.funcGetHost()
@@ -283,11 +283,11 @@ func (mmGetNodeRef *DiscoveryNodeMock) GetNodeRef() (rp1 *mm_insolar.Reference) 
 	if mmGetNodeRef.GetNodeRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNodeRef.GetNodeRefMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNodeRef.GetNodeRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNodeRef.GetNodeRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNodeRef.t.Fatal("No results are set for the DiscoveryNodeMock.GetNodeRef")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmGetNodeRef.funcGetNodeRef != nil {
 		return mmGetNodeRef.funcGetNodeRef()
@@ -426,11 +426,11 @@ func (mmGetPublicKey *DiscoveryNodeMock) GetPublicKey() (p1 crypto.PublicKey) {
 	if mmGetPublicKey.GetPublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKey.GetPublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKey.t.Fatal("No results are set for the DiscoveryNodeMock.GetPublicKey")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPublicKey.funcGetPublicKey != nil {
 		return mmGetPublicKey.funcGetPublicKey()
@@ -569,11 +569,11 @@ func (mmGetRole *DiscoveryNodeMock) GetRole() (s1 mm_insolar.StaticRole) {
 	if mmGetRole.GetRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRole.GetRoleMock.defaultExpectation.Counter, 1)
 
-		results := mmGetRole.GetRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetRole.GetRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetRole.t.Fatal("No results are set for the DiscoveryNodeMock.GetRole")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetRole.funcGetRole != nil {
 		return mmGetRole.funcGetRole()

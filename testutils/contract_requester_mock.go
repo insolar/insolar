@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -166,15 +166,15 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, ref *mm_insolar.R
 		mmCall.inspectFuncCall(ctx, ref, method, argsIn, pulse)
 	}
 
-	params := &ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
+	mm_params := &ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
 
 	// Record call args
 	mmCall.CallMock.mutex.Lock()
-	mmCall.CallMock.callArgs = append(mmCall.CallMock.callArgs, params)
+	mmCall.CallMock.callArgs = append(mmCall.CallMock.callArgs, mm_params)
 	mmCall.CallMock.mutex.Unlock()
 
 	for _, e := range mmCall.CallMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.rp1, e.results.err
 		}
@@ -182,17 +182,17 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, ref *mm_insolar.R
 
 	if mmCall.CallMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCall.CallMock.defaultExpectation.Counter, 1)
-		want := mmCall.CallMock.defaultExpectation.params
-		got := ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCall.t.Errorf("ContractRequesterMock.Call got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCall.CallMock.defaultExpectation.params
+		mm_got := ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCall.t.Errorf("ContractRequesterMock.Call got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCall.CallMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCall.CallMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCall.t.Fatal("No results are set for the ContractRequesterMock.Call")
 		}
-		return (*results).r1, (*results).rp1, (*results).err
+		return (*mm_results).r1, (*mm_results).rp1, (*mm_results).err
 	}
 	if mmCall.funcCall != nil {
 		return mmCall.funcCall(ctx, ref, method, argsIn, pulse)
@@ -384,15 +384,15 @@ func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, msg
 		mmSendRequest.inspectFuncSendRequest(ctx, msg)
 	}
 
-	params := &ContractRequesterMockSendRequestParams{ctx, msg}
+	mm_params := &ContractRequesterMockSendRequestParams{ctx, msg}
 
 	// Record call args
 	mmSendRequest.SendRequestMock.mutex.Lock()
-	mmSendRequest.SendRequestMock.callArgs = append(mmSendRequest.SendRequestMock.callArgs, params)
+	mmSendRequest.SendRequestMock.callArgs = append(mmSendRequest.SendRequestMock.callArgs, mm_params)
 	mmSendRequest.SendRequestMock.mutex.Unlock()
 
 	for _, e := range mmSendRequest.SendRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.rp1, e.results.err
 		}
@@ -400,17 +400,17 @@ func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, msg
 
 	if mmSendRequest.SendRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendRequest.SendRequestMock.defaultExpectation.Counter, 1)
-		want := mmSendRequest.SendRequestMock.defaultExpectation.params
-		got := ContractRequesterMockSendRequestParams{ctx, msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendRequest.t.Errorf("ContractRequesterMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendRequest.SendRequestMock.defaultExpectation.params
+		mm_got := ContractRequesterMockSendRequestParams{ctx, msg}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendRequest.t.Errorf("ContractRequesterMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendRequest.SendRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendRequest.SendRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendRequest.t.Fatal("No results are set for the ContractRequesterMock.SendRequest")
 		}
-		return (*results).r1, (*results).rp1, (*results).err
+		return (*mm_results).r1, (*mm_results).rp1, (*mm_results).err
 	}
 	if mmSendRequest.funcSendRequest != nil {
 		return mmSendRequest.funcSendRequest(ctx, msg)

@@ -60,7 +60,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -165,7 +165,7 @@ func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
 func TestCalculatorError(t *testing.T) {
 	calculator := &calculator{}
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)

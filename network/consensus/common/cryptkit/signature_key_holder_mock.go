@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/longbits"
 )
 
@@ -192,11 +192,11 @@ func (mmAsByteString *SignatureKeyHolderMock) AsByteString() (b1 longbits.ByteSt
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the SignatureKeyHolderMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -335,11 +335,11 @@ func (mmAsBytes *SignatureKeyHolderMock) AsBytes() (ba1 []byte) {
 	if mmAsBytes.AsBytesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsBytes.AsBytesMock.defaultExpectation.Counter, 1)
 
-		results := mmAsBytes.AsBytesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsBytes.AsBytesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsBytes.t.Fatal("No results are set for the SignatureKeyHolderMock.AsBytes")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmAsBytes.funcAsBytes != nil {
 		return mmAsBytes.funcAsBytes()
@@ -511,15 +511,15 @@ func (mmEquals *SignatureKeyHolderMock) Equals(other SignatureKeyHolder) (b1 boo
 		mmEquals.inspectFuncEquals(other)
 	}
 
-	params := &SignatureKeyHolderMockEqualsParams{other}
+	mm_params := &SignatureKeyHolderMockEqualsParams{other}
 
 	// Record call args
 	mmEquals.EqualsMock.mutex.Lock()
-	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, params)
+	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, mm_params)
 	mmEquals.EqualsMock.mutex.Unlock()
 
 	for _, e := range mmEquals.EqualsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -527,17 +527,17 @@ func (mmEquals *SignatureKeyHolderMock) Equals(other SignatureKeyHolder) (b1 boo
 
 	if mmEquals.EqualsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEquals.EqualsMock.defaultExpectation.Counter, 1)
-		want := mmEquals.EqualsMock.defaultExpectation.params
-		got := SignatureKeyHolderMockEqualsParams{other}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEquals.t.Errorf("SignatureKeyHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEquals.EqualsMock.defaultExpectation.params
+		mm_got := SignatureKeyHolderMockEqualsParams{other}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEquals.t.Errorf("SignatureKeyHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmEquals.EqualsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmEquals.EqualsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmEquals.t.Fatal("No results are set for the SignatureKeyHolderMock.Equals")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmEquals.funcEquals != nil {
 		return mmEquals.funcEquals(other)
@@ -693,11 +693,11 @@ func (mmFixedByteSize *SignatureKeyHolderMock) FixedByteSize() (i1 int) {
 	if mmFixedByteSize.FixedByteSizeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFixedByteSize.FixedByteSizeMock.defaultExpectation.Counter, 1)
 
-		results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFixedByteSize.t.Fatal("No results are set for the SignatureKeyHolderMock.FixedByteSize")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmFixedByteSize.funcFixedByteSize != nil {
 		return mmFixedByteSize.funcFixedByteSize()
@@ -836,11 +836,11 @@ func (mmFoldToUint64 *SignatureKeyHolderMock) FoldToUint64() (u1 uint64) {
 	if mmFoldToUint64.FoldToUint64Mock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFoldToUint64.FoldToUint64Mock.defaultExpectation.Counter, 1)
 
-		results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
+		if mm_results == nil {
 			mmFoldToUint64.t.Fatal("No results are set for the SignatureKeyHolderMock.FoldToUint64")
 		}
-		return (*results).u1
+		return (*mm_results).u1
 	}
 	if mmFoldToUint64.funcFoldToUint64 != nil {
 		return mmFoldToUint64.funcFoldToUint64()
@@ -979,11 +979,11 @@ func (mmGetSignMethod *SignatureKeyHolderMock) GetSignMethod() (s1 SignMethod) {
 	if mmGetSignMethod.GetSignMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignMethod.GetSignMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignMethod.t.Fatal("No results are set for the SignatureKeyHolderMock.GetSignMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignMethod.funcGetSignMethod != nil {
 		return mmGetSignMethod.funcGetSignMethod()
@@ -1122,11 +1122,11 @@ func (mmGetSignatureKeyMethod *SignatureKeyHolderMock) GetSignatureKeyMethod() (
 	if mmGetSignatureKeyMethod.GetSignatureKeyMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureKeyMethod.GetSignatureKeyMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureKeyMethod.GetSignatureKeyMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureKeyMethod.GetSignatureKeyMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureKeyMethod.t.Fatal("No results are set for the SignatureKeyHolderMock.GetSignatureKeyMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureKeyMethod.funcGetSignatureKeyMethod != nil {
 		return mmGetSignatureKeyMethod.funcGetSignatureKeyMethod()
@@ -1265,11 +1265,11 @@ func (mmGetSignatureKeyType *SignatureKeyHolderMock) GetSignatureKeyType() (s1 S
 	if mmGetSignatureKeyType.GetSignatureKeyTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureKeyType.GetSignatureKeyTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureKeyType.GetSignatureKeyTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureKeyType.GetSignatureKeyTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureKeyType.t.Fatal("No results are set for the SignatureKeyHolderMock.GetSignatureKeyType")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureKeyType.funcGetSignatureKeyType != nil {
 		return mmGetSignatureKeyType.funcGetSignatureKeyType()
@@ -1442,15 +1442,15 @@ func (mmRead *SignatureKeyHolderMock) Read(p []byte) (n int, err error) {
 		mmRead.inspectFuncRead(p)
 	}
 
-	params := &SignatureKeyHolderMockReadParams{p}
+	mm_params := &SignatureKeyHolderMockReadParams{p}
 
 	// Record call args
 	mmRead.ReadMock.mutex.Lock()
-	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, params)
+	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, mm_params)
 	mmRead.ReadMock.mutex.Unlock()
 
 	for _, e := range mmRead.ReadMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1458,17 +1458,17 @@ func (mmRead *SignatureKeyHolderMock) Read(p []byte) (n int, err error) {
 
 	if mmRead.ReadMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRead.ReadMock.defaultExpectation.Counter, 1)
-		want := mmRead.ReadMock.defaultExpectation.params
-		got := SignatureKeyHolderMockReadParams{p}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRead.t.Errorf("SignatureKeyHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRead.ReadMock.defaultExpectation.params
+		mm_got := SignatureKeyHolderMockReadParams{p}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRead.t.Errorf("SignatureKeyHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRead.ReadMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRead.ReadMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRead.t.Fatal("No results are set for the SignatureKeyHolderMock.Read")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmRead.funcRead != nil {
 		return mmRead.funcRead(p)
@@ -1658,15 +1658,15 @@ func (mmWriteTo *SignatureKeyHolderMock) WriteTo(w io.Writer) (n int64, err erro
 		mmWriteTo.inspectFuncWriteTo(w)
 	}
 
-	params := &SignatureKeyHolderMockWriteToParams{w}
+	mm_params := &SignatureKeyHolderMockWriteToParams{w}
 
 	// Record call args
 	mmWriteTo.WriteToMock.mutex.Lock()
-	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, params)
+	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, mm_params)
 	mmWriteTo.WriteToMock.mutex.Unlock()
 
 	for _, e := range mmWriteTo.WriteToMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1674,17 +1674,17 @@ func (mmWriteTo *SignatureKeyHolderMock) WriteTo(w io.Writer) (n int64, err erro
 
 	if mmWriteTo.WriteToMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWriteTo.WriteToMock.defaultExpectation.Counter, 1)
-		want := mmWriteTo.WriteToMock.defaultExpectation.params
-		got := SignatureKeyHolderMockWriteToParams{w}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWriteTo.t.Errorf("SignatureKeyHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWriteTo.WriteToMock.defaultExpectation.params
+		mm_got := SignatureKeyHolderMockWriteToParams{w}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWriteTo.t.Errorf("SignatureKeyHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWriteTo.WriteToMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWriteTo.WriteToMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWriteTo.t.Fatal("No results are set for the SignatureKeyHolderMock.WriteTo")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmWriteTo.funcWriteTo != nil {
 		return mmWriteTo.funcWriteTo(w)

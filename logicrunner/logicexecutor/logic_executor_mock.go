@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -172,15 +172,15 @@ func (mmExecute *LogicExecutorMock) Execute(ctx context.Context, transcript *com
 		mmExecute.inspectFuncExecute(ctx, transcript)
 	}
 
-	params := &LogicExecutorMockExecuteParams{ctx, transcript}
+	mm_params := &LogicExecutorMockExecuteParams{ctx, transcript}
 
 	// Record call args
 	mmExecute.ExecuteMock.mutex.Lock()
-	mmExecute.ExecuteMock.callArgs = append(mmExecute.ExecuteMock.callArgs, params)
+	mmExecute.ExecuteMock.callArgs = append(mmExecute.ExecuteMock.callArgs, mm_params)
 	mmExecute.ExecuteMock.mutex.Unlock()
 
 	for _, e := range mmExecute.ExecuteMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -188,17 +188,17 @@ func (mmExecute *LogicExecutorMock) Execute(ctx context.Context, transcript *com
 
 	if mmExecute.ExecuteMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExecute.ExecuteMock.defaultExpectation.Counter, 1)
-		want := mmExecute.ExecuteMock.defaultExpectation.params
-		got := LogicExecutorMockExecuteParams{ctx, transcript}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExecute.t.Errorf("LogicExecutorMock.Execute got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExecute.ExecuteMock.defaultExpectation.params
+		mm_got := LogicExecutorMockExecuteParams{ctx, transcript}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExecute.t.Errorf("LogicExecutorMock.Execute got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExecute.ExecuteMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExecute.ExecuteMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExecute.t.Fatal("No results are set for the LogicExecutorMock.Execute")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmExecute.funcExecute != nil {
 		return mmExecute.funcExecute(ctx, transcript)
@@ -389,15 +389,15 @@ func (mmExecuteConstructor *LogicExecutorMock) ExecuteConstructor(ctx context.Co
 		mmExecuteConstructor.inspectFuncExecuteConstructor(ctx, transcript)
 	}
 
-	params := &LogicExecutorMockExecuteConstructorParams{ctx, transcript}
+	mm_params := &LogicExecutorMockExecuteConstructorParams{ctx, transcript}
 
 	// Record call args
 	mmExecuteConstructor.ExecuteConstructorMock.mutex.Lock()
-	mmExecuteConstructor.ExecuteConstructorMock.callArgs = append(mmExecuteConstructor.ExecuteConstructorMock.callArgs, params)
+	mmExecuteConstructor.ExecuteConstructorMock.callArgs = append(mmExecuteConstructor.ExecuteConstructorMock.callArgs, mm_params)
 	mmExecuteConstructor.ExecuteConstructorMock.mutex.Unlock()
 
 	for _, e := range mmExecuteConstructor.ExecuteConstructorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -405,17 +405,17 @@ func (mmExecuteConstructor *LogicExecutorMock) ExecuteConstructor(ctx context.Co
 
 	if mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation.Counter, 1)
-		want := mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation.params
-		got := LogicExecutorMockExecuteConstructorParams{ctx, transcript}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExecuteConstructor.t.Errorf("LogicExecutorMock.ExecuteConstructor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation.params
+		mm_got := LogicExecutorMockExecuteConstructorParams{ctx, transcript}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExecuteConstructor.t.Errorf("LogicExecutorMock.ExecuteConstructor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExecuteConstructor.ExecuteConstructorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExecuteConstructor.t.Fatal("No results are set for the LogicExecutorMock.ExecuteConstructor")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmExecuteConstructor.funcExecuteConstructor != nil {
 		return mmExecuteConstructor.funcExecuteConstructor(ctx, transcript)
@@ -606,15 +606,15 @@ func (mmExecuteMethod *LogicExecutorMock) ExecuteMethod(ctx context.Context, tra
 		mmExecuteMethod.inspectFuncExecuteMethod(ctx, transcript)
 	}
 
-	params := &LogicExecutorMockExecuteMethodParams{ctx, transcript}
+	mm_params := &LogicExecutorMockExecuteMethodParams{ctx, transcript}
 
 	// Record call args
 	mmExecuteMethod.ExecuteMethodMock.mutex.Lock()
-	mmExecuteMethod.ExecuteMethodMock.callArgs = append(mmExecuteMethod.ExecuteMethodMock.callArgs, params)
+	mmExecuteMethod.ExecuteMethodMock.callArgs = append(mmExecuteMethod.ExecuteMethodMock.callArgs, mm_params)
 	mmExecuteMethod.ExecuteMethodMock.mutex.Unlock()
 
 	for _, e := range mmExecuteMethod.ExecuteMethodMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -622,17 +622,17 @@ func (mmExecuteMethod *LogicExecutorMock) ExecuteMethod(ctx context.Context, tra
 
 	if mmExecuteMethod.ExecuteMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExecuteMethod.ExecuteMethodMock.defaultExpectation.Counter, 1)
-		want := mmExecuteMethod.ExecuteMethodMock.defaultExpectation.params
-		got := LogicExecutorMockExecuteMethodParams{ctx, transcript}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExecuteMethod.t.Errorf("LogicExecutorMock.ExecuteMethod got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExecuteMethod.ExecuteMethodMock.defaultExpectation.params
+		mm_got := LogicExecutorMockExecuteMethodParams{ctx, transcript}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExecuteMethod.t.Errorf("LogicExecutorMock.ExecuteMethod got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExecuteMethod.ExecuteMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExecuteMethod.ExecuteMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExecuteMethod.t.Fatal("No results are set for the LogicExecutorMock.ExecuteMethod")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmExecuteMethod.funcExecuteMethod != nil {
 		return mmExecuteMethod.funcExecuteMethod(ctx, transcript)
