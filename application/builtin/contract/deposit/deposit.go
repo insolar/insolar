@@ -42,7 +42,6 @@ type Deposit struct {
 	MigrationDaemonConfirms foundation.StableMap      `json:"confirmerReferences"`
 	Amount                  string                    `json:"amount"`
 	TxHash                  string                    `json:"ethTxHash"`
-	VestingType             appfoundation.VestingType `json:"vestingType"`
 	Lockup                  int64                     `json:"lockupInPulses"`
 	Vesting                 int64                     `json:"vestingInPulses"`
 	VestingStep             int64                     `json:"vestingStepInPulses"`
@@ -56,7 +55,6 @@ type DepositOut struct {
 	MigrationDaemonConfirms []DaemonConfirm           `json:"confirmerReferences"`
 	Amount                  string                    `json:"amount"`
 	TxHash                  string                    `json:"ethTxHash"`
-	VestingType             appfoundation.VestingType `json:"vestingType"`
 	Lockup                  int64                     `json:"lockup"`
 	Vesting                 int64                     `json:"vesting"`
 	VestingStep             int64                     `json:"vestingStep"`
@@ -84,7 +82,6 @@ func (d Deposit) toOut() DepositOut {
 		MigrationDaemonConfirms: daemonConfirms,
 		Amount:                  d.Amount,
 		TxHash:                  d.TxHash,
-		VestingType:             d.VestingType,
 		Lockup:                  d.Lockup,
 		Vesting:                 d.Vesting,
 		VestingStep:             d.VestingStep,
@@ -121,7 +118,6 @@ func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposi
 		Lockup:                  lockup,
 		Vesting:                 vesting,
 		VestingStep:             vestingStep,
-		VestingType:             appfoundation.DefaultVesting,
 	}, nil
 }
 
@@ -280,7 +276,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 			c++
 		}
 	}
-	if d.VestingType == appfoundation.DefaultVesting && c < numConfirmation {
+	if c < numConfirmation {
 		return fmt.Errorf("number of confirms is less then 2")
 	}
 

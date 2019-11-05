@@ -37,7 +37,6 @@ type DepositOut struct {
 	MigrationDaemonConfirms []DaemonConfirm           `json:"confirmerReferences"`
 	Amount                  string                    `json:"amount"`
 	TxHash                  string                    `json:"ethTxHash"`
-	VestingType             appfoundation.VestingType `json:"vestingType"`
 	Lockup                  int64                     `json:"lockup"`
 	Vesting                 int64                     `json:"vesting"`
 	VestingStep             int64                     `json:"vestingStep"`
