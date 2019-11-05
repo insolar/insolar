@@ -39,23 +39,32 @@ type BadgerGCRunInfo struct {
 	runFrequency uint
 
 	callCounter uint
-	lock        sync.Mutex
+	tryLock     chan struct{}
 }
 
 func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
+	tryLock := make(chan struct{}, 1)
+	tryLock <- struct{}{}
 	return &BadgerGCRunInfo{
 		runner:       runner,
 		runFrequency: runFrequency,
+		tryLock:      tryLock,
 	}
 }
 
 func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.callCounter++
-	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
-		b.runner.RunValueGC(ctx)
-	}
+	go func() {
+		select {
+		case v := <-b.tryLock:
+			b.callCounter++
+			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				b.runner.RunValueGC(ctx)
+			}
+			b.tryLock <- v
+		default:
+			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
+		}
+	}()
 }
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
@@ -90,6 +99,8 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	}
 }
 
+var finalizationLock sync.Mutex
+
 func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx)
 	if !shouldStartFinalization(ctx, jetKeeper, pulses, newPulse) {
@@ -110,6 +121,10 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
 		return nil
 	}
+
+	finalizationLock.Lock()
+	defer finalizationLock.Unlock()
+	logger.Debug("FinalizePulse: after getting lock")
 
 	err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
 	if err != nil {

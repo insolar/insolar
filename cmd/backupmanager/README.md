@@ -31,7 +31,6 @@ ledger:
     backupfile: incr.bkp
     dirnametemplate: pulse-%d
     backupwaitperiod: 60
-    lastbackupinfofile: ./data/last_backup_info.json
     postprocessbackupcmd:
     - bash
     - -c

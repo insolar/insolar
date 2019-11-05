@@ -18,7 +18,6 @@ package executor_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -71,41 +70,15 @@ func TestBackuper_BadConfig(t *testing.T) {
 	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg}, testPulse, nil)
 	require.Contains(t, err.Error(), "PostProcessBackupCmd can't be empty")
 
-	cfg.PostProcessBackupCmd = []string{"some command"}
-	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg}, testPulse, nil)
-	require.Contains(t, err.Error(), "LastBackupInfoFile can't be empty")
-
-	tmpDir := "/tmp/BKP/"
-	err = os.MkdirAll(tmpDir, 0777)
-	defer os.RemoveAll(tmpDir)
-	require.NoError(t, err)
-	lastBackupedVersionFile := tmpDir + "/last_version.json"
-	addLastBackupFile(t, lastBackupedVersionFile, 200)
-
 	db := store.NewDBMock(t)
 	db.GetMock.Return([]byte{}, nil)
 
-	cfg.LastBackupInfoFile = lastBackupedVersionFile
-	storageConfig := configuration.Storage{DataDirectory: tmpDir}
-	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg, Storage: storageConfig}, testPulse, db)
-	require.NoError(t, err)
-}
-
-func addLastBackupFile(t *testing.T, to string, lastBackupedVersion uint64) {
-	backupInfo := executor.LastBackupInfo{
-		LastBackupedVersion: lastBackupedVersion,
-	}
-	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
-	require.NoError(t, err)
-
-	err = ioutil.WriteFile(to, rawInfo, 0600)
+	cfg.PostProcessBackupCmd = []string{"some command"}
+	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg}, testPulse, db)
 	require.NoError(t, err)
 }
 
 func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configuration.Ledger {
-
-	lastBackupedVersionFile := badgerDir + "/last_version.json"
-	addLastBackupFile(t, lastBackupedVersionFile, 200)
 
 	tmpDir := "/tmp/BKP/"
 	cfg := configuration.Backup{
@@ -118,7 +91,6 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configura
 		BackupFile:           "incr.bkp",
 		Enabled:              true,
 		PostProcessBackupCmd: []string{"ls"},
-		LastBackupInfoFile:   lastBackupedVersionFile,
 	}
 
 	err := os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -222,30 +194,6 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 
 	err = bm.MakeBackup(context.Background(), testPulse+1)
 	require.Contains(t, err.Error(), "no backup confirmation")
-}
-
-func TestBackuper_CantMoveToTargetDir(t *testing.T) {
-	testPulse := insolar.GenesisPulse.PulseNumber
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0, db)
-	require.NoError(t, err)
-	// Create dir to fail move operation
-	_, err = os.Create(filepath.Join(cfg.Backup.TargetDirectory, fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse)))
-	require.NoError(t, err)
-
-	err = bm.MakeBackup(context.Background(), testPulse)
-	require.Contains(t, err.Error(), "can't move")
 }
 
 func TestBackuper_Backup_OldPulse(t *testing.T) {
