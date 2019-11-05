@@ -93,10 +93,6 @@ type Backup struct {
 	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
 	BackupWaitPeriod uint
 
-	// LastBackupInfoFile contains info about last backup. Must exist and lie inside Storage.DataDirectory
-	// Is's a full path.
-	LastBackupInfoFile string
-
 	// PostProcessBackupCmd - command which will be invoked after creating backup. It might be used to
 	// send backup to remote node and do some external checks. If everything is ok, this command must create ConfirmFile
 	// It will be invoked with environment variable 'INSOLAR_CURRENT_BACKUP_DIR'
@@ -130,13 +126,12 @@ func NewLedger() Ledger {
 		LightChainLimit: 5, // 5 pulses
 
 		Backup: Backup{
-			Enabled:            false,
-			DirNameTemplate:    "pulse-%d",
-			BackupWaitPeriod:   60,
-			MetaInfoFile:       "meta.json",
-			BackupFile:         "incr.bkp",
-			ConfirmFile:        "BACKUPED",
-			LastBackupInfoFile: dataDir + "/last_backup_info.json",
+			Enabled:          false,
+			DirNameTemplate:  "pulse-%d",
+			BackupWaitPeriod: 60,
+			MetaInfoFile:     "meta.json",
+			BackupFile:       "incr.bkp",
+			ConfirmFile:      "BACKUPED",
 		},
 
 		CleanerDelay:             3,    // 3 pulses
