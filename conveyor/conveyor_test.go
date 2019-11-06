@@ -27,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/sworker"
-	"github.com/insolar/insolar/conveyor/tools"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/pulse"
 )
@@ -52,12 +51,11 @@ func TestConveyor(t *testing.T) {
 		}
 	}
 
-	conveyor := NewPulseConveyor(context.Background(), machineConfig, factoryFn, machineConfig, nil)
+	conveyor := NewPulseConveyor(context.Background(), machineConfig, 100*time.Millisecond, factoryFn, machineConfig, nil)
 
 	pd := pulse.NewFirstPulsarData(10, longbits.Bits256{})
-	signal := conveyor.externalSignal
 
-	go worker(conveyor, signal)
+	go worker(conveyor)
 
 	require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
 	eventCount := 0
@@ -103,25 +101,7 @@ func stepLogger(ctx context.Context, data *smachine.StepLoggerData) {
 		migrate, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
 }
 
-func worker(conveyor *PulseConveyor, signal tools.VersionedSignal) {
+func worker(conveyor *PulseConveyor) {
 	workerFactory := sworker.NewAttachableSimpleSlotWorker()
-	sm := conveyor.slotMachine
-	for {
-		var (
-			repeatNow    bool
-			nextPollTime time.Time
-		)
-		workerFactory.AttachTo(sm, signal.Mark(), 100, func(worker smachine.AttachedSlotWorker) {
-			repeatNow, nextPollTime = sm.ScanOnce(0, worker)
-		})
-
-		if repeatNow {
-			continue
-		}
-		if !nextPollTime.IsZero() {
-			time.Sleep(time.Until(nextPollTime))
-		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
+	conveyor.RunOnWorker(workerFactory, nil)
 }

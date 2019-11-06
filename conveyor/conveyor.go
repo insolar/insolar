@@ -405,7 +405,7 @@ func (p *PulseConveyor) RunOnWorker(w smachine.AttachableSlotWorker, stopSignal 
 			repeatNow    bool
 			nextPollTime time.Time
 		)
-		w.AttachTo(p.slotMachine, p.externalSignal.Mark(), 0, func(worker smachine.AttachedSlotWorker) {
+		w.AttachTo(p.slotMachine, p.externalSignal.Mark(), math.MaxUint32, func(worker smachine.AttachedSlotWorker) {
 			repeatNow, nextPollTime = p.slotMachine.ScanOnce(0, worker)
 		})
 
