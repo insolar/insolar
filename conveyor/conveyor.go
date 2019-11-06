@@ -31,7 +31,7 @@ type PreparedState = struct{}
 type InputEvent = interface{}
 type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
-type AddInputer interface {
+type EventInputer interface {
 	AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error
 }
 

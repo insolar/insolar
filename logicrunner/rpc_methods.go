@@ -55,7 +55,7 @@ func getRequestReference(info *payload.RequestInfo) *insolar.Reference {
 
 func NewRPCMethods(
 	dc artifacts.DescriptorsCache,
-	pc conveyor.AddInputer,
+	pc conveyor.EventInputer,
 	pa pulse.Accessor,
 ) *RPCMethods {
 	return &RPCMethods{
@@ -122,13 +122,13 @@ func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *r
 
 type executionProxyImplementation struct {
 	dc       artifacts.DescriptorsCache
-	conveyor conveyor.AddInputer
+	conveyor conveyor.EventInputer
 	pa       pulse.Accessor
 }
 
 func NewExecutionProxyImplementation(
 	dc artifacts.DescriptorsCache,
-	conveyor conveyor.AddInputer,
+	conveyor conveyor.EventInputer,
 	pa pulse.Accessor,
 ) ProxyImplementation {
 	return &executionProxyImplementation{
