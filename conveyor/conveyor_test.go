@@ -87,16 +87,21 @@ func TestConveyor(t *testing.T) {
 	time.Sleep(time.Hour)
 }
 
-func stepLogger(ctx context.Context, data *smachine.StepLoggerData) {
-	migrate := ""
-	if data.Flags&smachine.StepLoggerMigrate != 0 {
-		migrate = "migrate "
+func stepLogger(_ context.Context, data *smachine.StepLoggerData) {
+	if data.Flags&smachine.StepLoggerInternal != 0 {
+		fmt.Printf("%s: %03d @ %03d: internal %s current=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
+			data.UpdateType, data.CurrentStep.Transition, data.SM, data.SM)
+		return
 	}
 
+	special := ""
+	if data.Flags&smachine.StepLoggerMigrate != 0 {
+		special = "migrate "
+	}
 	detached := ""
 	if data.Flags&smachine.StepLoggerDetached != 0 {
 		detached = "(detached)"
 	}
 	fmt.Printf("%s: %03d @ %03d: %s%s%s current=%p next=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
-		migrate, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
+		special, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
 }

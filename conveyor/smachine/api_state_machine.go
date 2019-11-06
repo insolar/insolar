@@ -71,6 +71,9 @@ type StepLoggerFlags uint8
 const (
 	StepLoggerMigrate StepLoggerFlags = 1 << iota
 	StepLoggerDetached
+
+	// logger should not log these without necessity
+	StepLoggerInternal
 )
 
 type StepLoggerData struct {
@@ -79,6 +82,7 @@ type StepLoggerData struct {
 	NextStep    SlotStep
 	UpdateType  string
 	Flags       StepLoggerFlags
+	Error       error
 
 	// NB! This field can't be provided by SlotMachine and will be nil
 	// but it can be filled in by custom wrappers of StepLoggerFunc

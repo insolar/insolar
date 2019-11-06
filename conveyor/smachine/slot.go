@@ -446,6 +446,19 @@ func (s *Slot) decAsyncCount() {
 	s.asyncCallCount--
 }
 
+func (s *Slot) logInternal(link StepLink, updateType string, err error) {
+	if s.stepLogger == nil {
+		return
+	}
+	stepData := StepLoggerData{Flags: StepLoggerInternal, StepNo: link, CurrentStep: s.step, Error: err, UpdateType: updateType}
+	func() {
+		defer func() {
+			_ = recover() // we can't fail here
+		}()
+		s.stepLogger(&stepData)
+	}()
+}
+
 func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags StepLoggerFlags) {
 	stepData := StepLoggerData{StepNo: s.NewStepLink(), Flags: flags, CurrentStep: s.step, NextStep: stateUpdate.step}
 

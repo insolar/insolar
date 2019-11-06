@@ -710,6 +710,7 @@ func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, e
 		}
 	}
 
+	slot.logInternal(link, "recycle", err)
 	m._recycleSlot(slot)
 }
 
