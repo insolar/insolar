@@ -168,7 +168,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	}
 
 	lr.ObjectCatalog = &sm_object.LocalObjectCatalog{}
-	lr.ArtifactClientService = s_artifact.CreateArtifactClientService(lr.Sender)
+	lr.ArtifactClientService = s_artifact.CreateArtifactClientService(lr.ArtifactManager)
 	lr.ContractRequesterService = s_contract_requester.CreateContractRequesterService(lr.ContractRequester)
 	lr.ContractRunnerService = s_contract_runner.CreateContractRunnerService(lr.LogicExecutor, lr.MachinesManager)
 	lr.SenderService = s_sender.CreateSenderService(lr.Sender, lr.PulseAccessor)

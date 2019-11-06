@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	common2 "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
 	"github.com/insolar/insolar/logicrunner/sm_object"
@@ -68,7 +69,9 @@ func (s *ExecuteIncomingRequest) stepWaitObjectReady(ctx smachine.ExecutionConte
 			semaphoreReadyToWork smachine.SyncLink
 		)
 
+		goCtx := ctx.GetContext()
 		stateUpdate := s.useSharedObjectInfo(ctx, func(state *sm_object.SharedObjectState) {
+			inslogger.FromContext(goCtx).Error("useSharedObjectInfo after")
 			readyToWork = state.IsReadyToWork
 			semaphoreReadyToWork = state.SemaphoreReadyToWork
 
@@ -82,6 +85,8 @@ func (s *ExecuteIncomingRequest) stepWaitObjectReady(ctx smachine.ExecutionConte
 		if !readyToWork && ctx.AcquireForThisStep(semaphoreReadyToWork).IsNotPassed() {
 			return ctx.Sleep().ThenRepeat()
 		}
+	} else {
+		inslogger.FromContext(ctx.GetContext()).Error("s deduplicated result is not nil: %#v", s.DeduplicatedResult)
 	}
 
 	return ctx.Jump(s.stepClassifyCall)
@@ -105,9 +110,6 @@ func (s *ExecuteIncomingRequest) stepClassifyCall(ctx smachine.ExecutionContext)
 		return ctx.ReplaceWith(&ExecuteIncomingMutableRequest{ExecuteIncomingCommon: common})
 	case s_contract_runner.ContractCallImmutable:
 		return ctx.ReplaceWith(&ExecuteIncomingImmutableRequest{ExecuteIncomingCommon: common})
-	case s_contract_runner.ContractCallSaga: // shouldn't be called
-		panic("unreachable")
-		return ctx.ReplaceWith(&ExecuteIncomingSagaRequest{ExecuteIncomingCommon: common})
 	default:
 		panic("unreachable")
 	}

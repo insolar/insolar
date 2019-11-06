@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
@@ -34,7 +35,7 @@ import (
 )
 
 type ExecuteIncomingCommon struct {
-	objectCatalog  sm_object.LocalObjectCatalog
+	objectCatalog  *sm_object.LocalObjectCatalog
 	pulseSlot      *conveyor.PulseSlot
 	ArtifactClient *s_artifact.ArtifactClientServiceAdapter
 	Sender         *s_sender.SenderServiceAdapter
@@ -71,6 +72,8 @@ func (s *ExecuteIncomingCommon) InjectDependencies(sm smachine.StateMachine, slo
 }
 
 func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContext, cb func(state *sm_object.SharedObjectState)) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
+
 	if s.sharedStateLink.IsZero() {
 		objectPair := sm_object.ObjectPair{
 			Pulse:           s.pulseSlot.PulseData().PulseNumber,
@@ -81,12 +84,17 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 
 	switch s.sharedStateLink.Prepare(cb).TryUse(ctx).GetDecision() {
 	case smachine.NotPassed:
+		inslogger.FromContext(goCtx).Error("NotPassed")
 		return ctx.WaitShared(s.sharedStateLink.SharedDataLink).ThenRepeat()
 	case smachine.Impossible:
+		inslogger.FromContext(goCtx).Error("Impossible")
 		// the holder of the sharedState is stopped
 		return ctx.Stop()
+	case smachine.Passed:
+		inslogger.FromContext(goCtx).Error("Passed")
+	default:
+		panic("unknown state from TryUse")
 	}
-
 	return smachine.StateUpdate{}
 }
 

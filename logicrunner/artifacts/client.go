@@ -599,6 +599,9 @@ func (m *client) ActivatePrototype(
 
 // pulse returns current PulseNumber for artifact manager
 func (m *client) pulse(ctx context.Context) (insolar.PulseNumber, error) {
+	if m.PulseAccessor == nil || m.PulseAccessor == insPulse.Accessor(nil) {
+		panic("123")
+	}
 	pulseObject, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return pulse.Unknown, err

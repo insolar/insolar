@@ -153,8 +153,9 @@ func (s *StateMachineCallMethod) parseRequestInfo(info *payload.RequestInfo, err
 func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	incoming := s.Payload.Request
 
+	goCtx := ctx.GetContext()
 	return s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		info, err := svc.RegisterIncomingRequest(ctx.GetContext(), incoming)
+		info, err := svc.RegisterIncomingRequest(goCtx, incoming)
 
 		return func(ctx smachine.AsyncResultContext) {
 			s.parseRequestInfo(info, err)
@@ -172,16 +173,14 @@ func (s *StateMachineCallMethod) stepSendRequestID(ctx smachine.ExecutionContext
 	}
 
 	messageMeta := s.Meta
-	response := &reply.RegisterRequest{
-		Request: s.RequestReference,
-	}
+	response := &reply.RegisterRequest{Request: s.RequestReference}
+	goCtx := ctx.GetContext()
 
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
-		goctx := ctx.GetContext()
 
-		msg := bus.ReplyAsMessage(goctx, response)
-		svc.Reply(goctx, *messageMeta, msg)
-	}).Send()
+		msg := bus.ReplyAsMessage(goCtx, response)
+		svc.Reply(goCtx, *messageMeta, msg)
+	}).DelayedSend()
 
 	return ctx.Jump(s.stepExecute)
 }
@@ -199,7 +198,7 @@ func (s *StateMachineCallMethod) stepExecute(ctx smachine.ExecutionContext) smac
 	)
 
 	_ = ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &sm_execute_request.ExecuteIncomingMutableRequest{
+		return &sm_execute_request.ExecuteIncomingRequest{
 			ExecuteIncomingCommon: sm_execute_request.ExecuteIncomingCommon{
 				RequestReference:       requestReference,
 				RequestObjectReference: requestObjectReference,
@@ -222,9 +221,10 @@ func (s *StateMachineCallMethod) stepError(ctx smachine.ExecutionContext) smachi
 	err := s.externalError
 	messageMeta := s.Meta
 
+	goCtx := ctx.GetContext()
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
-		bus.ReplyError(ctx.GetContext(), svc, *messageMeta, err)
-	}).Send()
+		bus.ReplyError(goCtx, svc, *messageMeta, err)
+	}).DelayedSend()
 
 	return ctx.Error(s.externalError)
 }
@@ -240,13 +240,12 @@ func (s *StateMachineCallMethod) migrationPulseChanged(ctx smachine.MigrationCon
 func (s *StateMachineCallMethod) stepPulseChanged(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	messageMeta := s.Meta
 	response := &reply.Error{ErrType: reply.FlowCancelled}
+	goCtx := ctx.GetContext()
 
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
-		goctx := ctx.GetContext()
-
-		msg := bus.ReplyAsMessage(goctx, response)
-		svc.Reply(goctx, *messageMeta, msg)
-	}).Send()
+		msg := bus.ReplyAsMessage(goCtx, response)
+		svc.Reply(goCtx, *messageMeta, msg)
+	}).DelayedSend()
 
 	return ctx.Jump(s.stepDone)
 }
@@ -270,10 +269,11 @@ func (s *StateMachineCallMethod) stepSendRegisteredCall(ctx smachine.ExecutionCo
 		panic("couldn't serialize message: " + err.Error())
 	}
 
+	goCtx := ctx.GetContext()
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
-		_, done := svc.SendRole(ctx.GetContext(), msg, insolar.DynamicRoleVirtualExecutor, s.RequestObjectReference)
+		_, done := svc.SendRole(goCtx, msg, insolar.DynamicRoleVirtualExecutor, s.RequestObjectReference)
 		done()
-	}).Send()
+	}).DelayedSend()
 
 	return ctx.Jump(s.stepDone)
 }

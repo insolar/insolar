@@ -39,20 +39,18 @@ func (s *ExecuteIncomingMutableRequest) GetInitStateFor(smachine.StateMachine) s
 }
 
 func (s *ExecuteIncomingMutableRequest) InjectDependencies(smachine.StateMachine, smachine.SlotLink, *injector.DependencyInjector) {
-	panic("implement me")
 }
 
 func (s *ExecuteIncomingMutableRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	panic("implement me")
+	return nil
 }
 
 func (s *ExecuteIncomingMutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
 	return nil, false
-
 }
 
 func (s *ExecuteIncomingMutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	panic("implement me")
+	return false
 }
 
 /* -------- Instance ------------- */

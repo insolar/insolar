@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
@@ -65,7 +64,7 @@ type artifactClientService struct {
 	artifacts.Client
 }
 
-func CreateArtifactClientService(sender bus.Sender) *ArtifactClientServiceAdapter {
+func CreateArtifactClientService(client artifacts.Client) *ArtifactClientServiceAdapter {
 	ctx := context.Background()
 	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
 
@@ -73,7 +72,7 @@ func CreateArtifactClientService(sender bus.Sender) *ArtifactClientServiceAdapte
 
 	return &ArtifactClientServiceAdapter{
 		svc: artifactClientService{
-			Client: artifacts.NewClient(sender),
+			Client: client,
 		},
 		exec: smachine.NewExecutionAdapter("ArtifactClientService", ae),
 	}

@@ -45,6 +45,11 @@ func (c *conveyorDispatcher) BeginPulse(ctx context.Context, pulseObject insolar
 func (c *conveyorDispatcher) ClosePulse(ctx context.Context, pulseObject insolar.Pulse) {
 }
 
+type DispatcherMessage struct {
+	MessageMeta message.Metadata
+	PayloadMeta *payload.Meta
+}
+
 func (c *conveyorDispatcher) Process(msg *message.Message) error {
 	pl, err := payload.Unmarshal(msg.Payload)
 	if err != nil {
@@ -55,7 +60,10 @@ func (c *conveyorDispatcher) Process(msg *message.Message) error {
 		return errors.Errorf("unexpected type: %T (expected payload.Meta)", pl)
 	}
 
-	return c.conveyor.AddInput(context.Background(), meta.Pulse, meta)
+	return c.conveyor.AddInput(context.Background(), meta.Pulse, &DispatcherMessage{
+		MessageMeta: msg.Metadata,
+		PayloadMeta: meta,
+	})
 }
 
 func NewConveyorDispatcher(conveyor *conveyor.PulseConveyor) dispatcher.Dispatcher {
