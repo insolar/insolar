@@ -27,36 +27,36 @@ func NewVersionedSignal() VersionedSignal {
 }
 
 type VersionedSignal struct {
-	signalVersion unsafe.Pointer // atomic *SignalVersion
+	signalVersion *SignalVersion // atomic
+}
+
+func (p *VersionedSignal) _signalVersion() *unsafe.Pointer {
+	return (*unsafe.Pointer)((unsafe.Pointer)(&p.signalVersion))
 }
 
 func (p *VersionedSignal) NextBroadcast() {
-	sv := (*SignalVersion)(atomic.SwapPointer(&p.signalVersion, nil))
-	if sv != nil {
-		sv.signal()
-	}
+	sv := (*SignalVersion)(atomic.SwapPointer(p._signalVersion(), nil))
+	sv.signal()
 }
 
 func (p *VersionedSignal) BroadcastAndMark() *SignalVersion {
 	nsv := newSignalVersion()
-	sv := (*SignalVersion)(atomic.SwapPointer(&p.signalVersion, (unsafe.Pointer)(nsv)))
-	if sv != nil {
-		sv.signal()
-	}
+	sv := (*SignalVersion)(atomic.SwapPointer(p._signalVersion(), (unsafe.Pointer)(nsv)))
+	sv.signal()
 	return nsv
 }
 
 func (p *VersionedSignal) Mark() *SignalVersion {
 	var nsv *SignalVersion
 	for {
-		sv := (*SignalVersion)(atomic.LoadPointer(&p.signalVersion))
+		sv := (*SignalVersion)(atomic.LoadPointer(p._signalVersion()))
 		switch {
 		case sv != nil:
 			return sv
 		case nsv == nil: // avoid repetitive new
 			nsv = newSignalVersion()
 		}
-		if atomic.CompareAndSwapPointer(&p.signalVersion, nil, (unsafe.Pointer)(nsv)) {
+		if atomic.CompareAndSwapPointer(p._signalVersion(), nil, (unsafe.Pointer)(nsv)) {
 			return nsv
 		}
 	}
@@ -76,19 +76,28 @@ type signalChannel = chan struct{}
 
 type SignalVersion struct {
 	next *SignalVersion
-	wg   sync.WaitGroup
-	c    unsafe.Pointer // atomic *signalChannel
+	wg   sync.WaitGroup // is cheaper than channel and doesn't need additional heap allocation
+	c    *signalChannel // atomic
+}
+
+func (p *SignalVersion) _signalChannel() *unsafe.Pointer {
+	return (*unsafe.Pointer)((unsafe.Pointer)(&p.c))
+}
+
+func (p *SignalVersion) getSignalChannel() *signalChannel {
+	return (*signalChannel)(atomic.LoadPointer(p._signalChannel()))
 }
 
 func (p *SignalVersion) signal() {
-	if p.next != nil {
-		p.next.signal() // older signals must fire first
+	if p == nil {
+		return
 	}
+	p.next.signal() // older signals must fire first
 
 	var closedSignal *signalChannel // explicit type decl to avoid passing of something wrong into unsafe.Pointer conversion
 	closedSignal = &closedChan
 
-	atomic.CompareAndSwapPointer(&p.c, nil, (unsafe.Pointer)(closedSignal))
+	atomic.CompareAndSwapPointer(p._signalChannel(), nil, (unsafe.Pointer)(closedSignal))
 	p.wg.Done()
 }
 
@@ -114,15 +123,14 @@ func (p *SignalVersion) Channel() <-chan struct{} {
 
 	var wcp *signalChannel
 	for {
-		sc := (*signalChannel)(atomic.LoadPointer(&p.c))
-		switch {
+		switch sc := p.getSignalChannel(); {
 		case sc != nil:
 			return *sc
 		case wcp == nil:
 			wcp = new(signalChannel)
 		}
 
-		if atomic.CompareAndSwapPointer(&p.c, nil, (unsafe.Pointer)(wcp)) {
+		if atomic.CompareAndSwapPointer(p._signalChannel(), nil, (unsafe.Pointer)(wcp)) {
 			go func() {
 				p.wg.Wait()
 				close(*wcp)
@@ -137,7 +145,7 @@ func (p *SignalVersion) HasSignal() bool {
 		return true
 	}
 
-	sc := (*signalChannel)(atomic.LoadPointer(&p.c))
+	sc := p.getSignalChannel()
 	if sc == nil {
 		return false
 	}
