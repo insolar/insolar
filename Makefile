@@ -89,7 +89,7 @@ pre-build: ensure install-deps generate regen-builtin ## install dependencies, (
 
 .PHONY: generate
 generate: ## run go generate
-	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+	go generate -x $(ALL_PACKAGES)
 
 .PHONY: test_git_no_changes
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
