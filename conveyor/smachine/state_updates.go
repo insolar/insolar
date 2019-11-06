@@ -65,7 +65,7 @@ func init() {
 		},
 
 		stateUpdInternalRepeatNow: {
-			name:   "internalRepeat",
+			name:   "repeatNow",
 			filter: updCtxInternal, // can't be created by a template
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				if slot.isInQueue() {

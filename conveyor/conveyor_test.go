@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/conveyor/sworker"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/pulse"
 )
@@ -55,14 +54,14 @@ func TestConveyor(t *testing.T) {
 
 	pd := pulse.NewFirstPulsarData(10, longbits.Bits256{})
 
-	go worker(conveyor)
+	conveyor.StartWorker(nil, nil)
 
 	require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
 	eventCount := 0
 
 	time.Sleep(100 * time.Millisecond)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 3; i++ {
 		pd = pd.CreateNextPulsarPulse(10, func() longbits.Bits256 {
 			return longbits.Bits256{}
 		})
@@ -84,6 +83,7 @@ func TestConveyor(t *testing.T) {
 		time.Sleep(time.Second)
 	}
 	fmt.Println("======================")
+	conveyor.StopNoWait()
 	time.Sleep(time.Hour)
 }
 
@@ -99,9 +99,4 @@ func stepLogger(ctx context.Context, data *smachine.StepLoggerData) {
 	}
 	fmt.Printf("%s: %03d @ %03d: %s%s%s current=%p next=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
 		migrate, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
-}
-
-func worker(conveyor *PulseConveyor) {
-	workerFactory := sworker.NewAttachableSimpleSlotWorker()
-	conveyor.RunOnWorker(workerFactory, nil)
 }

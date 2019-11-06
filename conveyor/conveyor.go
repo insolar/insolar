@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/sworker"
 	"github.com/insolar/insolar/conveyor/tools"
 	"github.com/insolar/insolar/pulse"
 )
@@ -94,8 +95,11 @@ type PulseConveyor struct {
 	// immutable, set at construction
 	externalSignal tools.VersionedSignal
 	internalSignal tools.VersionedSignal
-	slotMachine    *smachine.SlotMachine
-	pdm            PulseDataManager
+
+	slotMachine   *smachine.SlotMachine
+	machineWorker smachine.AttachableSlotWorker
+
+	pdm PulseDataManager
 
 	// mutable, set under SlotMachine synchronization
 	presentMachine *PulseSlotMachine
@@ -390,30 +394,53 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr p
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
 }
 
-func (p *PulseConveyor) RunOnWorker(w smachine.AttachableSlotWorker, stopSignal <-chan struct{}) {
+func (p *PulseConveyor) StopNoWait() {
+	p.slotMachine.Stop()
+}
 
-	go func() {
-		select {
-		case <-stopSignal:
-			p.externalSignal.NextBroadcast()
-			return
-		}
-	}()
+func (p *PulseConveyor) StartWorker(emergencyStop <-chan struct{}, completedFn func()) {
+
+	if p.machineWorker != nil {
+		panic("illegal state")
+	}
+	p.machineWorker = sworker.NewAttachableSimpleSlotWorker()
+	go p.runWorker(emergencyStop, completedFn)
+}
+
+func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, completedFn func()) {
+	if emergencyStop != nil {
+		go func() {
+			select {
+			case <-emergencyStop:
+				p.slotMachine.Stop()
+				p.externalSignal.NextBroadcast()
+				return
+			}
+		}()
+	}
+
+	if completedFn != nil {
+		defer completedFn()
+	}
 
 	for {
 		var (
 			repeatNow    bool
 			nextPollTime time.Time
 		)
-		w.AttachTo(p.slotMachine, p.externalSignal.Mark(), math.MaxUint32, func(worker smachine.AttachedSlotWorker) {
-			repeatNow, nextPollTime = p.slotMachine.ScanOnce(0, worker)
+		p.machineWorker.AttachTo(p.slotMachine, p.externalSignal.Mark(), math.MaxUint32, func(worker smachine.AttachedSlotWorker) {
+			repeatNow, nextPollTime = p.slotMachine.ScanOnce(smachine.ScanDefault, worker)
 		})
 
 		select {
-		case <-stopSignal:
+		case <-emergencyStop:
 			return
 		default:
 			// pass
+		}
+
+		if !p.slotMachine.IsActive() {
+			break
 		}
 
 		if repeatNow {
@@ -426,10 +453,13 @@ func (p *PulseConveyor) RunOnWorker(w smachine.AttachableSlotWorker, stopSignal 
 		}
 
 		select {
-		case <-stopSignal:
+		case <-emergencyStop:
 			return
 		case <-time.After(timeToWait):
 			// pass
 		}
 	}
+
+	p.slotMachine.RunToStop(p.machineWorker, tools.NewNeverSignal())
+	p.presentMachine = nil
 }

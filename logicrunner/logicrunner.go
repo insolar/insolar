@@ -81,7 +81,7 @@ type LogicRunner struct {
 	ShutdownFlag     shutdown.Flag
 
 	Conveyor       *conveyor.PulseConveyor
-	ConveyorWorker *lrCommon.ConveyorWorker
+	ConveyorWorker lrCommon.ConveyorWorker
 
 	ObjectCatalog            *sm_object.LocalObjectCatalog
 	ArtifactClientService    *s_artifact.ArtifactClientServiceAdapter

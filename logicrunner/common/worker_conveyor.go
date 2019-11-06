@@ -17,27 +17,34 @@
 package common
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/conveyor"
-	"github.com/insolar/insolar/conveyor/sworker"
 )
 
 type ConveyorWorker struct {
-	stoppedChan chan struct{}
+	conveyor *conveyor.PulseConveyor
+	stopped  sync.WaitGroup
 }
 
 func (w *ConveyorWorker) Stop() {
-	close(w.stoppedChan)
+	w.conveyor.StopNoWait()
+	w.stopped.Wait()
 }
 
-func (w *ConveyorWorker) AttachTo(
-	conveyor *conveyor.PulseConveyor,
-) {
-	workerFactory := sworker.NewAttachableSimpleSlotWorker()
-	go conveyor.RunOnWorker(workerFactory, w.stoppedChan)
-}
-
-func NewConveyorWorker() *ConveyorWorker {
-	return &ConveyorWorker{
-		stoppedChan: make(chan struct{}),
+func (w *ConveyorWorker) AttachTo(conveyor *conveyor.PulseConveyor) {
+	if conveyor == nil {
+		panic("illegal value")
 	}
+	if w.conveyor != nil {
+		panic("illegal state")
+	}
+	w.conveyor = conveyor
+	conveyor.StartWorker(nil, func() {
+		w.stopped.Done()
+	})
+}
+
+func NewConveyorWorker() ConveyorWorker {
+	return ConveyorWorker{}
 }
