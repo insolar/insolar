@@ -79,7 +79,7 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/install_build_tools.sh
+	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
 install-deps: ensure install-build-tools ## install dep and codegen tools
