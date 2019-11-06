@@ -74,7 +74,7 @@ func (p *PulseSlotMachine) activate(workerCtx context.Context,
 		p.innerMachine.AddDependency(&p.pulseSlot)
 	}
 
-	p.selfLink = addFn(workerCtx, p, smachine.CreateDefaultValues{})
+	p.selfLink = addFn(workerCtx, p, smachine.CreateDefaultValues{TerminationHandler: p.onTerminate})
 }
 
 func (p *PulseSlotMachine) setFuture(pd pulse.Data) {
@@ -139,7 +139,6 @@ func (p *PulseSlotMachine) GetInitStateFor(sm smachine.StateMachine) smachine.In
 func (p *PulseSlotMachine) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
 
 	p.innerWorker = sworker.NewAttachableSimpleSlotWorker()
-
 	ctx.SetDefaultErrorHandler(p.errorHandler)
 	switch p.pulseSlot.State() {
 	case Future:
@@ -160,15 +159,13 @@ func (p *PulseSlotMachine) stepInit(ctx smachine.InitializationContext) smachine
 }
 
 func (p *PulseSlotMachine) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	p._finalize()
 	return ctx.Stop()
 }
 
 func (p *PulseSlotMachine) errorHandler(ctx smachine.FailureContext) {
-	p._finalize()
 }
 
-func (p *PulseSlotMachine) _finalize() {
+func (p *PulseSlotMachine) onTerminate(context.Context, smachine.TerminationData) {
 	p.innerMachine.RunToStop(p.innerWorker, tools.NewNeverSignal())
 	if p.finalizeFn != nil {
 		p.finalizeFn()

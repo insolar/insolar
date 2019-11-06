@@ -82,6 +82,7 @@ func TestConveyor(t *testing.T) {
 
 		time.Sleep(time.Second)
 	}
+	time.Sleep(100 * time.Millisecond)
 	fmt.Println("======================")
 	conveyor.StopNoWait()
 	time.Sleep(time.Hour)
