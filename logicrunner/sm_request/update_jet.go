@@ -22,20 +22,23 @@ import (
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/logicrunner/s_jet_storage"
 )
 
 type StateMachineUpdateJet struct {
 	// input arguments
 	Meta    *payload.Meta
 	Payload *payload.UpdateJet
+
+	jetStorage *s_jet_storage.JetStorageService
 }
 
 var declUpdateJet smachine.StateMachineDeclaration = declarationUpdateJet{}
 
 type declarationUpdateJet struct{}
 
-func (declarationUpdateJet) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationUpdateJet) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationUpdateJet) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

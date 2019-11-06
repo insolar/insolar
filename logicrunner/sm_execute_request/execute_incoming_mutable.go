@@ -46,8 +46,9 @@ func (s *ExecuteIncomingMutableRequest) GetShadowMigrateFor(smachine.StateMachin
 	panic("implement me")
 }
 
-func (s *ExecuteIncomingMutableRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (s *ExecuteIncomingMutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
+
 }
 
 func (s *ExecuteIncomingMutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {

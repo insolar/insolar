@@ -78,21 +78,14 @@ type ServiceNetwork struct {
 	cm  *component.Manager
 
 	// dependencies
-	CertificateManager  insolar.CertificateManager         `inject:""`
-	PulseManager        insolar.PulseManager               `inject:""`
-	CryptographyService insolar.CryptographyService        `inject:""`
-	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
-	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	ContractRequester   insolar.ContractRequester          `inject:""`
+	CertificateManager insolar.CertificateManager `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
 	RPC                controller.RPCController   `inject:"subcomponent"`
-	TransportFactory   transport.Factory          `inject:"subcomponent"`
 	PulseAccessor      storage.PulseAccessor      `inject:"subcomponent"`
-	PulseAppender      storage.PulseAppender      `inject:"subcomponent"`
 	NodeKeeper         network.NodeKeeper         `inject:"subcomponent"`
 	TerminationHandler network.TerminationHandler `inject:"subcomponent"`
 

@@ -34,8 +34,8 @@ var declExecutorResults smachine.StateMachineDeclaration = declarationExecutorRe
 
 type declarationExecutorResults struct{}
 
-func (declarationExecutorResults) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationExecutorResults) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationExecutorResults) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

@@ -341,7 +341,7 @@ func BytesToGroupedString(s []byte, prefix string, separator string, everyN int)
 func copyToFixedBits(dst, src []byte, expectedSize int) {
 	size := len(src)
 	if size != expectedSize {
-		panic(fmt.Sprintf("Length missmatch, expected: %d, actual: %d", expectedSize, size))
+		panic(fmt.Sprintf("Length mismatch, expected: %d, actual: %d", expectedSize, size))
 	}
 
 	copy(dst, src)

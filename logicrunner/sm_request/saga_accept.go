@@ -52,8 +52,8 @@ var declSagaAccept smachine.StateMachineDeclaration = declarationSagaAccept{}
 
 type declarationSagaAccept struct{}
 
-func (declarationSagaAccept) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationSagaAccept) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationSagaAccept) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

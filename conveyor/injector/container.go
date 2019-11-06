@@ -1,6 +1,8 @@
 package injector
 
-import "sync"
+import (
+	"sync"
+)
 
 func NewRegistry(m map[string]interface{}) ReadOnlyContainer {
 	return NewRegistryWithParent(nil, m)

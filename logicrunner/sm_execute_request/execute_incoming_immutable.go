@@ -46,8 +46,8 @@ func (s *ExecuteIncomingImmutableRequest) GetShadowMigrateFor(smachine.StateMach
 	return nil
 }
 
-func (s *ExecuteIncomingImmutableRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (s *ExecuteIncomingImmutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (s *ExecuteIncomingImmutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {

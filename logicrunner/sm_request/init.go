@@ -17,10 +17,12 @@
 package sm_request
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func HandlerFactoryMeta(messageMeta *payload.Meta) smachine.CreateFunc {
@@ -29,6 +31,8 @@ func HandlerFactoryMeta(messageMeta *payload.Meta) smachine.CreateFunc {
 	if err != nil {
 		panic(fmt.Sprintf("failed to unmarshal payload type: %s", err.Error()))
 	}
+
+	inslogger.FromContext(context.Background()).Error("processing message %s", payloadType.String())
 
 	switch payloadType {
 	case payload.TypeCallMethod:

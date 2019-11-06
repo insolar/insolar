@@ -19,7 +19,11 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,7 +33,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/conveyor"
-	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -50,6 +53,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_contract_requester"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
+	"github.com/insolar/insolar/logicrunner/s_jet_storage"
 	"github.com/insolar/insolar/logicrunner/s_sender"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/sm_object"
@@ -76,12 +80,15 @@ type LogicRunner struct {
 	FlowDispatcher   dispatcher.Dispatcher
 	ShutdownFlag     shutdown.Flag
 
-	Conveyor                 *conveyor.PulseConveyor
+	Conveyor       *conveyor.PulseConveyor
+	ConveyorWorker *lrCommon.ConveyorWorker
+
 	ObjectCatalog            *sm_object.LocalObjectCatalog
 	ArtifactClientService    *s_artifact.ArtifactClientServiceAdapter
 	ContractRequesterService *s_contract_requester.ContractRequesterServiceAdapter
 	ContractRunnerService    *s_contract_runner.ContractRunnerServiceAdapter
 	SenderService            *s_sender.SenderServiceAdapter
+	JetStorageService        *s_jet_storage.JetStorageServiceAdapter
 
 	Cfg *configuration.LogicRunner
 
@@ -104,6 +111,45 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 
 func (lr *LogicRunner) LRI() {}
 
+func getStepName(_ context.Context, step interface{}) string {
+	fullName := runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name()
+	if fullName != "" && strings.Contains(fullName, ".") {
+		return fullName[strings.LastIndex(fullName, ".")+1:]
+	}
+	return fullName
+}
+
+func stepLogger(ctx context.Context, data *smachine.StepLoggerData) {
+	migrate := ""
+	if data.Flags&smachine.StepLoggerMigrate != 0 {
+		migrate = "migrate "
+	}
+
+	detached := ""
+	if data.Flags&smachine.StepLoggerDetached != 0 {
+		detached = "(detached)"
+	}
+
+	if _, ok := data.SM.(*conveyor.PulseSlotMachine); ok {
+		return
+	}
+
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"machineID": data.StepNo.MachineId(),
+		"slotStep":  fmt.Sprintf("%03d @ %03d", data.StepNo.SlotID(), data.StepNo.StepNo()),
+		"component": "sm",
+		"from":      getStepName(ctx, data.CurrentStep.Transition),
+		"to":        getStepName(ctx, data.NextStep.Transition),
+		"eventType": fmt.Sprintf("%T", data.SM),
+	}).Debug(migrate, data.UpdateType, detached)
+}
+
+func SlotMachineLoggerFactory(ctx context.Context) smachine.StepLoggerFunc {
+	return func(data *smachine.StepLoggerData) {
+		stepLogger(ctx, data)
+	}
+}
+
 func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
 	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
@@ -114,10 +160,11 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 	// configuration steps for slot machine
 	machineConfig := smachine.SlotMachineConfig{
-		SlotPageSize:    1000,
-		PollingPeriod:   500 * time.Millisecond,
-		PollingTruncate: 1 * time.Millisecond,
-		ScanCountLimit:  100000,
+		PollingPeriod:       500 * time.Millisecond,
+		PollingTruncate:     1 * time.Millisecond,
+		SlotPageSize:        1000,
+		ScanCountLimit:      100000,
+		StepLoggerFactoryFn: SlotMachineLoggerFactory,
 	}
 
 	lr.ObjectCatalog = &sm_object.LocalObjectCatalog{}
@@ -125,16 +172,21 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ContractRequesterService = s_contract_requester.CreateContractRequesterService(lr.ContractRequester)
 	lr.ContractRunnerService = s_contract_runner.CreateContractRunnerService(lr.LogicExecutor, lr.MachinesManager)
 	lr.SenderService = s_sender.CreateSenderService(lr.Sender, lr.PulseAccessor)
-
-	di := injector.SyncReadWriteContainer{}
-	di.PutDependency("sm_object.LocalObjectCatalog", lr.ObjectCatalog)
-	di.PutDependency("s_artifact.ArtifactClientServiceAdapter", lr.ArtifactClientService)
-	di.PutDependency("s_contract_requester.ContractRequesterServiceAdapter", lr.ContractRequesterService)
-	di.PutDependency("s_contract_runner.ContractRunnerServiceAdapter", lr.ContractRunnerService)
-	di.PutDependency("s_sender.SenderServiceAdapter", lr.SenderService)
+	lr.JetStorageService = s_jet_storage.CreateJetStorageService(lr.JetStorage)
 
 	defaultHandlers := statemachine_go.DefaultHandlersFactory
-	lr.Conveyor = conveyor.NewPulseConveyor(ctx, machineConfig, defaultHandlers, machineConfig, di)
+	lr.Conveyor = conveyor.NewPulseConveyor(ctx, machineConfig, defaultHandlers, machineConfig, nil)
+	lr.Conveyor.AddDependency(lr.ObjectCatalog)
+	lr.Conveyor.AddDependency(lr.ArtifactClientService)
+	lr.Conveyor.AddDependency(lr.ContractRequesterService)
+	lr.Conveyor.AddDependency(lr.ContractRunnerService)
+	lr.Conveyor.AddDependency(lr.SenderService)
+	lr.Conveyor.AddDependency(lr.JetStorageService)
+
+	lr.ConveyorWorker = lrCommon.NewConveyorWorker()
+	lr.ConveyorWorker.AttachTo(ctx, lr.Conveyor, 100)
+
+	lr.FlowDispatcher = lrCommon.NewConveyorDispatcher(lr.Conveyor)
 
 	rpcMethods := NewRPCMethods(lr.DescriptorsCache, lr.Conveyor, lr.PulseAccessor)
 	lr.rpc = lrCommon.NewRPC(rpcMethods, lr.Cfg)
@@ -194,15 +246,9 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
-	reterr := error(nil)
-	// if lr.OutgoingSender != nil {
-	// 	lr.OutgoingSender.Stop(ctx)
-	// }
-	if err := lr.rpc.Stop(ctx); err != nil {
-		return err
-	}
+	lr.ConveyorWorker.Stop()
 
-	return reterr
+	return lr.rpc.Stop(ctx)
 }
 
 func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
@@ -221,23 +267,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 		span.Finish()
 	}(ctx)
 
-	// err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to close pulse on write controller")
-	// }
-
 	lr.ResultsMatcher.Clear(ctx)
-
-	// messages := lr.StateStorage.OnPulse(ctx, newPulse)
-	// err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to start new pulse on write controller")
-	// }
-
-	// if len(messages) > 0 {
-	// 	go lr.sendOnPulseMessagesAsync(ctx, messages)
-	// }
-
 	lr.stopIfNeeded(ctx)
 
 	return nil
@@ -294,14 +324,6 @@ func contextWithServiceData(ctx context.Context, data *payload.ServiceData) cont
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
 	m := msg.(*payload.ReturnResults)
-	// done, err := lr.WriteController.Begin(ctx, flow.Pulse(ctx))
-	// if err != nil {
-	// 	if err == writecontroller.ErrWriteClosed {
-	// 		return flow.ErrCancelled
-	// 	}
-	// 	return errors.Wrap(err, "couldn't obtain writecontroller lock")
-	// }
-	// defer done()
 
 	lr.ResultsMatcher.AddUnwantedResponse(ctx, *m)
 	return nil

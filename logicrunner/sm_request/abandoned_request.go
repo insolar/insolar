@@ -34,8 +34,8 @@ var declAbandonedRequests smachine.StateMachineDeclaration = declarationAbandone
 
 type declarationAbandonedRequests struct{}
 
-func (declarationAbandonedRequests) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationAbandonedRequests) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationAbandonedRequests) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

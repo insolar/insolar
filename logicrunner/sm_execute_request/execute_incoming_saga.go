@@ -40,8 +40,8 @@ func (s *ExecuteIncomingSagaRequest) GetShadowMigrateFor(smachine.StateMachine) 
 	return nil
 }
 
-func (s *ExecuteIncomingSagaRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (s *ExecuteIncomingSagaRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (s *ExecuteIncomingSagaRequest) IsConsecutive(cur, next smachine.StateFunc) bool {

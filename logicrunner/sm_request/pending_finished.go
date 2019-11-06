@@ -34,8 +34,8 @@ var declPendingFinished smachine.StateMachineDeclaration = declarationPendingFin
 
 type declarationPendingFinished struct{}
 
-func (declarationPendingFinished) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationPendingFinished) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationPendingFinished) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

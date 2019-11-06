@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2019 Insolar Technologies GmbHlf
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ var declStillExecuting smachine.StateMachineDeclaration = declarationStillExecut
 
 type declarationStillExecuting struct{}
 
-func (declarationStillExecuting) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (declarationStillExecuting) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (declarationStillExecuting) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {

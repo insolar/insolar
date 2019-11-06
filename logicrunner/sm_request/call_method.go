@@ -41,7 +41,7 @@ type StateMachineCallMethod struct {
 	Payload *payload.CallMethod
 
 	// injected arguments
-	catalogObj     sm_object.LocalObjectCatalog
+	catalogObj     *sm_object.LocalObjectCatalog
 	artifactClient *s_artifact.ArtifactClientServiceAdapter
 	sender         *s_sender.SenderServiceAdapter
 
@@ -60,14 +60,16 @@ var declCallMethod smachine.StateMachineDeclaration = declarationCallMethod{}
 
 type declarationCallMethod struct{}
 
-func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+func (declarationCallMethod) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
 	return nil, false
 }
 
 func (declarationCallMethod) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	s := sm.(*StateMachineCallMethod)
 
+	injector.MustInject(&s.catalogObj)
 	injector.MustInject(&s.artifactClient)
+	injector.MustInject(&s.sender)
 }
 
 func (declarationCallMethod) IsConsecutive(cur, next smachine.StateFunc) bool {
@@ -150,17 +152,15 @@ func (s *StateMachineCallMethod) parseRequestInfo(info *payload.RequestInfo, err
 
 func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	incoming := s.Payload.Request
-	s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+
+	return s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		info, err := svc.RegisterIncomingRequest(ctx.GetContext(), incoming)
 
 		return func(ctx smachine.AsyncResultContext) {
-			ctx.WakeUp()
 			s.parseRequestInfo(info, err)
 			return
 		}
-	})
-
-	return ctx.Sleep().ThenJumpExt(smachine.SlotStep{
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJumpExt(smachine.SlotStep{
 		Transition: s.stepSendRequestID,
 		Migration:  s.migrationSendRegisteredCall,
 	})
@@ -181,7 +181,7 @@ func (s *StateMachineCallMethod) stepSendRequestID(ctx smachine.ExecutionContext
 
 		msg := bus.ReplyAsMessage(goctx, response)
 		svc.Reply(goctx, *messageMeta, msg)
-	})
+	}).Send()
 
 	return ctx.Jump(s.stepExecute)
 }
@@ -190,6 +190,7 @@ func (s *StateMachineCallMethod) stepExecute(ctx smachine.ExecutionContext) smac
 	ctx.SetDefaultMigration(nil)
 
 	var (
+		meta                   = s.Meta
 		request                = s.Request
 		requestReference       = s.RequestReference
 		requestDeduplicated    = s.RequestDeduplicated
@@ -205,7 +206,7 @@ func (s *StateMachineCallMethod) stepExecute(ctx smachine.ExecutionContext) smac
 				RequestDeduplicated:    requestDeduplicated,
 				Request:                request,
 				DeduplicatedResult:     result,
-				MessageMeta:            s.Meta,
+				MessageMeta:            meta,
 			},
 		}
 	})
@@ -223,7 +224,7 @@ func (s *StateMachineCallMethod) stepError(ctx smachine.ExecutionContext) smachi
 
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
 		bus.ReplyError(ctx.GetContext(), svc, *messageMeta, err)
-	})
+	}).Send()
 
 	return ctx.Error(s.externalError)
 }
@@ -245,7 +246,7 @@ func (s *StateMachineCallMethod) stepPulseChanged(ctx smachine.ExecutionContext)
 
 		msg := bus.ReplyAsMessage(goctx, response)
 		svc.Reply(goctx, *messageMeta, msg)
-	})
+	}).Send()
 
 	return ctx.Jump(s.stepDone)
 }
@@ -272,7 +273,7 @@ func (s *StateMachineCallMethod) stepSendRegisteredCall(ctx smachine.ExecutionCo
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
 		_, done := svc.SendRole(ctx.GetContext(), msg, insolar.DynamicRoleVirtualExecutor, s.RequestObjectReference)
 		done()
-	})
+	}).Send()
 
 	return ctx.Jump(s.stepDone)
 }

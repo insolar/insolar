@@ -123,8 +123,8 @@ func (s *ExecuteOutgoingRequest) GetShadowMigrateFor(smachine.StateMachine) smac
 	return nil
 }
 
-func (s *ExecuteOutgoingRequest) GetStepLogger(context.Context, smachine.StateMachine) smachine.StateMachineStepLoggerFunc {
-	return nil
+func (s *ExecuteOutgoingRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
+	return nil, false
 }
 
 func (s *ExecuteOutgoingRequest) IsConsecutive(cur, next smachine.StateFunc) bool {

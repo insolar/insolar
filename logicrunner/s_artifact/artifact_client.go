@@ -33,16 +33,31 @@ type ArtifactClientServiceAdapter struct {
 	exec smachine.ExecutionAdapter
 }
 
-func (a *ArtifactClientServiceAdapter) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ArtifactClientService)) smachine.SyncCallRequester {
+func (a *ArtifactClientServiceAdapter) PrepareSync(
+	ctx smachine.ExecutionContext,
+	fn func(svc ArtifactClientService),
+) smachine.SyncCallRequester {
 	return a.exec.PrepareSync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
-func (a *ArtifactClientServiceAdapter) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ArtifactClientService) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
+func (a *ArtifactClientServiceAdapter) PrepareAsync(
+	ctx smachine.ExecutionContext,
+	fn func(svc ArtifactClientService) smachine.AsyncResultFunc,
+) smachine.AsyncCallRequester {
 	return a.exec.PrepareAsync(ctx, func(interface{}) smachine.AsyncResultFunc {
 		return fn(a.svc)
+	})
+}
+
+func (a *ArtifactClientServiceAdapter) PrepareNotify(
+	ctx smachine.ExecutionContext,
+	fn func(svc ArtifactClientService),
+) smachine.NotifyRequester {
+	return a.exec.PrepareNotify(ctx, func(interface{}) {
+		fn(a.svc)
 	})
 }
 
@@ -53,6 +68,7 @@ type artifactClientService struct {
 func CreateArtifactClientService(sender bus.Sender) *ArtifactClientServiceAdapter {
 	ctx := context.Background()
 	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
+
 	smachine.StartChannelWorker(ctx, ch, nil)
 
 	return &ArtifactClientServiceAdapter{

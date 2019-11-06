@@ -85,9 +85,8 @@ func (rpc *RPC) Stop(_ context.Context) error {
 	}
 	if rpc.isStarted {
 		rpc.isStarted = false
-		if err := rpc.listener.Close(); err != nil {
-			return err
-		}
+
+		return rpc.listener.Close()
 	}
 	return nil
 }

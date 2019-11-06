@@ -156,6 +156,7 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 	if _, ok := pulseSlotMachine.innerMachine.AddNewByFunc(ctx, createFn, createDefaults); !ok {
 		return fmt.Errorf("ignored event: pn=%v event=%v", targetPN, event)
 	}
+
 	return nil
 }
 
@@ -384,4 +385,12 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr p
 		p.presentMachine.activate(p.workerCtx, ctx.AddNew)
 	}
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
+}
+
+func (p *PulseConveyor) GetSlotMachine() *smachine.SlotMachine {
+	return p.slotMachine
+}
+
+func (p *PulseConveyor) GetExternalSignal() *tools.VersionedSignal {
+	return &p.externalSignal
 }
