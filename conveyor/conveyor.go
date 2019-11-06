@@ -135,12 +135,13 @@ func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event Inp
 		return fmt.Errorf("unrecognized event: pn=%v event=%v", targetPN, event)
 
 	case pulseState == Future:
-		// event for future need special handling
+		// event for future needs special handling - it must wait until the pulse will actually arrive
 		pulseSlotMachine.innerMachine.AddNew(ctx,
 			newFutureEventSM(targetPN, &pulseSlotMachine.pulseSlot, createFn), createDefaults)
 		return nil
 
 	case pulseState == Antique:
+		// Antique events have individual pulse slots, while being executed in a single SlotMachine
 		if cps, ok := p.pdm.getCachedPulseSlot(targetPN); ok {
 			createDefaults.PutOverride(injector.GetDefaultInjectionId(cps), cps)
 			break // add SM
@@ -182,7 +183,7 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 	case !pn.IsTimePulse():
 		return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
 	case pn < presentPN:
-		// this can be either a past/antique slot, or a part of the present range
+		// this can be either be a past/antique slot, or a part of the present range
 		if psm := p.getPulseSlotMachine(pn); psm != nil {
 			return psm, pn, Past, nil
 		}
@@ -210,9 +211,6 @@ func (p *PulseConveyor) mapToPulseSlotMachine(pn pulse.Number) (*PulseSlotMachin
 	case pn < futurePN:
 		return nil, 0, 0, fmt.Errorf("pulse number is unexpected: pn=%v", pn)
 	default: // pn >= futurePN
-		if !pn.IsTimePulse() {
-			return nil, 0, 0, fmt.Errorf("pulse number is invalid: pn=%v", pn)
-		}
 		if !p.pdm.isAllowedFutureSpan(presentPN, futurePN, pn) {
 			return nil, 0, 0, fmt.Errorf("pulse number is too far in future: pn=%v, expected=%v", pn, futurePN)
 		}
@@ -240,8 +238,8 @@ func (p *PulseConveyor) getFuturePulseSlotMachine(presentPN, futurePN pulse.Numb
 	switch {
 	case presentPN.IsUnknown():
 		prevDelta = 0
-	case prevDelta >= math.MaxUint16:
-		prevDelta = math.MaxUint16 - 1
+	case prevDelta > math.MaxUint16:
+		prevDelta = math.MaxUint16
 	}
 
 	psm.setFuture(pulse.NewExpectedPulsarData(futurePN, uint16(prevDelta)))
@@ -290,7 +288,7 @@ func (p *PulseConveyor) sendSignal(fn smachine.MachineCallFunc) error {
 func (p *PulseConveyor) PreparePulseChange(out PreparePulseChangeChannel) error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
 		if p.presentMachine == nil {
-			// wrong - first pulse can only be committed
+			// wrong - first pulse can only be committed but not prepared
 			panic("illegal state")
 		}
 		p.pdm.setPreparingPulse(out)
@@ -303,7 +301,7 @@ func (p *PulseConveyor) PreparePulseChange(out PreparePulseChangeChannel) error 
 func (p *PulseConveyor) CancelPulseChange() error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
 		if p.presentMachine == nil {
-			// wrong - first pulse can only be committed
+			// wrong - first pulse can only be committed but not prepared
 			panic("illegal state")
 		}
 		p.pdm.unsetPreparingPulse()
@@ -366,7 +364,8 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr p
 		p.presentMachine = prevFuture
 
 		if prevFuturePN != pd.PulseNumber {
-			// avoids unnecessary synchronization the alias will be unpublished on commit of a next pulse
+			// new pulse is different than expected at the previous cycle, so we have to remove the pulse number alias
+			// to avoids unnecessary synchronization - the previous alias will be unpublished on commit of a next pulse
 			p.unpublishPulse = prevFuturePN
 			republishPresent = true
 		}
@@ -389,14 +388,6 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr p
 		p.presentMachine.activate(p.workerCtx, ctx.AddNew)
 	}
 	p.pdm.setPresentPulse(pd) // reroutes incoming events
-}
-
-func (p *PulseConveyor) GetSlotMachine() *smachine.SlotMachine {
-	return p.slotMachine
-}
-
-func (p *PulseConveyor) GetExternalSignal() *tools.VersionedSignal {
-	return &p.externalSignal
 }
 
 func (p *PulseConveyor) RunOnWorker(w smachine.AttachableSlotWorker, stopSignal <-chan struct{}) {
