@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
@@ -27,13 +28,15 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-type PreparedState = struct{}
 type InputEvent = interface{}
 type PulseEventFactoryFunc = func(pulse.Number, InputEvent) smachine.CreateFunc
 
 type EventInputer interface {
 	AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error
 }
+
+type PreparedState = struct{}
+type PreparePulseChangeChannel = chan<- PreparedState
 
 type PulseChanger interface {
 	PreparePulseChange(out PreparePulseChangeChannel) error
@@ -46,6 +49,7 @@ type PulseChanger interface {
 func NewPulseConveyor(
 	ctx context.Context,
 	conveyorMachineConfig smachine.SlotMachineConfig,
+	eventlessSleep time.Duration,
 	factoryFn PulseEventFactoryFunc,
 	slotMachineConfig smachine.SlotMachineConfig,
 	registry injector.DependencyRegistry,
@@ -56,7 +60,8 @@ func NewPulseConveyor(
 		slotConfig: PulseSlotConfig{
 			config: slotMachineConfig,
 		},
-		factoryFn: factoryFn,
+		factoryFn:      factoryFn,
+		eventlessSleep: eventlessSleep,
 	}
 	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig,
 		r.internalSignal.NextBroadcast,
@@ -81,9 +86,10 @@ func NewPulseConveyor(
 
 type PulseConveyor struct {
 	// immutable, provided, set at construction
-	slotConfig PulseSlotConfig
-	factoryFn  PulseEventFactoryFunc
-	workerCtx  context.Context
+	slotConfig     PulseSlotConfig
+	eventlessSleep time.Duration
+	factoryFn      PulseEventFactoryFunc
+	workerCtx      context.Context
 
 	// immutable, set at construction
 	externalSignal tools.VersionedSignal
@@ -281,8 +287,6 @@ func (p *PulseConveyor) sendSignal(fn smachine.MachineCallFunc) error {
 	return <-result
 }
 
-type PreparePulseChangeChannel = chan<- PreparedState
-
 func (p *PulseConveyor) PreparePulseChange(out PreparePulseChangeChannel) error {
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
 		if p.presentMachine == nil {
@@ -393,4 +397,48 @@ func (p *PulseConveyor) GetSlotMachine() *smachine.SlotMachine {
 
 func (p *PulseConveyor) GetExternalSignal() *tools.VersionedSignal {
 	return &p.externalSignal
+}
+
+func (p *PulseConveyor) RunOnWorker(w smachine.AttachableSlotWorker, stopSignal <-chan struct{}) {
+
+	go func() {
+		select {
+		case <-stopSignal:
+			p.externalSignal.NextBroadcast()
+			return
+		}
+	}()
+
+	for {
+		var (
+			repeatNow    bool
+			nextPollTime time.Time
+		)
+		w.AttachTo(p.slotMachine, p.externalSignal.Mark(), 0, func(worker smachine.AttachedSlotWorker) {
+			repeatNow, nextPollTime = p.slotMachine.ScanOnce(0, worker)
+		})
+
+		select {
+		case <-stopSignal:
+			return
+		default:
+			// pass
+		}
+
+		if repeatNow {
+			continue
+		}
+
+		timeToWait := p.eventlessSleep
+		if !nextPollTime.IsZero() {
+			timeToWait = time.Until(nextPollTime)
+		}
+
+		select {
+		case <-stopSignal:
+			return
+		case <-time.After(timeToWait):
+			// pass
+		}
+	}
 }

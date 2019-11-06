@@ -17,11 +17,7 @@
 package common
 
 import (
-	"context"
-	"time"
-
 	"github.com/insolar/insolar/conveyor"
-	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/sworker"
 )
 
@@ -34,53 +30,10 @@ func (w *ConveyorWorker) Stop() {
 }
 
 func (w *ConveyorWorker) AttachTo(
-	ctx context.Context,
 	conveyor *conveyor.PulseConveyor,
-	loopLimit uint32,
-) (
-	wasDetached bool,
 ) {
-	go func() {
-		workerFactory := sworker.NewAttachableSimpleSlotWorker()
-
-		sm := conveyor.GetSlotMachine()
-		signal := conveyor.GetExternalSignal()
-
-		for {
-			var (
-				repeatNow    bool
-				nextPollTime time.Time
-			)
-			workerFactory.AttachTo(sm, signal.Mark(), 100, func(worker smachine.AttachedSlotWorker) {
-				repeatNow, nextPollTime = sm.ScanOnce(0, worker)
-			})
-
-			select {
-			case <-w.stoppedChan:
-				return
-			default:
-				// pass
-			}
-
-			if repeatNow {
-				continue
-			}
-
-			timeToWait := 100 * time.Millisecond
-			if !nextPollTime.IsZero() {
-				timeToWait = time.Until(nextPollTime)
-			}
-
-			select {
-			case <-w.stoppedChan:
-				return
-			case <-time.After(timeToWait):
-				// pass
-			}
-		}
-	}()
-
-	return false
+	workerFactory := sworker.NewAttachableSimpleSlotWorker()
+	go conveyor.RunOnWorker(workerFactory, w.stoppedChan)
 }
 
 func NewConveyorWorker() *ConveyorWorker {

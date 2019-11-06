@@ -18,7 +18,6 @@ package conveyor
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
@@ -50,7 +49,7 @@ type PulseSlotMachine struct {
 
 	innerMachine *smachine.SlotMachine
 	innerWorker  smachine.AttachableSlotWorker
-	pulseSlot    PulseSlot // injectable for innerMachine's slots - see NewPulseSlotMachine()
+	pulseSlot    PulseSlot // injectable for innerMachine's slots
 
 	finalizeFn func()
 	selfLink   smachine.SlotLink
@@ -72,7 +71,7 @@ func (p *PulseSlotMachine) activate(workerCtx context.Context,
 		panic("illegal state")
 	}
 	if p.pulseSlot.State() != Antique {
-		p.innerMachine.PutDependency(reflect.TypeOf(PulseSlot{}).String(), &p.pulseSlot)
+		p.innerMachine.AddDependency(&p.pulseSlot)
 	}
 
 	p.selfLink = addFn(workerCtx, p, smachine.CreateDefaultValues{})
