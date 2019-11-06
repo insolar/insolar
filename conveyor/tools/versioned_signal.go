@@ -128,6 +128,7 @@ func (p *SignalVersion) Channel() <-chan struct{} {
 			return *sc
 		case wcp == nil:
 			wcp = new(signalChannel)
+			*wcp = make(signalChannel)
 		}
 
 		if atomic.CompareAndSwapPointer(p._signalChannel(), nil, (unsafe.Pointer)(wcp)) {
