@@ -61,7 +61,7 @@ func TestConveyor(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 100; i++ {
 		pd = pd.CreateNextPulsarPulse(10, func() longbits.Bits256 {
 			return longbits.Bits256{}
 		})
