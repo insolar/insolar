@@ -1,5 +1,8 @@
 //usr/bin/env go run "$0" "$@"; exit "$?"
 // ls-tools.go - go script extract tools imports from tools.go
+
+// +build tools
+
 package main
 
 import (
