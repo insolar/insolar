@@ -94,10 +94,11 @@ type SlotMachine struct {
 	hotWaitOnly  bool      // true when activeSlots & prioritySlots have only slots added by "hot wait"
 	scanWakeUpAt time.Time // when all slots are waiting, this is the earliest time requested for wakeup
 
-	activeSlots   SlotQueue    //they are are moved to workingSlots on every full Scan
-	prioritySlots SlotQueue    //they are are moved to workingSlots on every full Scan (placed first)
-	pollingSlots  PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
-	workingSlots  SlotQueue    //slots are currently in processing
+	activeSlots      SlotQueue    //they are are moved to workingSlots on every full Scan
+	prioritySlots    SlotQueue    //they are are moved to workingSlots on every full Scan (placed first)
+	pollingSlots     PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
+	workingSlots     SlotQueue    //slots are currently in processing
+	nonPriorityCount uint32       // number of non-priority slots processed since the last replenishment of workingSlots
 
 	syncQueue SlotMachineSync
 }
@@ -228,17 +229,24 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 	case m.machineStartedAt.IsZero():
 		m.machineStartedAt = scanTime
 		fallthrough
-	case !m.workingSlots.IsEmpty():
-		// we were interrupted
-		currentScanNo = m.getScanCount()
 	case scanMode == ScanEventsOnly:
 		// no scans
 		currentScanNo = m.getScanCount()
+
+	case !m.workingSlots.IsEmpty():
+		// we were interrupted
+		currentScanNo = m.getScanCount()
+		if m.nonPriorityCount >= uint32(m.config.ScanCountLimit) {
+			m.nonPriorityCount = 0
+			m.workingSlots.AppendAll(&m.prioritySlots)
+		}
 	default:
 		currentScanNo = m.incScanCount()
 
 		m.hotWaitOnly = true
+		m.nonPriorityCount = 0
 		m.workingSlots.AppendAll(&m.prioritySlots)
+
 		if scanMode != ScanPriorityOnly {
 			m.workingSlots.AppendAll(&m.activeSlots)
 		}
@@ -297,10 +305,15 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 		prevStepNo := currentSlot.startWorking(currentScanNo) // its counterpart is in slotPostExecution()
 		currentSlot.removeFromQueue()
 
-		if priorityOnly && currentSlot.step.Flags&StepPriority == 0 {
+		switch {
+		case currentSlot.step.Flags&StepPriority != 0:
+			break
+		case priorityOnly:
 			m.activeSlots.AddLast(currentSlot)
 			currentSlot.stopWorking()
 			continue
+		default:
+			m.nonPriorityCount++
 		}
 
 		if stopNow, loopExtraIncrement := m._executeSlot(currentSlot, prevStepNo, worker, loopLimit); stopNow {
