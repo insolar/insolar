@@ -365,8 +365,6 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 		}
 	})
 
-	//fmt.Printf("slot-%d update %v\n", slot.GetSlotID(), stateUpdate)
-
 	if wasDetached {
 		// MUST NOT apply any changes in the current routine, as it is no more safe to update queues
 		m.asyncPostSlotExecution(slot, stateUpdate, prevStepNo)

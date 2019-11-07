@@ -50,7 +50,13 @@ func TestConveyor(t *testing.T) {
 		}
 	}
 
-	conveyor := NewPulseConveyor(context.Background(), machineConfig, 100*time.Millisecond, factoryFn, machineConfig, nil)
+	conveyor := NewPulseConveyor(context.Background(), PulseConveyorConfig{
+		ConveyorMachineConfig: machineConfig,
+		SlotMachineConfig:     machineConfig,
+		EventlessSleep:        10000 * time.Millisecond,
+		MinCachePulseAge:      100,
+		MaxPastPulseAge:       1000,
+	}, factoryFn, nil)
 
 	pd := pulse.NewFirstPulsarData(10, longbits.Bits256{})
 

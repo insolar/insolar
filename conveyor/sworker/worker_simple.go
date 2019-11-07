@@ -33,6 +33,12 @@ type AttachableSimpleSlotWorker struct {
 	exclusive uint32
 }
 
+func (v *AttachableSimpleSlotWorker) WakeupWorkerOnEvent() {
+}
+
+func (v *AttachableSimpleSlotWorker) WakeupWorkerOnSignal() {
+}
+
 func (v *AttachableSimpleSlotWorker) AttachAsNested(m *smachine.SlotMachine, outer smachine.DetachableSlotWorker,
 	loopLimit uint32, fn smachine.AttachedFunc) (wasDetached bool) {
 

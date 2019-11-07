@@ -29,32 +29,35 @@ import (
 
 func main() {
 	const scanCountLimit = 1e6
+
+	signal := tools.NewVersionedSignal()
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:    1000,
 		PollingPeriod:   1 * time.Millisecond,
 		PollingTruncate: 1 * time.Microsecond,
 		ScanCountLimit:  scanCountLimit,
-	}, nil, nil, nil)
+	}, signal.NextBroadcast, signal.NextBroadcast, nil)
 
 	sm.PutDependency("example.ServiceAdapterA", example.CreateServiceAdapterA())
 	sm.PutDependency("example.catalogC", example.CreateCatalogC())
 
-	for i := 0; i < 1e4; i++ {
-		sm.AddNew(context.Background(), &example.StateMachine2{Yield: false}, smachine.CreateDefaultValues{})
-	}
-
-	//for i := 0; i < 1; i++ {
-	//	sm.AddNew(context.Background(), &example.StateMachine1{}, smachine.CreateDefaultValues{})
+	//for i := 0; i < 1e4; i++ {
+	//	sm.AddNew(context.Background(), &example.StateMachine2{Yield: false}, smachine.CreateDefaultValues{})
 	//}
 
-	signal := tools.NewVersionedSignal()
+	for i := 0; i < 1; i++ {
+		sm.AddNew(context.Background(), &example.StateMachine1{}, smachine.CreateDefaultValues{})
+	}
+
 	workerFactory := sworker.NewAttachableSimpleSlotWorker()
-	//(signal.Mark(), scanCountLimit)
+
 	startNano := time.Now().UnixNano()
 	startBase := example.IterationCount
 
 	iterBase := example.IterationCount
 	iterStart := time.Now().UnixNano()
+
+	neverSignal := tools.NewNeverSignal()
 
 	prev := 0
 	for i := 0; ; i++ {
@@ -62,7 +65,8 @@ func main() {
 			repeatNow    bool
 			nextPollTime time.Time
 		)
-		workerFactory.AttachTo(sm, signal.Mark(), scanCountLimit, func(worker smachine.AttachedSlotWorker) {
+		wakeupSignal := signal.Mark()
+		workerFactory.AttachTo(sm, neverSignal, scanCountLimit, func(worker smachine.AttachedSlotWorker) {
 			repeatNow, nextPollTime = sm.ScanOnce(0, worker)
 		})
 
@@ -95,7 +99,8 @@ func main() {
 		if !nextPollTime.IsZero() {
 			time.Sleep(time.Until(nextPollTime))
 		} else {
-			time.Sleep(3 * time.Second)
+			wakeupSignal.Wait()
+			//time.Sleep(3 * time.Second)
 		}
 	}
 }

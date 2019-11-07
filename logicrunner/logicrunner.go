@@ -175,7 +175,14 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.JetStorageService = s_jet_storage.CreateJetStorageService(lr.JetStorage)
 
 	defaultHandlers := statemachine_go.DefaultHandlersFactory
-	lr.Conveyor = conveyor.NewPulseConveyor(ctx, machineConfig, 100*time.Millisecond, defaultHandlers, machineConfig, nil)
+
+	lr.Conveyor = conveyor.NewPulseConveyor(context.Background(), conveyor.PulseConveyorConfig{
+		ConveyorMachineConfig: machineConfig,
+		SlotMachineConfig:     machineConfig,
+		EventlessSleep:        100 * time.Millisecond,
+		MinCachePulseAge:      100,
+		MaxPastPulseAge:       1000,
+	}, defaultHandlers, nil)
 	lr.Conveyor.AddDependency(lr.ObjectCatalog)
 	lr.Conveyor.AddDependency(lr.ArtifactClientService)
 	lr.Conveyor.AddDependency(lr.ContractRequesterService)

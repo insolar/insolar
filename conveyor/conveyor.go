@@ -45,42 +45,40 @@ type PulseChanger interface {
 	CommitPulseChange(pd pulse.Data) error
 }
 
-//type StepLoggerFactoryFunc
+type PulseConveyorConfig struct {
+	ConveyorMachineConfig             smachine.SlotMachineConfig
+	SlotMachineConfig                 smachine.SlotMachineConfig
+	EventlessSleep                    time.Duration
+	MinCachePulseAge, MaxPastPulseAge uint32
+}
 
 func NewPulseConveyor(
 	ctx context.Context,
-	conveyorMachineConfig smachine.SlotMachineConfig,
-	eventlessSleep time.Duration,
+	config PulseConveyorConfig,
 	factoryFn PulseEventFactoryFunc,
-	slotMachineConfig smachine.SlotMachineConfig,
 	registry injector.DependencyRegistry,
 ) *PulseConveyor {
 
 	r := &PulseConveyor{
 		workerCtx: ctx,
 		slotConfig: PulseSlotConfig{
-			config: slotMachineConfig,
+			config: config.SlotMachineConfig,
 		},
 		factoryFn:      factoryFn,
-		eventlessSleep: eventlessSleep,
+		eventlessSleep: config.EventlessSleep,
 	}
-	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig,
+	r.slotMachine = smachine.NewSlotMachine(config.ConveyorMachineConfig,
 		r.internalSignal.NextBroadcast,
-		r.externalSignal.NextBroadcast,
-		//func() {
-		//	r.externalSignal.NextBroadcast()
-		//	r.internalSignal.NextBroadcast()
-		//},
+		combineCallbacks(r.externalSignal.NextBroadcast, r.internalSignal.NextBroadcast),
 		registry)
 
 	r.slotConfig.eventCallback = r.internalSignal.NextBroadcast
-	r.slotConfig.signalCallback = r.internalSignal.NextBroadcast
 	r.slotConfig.parentRegistry = r.slotMachine
 
 	// shared SlotId sequence
 	r.slotConfig.config.SlotIdGenerateFn = r.slotMachine.CopyConfig().SlotIdGenerateFn
 
-	r.pdm.Init(100, 1000, 1)
+	r.pdm.Init(config.MinCachePulseAge, config.MaxPastPulseAge, 1)
 
 	return r
 }
@@ -428,6 +426,7 @@ func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, completedFn fun
 			repeatNow    bool
 			nextPollTime time.Time
 		)
+		eventMark := p.internalSignal.Mark()
 		p.machineWorker.AttachTo(p.slotMachine, p.externalSignal.Mark(), math.MaxUint32, func(worker smachine.AttachedSlotWorker) {
 			repeatNow, nextPollTime = p.slotMachine.ScanOnce(smachine.ScanDefault, worker)
 		})
@@ -443,20 +442,23 @@ func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, completedFn fun
 			break
 		}
 
-		if repeatNow {
+		if repeatNow || eventMark.HasSignal() {
 			continue
-		}
-
-		timeToWait := p.eventlessSleep
-		if !nextPollTime.IsZero() {
-			timeToWait = time.Until(nextPollTime)
 		}
 
 		select {
 		case <-emergencyStop:
 			return
-		case <-time.After(timeToWait):
-			// pass
+		case <-eventMark.Channel():
+		case <-func() <-chan time.Time {
+			switch {
+			case !nextPollTime.IsZero():
+				return time.After(time.Until(nextPollTime))
+			case p.eventlessSleep > 0 && p.eventlessSleep < math.MaxInt64:
+				return time.After(p.eventlessSleep)
+			}
+			return nil
+		}():
 		}
 	}
 

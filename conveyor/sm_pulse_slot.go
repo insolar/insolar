@@ -29,7 +29,6 @@ import (
 type PulseSlotConfig struct {
 	config         smachine.SlotMachineConfig
 	eventCallback  func()
-	signalCallback func()
 	parentRegistry injector.DependencyRegistry
 }
 
@@ -37,11 +36,29 @@ func NewPulseSlotMachine(config PulseSlotConfig, pulseManager *PulseDataManager)
 	psm := &PulseSlotMachine{
 		pulseSlot: PulseSlot{pulseManager: pulseManager},
 	}
-	// TODO capture callbacks into a worker manager
+
+	w := sworker.NewAttachableSimpleSlotWorker()
+	psm.innerWorker = w
 	psm.innerMachine = smachine.NewSlotMachine(config.config,
-		nil, nil, config.parentRegistry)
+		combineCallbacks(w.WakeupWorkerOnEvent, config.eventCallback),
+		combineCallbacks(w.WakeupWorkerOnSignal, config.eventCallback),
+		config.parentRegistry)
 
 	return psm
+}
+
+func combineCallbacks(mainFn, auxFn func()) func() {
+	switch {
+	case mainFn == nil:
+		panic("illegal state")
+	case auxFn == nil:
+		return mainFn
+	default:
+		return func() {
+			mainFn()
+			auxFn()
+		}
+	}
 }
 
 type PulseSlotMachine struct {
@@ -137,8 +154,6 @@ func (p *PulseSlotMachine) GetInitStateFor(sm smachine.StateMachine) smachine.In
 }
 
 func (p *PulseSlotMachine) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
-
-	p.innerWorker = sworker.NewAttachableSimpleSlotWorker()
 	ctx.SetDefaultErrorHandler(p.errorHandler)
 	switch p.pulseSlot.State() {
 	case Future:
