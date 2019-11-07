@@ -53,7 +53,7 @@ func TestConveyor(t *testing.T) {
 	conveyor := NewPulseConveyor(context.Background(), PulseConveyorConfig{
 		ConveyorMachineConfig: machineConfig,
 		SlotMachineConfig:     machineConfig,
-		EventlessSleep:        10000 * time.Millisecond,
+		EventlessSleep:        1 * time.Second,
 		MinCachePulseAge:      100,
 		MaxPastPulseAge:       1000,
 	}, factoryFn, nil)
@@ -65,14 +65,18 @@ func TestConveyor(t *testing.T) {
 	require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
 	eventCount := 0
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	for i := 0; i < 100; i++ {
 		pd = pd.CreateNextPulsarPulse(10, func() longbits.Bits256 {
 			return longbits.Bits256{}
 		})
-		fmt.Println("================================== ", pd, " ====================================")
+		fmt.Println(">>>================================== ", pd, " ====================================")
+		require.NoError(t, conveyor.PreparePulseChange(nil))
+		time.Sleep(100 * time.Millisecond)
 		require.NoError(t, conveyor.CommitPulseChange(pd.AsRange()))
+		fmt.Println("<<<================================== ", pd, " ====================================")
+		time.Sleep(10 * time.Millisecond)
 
 		if eventCount < math.MaxInt32 {
 			eventCount++
@@ -96,7 +100,8 @@ func TestConveyor(t *testing.T) {
 
 func stepLogger(_ context.Context, data *smachine.StepLoggerData) {
 	if data.Flags&smachine.StepLoggerInternal != 0 {
-		fmt.Printf("%s: %03d @ %03d: internal %s current=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
+		fmt.Printf("%s[%3d]: %03d @ %03d: internal %s current=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.CycleNo,
+			data.StepNo.SlotID(), data.StepNo.StepNo(),
 			data.UpdateType, data.CurrentStep.Transition, data.SM, data.SM)
 		return
 	}
@@ -109,6 +114,7 @@ func stepLogger(_ context.Context, data *smachine.StepLoggerData) {
 	if data.Flags&smachine.StepLoggerDetached != 0 {
 		detached = "(detached)"
 	}
-	fmt.Printf("%s: %03d @ %03d: %s%s%s current=%p next=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.StepNo.SlotID(), data.StepNo.StepNo(),
+	fmt.Printf("%s[%3d]: %03d @ %03d: %s%s%s current=%p next=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.CycleNo,
+		data.StepNo.SlotID(), data.StepNo.StepNo(),
 		special, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
 }

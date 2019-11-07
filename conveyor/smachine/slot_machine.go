@@ -1547,3 +1547,8 @@ func (m *SlotMachine) GetStoppingSignal() <-chan struct{} {
 func (m *SlotMachine) GetMachineId() string {
 	return fmt.Sprintf("%p", m)
 }
+
+// UNSAFE!
+func (m *SlotMachine) HasPriorityWork() bool {
+	return !m.prioritySlots.IsEmpty() || !m.workingSlots.IsEmpty()
+}

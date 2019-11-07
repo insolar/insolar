@@ -71,7 +71,7 @@ func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalBuilder
 	ncu := p.newConditionalUpdate(stateUpdWaitForEvent)
 
 	ncu.until = p.s.machine.toRelativeTime(until)
-	if ncu.until != 0 && !until.After(time.Now()) {
+	if ncu.until != 0 && time.Until(until) <= 0 {
 		ncu.decision = Passed
 	}
 
@@ -164,21 +164,21 @@ func (c *conditionalUpdate) GetDecision() Decision {
 }
 
 func (c *conditionalUpdate) ThenRepeatOrElse() (StateUpdate, bool) {
-	if c.decision.IsNotPassed() {
+	if c.GetDecision().IsNotPassed() {
 		return c.ThenRepeat(), true
 	}
 	return StateUpdate{}, false
 }
 
 func (c *conditionalUpdate) ThenRepeatOrJump(fn StateFunc) StateUpdate {
-	if c.decision.IsNotPassed() {
+	if c.GetDecision().IsNotPassed() {
 		return c.ThenRepeat()
 	}
 	return c.ThenJump(fn)
 }
 
 func (c *conditionalUpdate) ThenRepeatOrJumpExt(step SlotStep) StateUpdate {
-	if c.decision.IsNotPassed() {
+	if c.GetDecision().IsNotPassed() {
 		return c.ThenRepeat()
 	}
 	return c.ThenJumpExt(step)

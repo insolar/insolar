@@ -63,9 +63,9 @@ func (sm *AppEventSM) stepRun(ctx smachine.ExecutionContext) smachine.StateUpdat
 }
 
 func (sm *AppEventSM) migrateToClosing(ctx smachine.MigrationContext) smachine.StateUpdate {
+	sm.expiry = time.Now().Add(2600 * time.Millisecond)
 	fmt.Println("migrate: ", sm.eventValue, sm.pn)
 	ctx.SetDefaultMigration(nil)
-	sm.expiry = time.Now().Add(2600 * time.Millisecond)
 	return ctx.Jump(sm.stepClosingRun)
 }
 
@@ -74,6 +74,6 @@ func (sm *AppEventSM) stepClosingRun(ctx smachine.ExecutionContext) smachine.Sta
 		fmt.Println("wait: ", sm.eventValue, sm.pn)
 		return su
 	}
-	fmt.Println("stop: ", sm.eventValue, sm.pn, "late=", time.Now().Sub(sm.expiry))
+	fmt.Println("stop: ", sm.eventValue, sm.pn, "late=", time.Since(sm.expiry))
 	return ctx.Stop()
 }

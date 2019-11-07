@@ -77,6 +77,7 @@ const (
 )
 
 type StepLoggerData struct {
+	CycleNo     uint32
 	StepNo      StepLink
 	CurrentStep SlotStep
 	NextStep    SlotStep

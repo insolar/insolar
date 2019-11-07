@@ -161,7 +161,7 @@ func (p *PulseSlotMachine) stepInit(ctx smachine.InitializationContext) smachine
 		return ctx.Jump(p.stepFutureLoop)
 	case Present:
 		ctx.SetDefaultMigration(p.stepMigrateFromPresent)
-		return ctx.Jump(p.stepPresentLoop)
+		return ctx.JumpExt(smachine.SlotStep{Transition: p.stepPresentLoop, Flags: smachine.StepPriority})
 	case Past:
 		ctx.SetDefaultMigration(p.stepMigratePast)
 		return ctx.Jump(p.stepPastLoop)
@@ -196,17 +196,16 @@ func (p *PulseSlotMachine) _runInnerMigrate(ctx smachine.MigrationContext) {
 
 func (p *PulseSlotMachine) stepFutureLoop(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	if p.pulseSlot.pulseManager.isPreparingPulse() {
-		return ctx.Yield().ThenRepeat()
+		return ctx.WaitAny().ThenRepeat()
 	}
-
-	p.innerMachine.ScanNested(ctx, 0, 0, p.innerWorker)
+	p.innerMachine.ScanNested(ctx, smachine.ScanDefault, 0, p.innerWorker)
 	return ctx.Poll().ThenRepeat()
 }
 
 func (p *PulseSlotMachine) stepMigrateFromFuture(ctx smachine.MigrationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(p.stepMigrateFromPresent)
 	p._runInnerMigrate(ctx)
-	return ctx.Jump(p.stepPresentLoop)
+	return ctx.JumpExt(smachine.SlotStep{Transition: p.stepPresentLoop, Flags: smachine.StepPriority})
 }
 
 /* ------------- Present handlers --------------- */
@@ -214,18 +213,17 @@ func (p *PulseSlotMachine) stepMigrateFromFuture(ctx smachine.MigrationContext) 
 const presentSlotCycleBoost = 1
 
 func (p *PulseSlotMachine) stepPresentLoop(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, 0, 0, p.innerWorker)
+	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, smachine.ScanDefault, 0, p.innerWorker)
 
 	switch {
 	case repeatNow:
 		return ctx.Repeat(presentSlotCycleBoost)
 	case !nextPollTime.IsZero():
 		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
-	case p.innerMachine.IsEmpty():
-		return ctx.Poll().ThenRepeat() // TODO may cause a small delay on processing of a first request
-	default:
+	case !p.innerMachine.IsEmpty():
 		return ctx.Yield().ThenRepeat()
 	}
+	return ctx.WaitAny().ThenRepeat()
 }
 
 // Conveyor direct barge-in
@@ -239,20 +237,20 @@ func (p *PulseSlotMachine) preparePulseChange(ctx smachine.BargeInContext) smach
 func (p *PulseSlotMachine) stepPreparingChange(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, smachine.ScanPriorityOnly, 0, p.innerWorker)
 
-	// TODO may need some adjustments
 	switch {
 	case repeatNow:
 		return ctx.Repeat(presentSlotCycleBoost)
-	case nextPollTime.IsZero():
-		return ctx.Yield().ThenRepeat()
-	default:
+	case !nextPollTime.IsZero():
 		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
+	case p.innerMachine.HasPriorityWork(): // this is concurrency-unsafe method
+		return ctx.Yield().ThenRepeat()
 	}
+	return ctx.WaitAny().ThenRepeat()
 }
 
 // Conveyor direct barge-in
 func (p *PulseSlotMachine) cancelPulseChange(ctx smachine.BargeInContext) smachine.StateUpdate {
-	return ctx.Jump(p.stepPresentLoop)
+	return ctx.JumpExt(smachine.SlotStep{Transition: p.stepPresentLoop, Flags: smachine.StepPriority})
 }
 
 func (p *PulseSlotMachine) stepMigrateFromPresent(ctx smachine.MigrationContext) smachine.StateUpdate {
@@ -265,18 +263,20 @@ func (p *PulseSlotMachine) stepMigrateFromPresent(ctx smachine.MigrationContext)
 
 func (p *PulseSlotMachine) stepPastLoop(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	if p.pulseSlot.pulseManager.isPreparingPulse() {
-		return ctx.Yield().ThenRepeat()
+		return ctx.WaitAny().ThenRepeat()
 	}
 
-	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, 0, 0, p.innerWorker)
+	repeatNow, nextPollTime := p.innerMachine.ScanNested(ctx, smachine.ScanDefault, 0, p.innerWorker)
+
 	switch {
 	case repeatNow:
 		return ctx.Yield().ThenRepeat()
-	case nextPollTime.IsZero():
-		return ctx.Poll().ThenRepeat()
-	default:
+	case !nextPollTime.IsZero():
 		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
+	case !p.innerMachine.IsEmpty():
+		return ctx.Yield().ThenRepeat()
 	}
+	return ctx.WaitAny().ThenRepeat()
 }
 
 func (p *PulseSlotMachine) stepMigratePast(ctx smachine.MigrationContext) smachine.StateUpdate {

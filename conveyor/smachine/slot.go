@@ -460,7 +460,13 @@ func (s *Slot) logInternal(link StepLink, updateType string, err error) {
 }
 
 func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags StepLoggerFlags) {
-	stepData := StepLoggerData{StepNo: s.NewStepLink(), Flags: flags, CurrentStep: s.step, NextStep: stateUpdate.step}
+	stepData := StepLoggerData{
+		CycleNo:     s.machine.getScanCount(),
+		StepNo:      s.NewStepLink(),
+		Flags:       flags,
+		CurrentStep: s.step,
+		NextStep:    stateUpdate.step,
+	}
 
 	if prevStepNo <= 1 {
 		// nil all handlers as initialization transition can't be logged properly
