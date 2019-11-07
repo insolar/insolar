@@ -32,6 +32,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+const (
+	uint32Size = 16
+	uint64Size = uint32Size * 2
+)
+
 type LoggingSpan struct {
 	opentracing.Span
 	ctx    context.Context
@@ -98,10 +103,11 @@ func StartSpanWithSpanID(ctx context.Context, name string, spanID uint64, o ...o
 			traceID = sc.TraceID()
 			parentID = sc.SpanID()
 		}
-	} else if traceStr := inslogger.TraceID(ctx); len(traceStr) >= 16 {
+		// If it is shorter then uint32, then probably it is custom trace and it cannot be used for jaeger trace
+	} else if traceStr := inslogger.TraceID(ctx); len(traceStr) >= uint32Size {
 		var err error
-		if len(traceStr) > 32 {
-			traceStr = traceStr[:31]
+		if len(traceStr) > uint64Size {
+			traceStr = traceStr[:uint64Size-1]
 		}
 		traceID, err = jaeger.TraceIDFromString(traceStr)
 		if err != nil {
@@ -174,9 +180,10 @@ func ParentSpanCtx(ctx context.Context) (jaeger.SpanContext, context.Context) {
 		stringTrace = string(traceSpan.TraceID)
 	}
 
-	if len(stringTrace) >= 16 {
-		if len(stringTrace) > 32 {
-			stringTrace = stringTrace[:31]
+	// If it is shorter then uint32, then probably it is custom trace and it cannot be used for jaeger trace
+	if len(stringTrace) >= uint32Size {
+		if len(stringTrace) > uint64Size {
+			stringTrace = stringTrace[:uint64Size-1]
 		}
 		traceID, err = jaeger.TraceIDFromString(stringTrace)
 		if err != nil {
