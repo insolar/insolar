@@ -1,5 +1,5 @@
 export GO111MODULE ?= on
-export GOPROXY ?= https://proxy.golang.org
+export GOPROXY ?= https://goproxy.io
 export GOSUMDB ?= sum.golang.org
 
 BIN_DIR ?= bin
