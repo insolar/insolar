@@ -242,7 +242,7 @@ func (p *PulseSlotMachine) stepPreparingChange(ctx smachine.ExecutionContext) sm
 		return ctx.Repeat(presentSlotCycleBoost)
 	case !nextPollTime.IsZero():
 		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
-	case p.innerMachine.HasPriorityWork(): // this is concurrency-unsafe method
+	case p.innerMachine.HasPriorityWork(): // this is a concurrency-unsafe method
 		return ctx.Yield().ThenRepeat()
 	}
 	return ctx.WaitAny().ThenRepeat()
