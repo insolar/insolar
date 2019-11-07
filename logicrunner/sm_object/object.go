@@ -19,6 +19,7 @@ package sm_object
 import (
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
@@ -33,13 +34,12 @@ type ObjectInfo struct {
 	ObjectReference insolar.Reference
 	IsReadyToWork   bool
 
-	ArtifactClient   *s_artifact.ArtifactClientServiceAdapter
-	Sender           *s_sender.SenderServiceAdapter
-	ServiceCallError error
+	artifactClient *s_artifact.ArtifactClientServiceAdapter
+	sender         *s_sender.SenderServiceAdapter
+	pulseSlot      *conveyor.PulseSlot
+	externalError  error
 
 	ObjectLatestDescriptor artifacts.ObjectDescriptor
-	// ObjectLatestProtoDescriptor artifacts.PrototypeDescriptor
-	// ObjectLatestCodeDescriptor  artifacts.CodeDescriptor
 
 	ImmutableExecute smachine.SyncLink
 	MutableExecute   smachine.SyncLink
@@ -74,8 +74,9 @@ type ObjectSM struct {
 }
 
 func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	injector.MustInject(&sm.ArtifactClient)
-	injector.MustInject(&sm.Sender)
+	injector.MustInject(&sm.artifactClient)
+	injector.MustInject(&sm.sender)
+	injector.MustInject(&sm.pulseSlot)
 }
 
 func (sm *ObjectSM) GetInitStateFor(smachine.StateMachine) smachine.InitFunc {
@@ -87,18 +88,18 @@ func (sm *ObjectSM) GetStateMachineDeclaration() smachine.StateMachineDeclaratio
 }
 
 func (sm *ObjectSM) sendPayloadToVirtual(ctx smachine.ExecutionContext, pl payload.Payload) {
-	goctx := ctx.GetContext()
+	goCtx := ctx.GetContext()
 
 	resultsMessage, err := payload.NewMessage(pl)
 	if err == nil {
 		objectReference := sm.ObjectReference
 
-		sm.Sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
-			_, done := svc.SendRole(goctx, resultsMessage, insolar.DynamicRoleVirtualExecutor, objectReference)
+		sm.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
+			_, done := svc.SendRole(goCtx, resultsMessage, insolar.DynamicRoleVirtualExecutor, objectReference)
 			done()
-		})
+		}).DelayedSend()
 	} else {
-		logger := inslogger.FromContext(goctx)
+		logger := inslogger.FromContext(goCtx)
 		logger.Error("Failed to serialize message: ", err.Error())
 	}
 }
@@ -118,17 +119,22 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
 	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
 
+	pair := ObjectPair{
+		Pulse:           sm.pulseSlot.PulseData().PulseNumber,
+		ObjectReference: sm.ObjectReference,
+	}
+
 	sdl := ctx.Share(&sm.SharedObjectState, 0)
-	if !ctx.Publish(sm.ObjectReference, sdl) {
+	if !ctx.Publish(pair, sdl) {
 		return ctx.Stop()
 	}
-	return ctx.Jump(sm.stateGetLatestValidatedStatePrototypeAndCode)
+	return ctx.Jump(sm.stepCheckPreviousExecutor)
 }
 
-func (sm *ObjectSM) checkPreviousExecutor(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (sm *ObjectSM) stepCheckPreviousExecutor(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	switch sm.PreviousExecutorState {
 	case payload.PreviousExecutorUnknown:
-		return ctx.Jump(sm.stateGetPendingsInformation)
+		return ctx.Jump(sm.stepGetPendingsInformation)
 	case payload.PreviousExecutorProbablyExecutes, payload.PreviousExecutorExecutes:
 		// we should wait here till PendingFinished/ExecutorResults came, retry and then change state to PreviousExecutorFinished
 		if ctx.AcquireForThisStep(sm.SemaphorePreviousExecutorFinished).IsNotPassed() {
@@ -139,20 +145,21 @@ func (sm *ObjectSM) checkPreviousExecutor(ctx smachine.ExecutionContext) smachin
 		// if we came to that place - means MutableRequestsAreReady, but PreviousExecutor still executes)
 		panic("unreachable")
 	case payload.PreviousExecutorFinished:
-		return ctx.Jump(sm.stateGetLatestValidatedStatePrototypeAndCode)
+		return ctx.Jump(sm.stepGetLatestValidatedState)
 	default:
 		panic("unreachable")
 	}
 }
 
-func (sm *ObjectSM) stateGetPendingsInformation(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (sm *ObjectSM) stepGetPendingsInformation(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
 
 	objectReference := sm.ObjectReference
-	sm.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		goctx := ctx.GetContext()
-		logger := inslogger.FromContext(goctx)
 
-		hasAbandonedRequests, err := svc.HasPendings(goctx, objectReference)
+	return sm.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		logger := inslogger.FromContext(goCtx)
+
+		hasAbandonedRequests, err := svc.HasPendings(goCtx, objectReference)
 		if err != nil {
 			logger.Error("couldn't check pending state: ", err.Error())
 		}
@@ -172,63 +179,40 @@ func (sm *ObjectSM) stateGetPendingsInformation(ctx smachine.ExecutionContext) s
 			} else {
 				logger.Info("state already changed, ignoring check")
 			}
-			ctx.WakeUp()
 		}
-	})
-
-	return ctx.Jump(sm.checkPreviousExecutor)
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(sm.stepCheckPreviousExecutor)
 }
 
-func (sm *ObjectSM) stateGetLatestValidatedStatePrototypeAndCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (sm *ObjectSM) stepGetLatestValidatedState(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.migrateStop)
 
+	goCtx := ctx.GetContext()
 	objectReference := sm.ObjectReference
 
-	sm.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+	return sm.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		var err error
 
 		failCallback := func(ctx smachine.AsyncResultContext) {
-			inslogger.FromContext(ctx.GetContext()).Error("Failed to obtain objects: ", err)
-			sm.ServiceCallError = err
+			inslogger.FromContext(goCtx).Error("Failed to obtain objects: ", err)
+			sm.externalError = err
 		}
 
-		objectDescriptor, err := svc.GetObject(ctx.GetContext(), objectReference, nil)
+		objectDescriptor, err := svc.GetObject(goCtx, objectReference, nil)
 		if err != nil {
 			err = errors.Wrap(err, "Failed to obtain object descriptor")
 			return failCallback
 		}
 
-		// prototypeReference, err := objectDescriptor.Prototype()
-		// if err != nil {
-		// 	err = errors.Wrap(err, "Failed to obtain prototype reference from object descriptor")
-		// 	return failCallback
-		// }
-		// prototypeDescriptor, err := svc.GetPrototype(ctx.GetContext(), *prototypeReference)
-		// if err != nil {
-		// 	err = errors.Wrap(err, "Failed to obtain prototype descriptor")
-		// 	return failCallback
-		// }
-		//
-		// codeDescriptor, err := svc.GetCode(ctx.GetContext(), *prototypeDescriptor.Code())
-		// if err != nil {
-		// 	err = errors.Wrap(err, "Failed to obtain code descriptor")
-		// 	return failCallback
-		// }
-
 		return func(ctx smachine.AsyncResultContext) {
 			sm.ObjectLatestDescriptor = objectDescriptor
-			// sm.ObjectLatestCodeDescriptor = codeDescriptor
-			// sm.ObjectLatestProtoDescriptor = prototypeDescriptor
 			sm.IsReadyToWork = true
 		}
-	})
-
-	return ctx.Sleep().ThenJump(sm.stateGotLatestValidatedStatePrototypeAndCode)
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(sm.stateGotLatestValidatedStatePrototypeAndCode)
 }
 
 func (sm *ObjectSM) stateGotLatestValidatedStatePrototypeAndCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if sm.ServiceCallError != nil {
-		ctx.Error(sm.ServiceCallError)
+	if sm.externalError != nil {
+		ctx.Error(sm.externalError)
 	} else if sm.IsReadyToWork != true {
 		return ctx.Sleep().ThenJump(sm.stateGotLatestValidatedStatePrototypeAndCode)
 	}

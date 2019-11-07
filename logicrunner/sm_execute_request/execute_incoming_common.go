@@ -98,17 +98,19 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 	return smachine.StateUpdate{}
 }
 
-func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.StateConditionalBuilder {
+func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
+	goCtx := ctx.GetContext()
+
 	objectReference := s.RequestObjectReference
 	requestReference := s.RequestReference
 	executionResult := s.executionResult
 
-	s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		var objectDescriptor artifacts.ObjectDescriptor
 
-		err := svc.RegisterResult(ctx.GetContext(), requestReference, executionResult)
+		err := svc.RegisterResult(goCtx, requestReference, executionResult)
 		if err == nil && fetchNew {
-			objectDescriptor, err = svc.GetObject(ctx.GetContext(), objectReference, nil)
+			objectDescriptor, err = svc.GetObject(goCtx, objectReference, nil)
 		}
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -117,13 +119,13 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 				s.newObjectDescriptor = objectDescriptor
 			}
 		}
-	})
-
-	return ctx.Sleep()
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep()
 }
 
 // it'll panic or execute
 func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext) {
+	goCtx := ctx.GetContext()
+
 	var executionBytes []byte
 	var executionError string
 
@@ -179,9 +181,9 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 
 		var done func()
 		if APIRequest {
-			_, done = svc.SendTarget(ctx.GetContext(), msg, request.APINode)
+			_, done = svc.SendTarget(goCtx, msg, request.APINode)
 		} else {
-			_, done = svc.SendRole(ctx.GetContext(), msg, insolar.DynamicRoleVirtualExecutor, request.Caller)
+			_, done = svc.SendRole(goCtx, msg, insolar.DynamicRoleVirtualExecutor, request.Caller)
 		}
 		done()
 	})

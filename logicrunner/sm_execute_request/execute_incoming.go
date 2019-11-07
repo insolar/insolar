@@ -38,6 +38,7 @@ func (s *ExecuteIncomingRequest) GetInitStateFor(smachine.StateMachine) smachine
 }
 
 func (s *ExecuteIncomingRequest) InjectDependencies(sm smachine.StateMachine, slotLink smachine.SlotLink, injector *injector.DependencyInjector) {
+	s.ExecuteIncomingCommon.InjectDependencies(sm, slotLink, injector)
 }
 
 func (s *ExecuteIncomingRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
@@ -102,6 +103,7 @@ func (s *ExecuteIncomingRequest) stepClassifyCall(ctx smachine.ExecutionContext)
 	}).Call()
 
 	s.contractTranscript = common2.NewTranscript(ctx.GetContext(), s.RequestReference, *s.Request)
+	s.contractTranscript.ObjectDescriptor = s.objectInfo.ObjectLatestDescriptor
 
 	common := s.ExecuteIncomingCommon
 
