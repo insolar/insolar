@@ -63,7 +63,7 @@ var INSATTR_GetNodeInfo_API = true
 
 // GetNodeInfo returns RecordInfo.
 // ins:immutable
-func (nr NodeRecord) GetNodeInfo() (RecordInfo, error) {
+func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
 
@@ -72,17 +72,12 @@ var INSATTR_GetPublicKey_API = true
 
 // GetPublicKey returns public key.
 // ins:immutable
-func (nr NodeRecord) GetPublicKey() (string, error) {
+func (nr *NodeRecord) GetPublicKey() (string, error) {
 	return nr.Record.PublicKey, nil
 }
 
 // GetRole returns role.
 // ins:immutable
-func (nr NodeRecord) GetRole() (insolar.StaticRole, error) {
+func (nr *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	return nr.Record.Role, nil
-}
-
-// Destroy makes request to destroy current node record.
-func (nr *NodeRecord) Destroy() error {
-	return nr.SelfDestruct()
 }

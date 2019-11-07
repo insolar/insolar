@@ -504,13 +504,12 @@ func (r *Account) GetBalance() (string, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
-	var args [5]interface{}
-	args[0] = rootDomainRef
-	args[1] = amountStr
-	args[2] = toMember
-	args[3] = fromMember
-	args[4] = request
+func (r *Account) Transfer(amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
+	var args [4]interface{}
+	args[0] = amountStr
+	args[1] = toMember
+	args[2] = fromMember
+	args[3] = request
 
 	var argsSerialized []byte
 
@@ -548,13 +547,12 @@ func (r *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Account) TransferAsImmutable(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
-	var args [5]interface{}
-	args[0] = rootDomainRef
-	args[1] = amountStr
-	args[2] = toMember
-	args[3] = fromMember
-	args[4] = request
+func (r *Account) TransferAsImmutable(amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
+	var args [4]interface{}
+	args[0] = amountStr
+	args[1] = toMember
+	args[2] = fromMember
+	args[3] = request
 
 	var argsSerialized []byte
 

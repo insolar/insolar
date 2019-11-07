@@ -144,7 +144,7 @@ func (a *Account) GetBalance() (string, error) {
 
 // Transfer transfers money to given member.
 func (a *Account) Transfer(
-	rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference,
+	amountStr string, toMember *insolar.Reference,
 	fromMember insolar.Reference, request insolar.Reference,
 ) (interface{}, error) {
 
