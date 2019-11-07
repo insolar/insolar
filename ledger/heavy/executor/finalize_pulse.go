@@ -52,8 +52,12 @@ func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunIn
 	}
 }
 
-func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
+func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan struct{}) {
+	done := make(chan struct{}, 1)
 	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
 		select {
 		case v := <-b.tryLock:
 			b.callCounter++
@@ -65,6 +69,8 @@ func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
 			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
 		}
 	}()
+
+	return done
 }
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
@@ -145,7 +151,8 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	// We run value GC here ( and only here ) implicitly since we want to
 	// exclude running GC during process of backup-replication
-	gcRunner.RunGCIfNeeded(ctx)
+	// Skip return value - we don't want to wait completion
+	_ = gcRunner.RunGCIfNeeded(ctx)
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {
