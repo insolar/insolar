@@ -252,21 +252,20 @@ func (m *executionProxyImplementation) RouteCall(
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"call_to":   req.ConstructorName,
-		"on_object": req.Prototype.String(),
-	})
-	logger.Debug("call to other contract constructor")
+	// _, logger := inslogger.WithFields(ctx, map[string]interface{}{
+	// 	"call_to":   req.ConstructorName,
+	// 	"on_object": req.Prototype.String(),
+	// })
+	// logger.Debug("call to other contract constructor")
+	//
+	// ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
+	// 	TraceID: []byte(inslogger.TraceID(ctx)),
+	// 	SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
 
-	ctx = instracer.WithParentSpan(ctx, instracer.TraceSpan{
-		TraceID: []byte(inslogger.TraceID(ctx)),
-		SpanID:  instracer.MakeBinarySpan(current.Request.Reason.Bytes()),
-	})
-
-	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
-	defer span.Finish()
-
-	logger = logger
+	// })
+	//
+	// ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
+	// defer span.Finish()
 
 	pulseObject, err := m.pa.Latest(ctx)
 	if err != nil {

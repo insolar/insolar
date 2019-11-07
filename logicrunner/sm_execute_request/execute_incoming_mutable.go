@@ -39,20 +39,18 @@ func (s *ExecuteIncomingMutableRequest) GetInitStateFor(smachine.StateMachine) s
 }
 
 func (s *ExecuteIncomingMutableRequest) InjectDependencies(smachine.StateMachine, smachine.SlotLink, *injector.DependencyInjector) {
-	panic("implement me")
 }
 
 func (s *ExecuteIncomingMutableRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	panic("implement me")
+	return nil
 }
 
 func (s *ExecuteIncomingMutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
 	return nil, false
-
 }
 
 func (s *ExecuteIncomingMutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	panic("implement me")
+	return false
 }
 
 /* -------- Instance ------------- */
@@ -85,17 +83,15 @@ func (s *ExecuteIncomingMutableRequest) stepOrderingCheck(ctx smachine.Execution
 func (s *ExecuteIncomingMutableRequest) stepExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	transcript := s.contractTranscript
 
-	s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
-		ctx := ctx.GetContext()
+	goCtx := ctx.GetContext()
 
-		result, err := svc.Execute(ctx, transcript)
+	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
+		result, err := svc.Execute(goCtx, transcript)
 		return func(ctx smachine.AsyncResultContext) {
 			s.internalError = err
 			s.executionResult = result
 		}
-	})
-
-	return ctx.Sleep().ThenJump(s.stepRegisterResult)
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepRegisterResult)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepRegisterResult(ctx smachine.ExecutionContext) smachine.StateUpdate {

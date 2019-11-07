@@ -19,10 +19,14 @@ package sm_request
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/s_jet_storage"
+	"github.com/insolar/insolar/logicrunner/s_sender"
 )
 
 type StateMachineUpdateJet struct {
@@ -30,7 +34,10 @@ type StateMachineUpdateJet struct {
 	Meta    *payload.Meta
 	Payload *payload.UpdateJet
 
-	jetStorage *s_jet_storage.JetStorageService
+	sender     *s_sender.SenderServiceAdapter
+	jetStorage *s_jet_storage.JetStorageServiceAdapter
+
+	externalError error
 }
 
 var declUpdateJet smachine.StateMachineDeclaration = declarationUpdateJet{}
@@ -42,7 +49,10 @@ func (declarationUpdateJet) GetStepLogger(context.Context, smachine.StateMachine
 }
 
 func (declarationUpdateJet) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	_ = sm.(*StateMachineUpdateJet)
+	s := sm.(*StateMachineUpdateJet)
+
+	injector.MustInject(&s.sender)
+	injector.MustInject(&s.jetStorage)
 }
 
 func (declarationUpdateJet) IsConsecutive(cur, next smachine.StateFunc) bool {
@@ -65,5 +75,31 @@ func (s *StateMachineUpdateJet) GetStateMachineDeclaration() smachine.StateMachi
 }
 
 func (s *StateMachineUpdateJet) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	return ctx.Jump(s.stepUpdateJet)
+}
+
+func (s *StateMachineUpdateJet) stepUpdateJet(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
+	pl := s.Payload
+
+	return s.jetStorage.PrepareAsync(ctx, func(svc s_jet_storage.JetStorageService) smachine.AsyncResultFunc {
+		err := svc.Update(goCtx, pl.Pulse, true, pl.JetID)
+		return func(ctx smachine.AsyncResultContext) {
+			s.externalError = errors.Wrap(err, "failed to update jets")
+		}
+	}).DelayedStart().Sleep().ThenJump(s.stepStop)
+}
+
+func (s *StateMachineUpdateJet) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
+
+	if s.externalError != nil {
+		s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
+			bus.ReplyError(goCtx, svc, *s.Meta, s.externalError)
+		}).DelayedSend()
+
+		return ctx.Error(s.externalError)
+	}
+
 	return ctx.Stop()
 }

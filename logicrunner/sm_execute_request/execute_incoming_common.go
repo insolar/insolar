@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
@@ -34,7 +35,7 @@ import (
 )
 
 type ExecuteIncomingCommon struct {
-	objectCatalog  sm_object.LocalObjectCatalog
+	objectCatalog  *sm_object.LocalObjectCatalog
 	pulseSlot      *conveyor.PulseSlot
 	ArtifactClient *s_artifact.ArtifactClientServiceAdapter
 	Sender         *s_sender.SenderServiceAdapter
@@ -71,6 +72,8 @@ func (s *ExecuteIncomingCommon) InjectDependencies(sm smachine.StateMachine, slo
 }
 
 func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContext, cb func(state *sm_object.SharedObjectState)) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
+
 	if s.sharedStateLink.IsZero() {
 		objectPair := sm_object.ObjectPair{
 			Pulse:           s.pulseSlot.PulseData().PulseNumber,
@@ -81,26 +84,33 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 
 	switch s.sharedStateLink.Prepare(cb).TryUse(ctx).GetDecision() {
 	case smachine.NotPassed:
+		inslogger.FromContext(goCtx).Error("NotPassed")
 		return ctx.WaitShared(s.sharedStateLink.SharedDataLink).ThenRepeat()
 	case smachine.Impossible:
+		inslogger.FromContext(goCtx).Error("Impossible")
 		// the holder of the sharedState is stopped
 		return ctx.Stop()
+	case smachine.Passed:
+		inslogger.FromContext(goCtx).Error("Passed")
+	default:
+		panic("unknown state from TryUse")
 	}
-
 	return smachine.StateUpdate{}
 }
 
-func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.StateConditionalBuilder {
+func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
+	goCtx := ctx.GetContext()
+
 	objectReference := s.RequestObjectReference
 	requestReference := s.RequestReference
 	executionResult := s.executionResult
 
-	s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		var objectDescriptor artifacts.ObjectDescriptor
 
-		err := svc.RegisterResult(ctx.GetContext(), requestReference, executionResult)
+		err := svc.RegisterResult(goCtx, requestReference, executionResult)
 		if err == nil && fetchNew {
-			objectDescriptor, err = svc.GetObject(ctx.GetContext(), objectReference, nil)
+			objectDescriptor, err = svc.GetObject(goCtx, objectReference, nil)
 		}
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -109,13 +119,13 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 				s.newObjectDescriptor = objectDescriptor
 			}
 		}
-	})
-
-	return ctx.Sleep()
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep()
 }
 
 // it'll panic or execute
 func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext) {
+	goCtx := ctx.GetContext()
+
 	var executionBytes []byte
 	var executionError string
 
@@ -171,9 +181,9 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 
 		var done func()
 		if APIRequest {
-			_, done = svc.SendTarget(ctx.GetContext(), msg, request.APINode)
+			_, done = svc.SendTarget(goCtx, msg, request.APINode)
 		} else {
-			_, done = svc.SendRole(ctx.GetContext(), msg, insolar.DynamicRoleVirtualExecutor, request.Caller)
+			_, done = svc.SendRole(goCtx, msg, insolar.DynamicRoleVirtualExecutor, request.Caller)
 		}
 		done()
 	})
