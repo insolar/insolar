@@ -90,7 +90,7 @@ func (p *DependencyInjector) InjectAll() error {
 
 	for i := 0; i < tt.NumField(); i++ {
 		sf := tt.Field(i)
-		id, ok := quickTag(`inject:"`, sf.Tag)
+		id, ok := sf.Tag.Lookup("inject")
 		if !ok {
 			continue
 		}
@@ -116,16 +116,6 @@ func (p *DependencyInjector) InjectAll() error {
 	}
 
 	return nil
-}
-
-func quickTag(prefix string, tag reflect.StructTag) (string, bool) {
-	if len(tag) < len(prefix)+1 {
-		return "", false
-	}
-	if strings.HasPrefix(string(tag), prefix) && strings.HasSuffix(string(tag), `"`) {
-		return string(tag[len(prefix) : len(tag)-1]), true
-	}
-	return "", false
 }
 
 func (p *DependencyInjector) tryInjectVar(id string, varRef interface{}) error {
