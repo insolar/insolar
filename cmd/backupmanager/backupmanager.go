@@ -20,7 +20,7 @@ import (
 	"context"
 	"math"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
