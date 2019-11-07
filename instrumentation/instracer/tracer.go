@@ -107,7 +107,7 @@ func StartSpanWithSpanID(ctx context.Context, name string, spanID uint64, o ...o
 	} else if traceStr := inslogger.TraceID(ctx); len(traceStr) >= uint32Size {
 		var err error
 		if len(traceStr) > uint64Size {
-			traceStr = traceStr[:uint64Size-1]
+			traceStr = traceStr[:uint64Size]
 		}
 		traceID, err = jaeger.TraceIDFromString(traceStr)
 		if err != nil {
@@ -183,7 +183,7 @@ func ParentSpanCtx(ctx context.Context) (jaeger.SpanContext, context.Context) {
 	// If it is shorter then uint32, then probably it is custom trace and it cannot be used for jaeger trace
 	if len(stringTrace) >= uint32Size {
 		if len(stringTrace) > uint64Size {
-			stringTrace = stringTrace[:uint64Size-1]
+			stringTrace = stringTrace[:uint64Size]
 		}
 		traceID, err = jaeger.TraceIDFromString(stringTrace)
 		if err != nil {
