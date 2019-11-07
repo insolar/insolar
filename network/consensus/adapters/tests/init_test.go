@@ -240,7 +240,7 @@ func initLogger(level insolar.LogLevel) context.Context {
 	cfg.Level = level.String()
 	cfg.Formatter = insolar.TextFormat.String()
 
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, "main_"+utils.RandTraceID(), "", "")
+	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, utils.RandTraceID()+"_main", "", "")
 	return ctx
 }
 

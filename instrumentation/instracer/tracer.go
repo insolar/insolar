@@ -98,10 +98,10 @@ func StartSpanWithSpanID(ctx context.Context, name string, spanID uint64, o ...o
 			traceID = sc.TraceID()
 			parentID = sc.SpanID()
 		}
-	} else if traceStr := inslogger.TraceID(ctx); traceStr != "" {
+	} else if traceStr := inslogger.TraceID(ctx); len(traceStr) >= 16 {
 		var err error
 		if len(traceStr) > 32 {
-			traceStr = traceStr[:32]
+			traceStr = traceStr[:31]
 		}
 		traceID, err = jaeger.TraceIDFromString(traceStr)
 		if err != nil {
@@ -169,17 +169,16 @@ func ParentSpanCtx(ctx context.Context) (jaeger.SpanContext, context.Context) {
 		err     error
 	)
 
+	stringTrace := inslogger.TraceID(ctx)
 	if len(traceSpan.TraceID) > 0 {
-		if len(traceSpan.TraceID) > 32 {
-			traceSpan.TraceID = traceSpan.TraceID[:32]
+		stringTrace = string(traceSpan.TraceID)
+	}
+
+	if len(stringTrace) >= 16 {
+		if len(stringTrace) > 32 {
+			stringTrace = stringTrace[:31]
 		}
-		traceID, err = jaeger.TraceIDFromString(string(traceSpan.TraceID))
-		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to parse tracespan traceID"))
-			return emptyContext, ctx
-		}
-	} else {
-		traceID, err = jaeger.TraceIDFromString(inslogger.TraceID(ctx))
+		traceID, err = jaeger.TraceIDFromString(stringTrace)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to parse tracespan traceID"))
 			return emptyContext, ctx
