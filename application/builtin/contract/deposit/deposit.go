@@ -109,11 +109,9 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string,
-	lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
+func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
 
 	migrationDaemonConfirms := make(foundation.StableMap)
-	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
 
 	return &Deposit{
 		Balance:                 "0",
@@ -135,7 +133,7 @@ func (d *Deposit) Itself() (interface{}, error) {
 
 // Confirm adds confirm for deposit by migration daemon.
 func (d *Deposit) Confirm(
-	txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference,
+	txHash string, amountStr string, fromMember insolar.Reference, request insolar.Reference, toMember insolar.Reference,
 ) error {
 
 	migrationDaemonRef := fromMember.String()
@@ -170,7 +168,8 @@ func (d *Deposit) Confirm(
 		if !ok {
 			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
 		}
-		err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference(), fromMember, request)
+
+		err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference(), fromMember, request, toMember)
 		if err != nil {
 			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
 		}
@@ -182,7 +181,11 @@ func (d *Deposit) Confirm(
 
 // TransferToDeposit transfers funds to deposit.
 func (d *Deposit) TransferToDeposit(
-	amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+	amountStr string,
+	toDeposit insolar.Reference,
+	fromMember insolar.Reference,
+	request insolar.Reference,
+	toMember insolar.Reference,
 ) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {

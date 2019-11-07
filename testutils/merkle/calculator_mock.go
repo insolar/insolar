@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_merkle "github.com/insolar/insolar/network/merkle"
 )
 
@@ -180,15 +180,15 @@ func (mmGetCloudProof *CalculatorMock) GetCloudProof(cp1 *mm_merkle.CloudEntry) 
 		mmGetCloudProof.inspectFuncGetCloudProof(cp1)
 	}
 
-	params := &CalculatorMockGetCloudProofParams{cp1}
+	mm_params := &CalculatorMockGetCloudProofParams{cp1}
 
 	// Record call args
 	mmGetCloudProof.GetCloudProofMock.mutex.Lock()
-	mmGetCloudProof.GetCloudProofMock.callArgs = append(mmGetCloudProof.GetCloudProofMock.callArgs, params)
+	mmGetCloudProof.GetCloudProofMock.callArgs = append(mmGetCloudProof.GetCloudProofMock.callArgs, mm_params)
 	mmGetCloudProof.GetCloudProofMock.mutex.Unlock()
 
 	for _, e := range mmGetCloudProof.GetCloudProofMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.o1, e.results.cp2, e.results.err
 		}
@@ -196,17 +196,17 @@ func (mmGetCloudProof *CalculatorMock) GetCloudProof(cp1 *mm_merkle.CloudEntry) 
 
 	if mmGetCloudProof.GetCloudProofMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCloudProof.GetCloudProofMock.defaultExpectation.Counter, 1)
-		want := mmGetCloudProof.GetCloudProofMock.defaultExpectation.params
-		got := CalculatorMockGetCloudProofParams{cp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetCloudProof.t.Errorf("CalculatorMock.GetCloudProof got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetCloudProof.GetCloudProofMock.defaultExpectation.params
+		mm_got := CalculatorMockGetCloudProofParams{cp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetCloudProof.t.Errorf("CalculatorMock.GetCloudProof got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetCloudProof.GetCloudProofMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCloudProof.GetCloudProofMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCloudProof.t.Fatal("No results are set for the CalculatorMock.GetCloudProof")
 		}
-		return (*results).o1, (*results).cp2, (*results).err
+		return (*mm_results).o1, (*mm_results).cp2, (*mm_results).err
 	}
 	if mmGetCloudProof.funcGetCloudProof != nil {
 		return mmGetCloudProof.funcGetCloudProof(cp1)
@@ -397,15 +397,15 @@ func (mmGetGlobuleProof *CalculatorMock) GetGlobuleProof(gp1 *mm_merkle.GlobuleE
 		mmGetGlobuleProof.inspectFuncGetGlobuleProof(gp1)
 	}
 
-	params := &CalculatorMockGetGlobuleProofParams{gp1}
+	mm_params := &CalculatorMockGetGlobuleProofParams{gp1}
 
 	// Record call args
 	mmGetGlobuleProof.GetGlobuleProofMock.mutex.Lock()
-	mmGetGlobuleProof.GetGlobuleProofMock.callArgs = append(mmGetGlobuleProof.GetGlobuleProofMock.callArgs, params)
+	mmGetGlobuleProof.GetGlobuleProofMock.callArgs = append(mmGetGlobuleProof.GetGlobuleProofMock.callArgs, mm_params)
 	mmGetGlobuleProof.GetGlobuleProofMock.mutex.Unlock()
 
 	for _, e := range mmGetGlobuleProof.GetGlobuleProofMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.o1, e.results.gp2, e.results.err
 		}
@@ -413,17 +413,17 @@ func (mmGetGlobuleProof *CalculatorMock) GetGlobuleProof(gp1 *mm_merkle.GlobuleE
 
 	if mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation.Counter, 1)
-		want := mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation.params
-		got := CalculatorMockGetGlobuleProofParams{gp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetGlobuleProof.t.Errorf("CalculatorMock.GetGlobuleProof got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation.params
+		mm_got := CalculatorMockGetGlobuleProofParams{gp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetGlobuleProof.t.Errorf("CalculatorMock.GetGlobuleProof got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetGlobuleProof.GetGlobuleProofMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetGlobuleProof.t.Fatal("No results are set for the CalculatorMock.GetGlobuleProof")
 		}
-		return (*results).o1, (*results).gp2, (*results).err
+		return (*mm_results).o1, (*mm_results).gp2, (*mm_results).err
 	}
 	if mmGetGlobuleProof.funcGetGlobuleProof != nil {
 		return mmGetGlobuleProof.funcGetGlobuleProof(gp1)
@@ -614,15 +614,15 @@ func (mmGetPulseProof *CalculatorMock) GetPulseProof(pp1 *mm_merkle.PulseEntry) 
 		mmGetPulseProof.inspectFuncGetPulseProof(pp1)
 	}
 
-	params := &CalculatorMockGetPulseProofParams{pp1}
+	mm_params := &CalculatorMockGetPulseProofParams{pp1}
 
 	// Record call args
 	mmGetPulseProof.GetPulseProofMock.mutex.Lock()
-	mmGetPulseProof.GetPulseProofMock.callArgs = append(mmGetPulseProof.GetPulseProofMock.callArgs, params)
+	mmGetPulseProof.GetPulseProofMock.callArgs = append(mmGetPulseProof.GetPulseProofMock.callArgs, mm_params)
 	mmGetPulseProof.GetPulseProofMock.mutex.Unlock()
 
 	for _, e := range mmGetPulseProof.GetPulseProofMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.o1, e.results.pp2, e.results.err
 		}
@@ -630,17 +630,17 @@ func (mmGetPulseProof *CalculatorMock) GetPulseProof(pp1 *mm_merkle.PulseEntry) 
 
 	if mmGetPulseProof.GetPulseProofMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPulseProof.GetPulseProofMock.defaultExpectation.Counter, 1)
-		want := mmGetPulseProof.GetPulseProofMock.defaultExpectation.params
-		got := CalculatorMockGetPulseProofParams{pp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetPulseProof.t.Errorf("CalculatorMock.GetPulseProof got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetPulseProof.GetPulseProofMock.defaultExpectation.params
+		mm_got := CalculatorMockGetPulseProofParams{pp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetPulseProof.t.Errorf("CalculatorMock.GetPulseProof got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetPulseProof.GetPulseProofMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPulseProof.GetPulseProofMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPulseProof.t.Fatal("No results are set for the CalculatorMock.GetPulseProof")
 		}
-		return (*results).o1, (*results).pp2, (*results).err
+		return (*mm_results).o1, (*mm_results).pp2, (*mm_results).err
 	}
 	if mmGetPulseProof.funcGetPulseProof != nil {
 		return mmGetPulseProof.funcGetPulseProof(pp1)
@@ -831,15 +831,15 @@ func (mmIsValid *CalculatorMock) IsValid(p1 mm_merkle.Proof, o1 mm_merkle.Origin
 		mmIsValid.inspectFuncIsValid(p1, o1, p2)
 	}
 
-	params := &CalculatorMockIsValidParams{p1, o1, p2}
+	mm_params := &CalculatorMockIsValidParams{p1, o1, p2}
 
 	// Record call args
 	mmIsValid.IsValidMock.mutex.Lock()
-	mmIsValid.IsValidMock.callArgs = append(mmIsValid.IsValidMock.callArgs, params)
+	mmIsValid.IsValidMock.callArgs = append(mmIsValid.IsValidMock.callArgs, mm_params)
 	mmIsValid.IsValidMock.mutex.Unlock()
 
 	for _, e := range mmIsValid.IsValidMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -847,17 +847,17 @@ func (mmIsValid *CalculatorMock) IsValid(p1 mm_merkle.Proof, o1 mm_merkle.Origin
 
 	if mmIsValid.IsValidMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsValid.IsValidMock.defaultExpectation.Counter, 1)
-		want := mmIsValid.IsValidMock.defaultExpectation.params
-		got := CalculatorMockIsValidParams{p1, o1, p2}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsValid.t.Errorf("CalculatorMock.IsValid got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsValid.IsValidMock.defaultExpectation.params
+		mm_got := CalculatorMockIsValidParams{p1, o1, p2}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsValid.t.Errorf("CalculatorMock.IsValid got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsValid.IsValidMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsValid.IsValidMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsValid.t.Fatal("No results are set for the CalculatorMock.IsValid")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsValid.funcIsValid != nil {
 		return mmIsValid.funcIsValid(p1, o1, p2)

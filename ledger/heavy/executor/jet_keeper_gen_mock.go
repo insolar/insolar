@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 )
@@ -196,15 +196,15 @@ func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmation(ctx context.
 		mmAddBackupConfirmation.inspectFuncAddBackupConfirmation(ctx, pn)
 	}
 
-	params := &JetKeeperMockAddBackupConfirmationParams{ctx, pn}
+	mm_params := &JetKeeperMockAddBackupConfirmationParams{ctx, pn}
 
 	// Record call args
 	mmAddBackupConfirmation.AddBackupConfirmationMock.mutex.Lock()
-	mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs = append(mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs, params)
+	mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs = append(mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs, mm_params)
 	mmAddBackupConfirmation.AddBackupConfirmationMock.mutex.Unlock()
 
 	for _, e := range mmAddBackupConfirmation.AddBackupConfirmationMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -212,17 +212,17 @@ func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmation(ctx context.
 
 	if mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.Counter, 1)
-		want := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.params
-		got := JetKeeperMockAddBackupConfirmationParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddBackupConfirmation.t.Errorf("JetKeeperMock.AddBackupConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.params
+		mm_got := JetKeeperMockAddBackupConfirmationParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddBackupConfirmation.t.Errorf("JetKeeperMock.AddBackupConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddBackupConfirmation.t.Fatal("No results are set for the JetKeeperMock.AddBackupConfirmation")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAddBackupConfirmation.funcAddBackupConfirmation != nil {
 		return mmAddBackupConfirmation.funcAddBackupConfirmation(ctx, pn)
@@ -414,15 +414,15 @@ func (mmAddDropConfirmation *JetKeeperMock) AddDropConfirmation(ctx context.Cont
 		mmAddDropConfirmation.inspectFuncAddDropConfirmation(ctx, pn, jet, split)
 	}
 
-	params := &JetKeeperMockAddDropConfirmationParams{ctx, pn, jet, split}
+	mm_params := &JetKeeperMockAddDropConfirmationParams{ctx, pn, jet, split}
 
 	// Record call args
 	mmAddDropConfirmation.AddDropConfirmationMock.mutex.Lock()
-	mmAddDropConfirmation.AddDropConfirmationMock.callArgs = append(mmAddDropConfirmation.AddDropConfirmationMock.callArgs, params)
+	mmAddDropConfirmation.AddDropConfirmationMock.callArgs = append(mmAddDropConfirmation.AddDropConfirmationMock.callArgs, mm_params)
 	mmAddDropConfirmation.AddDropConfirmationMock.mutex.Unlock()
 
 	for _, e := range mmAddDropConfirmation.AddDropConfirmationMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -430,17 +430,17 @@ func (mmAddDropConfirmation *JetKeeperMock) AddDropConfirmation(ctx context.Cont
 
 	if mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation.Counter, 1)
-		want := mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation.params
-		got := JetKeeperMockAddDropConfirmationParams{ctx, pn, jet, split}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddDropConfirmation.t.Errorf("JetKeeperMock.AddDropConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation.params
+		mm_got := JetKeeperMockAddDropConfirmationParams{ctx, pn, jet, split}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddDropConfirmation.t.Errorf("JetKeeperMock.AddDropConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddDropConfirmation.AddDropConfirmationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddDropConfirmation.t.Fatal("No results are set for the JetKeeperMock.AddDropConfirmation")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAddDropConfirmation.funcAddDropConfirmation != nil {
 		return mmAddDropConfirmation.funcAddDropConfirmation(ctx, pn, jet, split)
@@ -632,15 +632,15 @@ func (mmAddHotConfirmation *JetKeeperMock) AddHotConfirmation(ctx context.Contex
 		mmAddHotConfirmation.inspectFuncAddHotConfirmation(ctx, pn, jet, split)
 	}
 
-	params := &JetKeeperMockAddHotConfirmationParams{ctx, pn, jet, split}
+	mm_params := &JetKeeperMockAddHotConfirmationParams{ctx, pn, jet, split}
 
 	// Record call args
 	mmAddHotConfirmation.AddHotConfirmationMock.mutex.Lock()
-	mmAddHotConfirmation.AddHotConfirmationMock.callArgs = append(mmAddHotConfirmation.AddHotConfirmationMock.callArgs, params)
+	mmAddHotConfirmation.AddHotConfirmationMock.callArgs = append(mmAddHotConfirmation.AddHotConfirmationMock.callArgs, mm_params)
 	mmAddHotConfirmation.AddHotConfirmationMock.mutex.Unlock()
 
 	for _, e := range mmAddHotConfirmation.AddHotConfirmationMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -648,17 +648,17 @@ func (mmAddHotConfirmation *JetKeeperMock) AddHotConfirmation(ctx context.Contex
 
 	if mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation.Counter, 1)
-		want := mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation.params
-		got := JetKeeperMockAddHotConfirmationParams{ctx, pn, jet, split}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddHotConfirmation.t.Errorf("JetKeeperMock.AddHotConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation.params
+		mm_got := JetKeeperMockAddHotConfirmationParams{ctx, pn, jet, split}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddHotConfirmation.t.Errorf("JetKeeperMock.AddHotConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddHotConfirmation.AddHotConfirmationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddHotConfirmation.t.Fatal("No results are set for the JetKeeperMock.AddHotConfirmation")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAddHotConfirmation.funcAddHotConfirmation != nil {
 		return mmAddHotConfirmation.funcAddHotConfirmation(ctx, pn, jet, split)
@@ -848,15 +848,15 @@ func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirms(ctx context.Context,
 		mmHasAllJetConfirms.inspectFuncHasAllJetConfirms(ctx, pn)
 	}
 
-	params := &JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
+	mm_params := &JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
 
 	// Record call args
 	mmHasAllJetConfirms.HasAllJetConfirmsMock.mutex.Lock()
-	mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs = append(mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs, params)
+	mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs = append(mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs, mm_params)
 	mmHasAllJetConfirms.HasAllJetConfirmsMock.mutex.Unlock()
 
 	for _, e := range mmHasAllJetConfirms.HasAllJetConfirmsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -864,17 +864,17 @@ func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirms(ctx context.Context,
 
 	if mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.Counter, 1)
-		want := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.params
-		got := JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmHasAllJetConfirms.t.Errorf("JetKeeperMock.HasAllJetConfirms got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.params
+		mm_got := JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmHasAllJetConfirms.t.Errorf("JetKeeperMock.HasAllJetConfirms got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHasAllJetConfirms.t.Fatal("No results are set for the JetKeeperMock.HasAllJetConfirms")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmHasAllJetConfirms.funcHasAllJetConfirms != nil {
 		return mmHasAllJetConfirms.funcHasAllJetConfirms(ctx, pn)
@@ -1030,11 +1030,11 @@ func (mmStorage *JetKeeperMock) Storage() (s1 jet.Storage) {
 	if mmStorage.StorageMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStorage.StorageMock.defaultExpectation.Counter, 1)
 
-		results := mmStorage.StorageMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStorage.StorageMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStorage.t.Fatal("No results are set for the JetKeeperMock.Storage")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmStorage.funcStorage != nil {
 		return mmStorage.funcStorage()
@@ -1173,11 +1173,11 @@ func (mmTopSyncPulse *JetKeeperMock) TopSyncPulse() (p1 insolar.PulseNumber) {
 	if mmTopSyncPulse.TopSyncPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmTopSyncPulse.TopSyncPulseMock.defaultExpectation.Counter, 1)
 
-		results := mmTopSyncPulse.TopSyncPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmTopSyncPulse.TopSyncPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmTopSyncPulse.t.Fatal("No results are set for the JetKeeperMock.TopSyncPulse")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmTopSyncPulse.funcTopSyncPulse != nil {
 		return mmTopSyncPulse.funcTopSyncPulse()

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -202,15 +202,15 @@ func (mmActivateObject *ManagerMock) ActivateObject(ctx context.Context, domain 
 		mmActivateObject.inspectFuncActivateObject(ctx, domain, obj, parent, prototype, memory)
 	}
 
-	params := &ManagerMockActivateObjectParams{ctx, domain, obj, parent, prototype, memory}
+	mm_params := &ManagerMockActivateObjectParams{ctx, domain, obj, parent, prototype, memory}
 
 	// Record call args
 	mmActivateObject.ActivateObjectMock.mutex.Lock()
-	mmActivateObject.ActivateObjectMock.callArgs = append(mmActivateObject.ActivateObjectMock.callArgs, params)
+	mmActivateObject.ActivateObjectMock.callArgs = append(mmActivateObject.ActivateObjectMock.callArgs, mm_params)
 	mmActivateObject.ActivateObjectMock.mutex.Unlock()
 
 	for _, e := range mmActivateObject.ActivateObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -218,17 +218,17 @@ func (mmActivateObject *ManagerMock) ActivateObject(ctx context.Context, domain 
 
 	if mmActivateObject.ActivateObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmActivateObject.ActivateObjectMock.defaultExpectation.Counter, 1)
-		want := mmActivateObject.ActivateObjectMock.defaultExpectation.params
-		got := ManagerMockActivateObjectParams{ctx, domain, obj, parent, prototype, memory}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmActivateObject.t.Errorf("ManagerMock.ActivateObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmActivateObject.ActivateObjectMock.defaultExpectation.params
+		mm_got := ManagerMockActivateObjectParams{ctx, domain, obj, parent, prototype, memory}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmActivateObject.t.Errorf("ManagerMock.ActivateObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmActivateObject.ActivateObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmActivateObject.ActivateObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmActivateObject.t.Fatal("No results are set for the ManagerMock.ActivateObject")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmActivateObject.funcActivateObject != nil {
 		return mmActivateObject.funcActivateObject(ctx, domain, obj, parent, prototype, memory)
@@ -422,15 +422,15 @@ func (mmDeployCode *ManagerMock) DeployCode(ctx context.Context, domain insolar.
 		mmDeployCode.inspectFuncDeployCode(ctx, domain, request, code, machineType)
 	}
 
-	params := &ManagerMockDeployCodeParams{ctx, domain, request, code, machineType}
+	mm_params := &ManagerMockDeployCodeParams{ctx, domain, request, code, machineType}
 
 	// Record call args
 	mmDeployCode.DeployCodeMock.mutex.Lock()
-	mmDeployCode.DeployCodeMock.callArgs = append(mmDeployCode.DeployCodeMock.callArgs, params)
+	mmDeployCode.DeployCodeMock.callArgs = append(mmDeployCode.DeployCodeMock.callArgs, mm_params)
 	mmDeployCode.DeployCodeMock.mutex.Unlock()
 
 	for _, e := range mmDeployCode.DeployCodeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ip1, e.results.err
 		}
@@ -438,17 +438,17 @@ func (mmDeployCode *ManagerMock) DeployCode(ctx context.Context, domain insolar.
 
 	if mmDeployCode.DeployCodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDeployCode.DeployCodeMock.defaultExpectation.Counter, 1)
-		want := mmDeployCode.DeployCodeMock.defaultExpectation.params
-		got := ManagerMockDeployCodeParams{ctx, domain, request, code, machineType}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDeployCode.t.Errorf("ManagerMock.DeployCode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDeployCode.DeployCodeMock.defaultExpectation.params
+		mm_got := ManagerMockDeployCodeParams{ctx, domain, request, code, machineType}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeployCode.t.Errorf("ManagerMock.DeployCode got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmDeployCode.DeployCodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDeployCode.DeployCodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDeployCode.t.Fatal("No results are set for the ManagerMock.DeployCode")
 		}
-		return (*results).ip1, (*results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmDeployCode.funcDeployCode != nil {
 		return mmDeployCode.funcDeployCode(ctx, domain, request, code, machineType)
@@ -639,15 +639,15 @@ func (mmGetObject *ManagerMock) GetObject(ctx context.Context, head insolar.Refe
 		mmGetObject.inspectFuncGetObject(ctx, head)
 	}
 
-	params := &ManagerMockGetObjectParams{ctx, head}
+	mm_params := &ManagerMockGetObjectParams{ctx, head}
 
 	// Record call args
 	mmGetObject.GetObjectMock.mutex.Lock()
-	mmGetObject.GetObjectMock.callArgs = append(mmGetObject.GetObjectMock.callArgs, params)
+	mmGetObject.GetObjectMock.callArgs = append(mmGetObject.GetObjectMock.callArgs, mm_params)
 	mmGetObject.GetObjectMock.mutex.Unlock()
 
 	for _, e := range mmGetObject.GetObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.o1, e.results.err
 		}
@@ -655,17 +655,17 @@ func (mmGetObject *ManagerMock) GetObject(ctx context.Context, head insolar.Refe
 
 	if mmGetObject.GetObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetObject.GetObjectMock.defaultExpectation.Counter, 1)
-		want := mmGetObject.GetObjectMock.defaultExpectation.params
-		got := ManagerMockGetObjectParams{ctx, head}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetObject.t.Errorf("ManagerMock.GetObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetObject.GetObjectMock.defaultExpectation.params
+		mm_got := ManagerMockGetObjectParams{ctx, head}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetObject.t.Errorf("ManagerMock.GetObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetObject.GetObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetObject.GetObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetObject.t.Fatal("No results are set for the ManagerMock.GetObject")
 		}
-		return (*results).o1, (*results).err
+		return (*mm_results).o1, (*mm_results).err
 	}
 	if mmGetObject.funcGetObject != nil {
 		return mmGetObject.funcGetObject(ctx, head)
@@ -856,15 +856,15 @@ func (mmRegisterRequest *ManagerMock) RegisterRequest(ctx context.Context, req r
 		mmRegisterRequest.inspectFuncRegisterRequest(ctx, req)
 	}
 
-	params := &ManagerMockRegisterRequestParams{ctx, req}
+	mm_params := &ManagerMockRegisterRequestParams{ctx, req}
 
 	// Record call args
 	mmRegisterRequest.RegisterRequestMock.mutex.Lock()
-	mmRegisterRequest.RegisterRequestMock.callArgs = append(mmRegisterRequest.RegisterRequestMock.callArgs, params)
+	mmRegisterRequest.RegisterRequestMock.callArgs = append(mmRegisterRequest.RegisterRequestMock.callArgs, mm_params)
 	mmRegisterRequest.RegisterRequestMock.mutex.Unlock()
 
 	for _, e := range mmRegisterRequest.RegisterRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ip1, e.results.err
 		}
@@ -872,17 +872,17 @@ func (mmRegisterRequest *ManagerMock) RegisterRequest(ctx context.Context, req r
 
 	if mmRegisterRequest.RegisterRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRegisterRequest.RegisterRequestMock.defaultExpectation.Counter, 1)
-		want := mmRegisterRequest.RegisterRequestMock.defaultExpectation.params
-		got := ManagerMockRegisterRequestParams{ctx, req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRegisterRequest.t.Errorf("ManagerMock.RegisterRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRegisterRequest.RegisterRequestMock.defaultExpectation.params
+		mm_got := ManagerMockRegisterRequestParams{ctx, req}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRegisterRequest.t.Errorf("ManagerMock.RegisterRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRegisterRequest.RegisterRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRegisterRequest.RegisterRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRegisterRequest.t.Fatal("No results are set for the ManagerMock.RegisterRequest")
 		}
-		return (*results).ip1, (*results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmRegisterRequest.funcRegisterRequest != nil {
 		return mmRegisterRequest.funcRegisterRequest(ctx, req)
@@ -1075,15 +1075,15 @@ func (mmRegisterResult *ManagerMock) RegisterResult(ctx context.Context, obj ins
 		mmRegisterResult.inspectFuncRegisterResult(ctx, obj, request, payload)
 	}
 
-	params := &ManagerMockRegisterResultParams{ctx, obj, request, payload}
+	mm_params := &ManagerMockRegisterResultParams{ctx, obj, request, payload}
 
 	// Record call args
 	mmRegisterResult.RegisterResultMock.mutex.Lock()
-	mmRegisterResult.RegisterResultMock.callArgs = append(mmRegisterResult.RegisterResultMock.callArgs, params)
+	mmRegisterResult.RegisterResultMock.callArgs = append(mmRegisterResult.RegisterResultMock.callArgs, mm_params)
 	mmRegisterResult.RegisterResultMock.mutex.Unlock()
 
 	for _, e := range mmRegisterResult.RegisterResultMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ip1, e.results.err
 		}
@@ -1091,17 +1091,17 @@ func (mmRegisterResult *ManagerMock) RegisterResult(ctx context.Context, obj ins
 
 	if mmRegisterResult.RegisterResultMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRegisterResult.RegisterResultMock.defaultExpectation.Counter, 1)
-		want := mmRegisterResult.RegisterResultMock.defaultExpectation.params
-		got := ManagerMockRegisterResultParams{ctx, obj, request, payload}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRegisterResult.t.Errorf("ManagerMock.RegisterResult got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRegisterResult.RegisterResultMock.defaultExpectation.params
+		mm_got := ManagerMockRegisterResultParams{ctx, obj, request, payload}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRegisterResult.t.Errorf("ManagerMock.RegisterResult got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRegisterResult.RegisterResultMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRegisterResult.RegisterResultMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRegisterResult.t.Fatal("No results are set for the ManagerMock.RegisterResult")
 		}
-		return (*results).ip1, (*results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmRegisterResult.funcRegisterResult != nil {
 		return mmRegisterResult.funcRegisterResult(ctx, obj, request, payload)
@@ -1294,15 +1294,15 @@ func (mmUpdateObject *ManagerMock) UpdateObject(ctx context.Context, domain inso
 		mmUpdateObject.inspectFuncUpdateObject(ctx, domain, request, obj, memory)
 	}
 
-	params := &ManagerMockUpdateObjectParams{ctx, domain, request, obj, memory}
+	mm_params := &ManagerMockUpdateObjectParams{ctx, domain, request, obj, memory}
 
 	// Record call args
 	mmUpdateObject.UpdateObjectMock.mutex.Lock()
-	mmUpdateObject.UpdateObjectMock.callArgs = append(mmUpdateObject.UpdateObjectMock.callArgs, params)
+	mmUpdateObject.UpdateObjectMock.callArgs = append(mmUpdateObject.UpdateObjectMock.callArgs, mm_params)
 	mmUpdateObject.UpdateObjectMock.mutex.Unlock()
 
 	for _, e := range mmUpdateObject.UpdateObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1310,17 +1310,17 @@ func (mmUpdateObject *ManagerMock) UpdateObject(ctx context.Context, domain inso
 
 	if mmUpdateObject.UpdateObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpdateObject.UpdateObjectMock.defaultExpectation.Counter, 1)
-		want := mmUpdateObject.UpdateObjectMock.defaultExpectation.params
-		got := ManagerMockUpdateObjectParams{ctx, domain, request, obj, memory}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpdateObject.t.Errorf("ManagerMock.UpdateObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpdateObject.UpdateObjectMock.defaultExpectation.params
+		mm_got := ManagerMockUpdateObjectParams{ctx, domain, request, obj, memory}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdateObject.t.Errorf("ManagerMock.UpdateObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUpdateObject.UpdateObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUpdateObject.UpdateObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUpdateObject.t.Fatal("No results are set for the ManagerMock.UpdateObject")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmUpdateObject.funcUpdateObject != nil {
 		return mmUpdateObject.funcUpdateObject(ctx, domain, request, obj, memory)

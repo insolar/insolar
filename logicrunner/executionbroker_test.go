@@ -27,7 +27,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/fortytw2/leaktest"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -600,6 +600,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
+	defer leaktest.Check(t)()
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},

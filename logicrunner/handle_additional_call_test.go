@@ -22,7 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/fortytw2/leaktest"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -69,6 +70,8 @@ func genIncomingRequest() *record.IncomingRequest {
 }
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	table := []struct {
 		name                      string
 		clarifyPendingStateResult error
@@ -129,7 +132,12 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 
 	t.Run("Proceed without pending", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
+
 		mc := minimock.NewController(t)
 
 		ctx := inslogger.TestContext(t)
@@ -158,7 +166,11 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 	})
 
 	t.Run("Proceed with pending", func(t *testing.T) {
-		t.Parallel()
+		if useLeakTest {
+			defer leaktest.Check(t)()
+		} else {
+			t.Parallel()
+		}
 
 		mc := minimock.NewController(t)
 

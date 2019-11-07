@@ -21,15 +21,16 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 )
 
 type TestBadgerGCRunner struct {
@@ -59,7 +60,8 @@ func TestBadgerGCRunInfo(t *testing.T) {
 		runner := &TestBadgerGCRunner{}
 		info := executor.NewBadgerGCRunInfo(runner, 1)
 		for i := 1; i < 5; i++ {
-			info.RunGCIfNeeded(ctx)
+			done := info.RunGCIfNeeded(ctx)
+			<-done
 			require.Equal(t, uint(i), runner.getCount())
 		}
 	})
@@ -69,23 +71,21 @@ func TestBadgerGCRunInfo(t *testing.T) {
 		runner := &TestBadgerGCRunner{}
 		info := executor.NewBadgerGCRunInfo(runner, 0)
 		for i := 1; i < 5; i++ {
-			info.RunGCIfNeeded(ctx)
+			done := info.RunGCIfNeeded(ctx)
+			<-done
 			require.Equal(t, uint(0), runner.getCount())
 		}
 	})
-	t.Run("call every second time if frequency equal 2", func(t *testing.T) {
+
+	t.Run("even calls if frequency equal 2", func(t *testing.T) {
 		t.Parallel()
 		runner := &TestBadgerGCRunner{}
-		frequency := uint(2)
-		info := executor.NewBadgerGCRunInfo(runner, frequency)
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(0), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(1), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(1), runner.getCount())
-		info.RunGCIfNeeded(ctx)
-		require.Equal(t, uint(2), runner.getCount())
+		info := executor.NewBadgerGCRunInfo(runner, 2)
+		for i := 1; i < 5; i++ {
+			done := info.RunGCIfNeeded(ctx)
+			<-done
+			require.Equal(t, uint(i/2), runner.getCount())
+		}
 	})
 }
 
@@ -95,7 +95,7 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 	targetPulse := testPulse + 1
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
 
 	bkp := executor.NewBackupMakerMock(t)
@@ -167,7 +167,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	jk.HasAllJetConfirmsMock.Return(true)
 	jk.TopSyncPulseMock.Return(testPulse)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{}, errors.New("Test"))
 
 	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse, testBadgerGCInfo())
@@ -187,7 +187,7 @@ func TestFinalizePulse_BackupError(t *testing.T) {
 	js.AllMock.Return(nil)
 	jk.StorageMock.Return(js)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
 
 	bkp := executor.NewBackupMakerMock(t)
@@ -205,7 +205,7 @@ func TestFinalizePulse_NotNextPulse(t *testing.T) {
 	jk.HasAllJetConfirmsMock.Return(true)
 	jk.TopSyncPulseMock.Return(testPulse)
 
-	pc := network.NewPulseCalculatorMock(t)
+	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: testPulse}, nil)
 
 	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse+10, testBadgerGCInfo())

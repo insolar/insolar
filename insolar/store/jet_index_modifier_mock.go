@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -134,15 +134,15 @@ func (mmAdd *JetIndexModifierMock) Add(id insolar.ID, jetID insolar.JetID) {
 		mmAdd.inspectFuncAdd(id, jetID)
 	}
 
-	params := &JetIndexModifierMockAddParams{id, jetID}
+	mm_params := &JetIndexModifierMockAddParams{id, jetID}
 
 	// Record call args
 	mmAdd.AddMock.mutex.Lock()
-	mmAdd.AddMock.callArgs = append(mmAdd.AddMock.callArgs, params)
+	mmAdd.AddMock.callArgs = append(mmAdd.AddMock.callArgs, mm_params)
 	mmAdd.AddMock.mutex.Unlock()
 
 	for _, e := range mmAdd.AddMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -150,10 +150,10 @@ func (mmAdd *JetIndexModifierMock) Add(id insolar.ID, jetID insolar.JetID) {
 
 	if mmAdd.AddMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAdd.AddMock.defaultExpectation.Counter, 1)
-		want := mmAdd.AddMock.defaultExpectation.params
-		got := JetIndexModifierMockAddParams{id, jetID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAdd.t.Errorf("JetIndexModifierMock.Add got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAdd.AddMock.defaultExpectation.params
+		mm_got := JetIndexModifierMockAddParams{id, jetID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAdd.t.Errorf("JetIndexModifierMock.Add got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -322,15 +322,15 @@ func (mmDelete *JetIndexModifierMock) Delete(id insolar.ID, jetID insolar.JetID)
 		mmDelete.inspectFuncDelete(id, jetID)
 	}
 
-	params := &JetIndexModifierMockDeleteParams{id, jetID}
+	mm_params := &JetIndexModifierMockDeleteParams{id, jetID}
 
 	// Record call args
 	mmDelete.DeleteMock.mutex.Lock()
-	mmDelete.DeleteMock.callArgs = append(mmDelete.DeleteMock.callArgs, params)
+	mmDelete.DeleteMock.callArgs = append(mmDelete.DeleteMock.callArgs, mm_params)
 	mmDelete.DeleteMock.mutex.Unlock()
 
 	for _, e := range mmDelete.DeleteMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -338,10 +338,10 @@ func (mmDelete *JetIndexModifierMock) Delete(id insolar.ID, jetID insolar.JetID)
 
 	if mmDelete.DeleteMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDelete.DeleteMock.defaultExpectation.Counter, 1)
-		want := mmDelete.DeleteMock.defaultExpectation.params
-		got := JetIndexModifierMockDeleteParams{id, jetID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDelete.t.Errorf("JetIndexModifierMock.Delete got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDelete.DeleteMock.defaultExpectation.params
+		mm_got := JetIndexModifierMockDeleteParams{id, jetID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDelete.t.Errorf("JetIndexModifierMock.Delete got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

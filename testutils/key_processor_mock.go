@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // KeyProcessorMock implements insolar.KeyProcessor
@@ -213,15 +213,15 @@ func (mmExportPrivateKeyPEM *KeyProcessorMock) ExportPrivateKeyPEM(p1 crypto.Pri
 		mmExportPrivateKeyPEM.inspectFuncExportPrivateKeyPEM(p1)
 	}
 
-	params := &KeyProcessorMockExportPrivateKeyPEMParams{p1}
+	mm_params := &KeyProcessorMockExportPrivateKeyPEMParams{p1}
 
 	// Record call args
 	mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.mutex.Lock()
-	mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.callArgs = append(mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.callArgs, params)
+	mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.callArgs = append(mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.callArgs, mm_params)
 	mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.mutex.Unlock()
 
 	for _, e := range mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ba1, e.results.err
 		}
@@ -229,17 +229,17 @@ func (mmExportPrivateKeyPEM *KeyProcessorMock) ExportPrivateKeyPEM(p1 crypto.Pri
 
 	if mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation.Counter, 1)
-		want := mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation.params
-		got := KeyProcessorMockExportPrivateKeyPEMParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExportPrivateKeyPEM.t.Errorf("KeyProcessorMock.ExportPrivateKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation.params
+		mm_got := KeyProcessorMockExportPrivateKeyPEMParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExportPrivateKeyPEM.t.Errorf("KeyProcessorMock.ExportPrivateKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExportPrivateKeyPEM.ExportPrivateKeyPEMMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExportPrivateKeyPEM.t.Fatal("No results are set for the KeyProcessorMock.ExportPrivateKeyPEM")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmExportPrivateKeyPEM.funcExportPrivateKeyPEM != nil {
 		return mmExportPrivateKeyPEM.funcExportPrivateKeyPEM(p1)
@@ -429,15 +429,15 @@ func (mmExportPublicKeyBinary *KeyProcessorMock) ExportPublicKeyBinary(p1 crypto
 		mmExportPublicKeyBinary.inspectFuncExportPublicKeyBinary(p1)
 	}
 
-	params := &KeyProcessorMockExportPublicKeyBinaryParams{p1}
+	mm_params := &KeyProcessorMockExportPublicKeyBinaryParams{p1}
 
 	// Record call args
 	mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.mutex.Lock()
-	mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.callArgs = append(mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.callArgs, params)
+	mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.callArgs = append(mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.callArgs, mm_params)
 	mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.mutex.Unlock()
 
 	for _, e := range mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ba1, e.results.err
 		}
@@ -445,17 +445,17 @@ func (mmExportPublicKeyBinary *KeyProcessorMock) ExportPublicKeyBinary(p1 crypto
 
 	if mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation.Counter, 1)
-		want := mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation.params
-		got := KeyProcessorMockExportPublicKeyBinaryParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExportPublicKeyBinary.t.Errorf("KeyProcessorMock.ExportPublicKeyBinary got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation.params
+		mm_got := KeyProcessorMockExportPublicKeyBinaryParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExportPublicKeyBinary.t.Errorf("KeyProcessorMock.ExportPublicKeyBinary got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExportPublicKeyBinary.ExportPublicKeyBinaryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExportPublicKeyBinary.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyBinary")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmExportPublicKeyBinary.funcExportPublicKeyBinary != nil {
 		return mmExportPublicKeyBinary.funcExportPublicKeyBinary(p1)
@@ -645,15 +645,15 @@ func (mmExportPublicKeyPEM *KeyProcessorMock) ExportPublicKeyPEM(p1 crypto.Publi
 		mmExportPublicKeyPEM.inspectFuncExportPublicKeyPEM(p1)
 	}
 
-	params := &KeyProcessorMockExportPublicKeyPEMParams{p1}
+	mm_params := &KeyProcessorMockExportPublicKeyPEMParams{p1}
 
 	// Record call args
 	mmExportPublicKeyPEM.ExportPublicKeyPEMMock.mutex.Lock()
-	mmExportPublicKeyPEM.ExportPublicKeyPEMMock.callArgs = append(mmExportPublicKeyPEM.ExportPublicKeyPEMMock.callArgs, params)
+	mmExportPublicKeyPEM.ExportPublicKeyPEMMock.callArgs = append(mmExportPublicKeyPEM.ExportPublicKeyPEMMock.callArgs, mm_params)
 	mmExportPublicKeyPEM.ExportPublicKeyPEMMock.mutex.Unlock()
 
 	for _, e := range mmExportPublicKeyPEM.ExportPublicKeyPEMMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ba1, e.results.err
 		}
@@ -661,17 +661,17 @@ func (mmExportPublicKeyPEM *KeyProcessorMock) ExportPublicKeyPEM(p1 crypto.Publi
 
 	if mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation.Counter, 1)
-		want := mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation.params
-		got := KeyProcessorMockExportPublicKeyPEMParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExportPublicKeyPEM.t.Errorf("KeyProcessorMock.ExportPublicKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation.params
+		mm_got := KeyProcessorMockExportPublicKeyPEMParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExportPublicKeyPEM.t.Errorf("KeyProcessorMock.ExportPublicKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExportPublicKeyPEM.ExportPublicKeyPEMMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExportPublicKeyPEM.t.Fatal("No results are set for the KeyProcessorMock.ExportPublicKeyPEM")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmExportPublicKeyPEM.funcExportPublicKeyPEM != nil {
 		return mmExportPublicKeyPEM.funcExportPublicKeyPEM(p1)
@@ -860,15 +860,15 @@ func (mmExtractPublicKey *KeyProcessorMock) ExtractPublicKey(p1 crypto.PrivateKe
 		mmExtractPublicKey.inspectFuncExtractPublicKey(p1)
 	}
 
-	params := &KeyProcessorMockExtractPublicKeyParams{p1}
+	mm_params := &KeyProcessorMockExtractPublicKeyParams{p1}
 
 	// Record call args
 	mmExtractPublicKey.ExtractPublicKeyMock.mutex.Lock()
-	mmExtractPublicKey.ExtractPublicKeyMock.callArgs = append(mmExtractPublicKey.ExtractPublicKeyMock.callArgs, params)
+	mmExtractPublicKey.ExtractPublicKeyMock.callArgs = append(mmExtractPublicKey.ExtractPublicKeyMock.callArgs, mm_params)
 	mmExtractPublicKey.ExtractPublicKeyMock.mutex.Unlock()
 
 	for _, e := range mmExtractPublicKey.ExtractPublicKeyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p2
 		}
@@ -876,17 +876,17 @@ func (mmExtractPublicKey *KeyProcessorMock) ExtractPublicKey(p1 crypto.PrivateKe
 
 	if mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation.Counter, 1)
-		want := mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation.params
-		got := KeyProcessorMockExtractPublicKeyParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExtractPublicKey.t.Errorf("KeyProcessorMock.ExtractPublicKey got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation.params
+		mm_got := KeyProcessorMockExtractPublicKeyParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExtractPublicKey.t.Errorf("KeyProcessorMock.ExtractPublicKey got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExtractPublicKey.ExtractPublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExtractPublicKey.t.Fatal("No results are set for the KeyProcessorMock.ExtractPublicKey")
 		}
-		return (*results).p2
+		return (*mm_results).p2
 	}
 	if mmExtractPublicKey.funcExtractPublicKey != nil {
 		return mmExtractPublicKey.funcExtractPublicKey(p1)
@@ -1043,11 +1043,11 @@ func (mmGeneratePrivateKey *KeyProcessorMock) GeneratePrivateKey() (p1 crypto.Pr
 	if mmGeneratePrivateKey.GeneratePrivateKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGeneratePrivateKey.GeneratePrivateKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGeneratePrivateKey.GeneratePrivateKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGeneratePrivateKey.GeneratePrivateKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGeneratePrivateKey.t.Fatal("No results are set for the KeyProcessorMock.GeneratePrivateKey")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmGeneratePrivateKey.funcGeneratePrivateKey != nil {
 		return mmGeneratePrivateKey.funcGeneratePrivateKey()
@@ -1220,15 +1220,15 @@ func (mmImportPrivateKeyPEM *KeyProcessorMock) ImportPrivateKeyPEM(ba1 []byte) (
 		mmImportPrivateKeyPEM.inspectFuncImportPrivateKeyPEM(ba1)
 	}
 
-	params := &KeyProcessorMockImportPrivateKeyPEMParams{ba1}
+	mm_params := &KeyProcessorMockImportPrivateKeyPEMParams{ba1}
 
 	// Record call args
 	mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.mutex.Lock()
-	mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.callArgs = append(mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.callArgs, params)
+	mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.callArgs = append(mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.callArgs, mm_params)
 	mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.mutex.Unlock()
 
 	for _, e := range mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -1236,17 +1236,17 @@ func (mmImportPrivateKeyPEM *KeyProcessorMock) ImportPrivateKeyPEM(ba1 []byte) (
 
 	if mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation.Counter, 1)
-		want := mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation.params
-		got := KeyProcessorMockImportPrivateKeyPEMParams{ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmImportPrivateKeyPEM.t.Errorf("KeyProcessorMock.ImportPrivateKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation.params
+		mm_got := KeyProcessorMockImportPrivateKeyPEMParams{ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmImportPrivateKeyPEM.t.Errorf("KeyProcessorMock.ImportPrivateKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmImportPrivateKeyPEM.ImportPrivateKeyPEMMock.defaultExpectation.results
+		if mm_results == nil {
 			mmImportPrivateKeyPEM.t.Fatal("No results are set for the KeyProcessorMock.ImportPrivateKeyPEM")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmImportPrivateKeyPEM.funcImportPrivateKeyPEM != nil {
 		return mmImportPrivateKeyPEM.funcImportPrivateKeyPEM(ba1)
@@ -1436,15 +1436,15 @@ func (mmImportPublicKeyBinary *KeyProcessorMock) ImportPublicKeyBinary(ba1 []byt
 		mmImportPublicKeyBinary.inspectFuncImportPublicKeyBinary(ba1)
 	}
 
-	params := &KeyProcessorMockImportPublicKeyBinaryParams{ba1}
+	mm_params := &KeyProcessorMockImportPublicKeyBinaryParams{ba1}
 
 	// Record call args
 	mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.mutex.Lock()
-	mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.callArgs = append(mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.callArgs, params)
+	mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.callArgs = append(mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.callArgs, mm_params)
 	mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.mutex.Unlock()
 
 	for _, e := range mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -1452,17 +1452,17 @@ func (mmImportPublicKeyBinary *KeyProcessorMock) ImportPublicKeyBinary(ba1 []byt
 
 	if mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation.Counter, 1)
-		want := mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation.params
-		got := KeyProcessorMockImportPublicKeyBinaryParams{ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmImportPublicKeyBinary.t.Errorf("KeyProcessorMock.ImportPublicKeyBinary got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation.params
+		mm_got := KeyProcessorMockImportPublicKeyBinaryParams{ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmImportPublicKeyBinary.t.Errorf("KeyProcessorMock.ImportPublicKeyBinary got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmImportPublicKeyBinary.ImportPublicKeyBinaryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmImportPublicKeyBinary.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyBinary")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmImportPublicKeyBinary.funcImportPublicKeyBinary != nil {
 		return mmImportPublicKeyBinary.funcImportPublicKeyBinary(ba1)
@@ -1652,15 +1652,15 @@ func (mmImportPublicKeyPEM *KeyProcessorMock) ImportPublicKeyPEM(ba1 []byte) (p1
 		mmImportPublicKeyPEM.inspectFuncImportPublicKeyPEM(ba1)
 	}
 
-	params := &KeyProcessorMockImportPublicKeyPEMParams{ba1}
+	mm_params := &KeyProcessorMockImportPublicKeyPEMParams{ba1}
 
 	// Record call args
 	mmImportPublicKeyPEM.ImportPublicKeyPEMMock.mutex.Lock()
-	mmImportPublicKeyPEM.ImportPublicKeyPEMMock.callArgs = append(mmImportPublicKeyPEM.ImportPublicKeyPEMMock.callArgs, params)
+	mmImportPublicKeyPEM.ImportPublicKeyPEMMock.callArgs = append(mmImportPublicKeyPEM.ImportPublicKeyPEMMock.callArgs, mm_params)
 	mmImportPublicKeyPEM.ImportPublicKeyPEMMock.mutex.Unlock()
 
 	for _, e := range mmImportPublicKeyPEM.ImportPublicKeyPEMMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -1668,17 +1668,17 @@ func (mmImportPublicKeyPEM *KeyProcessorMock) ImportPublicKeyPEM(ba1 []byte) (p1
 
 	if mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation.Counter, 1)
-		want := mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation.params
-		got := KeyProcessorMockImportPublicKeyPEMParams{ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmImportPublicKeyPEM.t.Errorf("KeyProcessorMock.ImportPublicKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation.params
+		mm_got := KeyProcessorMockImportPublicKeyPEMParams{ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmImportPublicKeyPEM.t.Errorf("KeyProcessorMock.ImportPublicKeyPEM got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmImportPublicKeyPEM.ImportPublicKeyPEMMock.defaultExpectation.results
+		if mm_results == nil {
 			mmImportPublicKeyPEM.t.Fatal("No results are set for the KeyProcessorMock.ImportPublicKeyPEM")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmImportPublicKeyPEM.funcImportPublicKeyPEM != nil {
 		return mmImportPublicKeyPEM.funcImportPublicKeyPEM(ba1)

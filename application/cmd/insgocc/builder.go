@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"go/build"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,12 +74,8 @@ func (cb *contractsBuilder) outputDir() string {
 }
 
 func newContractBuilder(tmpDir string, skipProxy bool) *contractsBuilder {
-	var err error
 	if tmpDir == "" {
-		tmpDir, err = ioutil.TempDir("", "insgocc-")
-		if err != nil {
-			panic(err)
-		}
+		tmpDir = insolar.ContractBuildTmpDir("insgocc-")
 	}
 
 	cb := &contractsBuilder{
@@ -95,7 +90,7 @@ func (cb *contractsBuilder) clean() {
 	log.Infof("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root)
 	if err != nil {
-		panic(err)
+		log.Error(err)
 	}
 }
 
@@ -195,16 +190,21 @@ func (cb *contractsBuilder) plugin(ctx context.Context, name string) (string, er
 	args := []string{
 		"build",
 		"-buildmode=plugin",
+		// "-trimpath",
+		"-mod=vendor",
 		"-o", soFile,
-		buildPath,
+		".",
 	}
+	cmdVendor := exec.Command("go", "mod", "vendor")
 	cmd := exec.Command(
 		"go",
 		args...,
 	)
+	cmd.Dir = buildPath
 	inslogger.FromContext(ctx).Infof("exec: go %v", strings.Join(args, " "))
 
 	env := make([]string, 0, len(os.Environ()))
+	env = append(env, "GO111MODULE=on")
 	for _, pair := range os.Environ() {
 		if strings.HasPrefix(pair, "GOPATH=") {
 			continue
@@ -214,9 +214,13 @@ func (cb *contractsBuilder) plugin(ctx context.Context, name string) (string, er
 	env = append(env, "GOPATH="+prependGoPath(cb.root))
 	inslogger.FromContext(ctx).Info("GOPATH=" + prependGoPath(cb.root))
 	cmd.Env = env
+	cmdVendor.Env = env
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmdVendor.Stdout = os.Stdout
+	cmdVendor.Stderr = os.Stderr
+
 	err = cmd.Run()
 	if err != nil {
 		return "", errors.Wrapf(err, "can't build plugin: %v", soFile)

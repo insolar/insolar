@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // LoggerMock implements Logger
@@ -285,11 +285,11 @@ func (mmCopy *LoggerMock) Copy() (l1 LoggerBuilder) {
 	if mmCopy.CopyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCopy.CopyMock.defaultExpectation.Counter, 1)
 
-		results := mmCopy.CopyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCopy.CopyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCopy.t.Fatal("No results are set for the LoggerMock.Copy")
 		}
-		return (*results).l1
+		return (*mm_results).l1
 	}
 	if mmCopy.funcCopy != nil {
 		return mmCopy.funcCopy()
@@ -435,15 +435,15 @@ func (mmDebug *LoggerMock) Debug(p1 ...interface{}) {
 		mmDebug.inspectFuncDebug(p1...)
 	}
 
-	params := &LoggerMockDebugParams{p1}
+	mm_params := &LoggerMockDebugParams{p1}
 
 	// Record call args
 	mmDebug.DebugMock.mutex.Lock()
-	mmDebug.DebugMock.callArgs = append(mmDebug.DebugMock.callArgs, params)
+	mmDebug.DebugMock.callArgs = append(mmDebug.DebugMock.callArgs, mm_params)
 	mmDebug.DebugMock.mutex.Unlock()
 
 	for _, e := range mmDebug.DebugMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -451,10 +451,10 @@ func (mmDebug *LoggerMock) Debug(p1 ...interface{}) {
 
 	if mmDebug.DebugMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDebug.DebugMock.defaultExpectation.Counter, 1)
-		want := mmDebug.DebugMock.defaultExpectation.params
-		got := LoggerMockDebugParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDebug.t.Errorf("LoggerMock.Debug got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDebug.DebugMock.defaultExpectation.params
+		mm_got := LoggerMockDebugParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDebug.t.Errorf("LoggerMock.Debug got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -623,15 +623,15 @@ func (mmDebugf *LoggerMock) Debugf(s1 string, p1 ...interface{}) {
 		mmDebugf.inspectFuncDebugf(s1, p1...)
 	}
 
-	params := &LoggerMockDebugfParams{s1, p1}
+	mm_params := &LoggerMockDebugfParams{s1, p1}
 
 	// Record call args
 	mmDebugf.DebugfMock.mutex.Lock()
-	mmDebugf.DebugfMock.callArgs = append(mmDebugf.DebugfMock.callArgs, params)
+	mmDebugf.DebugfMock.callArgs = append(mmDebugf.DebugfMock.callArgs, mm_params)
 	mmDebugf.DebugfMock.mutex.Unlock()
 
 	for _, e := range mmDebugf.DebugfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -639,10 +639,10 @@ func (mmDebugf *LoggerMock) Debugf(s1 string, p1 ...interface{}) {
 
 	if mmDebugf.DebugfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDebugf.DebugfMock.defaultExpectation.Counter, 1)
-		want := mmDebugf.DebugfMock.defaultExpectation.params
-		got := LoggerMockDebugfParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDebugf.t.Errorf("LoggerMock.Debugf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDebugf.DebugfMock.defaultExpectation.params
+		mm_got := LoggerMockDebugfParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDebugf.t.Errorf("LoggerMock.Debugf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -803,11 +803,11 @@ func (mmEmbeddable *LoggerMock) Embeddable() (e1 EmbeddedLogger) {
 	if mmEmbeddable.EmbeddableMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEmbeddable.EmbeddableMock.defaultExpectation.Counter, 1)
 
-		results := mmEmbeddable.EmbeddableMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmEmbeddable.EmbeddableMock.defaultExpectation.results
+		if mm_results == nil {
 			mmEmbeddable.t.Fatal("No results are set for the LoggerMock.Embeddable")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmEmbeddable.funcEmbeddable != nil {
 		return mmEmbeddable.funcEmbeddable()
@@ -953,15 +953,15 @@ func (mmError *LoggerMock) Error(p1 ...interface{}) {
 		mmError.inspectFuncError(p1...)
 	}
 
-	params := &LoggerMockErrorParams{p1}
+	mm_params := &LoggerMockErrorParams{p1}
 
 	// Record call args
 	mmError.ErrorMock.mutex.Lock()
-	mmError.ErrorMock.callArgs = append(mmError.ErrorMock.callArgs, params)
+	mmError.ErrorMock.callArgs = append(mmError.ErrorMock.callArgs, mm_params)
 	mmError.ErrorMock.mutex.Unlock()
 
 	for _, e := range mmError.ErrorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -969,10 +969,10 @@ func (mmError *LoggerMock) Error(p1 ...interface{}) {
 
 	if mmError.ErrorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmError.ErrorMock.defaultExpectation.Counter, 1)
-		want := mmError.ErrorMock.defaultExpectation.params
-		got := LoggerMockErrorParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmError.t.Errorf("LoggerMock.Error got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmError.ErrorMock.defaultExpectation.params
+		mm_got := LoggerMockErrorParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmError.t.Errorf("LoggerMock.Error got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1141,15 +1141,15 @@ func (mmErrorf *LoggerMock) Errorf(s1 string, p1 ...interface{}) {
 		mmErrorf.inspectFuncErrorf(s1, p1...)
 	}
 
-	params := &LoggerMockErrorfParams{s1, p1}
+	mm_params := &LoggerMockErrorfParams{s1, p1}
 
 	// Record call args
 	mmErrorf.ErrorfMock.mutex.Lock()
-	mmErrorf.ErrorfMock.callArgs = append(mmErrorf.ErrorfMock.callArgs, params)
+	mmErrorf.ErrorfMock.callArgs = append(mmErrorf.ErrorfMock.callArgs, mm_params)
 	mmErrorf.ErrorfMock.mutex.Unlock()
 
 	for _, e := range mmErrorf.ErrorfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1157,10 +1157,10 @@ func (mmErrorf *LoggerMock) Errorf(s1 string, p1 ...interface{}) {
 
 	if mmErrorf.ErrorfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmErrorf.ErrorfMock.defaultExpectation.Counter, 1)
-		want := mmErrorf.ErrorfMock.defaultExpectation.params
-		got := LoggerMockErrorfParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmErrorf.t.Errorf("LoggerMock.Errorf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmErrorf.ErrorfMock.defaultExpectation.params
+		mm_got := LoggerMockErrorfParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmErrorf.t.Errorf("LoggerMock.Errorf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1329,15 +1329,15 @@ func (mmEvent *LoggerMock) Event(level LogLevel, args ...interface{}) {
 		mmEvent.inspectFuncEvent(level, args...)
 	}
 
-	params := &LoggerMockEventParams{level, args}
+	mm_params := &LoggerMockEventParams{level, args}
 
 	// Record call args
 	mmEvent.EventMock.mutex.Lock()
-	mmEvent.EventMock.callArgs = append(mmEvent.EventMock.callArgs, params)
+	mmEvent.EventMock.callArgs = append(mmEvent.EventMock.callArgs, mm_params)
 	mmEvent.EventMock.mutex.Unlock()
 
 	for _, e := range mmEvent.EventMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1345,10 +1345,10 @@ func (mmEvent *LoggerMock) Event(level LogLevel, args ...interface{}) {
 
 	if mmEvent.EventMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEvent.EventMock.defaultExpectation.Counter, 1)
-		want := mmEvent.EventMock.defaultExpectation.params
-		got := LoggerMockEventParams{level, args}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEvent.t.Errorf("LoggerMock.Event got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEvent.EventMock.defaultExpectation.params
+		mm_got := LoggerMockEventParams{level, args}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEvent.t.Errorf("LoggerMock.Event got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1518,15 +1518,15 @@ func (mmEventf *LoggerMock) Eventf(level LogLevel, fmt string, args ...interface
 		mmEventf.inspectFuncEventf(level, fmt, args...)
 	}
 
-	params := &LoggerMockEventfParams{level, fmt, args}
+	mm_params := &LoggerMockEventfParams{level, fmt, args}
 
 	// Record call args
 	mmEventf.EventfMock.mutex.Lock()
-	mmEventf.EventfMock.callArgs = append(mmEventf.EventfMock.callArgs, params)
+	mmEventf.EventfMock.callArgs = append(mmEventf.EventfMock.callArgs, mm_params)
 	mmEventf.EventfMock.mutex.Unlock()
 
 	for _, e := range mmEventf.EventfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1534,10 +1534,10 @@ func (mmEventf *LoggerMock) Eventf(level LogLevel, fmt string, args ...interface
 
 	if mmEventf.EventfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEventf.EventfMock.defaultExpectation.Counter, 1)
-		want := mmEventf.EventfMock.defaultExpectation.params
-		got := LoggerMockEventfParams{level, fmt, args}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEventf.t.Errorf("LoggerMock.Eventf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEventf.EventfMock.defaultExpectation.params
+		mm_got := LoggerMockEventfParams{level, fmt, args}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEventf.t.Errorf("LoggerMock.Eventf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1705,15 +1705,15 @@ func (mmFatal *LoggerMock) Fatal(p1 ...interface{}) {
 		mmFatal.inspectFuncFatal(p1...)
 	}
 
-	params := &LoggerMockFatalParams{p1}
+	mm_params := &LoggerMockFatalParams{p1}
 
 	// Record call args
 	mmFatal.FatalMock.mutex.Lock()
-	mmFatal.FatalMock.callArgs = append(mmFatal.FatalMock.callArgs, params)
+	mmFatal.FatalMock.callArgs = append(mmFatal.FatalMock.callArgs, mm_params)
 	mmFatal.FatalMock.mutex.Unlock()
 
 	for _, e := range mmFatal.FatalMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1721,10 +1721,10 @@ func (mmFatal *LoggerMock) Fatal(p1 ...interface{}) {
 
 	if mmFatal.FatalMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFatal.FatalMock.defaultExpectation.Counter, 1)
-		want := mmFatal.FatalMock.defaultExpectation.params
-		got := LoggerMockFatalParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFatal.t.Errorf("LoggerMock.Fatal got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFatal.FatalMock.defaultExpectation.params
+		mm_got := LoggerMockFatalParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFatal.t.Errorf("LoggerMock.Fatal got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1893,15 +1893,15 @@ func (mmFatalf *LoggerMock) Fatalf(s1 string, p1 ...interface{}) {
 		mmFatalf.inspectFuncFatalf(s1, p1...)
 	}
 
-	params := &LoggerMockFatalfParams{s1, p1}
+	mm_params := &LoggerMockFatalfParams{s1, p1}
 
 	// Record call args
 	mmFatalf.FatalfMock.mutex.Lock()
-	mmFatalf.FatalfMock.callArgs = append(mmFatalf.FatalfMock.callArgs, params)
+	mmFatalf.FatalfMock.callArgs = append(mmFatalf.FatalfMock.callArgs, mm_params)
 	mmFatalf.FatalfMock.mutex.Unlock()
 
 	for _, e := range mmFatalf.FatalfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1909,10 +1909,10 @@ func (mmFatalf *LoggerMock) Fatalf(s1 string, p1 ...interface{}) {
 
 	if mmFatalf.FatalfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFatalf.FatalfMock.defaultExpectation.Counter, 1)
-		want := mmFatalf.FatalfMock.defaultExpectation.params
-		got := LoggerMockFatalfParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFatalf.t.Errorf("LoggerMock.Fatalf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFatalf.FatalfMock.defaultExpectation.params
+		mm_got := LoggerMockFatalfParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFatalf.t.Errorf("LoggerMock.Fatalf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -2080,15 +2080,15 @@ func (mmInfo *LoggerMock) Info(p1 ...interface{}) {
 		mmInfo.inspectFuncInfo(p1...)
 	}
 
-	params := &LoggerMockInfoParams{p1}
+	mm_params := &LoggerMockInfoParams{p1}
 
 	// Record call args
 	mmInfo.InfoMock.mutex.Lock()
-	mmInfo.InfoMock.callArgs = append(mmInfo.InfoMock.callArgs, params)
+	mmInfo.InfoMock.callArgs = append(mmInfo.InfoMock.callArgs, mm_params)
 	mmInfo.InfoMock.mutex.Unlock()
 
 	for _, e := range mmInfo.InfoMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -2096,10 +2096,10 @@ func (mmInfo *LoggerMock) Info(p1 ...interface{}) {
 
 	if mmInfo.InfoMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmInfo.InfoMock.defaultExpectation.Counter, 1)
-		want := mmInfo.InfoMock.defaultExpectation.params
-		got := LoggerMockInfoParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmInfo.t.Errorf("LoggerMock.Info got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmInfo.InfoMock.defaultExpectation.params
+		mm_got := LoggerMockInfoParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmInfo.t.Errorf("LoggerMock.Info got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -2268,15 +2268,15 @@ func (mmInfof *LoggerMock) Infof(s1 string, p1 ...interface{}) {
 		mmInfof.inspectFuncInfof(s1, p1...)
 	}
 
-	params := &LoggerMockInfofParams{s1, p1}
+	mm_params := &LoggerMockInfofParams{s1, p1}
 
 	// Record call args
 	mmInfof.InfofMock.mutex.Lock()
-	mmInfof.InfofMock.callArgs = append(mmInfof.InfofMock.callArgs, params)
+	mmInfof.InfofMock.callArgs = append(mmInfof.InfofMock.callArgs, mm_params)
 	mmInfof.InfofMock.mutex.Unlock()
 
 	for _, e := range mmInfof.InfofMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -2284,10 +2284,10 @@ func (mmInfof *LoggerMock) Infof(s1 string, p1 ...interface{}) {
 
 	if mmInfof.InfofMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmInfof.InfofMock.defaultExpectation.Counter, 1)
-		want := mmInfof.InfofMock.defaultExpectation.params
-		got := LoggerMockInfofParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmInfof.t.Errorf("LoggerMock.Infof got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmInfof.InfofMock.defaultExpectation.params
+		mm_got := LoggerMockInfofParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmInfof.t.Errorf("LoggerMock.Infof got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -2481,15 +2481,15 @@ func (mmIs *LoggerMock) Is(level LogLevel) (b1 bool) {
 		mmIs.inspectFuncIs(level)
 	}
 
-	params := &LoggerMockIsParams{level}
+	mm_params := &LoggerMockIsParams{level}
 
 	// Record call args
 	mmIs.IsMock.mutex.Lock()
-	mmIs.IsMock.callArgs = append(mmIs.IsMock.callArgs, params)
+	mmIs.IsMock.callArgs = append(mmIs.IsMock.callArgs, mm_params)
 	mmIs.IsMock.mutex.Unlock()
 
 	for _, e := range mmIs.IsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -2497,17 +2497,17 @@ func (mmIs *LoggerMock) Is(level LogLevel) (b1 bool) {
 
 	if mmIs.IsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIs.IsMock.defaultExpectation.Counter, 1)
-		want := mmIs.IsMock.defaultExpectation.params
-		got := LoggerMockIsParams{level}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIs.t.Errorf("LoggerMock.Is got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIs.IsMock.defaultExpectation.params
+		mm_got := LoggerMockIsParams{level}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIs.t.Errorf("LoggerMock.Is got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIs.IsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIs.IsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIs.t.Fatal("No results are set for the LoggerMock.Is")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIs.funcIs != nil {
 		return mmIs.funcIs(level)
@@ -2696,15 +2696,15 @@ func (mmLevel *LoggerMock) Level(lvl LogLevel) (l1 Logger) {
 		mmLevel.inspectFuncLevel(lvl)
 	}
 
-	params := &LoggerMockLevelParams{lvl}
+	mm_params := &LoggerMockLevelParams{lvl}
 
 	// Record call args
 	mmLevel.LevelMock.mutex.Lock()
-	mmLevel.LevelMock.callArgs = append(mmLevel.LevelMock.callArgs, params)
+	mmLevel.LevelMock.callArgs = append(mmLevel.LevelMock.callArgs, mm_params)
 	mmLevel.LevelMock.mutex.Unlock()
 
 	for _, e := range mmLevel.LevelMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.l1
 		}
@@ -2712,17 +2712,17 @@ func (mmLevel *LoggerMock) Level(lvl LogLevel) (l1 Logger) {
 
 	if mmLevel.LevelMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLevel.LevelMock.defaultExpectation.Counter, 1)
-		want := mmLevel.LevelMock.defaultExpectation.params
-		got := LoggerMockLevelParams{lvl}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLevel.t.Errorf("LoggerMock.Level got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLevel.LevelMock.defaultExpectation.params
+		mm_got := LoggerMockLevelParams{lvl}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLevel.t.Errorf("LoggerMock.Level got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLevel.LevelMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLevel.LevelMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLevel.t.Fatal("No results are set for the LoggerMock.Level")
 		}
-		return (*results).l1
+		return (*mm_results).l1
 	}
 	if mmLevel.funcLevel != nil {
 		return mmLevel.funcLevel(lvl)
@@ -2885,15 +2885,15 @@ func (mmPanic *LoggerMock) Panic(p1 ...interface{}) {
 		mmPanic.inspectFuncPanic(p1...)
 	}
 
-	params := &LoggerMockPanicParams{p1}
+	mm_params := &LoggerMockPanicParams{p1}
 
 	// Record call args
 	mmPanic.PanicMock.mutex.Lock()
-	mmPanic.PanicMock.callArgs = append(mmPanic.PanicMock.callArgs, params)
+	mmPanic.PanicMock.callArgs = append(mmPanic.PanicMock.callArgs, mm_params)
 	mmPanic.PanicMock.mutex.Unlock()
 
 	for _, e := range mmPanic.PanicMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -2901,10 +2901,10 @@ func (mmPanic *LoggerMock) Panic(p1 ...interface{}) {
 
 	if mmPanic.PanicMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPanic.PanicMock.defaultExpectation.Counter, 1)
-		want := mmPanic.PanicMock.defaultExpectation.params
-		got := LoggerMockPanicParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPanic.t.Errorf("LoggerMock.Panic got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPanic.PanicMock.defaultExpectation.params
+		mm_got := LoggerMockPanicParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPanic.t.Errorf("LoggerMock.Panic got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -3073,15 +3073,15 @@ func (mmPanicf *LoggerMock) Panicf(s1 string, p1 ...interface{}) {
 		mmPanicf.inspectFuncPanicf(s1, p1...)
 	}
 
-	params := &LoggerMockPanicfParams{s1, p1}
+	mm_params := &LoggerMockPanicfParams{s1, p1}
 
 	// Record call args
 	mmPanicf.PanicfMock.mutex.Lock()
-	mmPanicf.PanicfMock.callArgs = append(mmPanicf.PanicfMock.callArgs, params)
+	mmPanicf.PanicfMock.callArgs = append(mmPanicf.PanicfMock.callArgs, mm_params)
 	mmPanicf.PanicfMock.mutex.Unlock()
 
 	for _, e := range mmPanicf.PanicfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -3089,10 +3089,10 @@ func (mmPanicf *LoggerMock) Panicf(s1 string, p1 ...interface{}) {
 
 	if mmPanicf.PanicfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPanicf.PanicfMock.defaultExpectation.Counter, 1)
-		want := mmPanicf.PanicfMock.defaultExpectation.params
-		got := LoggerMockPanicfParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPanicf.t.Errorf("LoggerMock.Panicf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPanicf.PanicfMock.defaultExpectation.params
+		mm_got := LoggerMockPanicfParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPanicf.t.Errorf("LoggerMock.Panicf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -3260,15 +3260,15 @@ func (mmWarn *LoggerMock) Warn(p1 ...interface{}) {
 		mmWarn.inspectFuncWarn(p1...)
 	}
 
-	params := &LoggerMockWarnParams{p1}
+	mm_params := &LoggerMockWarnParams{p1}
 
 	// Record call args
 	mmWarn.WarnMock.mutex.Lock()
-	mmWarn.WarnMock.callArgs = append(mmWarn.WarnMock.callArgs, params)
+	mmWarn.WarnMock.callArgs = append(mmWarn.WarnMock.callArgs, mm_params)
 	mmWarn.WarnMock.mutex.Unlock()
 
 	for _, e := range mmWarn.WarnMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -3276,10 +3276,10 @@ func (mmWarn *LoggerMock) Warn(p1 ...interface{}) {
 
 	if mmWarn.WarnMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWarn.WarnMock.defaultExpectation.Counter, 1)
-		want := mmWarn.WarnMock.defaultExpectation.params
-		got := LoggerMockWarnParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWarn.t.Errorf("LoggerMock.Warn got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWarn.WarnMock.defaultExpectation.params
+		mm_got := LoggerMockWarnParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWarn.t.Errorf("LoggerMock.Warn got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -3448,15 +3448,15 @@ func (mmWarnf *LoggerMock) Warnf(s1 string, p1 ...interface{}) {
 		mmWarnf.inspectFuncWarnf(s1, p1...)
 	}
 
-	params := &LoggerMockWarnfParams{s1, p1}
+	mm_params := &LoggerMockWarnfParams{s1, p1}
 
 	// Record call args
 	mmWarnf.WarnfMock.mutex.Lock()
-	mmWarnf.WarnfMock.callArgs = append(mmWarnf.WarnfMock.callArgs, params)
+	mmWarnf.WarnfMock.callArgs = append(mmWarnf.WarnfMock.callArgs, mm_params)
 	mmWarnf.WarnfMock.mutex.Unlock()
 
 	for _, e := range mmWarnf.WarnfMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -3464,10 +3464,10 @@ func (mmWarnf *LoggerMock) Warnf(s1 string, p1 ...interface{}) {
 
 	if mmWarnf.WarnfMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWarnf.WarnfMock.defaultExpectation.Counter, 1)
-		want := mmWarnf.WarnfMock.defaultExpectation.params
-		got := LoggerMockWarnfParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWarnf.t.Errorf("LoggerMock.Warnf got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWarnf.WarnfMock.defaultExpectation.params
+		mm_got := LoggerMockWarnfParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWarnf.t.Errorf("LoggerMock.Warnf got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -3662,15 +3662,15 @@ func (mmWithField *LoggerMock) WithField(s1 string, p1 interface{}) (l1 Logger) 
 		mmWithField.inspectFuncWithField(s1, p1)
 	}
 
-	params := &LoggerMockWithFieldParams{s1, p1}
+	mm_params := &LoggerMockWithFieldParams{s1, p1}
 
 	// Record call args
 	mmWithField.WithFieldMock.mutex.Lock()
-	mmWithField.WithFieldMock.callArgs = append(mmWithField.WithFieldMock.callArgs, params)
+	mmWithField.WithFieldMock.callArgs = append(mmWithField.WithFieldMock.callArgs, mm_params)
 	mmWithField.WithFieldMock.mutex.Unlock()
 
 	for _, e := range mmWithField.WithFieldMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.l1
 		}
@@ -3678,17 +3678,17 @@ func (mmWithField *LoggerMock) WithField(s1 string, p1 interface{}) (l1 Logger) 
 
 	if mmWithField.WithFieldMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWithField.WithFieldMock.defaultExpectation.Counter, 1)
-		want := mmWithField.WithFieldMock.defaultExpectation.params
-		got := LoggerMockWithFieldParams{s1, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWithField.t.Errorf("LoggerMock.WithField got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWithField.WithFieldMock.defaultExpectation.params
+		mm_got := LoggerMockWithFieldParams{s1, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWithField.t.Errorf("LoggerMock.WithField got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWithField.WithFieldMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWithField.WithFieldMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWithField.t.Fatal("No results are set for the LoggerMock.WithField")
 		}
-		return (*results).l1
+		return (*mm_results).l1
 	}
 	if mmWithField.funcWithField != nil {
 		return mmWithField.funcWithField(s1, p1)
@@ -3877,15 +3877,15 @@ func (mmWithFields *LoggerMock) WithFields(m1 map[string]interface{}) (l1 Logger
 		mmWithFields.inspectFuncWithFields(m1)
 	}
 
-	params := &LoggerMockWithFieldsParams{m1}
+	mm_params := &LoggerMockWithFieldsParams{m1}
 
 	// Record call args
 	mmWithFields.WithFieldsMock.mutex.Lock()
-	mmWithFields.WithFieldsMock.callArgs = append(mmWithFields.WithFieldsMock.callArgs, params)
+	mmWithFields.WithFieldsMock.callArgs = append(mmWithFields.WithFieldsMock.callArgs, mm_params)
 	mmWithFields.WithFieldsMock.mutex.Unlock()
 
 	for _, e := range mmWithFields.WithFieldsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.l1
 		}
@@ -3893,17 +3893,17 @@ func (mmWithFields *LoggerMock) WithFields(m1 map[string]interface{}) (l1 Logger
 
 	if mmWithFields.WithFieldsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWithFields.WithFieldsMock.defaultExpectation.Counter, 1)
-		want := mmWithFields.WithFieldsMock.defaultExpectation.params
-		got := LoggerMockWithFieldsParams{m1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWithFields.t.Errorf("LoggerMock.WithFields got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWithFields.WithFieldsMock.defaultExpectation.params
+		mm_got := LoggerMockWithFieldsParams{m1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWithFields.t.Errorf("LoggerMock.WithFields got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWithFields.WithFieldsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWithFields.WithFieldsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWithFields.t.Fatal("No results are set for the LoggerMock.WithFields")
 		}
-		return (*results).l1
+		return (*mm_results).l1
 	}
 	if mmWithFields.funcWithFields != nil {
 		return mmWithFields.funcWithFields(m1)

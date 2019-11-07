@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -160,15 +160,15 @@ func (mmAll *AccessorMock) All(pulse insolar.PulseNumber) (na1 []insolar.Node, e
 		mmAll.inspectFuncAll(pulse)
 	}
 
-	params := &AccessorMockAllParams{pulse}
+	mm_params := &AccessorMockAllParams{pulse}
 
 	// Record call args
 	mmAll.AllMock.mutex.Lock()
-	mmAll.AllMock.callArgs = append(mmAll.AllMock.callArgs, params)
+	mmAll.AllMock.callArgs = append(mmAll.AllMock.callArgs, mm_params)
 	mmAll.AllMock.mutex.Unlock()
 
 	for _, e := range mmAll.AllMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.na1, e.results.err
 		}
@@ -176,17 +176,17 @@ func (mmAll *AccessorMock) All(pulse insolar.PulseNumber) (na1 []insolar.Node, e
 
 	if mmAll.AllMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAll.AllMock.defaultExpectation.Counter, 1)
-		want := mmAll.AllMock.defaultExpectation.params
-		got := AccessorMockAllParams{pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAll.t.Errorf("AccessorMock.All got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAll.AllMock.defaultExpectation.params
+		mm_got := AccessorMockAllParams{pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAll.t.Errorf("AccessorMock.All got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAll.AllMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAll.AllMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAll.t.Fatal("No results are set for the AccessorMock.All")
 		}
-		return (*results).na1, (*results).err
+		return (*mm_results).na1, (*mm_results).err
 	}
 	if mmAll.funcAll != nil {
 		return mmAll.funcAll(pulse)
@@ -377,15 +377,15 @@ func (mmInRole *AccessorMock) InRole(pulse insolar.PulseNumber, role insolar.Sta
 		mmInRole.inspectFuncInRole(pulse, role)
 	}
 
-	params := &AccessorMockInRoleParams{pulse, role}
+	mm_params := &AccessorMockInRoleParams{pulse, role}
 
 	// Record call args
 	mmInRole.InRoleMock.mutex.Lock()
-	mmInRole.InRoleMock.callArgs = append(mmInRole.InRoleMock.callArgs, params)
+	mmInRole.InRoleMock.callArgs = append(mmInRole.InRoleMock.callArgs, mm_params)
 	mmInRole.InRoleMock.mutex.Unlock()
 
 	for _, e := range mmInRole.InRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.na1, e.results.err
 		}
@@ -393,17 +393,17 @@ func (mmInRole *AccessorMock) InRole(pulse insolar.PulseNumber, role insolar.Sta
 
 	if mmInRole.InRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmInRole.InRoleMock.defaultExpectation.Counter, 1)
-		want := mmInRole.InRoleMock.defaultExpectation.params
-		got := AccessorMockInRoleParams{pulse, role}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmInRole.t.Errorf("AccessorMock.InRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmInRole.InRoleMock.defaultExpectation.params
+		mm_got := AccessorMockInRoleParams{pulse, role}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmInRole.t.Errorf("AccessorMock.InRole got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmInRole.InRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmInRole.InRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmInRole.t.Fatal("No results are set for the AccessorMock.InRole")
 		}
-		return (*results).na1, (*results).err
+		return (*mm_results).na1, (*mm_results).err
 	}
 	if mmInRole.funcInRole != nil {
 		return mmInRole.funcInRole(pulse, role)

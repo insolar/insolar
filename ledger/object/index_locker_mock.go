@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -133,15 +133,15 @@ func (mmLock *IndexLockerMock) Lock(id insolar.ID) {
 		mmLock.inspectFuncLock(id)
 	}
 
-	params := &IndexLockerMockLockParams{id}
+	mm_params := &IndexLockerMockLockParams{id}
 
 	// Record call args
 	mmLock.LockMock.mutex.Lock()
-	mmLock.LockMock.callArgs = append(mmLock.LockMock.callArgs, params)
+	mmLock.LockMock.callArgs = append(mmLock.LockMock.callArgs, mm_params)
 	mmLock.LockMock.mutex.Unlock()
 
 	for _, e := range mmLock.LockMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -149,10 +149,10 @@ func (mmLock *IndexLockerMock) Lock(id insolar.ID) {
 
 	if mmLock.LockMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLock.LockMock.defaultExpectation.Counter, 1)
-		want := mmLock.LockMock.defaultExpectation.params
-		got := IndexLockerMockLockParams{id}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLock.t.Errorf("IndexLockerMock.Lock got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLock.LockMock.defaultExpectation.params
+		mm_got := IndexLockerMockLockParams{id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLock.t.Errorf("IndexLockerMock.Lock got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -320,15 +320,15 @@ func (mmUnlock *IndexLockerMock) Unlock(id insolar.ID) {
 		mmUnlock.inspectFuncUnlock(id)
 	}
 
-	params := &IndexLockerMockUnlockParams{id}
+	mm_params := &IndexLockerMockUnlockParams{id}
 
 	// Record call args
 	mmUnlock.UnlockMock.mutex.Lock()
-	mmUnlock.UnlockMock.callArgs = append(mmUnlock.UnlockMock.callArgs, params)
+	mmUnlock.UnlockMock.callArgs = append(mmUnlock.UnlockMock.callArgs, mm_params)
 	mmUnlock.UnlockMock.mutex.Unlock()
 
 	for _, e := range mmUnlock.UnlockMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -336,10 +336,10 @@ func (mmUnlock *IndexLockerMock) Unlock(id insolar.ID) {
 
 	if mmUnlock.UnlockMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUnlock.UnlockMock.defaultExpectation.Counter, 1)
-		want := mmUnlock.UnlockMock.defaultExpectation.params
-		got := IndexLockerMockUnlockParams{id}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUnlock.t.Errorf("IndexLockerMock.Unlock got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUnlock.UnlockMock.defaultExpectation.params
+		mm_got := IndexLockerMockUnlockParams{id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUnlock.t.Errorf("IndexLockerMock.Unlock got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

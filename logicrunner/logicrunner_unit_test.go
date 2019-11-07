@@ -24,7 +24,7 @@ import (
 
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/fortytw2/leaktest"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -59,6 +59,8 @@ import (
 
 var _ insolar.LogicRunner = &LogicRunner{}
 
+const useLeakTest = false
+
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
 
@@ -76,6 +78,7 @@ type LogicRunnerCommonTestSuite struct {
 	sender *bus.SenderMock
 	cr     *testutils.ContractRequesterMock
 	pub    message2.Publisher
+	lt     func()
 }
 
 func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) {
@@ -95,6 +98,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
+	suite.lt = leaktest.Check(&testutils.SyncT{T: suite.T()})
 	suite.SetupLogicRunner()
 }
 
@@ -124,6 +128,8 @@ func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	// that weren't shut down in case no Stop was called
 	// Do what we must, stop server
 	_ = suite.lr.Stop(suite.ctx)
+
+	suite.lt()
 }
 
 type LogicRunnerTestSuite struct {
@@ -429,7 +435,6 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	syncT := &testutils.SyncT{T: suite.T()}
-	defer leaktest.Check(syncT)()
 
 	wg := &sync.WaitGroup{}
 

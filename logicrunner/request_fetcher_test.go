@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +35,8 @@ import (
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
 	require.NotNil(t, rf)
 }

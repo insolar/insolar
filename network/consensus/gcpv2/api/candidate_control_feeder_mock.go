@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -128,11 +128,11 @@ func (mmPickNextJoinCandidate *CandidateControlFeederMock) PickNextJoinCandidate
 	if mmPickNextJoinCandidate.PickNextJoinCandidateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPickNextJoinCandidate.PickNextJoinCandidateMock.defaultExpectation.Counter, 1)
 
-		results := mmPickNextJoinCandidate.PickNextJoinCandidateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPickNextJoinCandidate.PickNextJoinCandidateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPickNextJoinCandidate.t.Fatal("No results are set for the CandidateControlFeederMock.PickNextJoinCandidate")
 		}
-		return (*results).c1, (*results).d1
+		return (*mm_results).c1, (*mm_results).d1
 	}
 	if mmPickNextJoinCandidate.funcPickNextJoinCandidate != nil {
 		return mmPickNextJoinCandidate.funcPickNextJoinCandidate()
@@ -305,15 +305,15 @@ func (mmRemoveJoinCandidate *CandidateControlFeederMock) RemoveJoinCandidate(can
 		mmRemoveJoinCandidate.inspectFuncRemoveJoinCandidate(candidateAdded, nodeID)
 	}
 
-	params := &CandidateControlFeederMockRemoveJoinCandidateParams{candidateAdded, nodeID}
+	mm_params := &CandidateControlFeederMockRemoveJoinCandidateParams{candidateAdded, nodeID}
 
 	// Record call args
 	mmRemoveJoinCandidate.RemoveJoinCandidateMock.mutex.Lock()
-	mmRemoveJoinCandidate.RemoveJoinCandidateMock.callArgs = append(mmRemoveJoinCandidate.RemoveJoinCandidateMock.callArgs, params)
+	mmRemoveJoinCandidate.RemoveJoinCandidateMock.callArgs = append(mmRemoveJoinCandidate.RemoveJoinCandidateMock.callArgs, mm_params)
 	mmRemoveJoinCandidate.RemoveJoinCandidateMock.mutex.Unlock()
 
 	for _, e := range mmRemoveJoinCandidate.RemoveJoinCandidateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -321,17 +321,17 @@ func (mmRemoveJoinCandidate *CandidateControlFeederMock) RemoveJoinCandidate(can
 
 	if mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation.Counter, 1)
-		want := mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation.params
-		got := CandidateControlFeederMockRemoveJoinCandidateParams{candidateAdded, nodeID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRemoveJoinCandidate.t.Errorf("CandidateControlFeederMock.RemoveJoinCandidate got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation.params
+		mm_got := CandidateControlFeederMockRemoveJoinCandidateParams{candidateAdded, nodeID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRemoveJoinCandidate.t.Errorf("CandidateControlFeederMock.RemoveJoinCandidate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRemoveJoinCandidate.RemoveJoinCandidateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRemoveJoinCandidate.t.Fatal("No results are set for the CandidateControlFeederMock.RemoveJoinCandidate")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmRemoveJoinCandidate.funcRemoveJoinCandidate != nil {
 		return mmRemoveJoinCandidate.funcRemoveJoinCandidate(candidateAdded, nodeID)

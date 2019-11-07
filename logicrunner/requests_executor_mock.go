@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -183,15 +183,15 @@ func (mmExecute *RequestsExecutorMock) Execute(ctx context.Context, current *com
 		mmExecute.inspectFuncExecute(ctx, current)
 	}
 
-	params := &RequestsExecutorMockExecuteParams{ctx, current}
+	mm_params := &RequestsExecutorMockExecuteParams{ctx, current}
 
 	// Record call args
 	mmExecute.ExecuteMock.mutex.Lock()
-	mmExecute.ExecuteMock.callArgs = append(mmExecute.ExecuteMock.callArgs, params)
+	mmExecute.ExecuteMock.callArgs = append(mmExecute.ExecuteMock.callArgs, mm_params)
 	mmExecute.ExecuteMock.mutex.Unlock()
 
 	for _, e := range mmExecute.ExecuteMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -199,17 +199,17 @@ func (mmExecute *RequestsExecutorMock) Execute(ctx context.Context, current *com
 
 	if mmExecute.ExecuteMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExecute.ExecuteMock.defaultExpectation.Counter, 1)
-		want := mmExecute.ExecuteMock.defaultExpectation.params
-		got := RequestsExecutorMockExecuteParams{ctx, current}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExecute.t.Errorf("RequestsExecutorMock.Execute got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExecute.ExecuteMock.defaultExpectation.params
+		mm_got := RequestsExecutorMockExecuteParams{ctx, current}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExecute.t.Errorf("RequestsExecutorMock.Execute got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExecute.ExecuteMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExecute.ExecuteMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExecute.t.Fatal("No results are set for the RequestsExecutorMock.Execute")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmExecute.funcExecute != nil {
 		return mmExecute.funcExecute(ctx, current)
@@ -400,15 +400,15 @@ func (mmExecuteAndSave *RequestsExecutorMock) ExecuteAndSave(ctx context.Context
 		mmExecuteAndSave.inspectFuncExecuteAndSave(ctx, current)
 	}
 
-	params := &RequestsExecutorMockExecuteAndSaveParams{ctx, current}
+	mm_params := &RequestsExecutorMockExecuteAndSaveParams{ctx, current}
 
 	// Record call args
 	mmExecuteAndSave.ExecuteAndSaveMock.mutex.Lock()
-	mmExecuteAndSave.ExecuteAndSaveMock.callArgs = append(mmExecuteAndSave.ExecuteAndSaveMock.callArgs, params)
+	mmExecuteAndSave.ExecuteAndSaveMock.callArgs = append(mmExecuteAndSave.ExecuteAndSaveMock.callArgs, mm_params)
 	mmExecuteAndSave.ExecuteAndSaveMock.mutex.Unlock()
 
 	for _, e := range mmExecuteAndSave.ExecuteAndSaveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -416,17 +416,17 @@ func (mmExecuteAndSave *RequestsExecutorMock) ExecuteAndSave(ctx context.Context
 
 	if mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation.Counter, 1)
-		want := mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation.params
-		got := RequestsExecutorMockExecuteAndSaveParams{ctx, current}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmExecuteAndSave.t.Errorf("RequestsExecutorMock.ExecuteAndSave got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation.params
+		mm_got := RequestsExecutorMockExecuteAndSaveParams{ctx, current}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmExecuteAndSave.t.Errorf("RequestsExecutorMock.ExecuteAndSave got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmExecuteAndSave.ExecuteAndSaveMock.defaultExpectation.results
+		if mm_results == nil {
 			mmExecuteAndSave.t.Fatal("No results are set for the RequestsExecutorMock.ExecuteAndSave")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmExecuteAndSave.funcExecuteAndSave != nil {
 		return mmExecuteAndSave.funcExecuteAndSave(ctx, current)
@@ -617,15 +617,15 @@ func (mmSave *RequestsExecutorMock) Save(ctx context.Context, current *common.Tr
 		mmSave.inspectFuncSave(ctx, current, res)
 	}
 
-	params := &RequestsExecutorMockSaveParams{ctx, current, res}
+	mm_params := &RequestsExecutorMockSaveParams{ctx, current, res}
 
 	// Record call args
 	mmSave.SaveMock.mutex.Lock()
-	mmSave.SaveMock.callArgs = append(mmSave.SaveMock.callArgs, params)
+	mmSave.SaveMock.callArgs = append(mmSave.SaveMock.callArgs, mm_params)
 	mmSave.SaveMock.mutex.Unlock()
 
 	for _, e := range mmSave.SaveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -633,17 +633,17 @@ func (mmSave *RequestsExecutorMock) Save(ctx context.Context, current *common.Tr
 
 	if mmSave.SaveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSave.SaveMock.defaultExpectation.Counter, 1)
-		want := mmSave.SaveMock.defaultExpectation.params
-		got := RequestsExecutorMockSaveParams{ctx, current, res}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSave.t.Errorf("RequestsExecutorMock.Save got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSave.SaveMock.defaultExpectation.params
+		mm_got := RequestsExecutorMockSaveParams{ctx, current, res}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSave.t.Errorf("RequestsExecutorMock.Save got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSave.SaveMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSave.SaveMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSave.t.Fatal("No results are set for the RequestsExecutorMock.Save")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSave.funcSave != nil {
 		return mmSave.funcSave(ctx, current, res)
@@ -810,15 +810,15 @@ func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, reqRef i
 		mmSendReply.inspectFuncSendReply(ctx, reqRef, req, re, err)
 	}
 
-	params := &RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
+	mm_params := &RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
 
 	// Record call args
 	mmSendReply.SendReplyMock.mutex.Lock()
-	mmSendReply.SendReplyMock.callArgs = append(mmSendReply.SendReplyMock.callArgs, params)
+	mmSendReply.SendReplyMock.callArgs = append(mmSendReply.SendReplyMock.callArgs, mm_params)
 	mmSendReply.SendReplyMock.mutex.Unlock()
 
 	for _, e := range mmSendReply.SendReplyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -826,10 +826,10 @@ func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, reqRef i
 
 	if mmSendReply.SendReplyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendReply.SendReplyMock.defaultExpectation.Counter, 1)
-		want := mmSendReply.SendReplyMock.defaultExpectation.params
-		got := RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendReply.t.Errorf("RequestsExecutorMock.SendReply got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendReply.SendReplyMock.defaultExpectation.params
+		mm_got := RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendReply.t.Errorf("RequestsExecutorMock.SendReply got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

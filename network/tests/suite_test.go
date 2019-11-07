@@ -77,8 +77,8 @@ import (
 
 	"github.com/insolar/insolar/network/servicenetwork"
 
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -580,7 +580,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.CacheDirectory = cacheDir + node.host
 
-	node.componentManager = &component.Manager{}
+	node.componentManager = component.NewManager(nil)
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
 	require.NoError(s.t, err)

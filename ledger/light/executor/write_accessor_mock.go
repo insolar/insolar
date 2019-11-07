@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -153,15 +153,15 @@ func (mmBegin *WriteAccessorMock) Begin(ctx context.Context, p1 insolar.PulseNum
 		mmBegin.inspectFuncBegin(ctx, p1)
 	}
 
-	params := &WriteAccessorMockBeginParams{ctx, p1}
+	mm_params := &WriteAccessorMockBeginParams{ctx, p1}
 
 	// Record call args
 	mmBegin.BeginMock.mutex.Lock()
-	mmBegin.BeginMock.callArgs = append(mmBegin.BeginMock.callArgs, params)
+	mmBegin.BeginMock.callArgs = append(mmBegin.BeginMock.callArgs, mm_params)
 	mmBegin.BeginMock.mutex.Unlock()
 
 	for _, e := range mmBegin.BeginMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.done, e.results.err
 		}
@@ -169,17 +169,17 @@ func (mmBegin *WriteAccessorMock) Begin(ctx context.Context, p1 insolar.PulseNum
 
 	if mmBegin.BeginMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBegin.BeginMock.defaultExpectation.Counter, 1)
-		want := mmBegin.BeginMock.defaultExpectation.params
-		got := WriteAccessorMockBeginParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBegin.t.Errorf("WriteAccessorMock.Begin got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBegin.BeginMock.defaultExpectation.params
+		mm_got := WriteAccessorMockBeginParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBegin.t.Errorf("WriteAccessorMock.Begin got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBegin.BeginMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBegin.BeginMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBegin.t.Fatal("No results are set for the WriteAccessorMock.Begin")
 		}
-		return (*results).done, (*results).err
+		return (*mm_results).done, (*mm_results).err
 	}
 	if mmBegin.funcBegin != nil {
 		return mmBegin.funcBegin(ctx, p1)

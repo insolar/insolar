@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
 )
@@ -159,15 +159,15 @@ func (mmGetAccessor *NodeNetworkMock) GetAccessor(p1 insolar.PulseNumber) (a1 mm
 		mmGetAccessor.inspectFuncGetAccessor(p1)
 	}
 
-	params := &NodeNetworkMockGetAccessorParams{p1}
+	mm_params := &NodeNetworkMockGetAccessorParams{p1}
 
 	// Record call args
 	mmGetAccessor.GetAccessorMock.mutex.Lock()
-	mmGetAccessor.GetAccessorMock.callArgs = append(mmGetAccessor.GetAccessorMock.callArgs, params)
+	mmGetAccessor.GetAccessorMock.callArgs = append(mmGetAccessor.GetAccessorMock.callArgs, mm_params)
 	mmGetAccessor.GetAccessorMock.mutex.Unlock()
 
 	for _, e := range mmGetAccessor.GetAccessorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.a1
 		}
@@ -175,17 +175,17 @@ func (mmGetAccessor *NodeNetworkMock) GetAccessor(p1 insolar.PulseNumber) (a1 mm
 
 	if mmGetAccessor.GetAccessorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetAccessor.GetAccessorMock.defaultExpectation.Counter, 1)
-		want := mmGetAccessor.GetAccessorMock.defaultExpectation.params
-		got := NodeNetworkMockGetAccessorParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetAccessor.t.Errorf("NodeNetworkMock.GetAccessor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetAccessor.GetAccessorMock.defaultExpectation.params
+		mm_got := NodeNetworkMockGetAccessorParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetAccessor.t.Errorf("NodeNetworkMock.GetAccessor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetAccessor.GetAccessorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetAccessor.GetAccessorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetAccessor.t.Fatal("No results are set for the NodeNetworkMock.GetAccessor")
 		}
-		return (*results).a1
+		return (*mm_results).a1
 	}
 	if mmGetAccessor.funcGetAccessor != nil {
 		return mmGetAccessor.funcGetAccessor(p1)
@@ -341,11 +341,11 @@ func (mmGetOrigin *NodeNetworkMock) GetOrigin() (n1 insolar.NetworkNode) {
 	if mmGetOrigin.GetOriginMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOrigin.GetOriginMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOrigin.GetOriginMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOrigin.GetOriginMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOrigin.t.Fatal("No results are set for the NodeNetworkMock.GetOrigin")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetOrigin.funcGetOrigin != nil {
 		return mmGetOrigin.funcGetOrigin()

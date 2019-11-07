@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -129,15 +129,15 @@ func (mmNotify *DetachedNotifierMock) Notify(ctx context.Context, openedRequests
 		mmNotify.inspectFuncNotify(ctx, openedRequests, objectID, closedRequestID)
 	}
 
-	params := &DetachedNotifierMockNotifyParams{ctx, openedRequests, objectID, closedRequestID}
+	mm_params := &DetachedNotifierMockNotifyParams{ctx, openedRequests, objectID, closedRequestID}
 
 	// Record call args
 	mmNotify.NotifyMock.mutex.Lock()
-	mmNotify.NotifyMock.callArgs = append(mmNotify.NotifyMock.callArgs, params)
+	mmNotify.NotifyMock.callArgs = append(mmNotify.NotifyMock.callArgs, mm_params)
 	mmNotify.NotifyMock.mutex.Unlock()
 
 	for _, e := range mmNotify.NotifyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -145,10 +145,10 @@ func (mmNotify *DetachedNotifierMock) Notify(ctx context.Context, openedRequests
 
 	if mmNotify.NotifyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNotify.NotifyMock.defaultExpectation.Counter, 1)
-		want := mmNotify.NotifyMock.defaultExpectation.params
-		got := DetachedNotifierMockNotifyParams{ctx, openedRequests, objectID, closedRequestID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNotify.t.Errorf("DetachedNotifierMock.Notify got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNotify.NotifyMock.defaultExpectation.params
+		mm_got := DetachedNotifierMockNotifyParams{ctx, openedRequests, objectID, closedRequestID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNotify.t.Errorf("DetachedNotifierMock.Notify got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

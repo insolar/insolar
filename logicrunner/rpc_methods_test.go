@@ -21,7 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/fortytw2/leaktest"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -51,6 +52,8 @@ func TestRPCMethods_New(t *testing.T) {
 }
 
 func TestRPCMethods_DeactivateObject(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -147,6 +150,8 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 }
 
 func TestProxyImplementation_GetCode(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -225,6 +230,8 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -260,6 +267,8 @@ func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_RouteCall(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -314,7 +323,12 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 	}
 }
 func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -370,7 +384,12 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 }
 
 func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
+
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -421,7 +440,11 @@ func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
 }
 
 func TestRouteCallRegistersSaga(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
@@ -456,7 +479,11 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 }
 
 func TestRouteCallFailedAfterReturningResultForSaga(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)
@@ -489,7 +516,11 @@ func TestRouteCallFailedAfterReturningResultForSaga(t *testing.T) {
 }
 
 func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
-	t.Parallel()
+	if useLeakTest {
+		defer leaktest.Check(t)()
+	} else {
+		t.Parallel()
+	}
 
 	am := artifacts.NewClientMock(t)
 	dc := artifacts.NewDescriptorsCacheMock(t)

@@ -22,7 +22,8 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/gojuno/minimock"
+	"github.com/fortytw2/leaktest"
+	"github.com/gojuno/minimock/v3"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -52,6 +53,8 @@ func sendTargetHelper(
 }
 
 func TestResultsMatcher_AddStillExecution(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.StillExecuting)
@@ -108,6 +111,8 @@ func TestResultsMatcher_AddStillExecution(t *testing.T) {
 }
 
 func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(ctx context.Context, t minimock.Tester) (ResultMatcher, payload.ReturnResults)
@@ -187,6 +192,8 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 }
 
 func TestResultsMatcher_Clear(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	tests := []struct {
 		name  string
 		mocks func(ctx context.Context, t minimock.Tester) ResultMatcher

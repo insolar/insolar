@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // FixedReaderMock implements FixedReader
@@ -150,11 +150,11 @@ func (mmAsByteString *FixedReaderMock) AsByteString() (b1 ByteString) {
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the FixedReaderMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -293,11 +293,11 @@ func (mmAsBytes *FixedReaderMock) AsBytes() (ba1 []byte) {
 	if mmAsBytes.AsBytesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsBytes.AsBytesMock.defaultExpectation.Counter, 1)
 
-		results := mmAsBytes.AsBytesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsBytes.AsBytesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsBytes.t.Fatal("No results are set for the FixedReaderMock.AsBytes")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmAsBytes.funcAsBytes != nil {
 		return mmAsBytes.funcAsBytes()
@@ -436,11 +436,11 @@ func (mmFixedByteSize *FixedReaderMock) FixedByteSize() (i1 int) {
 	if mmFixedByteSize.FixedByteSizeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFixedByteSize.FixedByteSizeMock.defaultExpectation.Counter, 1)
 
-		results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFixedByteSize.t.Fatal("No results are set for the FixedReaderMock.FixedByteSize")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmFixedByteSize.funcFixedByteSize != nil {
 		return mmFixedByteSize.funcFixedByteSize()
@@ -613,15 +613,15 @@ func (mmRead *FixedReaderMock) Read(p []byte) (n int, err error) {
 		mmRead.inspectFuncRead(p)
 	}
 
-	params := &FixedReaderMockReadParams{p}
+	mm_params := &FixedReaderMockReadParams{p}
 
 	// Record call args
 	mmRead.ReadMock.mutex.Lock()
-	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, params)
+	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, mm_params)
 	mmRead.ReadMock.mutex.Unlock()
 
 	for _, e := range mmRead.ReadMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -629,17 +629,17 @@ func (mmRead *FixedReaderMock) Read(p []byte) (n int, err error) {
 
 	if mmRead.ReadMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRead.ReadMock.defaultExpectation.Counter, 1)
-		want := mmRead.ReadMock.defaultExpectation.params
-		got := FixedReaderMockReadParams{p}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRead.t.Errorf("FixedReaderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRead.ReadMock.defaultExpectation.params
+		mm_got := FixedReaderMockReadParams{p}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRead.t.Errorf("FixedReaderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRead.ReadMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRead.ReadMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRead.t.Fatal("No results are set for the FixedReaderMock.Read")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmRead.funcRead != nil {
 		return mmRead.funcRead(p)
@@ -829,15 +829,15 @@ func (mmWriteTo *FixedReaderMock) WriteTo(w io.Writer) (n int64, err error) {
 		mmWriteTo.inspectFuncWriteTo(w)
 	}
 
-	params := &FixedReaderMockWriteToParams{w}
+	mm_params := &FixedReaderMockWriteToParams{w}
 
 	// Record call args
 	mmWriteTo.WriteToMock.mutex.Lock()
-	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, params)
+	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, mm_params)
 	mmWriteTo.WriteToMock.mutex.Unlock()
 
 	for _, e := range mmWriteTo.WriteToMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -845,17 +845,17 @@ func (mmWriteTo *FixedReaderMock) WriteTo(w io.Writer) (n int64, err error) {
 
 	if mmWriteTo.WriteToMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWriteTo.WriteToMock.defaultExpectation.Counter, 1)
-		want := mmWriteTo.WriteToMock.defaultExpectation.params
-		got := FixedReaderMockWriteToParams{w}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWriteTo.t.Errorf("FixedReaderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWriteTo.WriteToMock.defaultExpectation.params
+		mm_got := FixedReaderMockWriteToParams{w}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWriteTo.t.Errorf("FixedReaderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWriteTo.WriteToMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWriteTo.WriteToMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWriteTo.t.Fatal("No results are set for the FixedReaderMock.WriteTo")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmWriteTo.funcWriteTo != nil {
 		return mmWriteTo.funcWriteTo(w)

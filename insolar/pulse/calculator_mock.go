@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -163,15 +163,15 @@ func (mmBackwards *CalculatorMock) Backwards(ctx context.Context, pn insolar.Pul
 		mmBackwards.inspectFuncBackwards(ctx, pn, steps)
 	}
 
-	params := &CalculatorMockBackwardsParams{ctx, pn, steps}
+	mm_params := &CalculatorMockBackwardsParams{ctx, pn, steps}
 
 	// Record call args
 	mmBackwards.BackwardsMock.mutex.Lock()
-	mmBackwards.BackwardsMock.callArgs = append(mmBackwards.BackwardsMock.callArgs, params)
+	mmBackwards.BackwardsMock.callArgs = append(mmBackwards.BackwardsMock.callArgs, mm_params)
 	mmBackwards.BackwardsMock.mutex.Unlock()
 
 	for _, e := range mmBackwards.BackwardsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -179,17 +179,17 @@ func (mmBackwards *CalculatorMock) Backwards(ctx context.Context, pn insolar.Pul
 
 	if mmBackwards.BackwardsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBackwards.BackwardsMock.defaultExpectation.Counter, 1)
-		want := mmBackwards.BackwardsMock.defaultExpectation.params
-		got := CalculatorMockBackwardsParams{ctx, pn, steps}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBackwards.t.Errorf("CalculatorMock.Backwards got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBackwards.BackwardsMock.defaultExpectation.params
+		mm_got := CalculatorMockBackwardsParams{ctx, pn, steps}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBackwards.t.Errorf("CalculatorMock.Backwards got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBackwards.BackwardsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBackwards.BackwardsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBackwards.t.Fatal("No results are set for the CalculatorMock.Backwards")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmBackwards.funcBackwards != nil {
 		return mmBackwards.funcBackwards(ctx, pn, steps)
@@ -381,15 +381,15 @@ func (mmForwards *CalculatorMock) Forwards(ctx context.Context, pn insolar.Pulse
 		mmForwards.inspectFuncForwards(ctx, pn, steps)
 	}
 
-	params := &CalculatorMockForwardsParams{ctx, pn, steps}
+	mm_params := &CalculatorMockForwardsParams{ctx, pn, steps}
 
 	// Record call args
 	mmForwards.ForwardsMock.mutex.Lock()
-	mmForwards.ForwardsMock.callArgs = append(mmForwards.ForwardsMock.callArgs, params)
+	mmForwards.ForwardsMock.callArgs = append(mmForwards.ForwardsMock.callArgs, mm_params)
 	mmForwards.ForwardsMock.mutex.Unlock()
 
 	for _, e := range mmForwards.ForwardsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -397,17 +397,17 @@ func (mmForwards *CalculatorMock) Forwards(ctx context.Context, pn insolar.Pulse
 
 	if mmForwards.ForwardsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForwards.ForwardsMock.defaultExpectation.Counter, 1)
-		want := mmForwards.ForwardsMock.defaultExpectation.params
-		got := CalculatorMockForwardsParams{ctx, pn, steps}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForwards.t.Errorf("CalculatorMock.Forwards got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForwards.ForwardsMock.defaultExpectation.params
+		mm_got := CalculatorMockForwardsParams{ctx, pn, steps}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForwards.t.Errorf("CalculatorMock.Forwards got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForwards.ForwardsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForwards.ForwardsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForwards.t.Fatal("No results are set for the CalculatorMock.Forwards")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmForwards.funcForwards != nil {
 		return mmForwards.funcForwards(ctx, pn, steps)

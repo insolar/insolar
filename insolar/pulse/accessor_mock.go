@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -162,15 +162,15 @@ func (mmForPulseNumber *AccessorMock) ForPulseNumber(ctx context.Context, p1 ins
 		mmForPulseNumber.inspectFuncForPulseNumber(ctx, p1)
 	}
 
-	params := &AccessorMockForPulseNumberParams{ctx, p1}
+	mm_params := &AccessorMockForPulseNumberParams{ctx, p1}
 
 	// Record call args
 	mmForPulseNumber.ForPulseNumberMock.mutex.Lock()
-	mmForPulseNumber.ForPulseNumberMock.callArgs = append(mmForPulseNumber.ForPulseNumberMock.callArgs, params)
+	mmForPulseNumber.ForPulseNumberMock.callArgs = append(mmForPulseNumber.ForPulseNumberMock.callArgs, mm_params)
 	mmForPulseNumber.ForPulseNumberMock.mutex.Unlock()
 
 	for _, e := range mmForPulseNumber.ForPulseNumberMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p2, e.results.err
 		}
@@ -178,17 +178,17 @@ func (mmForPulseNumber *AccessorMock) ForPulseNumber(ctx context.Context, p1 ins
 
 	if mmForPulseNumber.ForPulseNumberMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForPulseNumber.ForPulseNumberMock.defaultExpectation.Counter, 1)
-		want := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.params
-		got := AccessorMockForPulseNumberParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForPulseNumber.t.Errorf("AccessorMock.ForPulseNumber got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.params
+		mm_got := AccessorMockForPulseNumberParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForPulseNumber.t.Errorf("AccessorMock.ForPulseNumber got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForPulseNumber.t.Fatal("No results are set for the AccessorMock.ForPulseNumber")
 		}
-		return (*results).p2, (*results).err
+		return (*mm_results).p2, (*mm_results).err
 	}
 	if mmForPulseNumber.funcForPulseNumber != nil {
 		return mmForPulseNumber.funcForPulseNumber(ctx, p1)
@@ -378,15 +378,15 @@ func (mmLatest *AccessorMock) Latest(ctx context.Context) (p1 insolar.Pulse, err
 		mmLatest.inspectFuncLatest(ctx)
 	}
 
-	params := &AccessorMockLatestParams{ctx}
+	mm_params := &AccessorMockLatestParams{ctx}
 
 	// Record call args
 	mmLatest.LatestMock.mutex.Lock()
-	mmLatest.LatestMock.callArgs = append(mmLatest.LatestMock.callArgs, params)
+	mmLatest.LatestMock.callArgs = append(mmLatest.LatestMock.callArgs, mm_params)
 	mmLatest.LatestMock.mutex.Unlock()
 
 	for _, e := range mmLatest.LatestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -394,17 +394,17 @@ func (mmLatest *AccessorMock) Latest(ctx context.Context) (p1 insolar.Pulse, err
 
 	if mmLatest.LatestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLatest.LatestMock.defaultExpectation.Counter, 1)
-		want := mmLatest.LatestMock.defaultExpectation.params
-		got := AccessorMockLatestParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLatest.t.Errorf("AccessorMock.Latest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLatest.LatestMock.defaultExpectation.params
+		mm_got := AccessorMockLatestParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLatest.t.Errorf("AccessorMock.Latest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLatest.LatestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLatest.LatestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLatest.t.Fatal("No results are set for the AccessorMock.Latest")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmLatest.funcLatest != nil {
 		return mmLatest.funcLatest(ctx)
