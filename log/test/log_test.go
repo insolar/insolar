@@ -168,6 +168,7 @@ func TestLogOther(t *testing.T) {
 
 }
 
+// BEGIN OF GENERATED PART (type_formats_gen)
 var types = map[string]string{
 	"complex64":  "%f",
 	"float64":    "%f",
@@ -187,6 +188,8 @@ var types = map[string]string{
 	"int64":      "%d",
 	"uintptr":    "%p",
 }
+
+// END OF GENERATED PART
 
 var tags = []string{"fmt+opt", "raw+opt", "fmt", "raw", "skip", "txt", "opt"}
 
@@ -368,4 +371,38 @@ func TestLogValueGetters(t *testing.T) {
 			require.True(t, contains != skip, "field "+fname+" have proper value "+mustHave)
 		}
 	}
+}
+
+func TestLogAwkwardValueGetters(t *testing.T) {
+	buf := bytes.Buffer{}
+	lg, _ := log.GlobalLogger().Copy().WithOutput(&buf).Build()
+	plr := struct {
+		f    func() string
+		notf func() (string, string)
+	}{}
+	plr.f = func() string {
+		return logstring
+	}
+	plr.notf = func() (s string, s2 string) {
+		return "", ""
+	}
+	lg.Warn(plr)
+	c := make(map[string]interface{})
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &c))
+	require.Equal(t, logstring, c["f"])
+	require.Contains(t, c["notf"], "marshaling error: json: unsupported type: func()")
+
+	plr2 := struct {
+		msg *string
+		inf interface{}
+	}{}
+	plr2.msg = &logstring
+	plr2.inf = logstring
+	buf.Reset()
+	lg.Warn(plr2)
+	c = make(map[string]interface{})
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &c))
+	require.Equal(t, logstring, c["message"])
+	require.Equal(t, logstring, c["inf"])
+
 }
