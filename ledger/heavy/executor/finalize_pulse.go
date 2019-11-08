@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opencensus.io/stats"
 
@@ -62,7 +63,9 @@ func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan 
 		case v := <-b.tryLock:
 			b.callCounter++
 			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				startedAt := time.Now().Second()
 				b.runner.RunValueGC(ctx)
+				stats.Record(ctx, statBadgerValueGCTime.M(int64(time.Now().Second()-startedAt)))
 			}
 			b.tryLock <- v
 		default:
@@ -118,10 +121,12 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, newPulse)))))
 
 	logger.Debug("FinalizePulse starts")
+	startedAt := time.Now().Second()
 	bkpError := backuper.MakeBackup(ctx, newPulse)
 	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
 		logger.Fatal("Can't do backup: " + bkpError.Error())
 	}
+	stats.Record(ctx, statBackupTime.M(int64(time.Now().Second()-startedAt)))
 
 	if bkpError == ErrAlreadyDone {
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
