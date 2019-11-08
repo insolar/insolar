@@ -169,7 +169,13 @@ func (d *Deposit) Confirm(
 			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
 		}
 
-		err = deposit.GetObject(*maDeposit).TransferToDeposit(amountStr, d.GetReference(), fromMember, request, toMember)
+		err = deposit.GetObject(*maDeposit).TransferToDeposit(
+			amountStr,
+			d.GetReference(),
+			appfoundation.GetMigrationAdminMember(),
+			request,
+			toMember,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
 		}
