@@ -43,9 +43,9 @@ const (
 	typeCallReturned = "cr_call_returned"
 )
 
-var ignoreTracePrefixes = []string{
-	"main_",
-	"pulse_",
+var ignoreTraceSuffixes = []string{
+	"_main",
+	"_pulse",
 }
 
 type paramsHolder struct {
@@ -82,8 +82,8 @@ func parseLogs() {
 		if log.TraceID == "" {
 			return false
 		}
-		for _, i := range ignoreTracePrefixes {
-			if strings.HasPrefix(log.TraceID, i) {
+		for _, i := range ignoreTraceSuffixes {
+			if strings.HasSuffix(log.TraceID, i) {
 				return false
 			}
 		}

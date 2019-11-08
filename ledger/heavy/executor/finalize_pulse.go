@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opencensus.io/stats"
 
@@ -52,19 +53,27 @@ func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunIn
 	}
 }
 
-func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
+func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan struct{}) {
+	done := make(chan struct{}, 1)
 	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
 		select {
 		case v := <-b.tryLock:
 			b.callCounter++
 			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				startedAt := time.Now().Second()
 				b.runner.RunValueGC(ctx)
+				stats.Record(ctx, statBadgerValueGCTime.M(int64(time.Now().Second()-startedAt)))
 			}
 			b.tryLock <- v
 		default:
 			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
 		}
 	}()
+
+	return done
 }
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
@@ -112,10 +121,12 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, newPulse)))))
 
 	logger.Debug("FinalizePulse starts")
+	startedAt := time.Now().Second()
 	bkpError := backuper.MakeBackup(ctx, newPulse)
 	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
 		logger.Fatal("Can't do backup: " + bkpError.Error())
 	}
+	stats.Record(ctx, statBackupTime.M(int64(time.Now().Second()-startedAt)))
 
 	if bkpError == ErrAlreadyDone {
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
@@ -145,7 +156,8 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	// We run value GC here ( and only here ) implicitly since we want to
 	// exclude running GC during process of backup-replication
-	gcRunner.RunGCIfNeeded(ctx)
+	// Skip return value - we don't want to wait completion
+	_ = gcRunner.RunGCIfNeeded(ctx)
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {

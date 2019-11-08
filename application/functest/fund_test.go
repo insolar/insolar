@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
@@ -151,9 +150,7 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
-		require.Error(t, err)
-		require.IsType(t, &requester.Error{}, err)
-		data := err.(*requester.Error).Data
+		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
 		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
@@ -171,9 +168,7 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
-		require.Error(t, err)
-		require.IsType(t, &requester.Error{}, err)
-		data := err.(*requester.Error).Data
+		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
 		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
@@ -191,9 +186,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
-		require.Error(t, err)
-		require.IsType(t, &requester.Error{}, err)
-		data := err.(*requester.Error).Data
+		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
 		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
@@ -215,9 +208,7 @@ func TestMigrationDaemonTransferDeposit(t *testing.T) {
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 	)
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "hold period didn't end")
 
 	newBalance, newDeposits := getBalanceAndDepositsNoErr(t, m, m.Ref)

@@ -1,5 +1,4 @@
 export GO111MODULE ?= on
-export GOPROXY ?= https://proxy.golang.org
 export GOSUMDB ?= sum.golang.org
 
 BIN_DIR ?= bin
@@ -79,7 +78,7 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/install_build_tools.sh
+	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
 install-deps: ensure install-build-tools ## install dep and codegen tools
@@ -89,7 +88,7 @@ pre-build: ensure install-deps generate regen-builtin ## install dependencies, (
 
 .PHONY: generate
 generate: ## run go generate
-	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+	go generate -x $(ALL_PACKAGES)
 
 .PHONY: test_git_no_changes
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
@@ -97,7 +96,7 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	GOPROXY=$(GOPROXY) go mod vendor
+	go mod vendor
 
 
 .PHONY: build

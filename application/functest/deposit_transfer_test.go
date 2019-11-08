@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
@@ -42,9 +41,8 @@ func TestDepositTransferToken(t *testing.T) {
 	anon := func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
-		require.Error(t, err)
-		require.IsType(t, &requester.Error{}, err)
-		data := err.(*requester.Error).Data
+
+		data := checkConvertRequesterError(t, err).Data
 		for _, v := range data.Trace {
 			if !strings.Contains(v, "hold period didn't end") {
 				return api.CallMethodReply{}
@@ -77,9 +75,7 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "hold period didn't end")
 }
 
@@ -88,9 +84,7 @@ func TestDepositTransferBiggerAmount(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")
 }
 
@@ -99,9 +93,7 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_testNovalid"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't find deposit")
 }
 
@@ -110,9 +102,7 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't parse input amount")
 }
 
@@ -123,8 +113,6 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")
 }
