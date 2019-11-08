@@ -1,5 +1,4 @@
 export GO111MODULE ?= on
-export GOPROXY ?= https://goproxy.io
 export GOSUMDB ?= sum.golang.org
 
 BIN_DIR ?= bin
@@ -97,7 +96,7 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	GOPROXY=$(GOPROXY) go mod vendor
+	go mod vendor
 
 
 .PHONY: build
