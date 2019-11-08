@@ -110,6 +110,12 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
+func checkConvertRequesterError(t *testing.T, err error) *requester.Error {
+	rv, ok := err.(*requester.Error)
+	require.Truef(t, ok, "got wrong error %T (expected *requester.Error) with text '%s'", err, err.Error())
+	return rv
+}
+
 func createMember(t *testing.T) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)

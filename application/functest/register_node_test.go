@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/application/api/requester"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
@@ -72,9 +70,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "role is not supported")
 }
 
@@ -83,9 +79,7 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	const testRole = "virtual"
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
 		map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "only root member can register node")
 }
 
