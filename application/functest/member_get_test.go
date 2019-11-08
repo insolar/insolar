@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/application/api/requester"
-
 	"github.com/insolar/insolar/application/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
@@ -61,9 +59,7 @@ func TestMigrationMemberGet(t *testing.T) {
 func TestMemberGetWrongPublicKey(t *testing.T) {
 	member1, _ := newUserWithKeys()
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member1, "member.get", nil)
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to find reference by key")
 }
 
