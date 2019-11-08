@@ -58,7 +58,7 @@ func (s *Server) Serve() {
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	ctx := context.Background()
-	traceID := "main_" + utils.RandTraceID()
+	traceID := utils.RandTraceID() + "_main"
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
 	log.InitTicker()
 
