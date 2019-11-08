@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1573228017297,
+  "iteration": 1573231675792,
   "links": [],
   "panels": [
     {
@@ -938,9 +938,6 @@
   },
   "timezone": "",
   "title": "INS-Heavy node",
-  "uid": "whlfhXFWz",
-  "version": 1
-}",
   "uid": "whlfhXFWz",
   "version": 1
 }
