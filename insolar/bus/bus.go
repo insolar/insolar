@@ -457,9 +457,9 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 	}
 }
 
-// wrapMeta wraps origin.Payload data with service fields
+// wrapMeta wraps msg.Payload data with service fields
 // and set it as byte slice back to msg.Payload.
-// Note: this method has side effect - origin-argument mutating
+// Note: this method has side effect - msg-argument mutating
 func (b *Bus) wrapMeta(
 	ctx context.Context,
 	msg *message.Message,
