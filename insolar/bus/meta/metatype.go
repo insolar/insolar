@@ -19,6 +19,9 @@ const (
 	// Sender is key for Sender
 	Sender = "sender"
 
+	// Receiver is key for Receiver
+	Receiver = "receiver"
+
 	// TraceID is key for traceID
 	TraceID = "TraceID"
 
