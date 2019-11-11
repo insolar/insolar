@@ -17,19 +17,44 @@
 package sm_execute_request
 
 import (
-	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/requestresult"
+	"github.com/insolar/insolar/logicrunner/s_artifact"
+	"github.com/insolar/insolar/logicrunner/s_contract_requester"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
+	"github.com/insolar/insolar/logicrunner/s_contract_runner/outgoing"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
 
 type ExecuteIncomingMutableRequest struct {
-	ExecuteIncomingCommon
+	smachine.StateMachineDeclTemplate
+
+	nextStep *s_contract_runner.ContractExecutionStateUpdate
+
+	deactivate          bool
+	code                []byte
+	outgoing            record.OutgoingRequest
+	outgoingResult      *record.Result
+	outgoingReply       insolar.Reply
+	outgoingRequestInfo *common.ParsedRequestInfo
+
+	// dependencies
+	ArtifactManager   *s_artifact.ArtifactClientServiceAdapter
+	ContractRequester *s_contract_requester.ContractRequesterServiceAdapter
+
+	*ExecuteIncomingCommon
 }
 
 /* -------- Declaration ------------- */
@@ -38,19 +63,9 @@ func (s *ExecuteIncomingMutableRequest) GetInitStateFor(smachine.StateMachine) s
 	return s.Init
 }
 
-func (s *ExecuteIncomingMutableRequest) InjectDependencies(smachine.StateMachine, smachine.SlotLink, *injector.DependencyInjector) {
-}
-
-func (s *ExecuteIncomingMutableRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
-}
-
-func (s *ExecuteIncomingMutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
-}
-
-func (s *ExecuteIncomingMutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
+func (s *ExecuteIncomingMutableRequest) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
+	injector.MustInject(&s.ArtifactManager)
+	injector.MustInject(&s.ContractRequester)
 }
 
 /* -------- Instance ------------- */
@@ -60,11 +75,16 @@ func (s *ExecuteIncomingMutableRequest) GetStateMachineDeclaration() smachine.St
 }
 
 func (s *ExecuteIncomingMutableRequest) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	sdl := ctx.Share(&s.SharedRequestState, 0)
+	if !ctx.Publish(s.RequestInfo.RequestReference, sdl) {
+		return ctx.Stop()
+	}
+
 	return ctx.Jump(s.stepTakeLock)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepTakeLock(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.DeduplicatedResult != nil {
+	if s.RequestInfo.Result != nil {
 		return ctx.Jump(s.stepReturnResult)
 	}
 
@@ -77,25 +97,187 @@ func (s *ExecuteIncomingMutableRequest) stepTakeLock(ctx smachine.ExecutionConte
 
 func (s *ExecuteIncomingMutableRequest) stepOrderingCheck(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	// passing right now
-	return ctx.Jump(s.stepExecute)
+	return ctx.Jump(s.stepStartExecution)
 }
 
-func (s *ExecuteIncomingMutableRequest) stepExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (s *ExecuteIncomingMutableRequest) stepStartExecution(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	transcript := s.contractTranscript
 
 	goCtx := ctx.GetContext()
 
 	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
-		result, err := svc.Execute(goCtx, transcript)
+		nextStep, err := svc.ExecutionStart(goCtx, transcript)
+
 		return func(ctx smachine.AsyncResultContext) {
-			s.internalError = err
-			s.executionResult = result
+			s.externalError = err
+			s.nextStep = nextStep
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepRegisterResult)
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepDecide)
+}
+
+func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	transcript := s.contractTranscript
+
+	goCtx := ctx.GetContext()
+
+	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
+		nextStep, err := svc.ExecutionContinue(goCtx, transcript.RequestRef, nil)
+
+		return func(ctx smachine.AsyncResultContext) {
+			s.externalError = err
+			s.nextStep = nextStep
+		}
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepDecide)
+}
+
+func (s *ExecuteIncomingMutableRequest) stepDecide(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	if s.externalError != nil {
+		return ctx.Stop() // TODO[bigbes]: process error
+	}
+
+	switch s.nextStep.Type {
+	case s_contract_runner.ContractError:
+		s.externalError = errors.Wrap(s.nextStep.Error, "failed to execute contract")
+		return ctx.Jump(s.stepReturnResult)
+	case s_contract_runner.ContractOutgoingCall:
+		return ctx.Jump(s.stepOutgoingClassify)
+	case s_contract_runner.ContractDone:
+		// extract result, register it and
+		return ctx.Jump(s.stepRegisterResult)
+	default:
+		panic("TODO")
+	}
+}
+
+func (s *ExecuteIncomingMutableRequest) stepOutgoingClassify(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	goCtx := ctx.GetContext()
+
+	switch event := s.nextStep.Outgoing.(type) {
+	case outgoing.DeactivateEvent:
+		s.deactivate = true
+		return ctx.Jump(s.stepContinueExecution)
+
+	case outgoing.GetCodeEvent:
+		return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+			desc, err := svc.GetCode(goCtx, event.CodeReference)
+
+			return func(ctx smachine.AsyncResultContext) {
+				s.externalError = err
+				if err != nil {
+					s.code, s.externalError = desc.Code()
+				}
+			}
+		}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
+
+	case outgoing.RouteCallEvent:
+		s.outgoing = event.ConstructOutgoing(*s.contractTranscript)
+		return ctx.Jump(s.stepOutgoingRegister)
+
+	case outgoing.SaveAsChildEvent:
+		s.outgoing = event.ConstructOutgoing(*s.contractTranscript)
+		return ctx.Jump(s.stepOutgoingRegister)
+
+	default:
+		panic(fmt.Sprintf("unknown type of event %T", event))
+	}
+}
+
+func (s *ExecuteIncomingMutableRequest) stepOutgoingRegister(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	var (
+		outgoingRequest = &s.outgoing
+		goCtx           = ctx.GetContext()
+	)
+
+	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		info, err := svc.RegisterOutgoingRequest(goCtx, outgoingRequest)
+
+		return func(ctx smachine.AsyncResultContext) {
+			if err != nil {
+				s.externalError = err
+			} else {
+				s.outgoingRequestInfo, s.externalError = common.NewParsedRequestInfo(outgoingRequest, info)
+
+				if _, ok := s.outgoingRequestInfo.Request.(*record.OutgoingRequest); s.externalError == nil && !ok {
+					s.externalError = errors.Errorf("unexpected request type: %T", s.outgoingRequestInfo.Request)
+				} else if s.outgoingRequestInfo.Result != nil {
+					pl := s.outgoingRequestInfo.Result.Payload
+					replyData, err := reply.UnmarshalFromMeta(pl)
+					if err != nil {
+						s.externalError = errors.Wrap(err, "failed to unmarshal reply")
+					} else {
+						s.outgoingReply = replyData
+					}
+				}
+			}
+
+			return
+		}
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepOutgoingExecute)
+}
+
+func (s *ExecuteIncomingMutableRequest) stepOutgoingExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	var (
+		goCtx       = ctx.GetContext()
+		incoming    = outgoing.BuildIncomingRequestFromOutgoing(&s.outgoing)
+		pulseNumber = s.pulseSlot.PulseData().PulseNumber
+		pl          = &payload.CallMethod{Request: incoming, PulseNumber: pulseNumber}
+	)
+
+	if s.outgoingReply == nil {
+		return s.ContractRequester.PrepareAsync(ctx, func(svc s_contract_requester.ContractRequesterService) smachine.AsyncResultFunc {
+			callResult, _, err := svc.SendRequest(goCtx, pl)
+
+			return func(ctx smachine.AsyncResultContext) {
+				s.externalError = err
+				s.outgoingReply = callResult
+			}
+		}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepOutgoingSaveResult)
+	}
+
+	return ctx.Jump(s.stepContinueExecution)
+}
+
+func (s *ExecuteIncomingMutableRequest) stepOutgoingSaveResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	if s.externalError != nil {
+		return ctx.Jump(s.stepStop)
+	}
+
+	var (
+		requestReference = s.outgoingRequestInfo.RequestReference
+		caller           = s.outgoingRequestInfo.Request.(*record.OutgoingRequest).Caller
+		result           []byte
+	)
+
+	switch v := s.outgoingReply.(type) {
+	case *reply.CallMethod: // regular call
+		result = v.Result
+		s.outgoingResult = &record.Result{
+			Object:  *s.objectInfo.ObjectReference.GetLocal(),
+			Request: requestReference,
+			Payload: v.Result,
+		}
+
+	default:
+		s.externalError = errors.Errorf("contractRequester.Call returned unexpected type %T", s.outgoingReply)
+		return ctx.Jump(s.stepStop)
+	}
+
+	// Register result of the outgoing method
+	requestResult := requestresult.New(result, caller)
+
+	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		err := svc.RegisterResult(ctx.GetContext(), requestReference, requestResult)
+
+		return func(ctx smachine.AsyncResultContext) {
+			if err != nil {
+				s.externalError = errors.Wrap(err, "can't register result")
+			}
+		}
+	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepRegisterResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.internalError != nil {
+	if s.externalError != nil {
 		return ctx.Jump(s.stepStop)
 	}
 
@@ -122,16 +304,24 @@ func (s *ExecuteIncomingMutableRequest) stepSetLastObjectState(ctx smachine.Exec
 }
 
 func (s *ExecuteIncomingMutableRequest) stepReturnResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.Request.ReturnMode != record.ReturnSaga {
-		if s.RequestReference.IsEmpty() {
+	var (
+		goCtx    = ctx.GetContext()
+		logger   = inslogger.FromContext(goCtx)
+		incoming = s.RequestInfo.Request.(*record.IncomingRequest)
+	)
+
+	switch incoming.ReturnMode {
+	case record.ReturnResult:
+		if s.RequestInfo.RequestReference.IsEmpty() {
 			panic("unreachable")
 		}
 
 		s.internalSendResult(ctx)
-	} else {
-		logger := inslogger.FromContext(ctx.GetContext())
+	case record.ReturnSaga:
 		logger.Debug("Not sending result, request type is Saga")
+	default:
+		return ctx.Errorf("unknown ReturnMode: %s", incoming.ReturnMode.String())
 	}
 
-	return ctx.Stop()
+	return ctx.Jump(s.stepStop)
 }

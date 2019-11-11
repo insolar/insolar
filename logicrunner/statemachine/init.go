@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/sm_execute_request"
 	"github.com/insolar/insolar/logicrunner/sm_request"
 	"github.com/insolar/insolar/pulse"
 )
@@ -31,8 +30,8 @@ func DefaultHandlersFactory(_ pulse.Number, input conveyor.InputEvent) smachine.
 	switch inputConverted := input.(type) {
 	case *common.DispatcherMessage:
 		return sm_request.HandlerFactoryMeta(inputConverted)
-	case *sm_execute_request.SMEventSendOutgoing:
-		return sm_execute_request.HandlerFactoryOutgoingSender(inputConverted)
+	// case *sm_execute_request.SMEventSendOutgoing:
+	// 	return sm_execute_request.HandlerFactoryOutgoingSender(inputConverted)
 	default:
 		panic(fmt.Sprintf("unknown event type, got %T", input))
 	}

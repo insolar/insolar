@@ -17,8 +17,6 @@
 package sm_request_test
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor"
@@ -86,12 +84,15 @@ type StateMachineCallRequest struct {
 
 /* -------- Declaration ------------- */
 
-var declCallRequest smachine.StateMachineDeclaration = declarationCallRequest{}
+var declCallRequest smachine.StateMachineDeclaration = &declarationCallRequest{}
 
-type declarationCallRequest struct{}
+type declarationCallRequest struct {
+	smachine.StateMachineDeclTemplate
+}
 
-func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
+func (declarationCallRequest) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
+	s := sm.(*StateMachineCallRequest)
+	return s.Init
 }
 
 func (declarationCallRequest) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
@@ -99,19 +100,6 @@ func (declarationCallRequest) InjectDependencies(sm smachine.StateMachine, _ sma
 
 	injector.MustInject(&s.pulseSlot)
 	injector.MustInject(&s.artifactClient)
-}
-
-func (declarationCallRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationCallRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
-}
-
-func (declarationCallRequest) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
-	s := sm.(*StateMachineCallRequest)
-	return s.Init
 }
 
 /* -------- Instance ------------- */
@@ -234,11 +222,7 @@ func (s *StateMachineCallRequest) cancelOnMigrate(ctx smachine.MigrationContext)
 
 func (s *StateMachineCallRequest) stateGetSharedReadyToWork(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	if s.sharedStateLink.IsZero() {
-		pair := sm_object.ObjectPair{
-			Pulse:           s.pulseSlot.PulseData().PulseNumber,
-			ObjectReference: s.calleeObj,
-		}
-		s.sharedStateLink = s.catalogObj.GetOrCreate(ctx, pair)
+		s.sharedStateLink = s.catalogObj.GetOrCreate(ctx, s.calleeObj)
 	}
 
 	var readyToWork smachine.SyncLink

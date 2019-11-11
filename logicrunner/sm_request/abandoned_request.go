@@ -17,8 +17,6 @@
 package sm_request
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/payload"
@@ -30,29 +28,19 @@ type StateMachineAbandonedRequests struct {
 	Payload *payload.AbandonedRequestsNotification
 }
 
-var declAbandonedRequests smachine.StateMachineDeclaration = declarationAbandonedRequests{}
+var declAbandonedRequests smachine.StateMachineDeclaration = &declarationAbandonedRequests{}
 
-type declarationAbandonedRequests struct{}
-
-func (declarationAbandonedRequests) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
-}
-
-func (declarationAbandonedRequests) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	_ = sm.(*StateMachineAbandonedRequests)
-}
-
-func (declarationAbandonedRequests) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationAbandonedRequests) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
+type declarationAbandonedRequests struct {
+	smachine.StateMachineDeclTemplate
 }
 
 func (declarationAbandonedRequests) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
 	s := sm.(*StateMachineAbandonedRequests)
 	return s.Init
+}
+
+func (declarationAbandonedRequests) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
+	_ = sm.(*StateMachineAbandonedRequests)
 }
 
 /* -------- Instance ------------- */

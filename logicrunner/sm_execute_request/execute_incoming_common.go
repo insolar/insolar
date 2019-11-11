@@ -17,8 +17,6 @@
 package sm_execute_request
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
@@ -34,7 +32,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
 
+type SharedRequestState struct {
+	Nonce       uint64
+	RequestInfo *common.ParsedRequestInfo
+}
+
 type ExecuteIncomingCommon struct {
+	SharedRequestState
+
 	objectCatalog  *sm_object.LocalObjectCatalog
 	pulseSlot      *conveyor.PulseSlot
 	ArtifactClient *s_artifact.ArtifactClientServiceAdapter
@@ -45,17 +50,10 @@ type ExecuteIncomingCommon struct {
 
 	sharedStateLink sm_object.SharedObjectStateAccessor
 
-	internalError error
+	externalError error
 
 	// input
 	MessageMeta *payload.Meta
-	Request     *record.IncomingRequest
-
-	// values to pass between steps
-	RequestReference       insolar.Reference
-	RequestObjectReference insolar.Reference
-	RequestDeduplicated    bool
-	DeduplicatedResult     *record.Result
 
 	contractTranscript  *common.Transcript
 	executionResult     artifacts.RequestResult
@@ -75,11 +73,13 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 	goCtx := ctx.GetContext()
 
 	if s.sharedStateLink.IsZero() {
-		objectPair := sm_object.ObjectPair{
-			Pulse:           s.pulseSlot.PulseData().PulseNumber,
-			ObjectReference: s.RequestObjectReference,
+		if s.RequestInfo.Request.IsCreationRequest() {
+			ctx.Log().Warn("creation request")
+			s.sharedStateLink = s.objectCatalog.Create(ctx, s.RequestInfo.RequestObjectReference)
+		} else {
+			ctx.Log().Warn("another request")
+			s.sharedStateLink = s.objectCatalog.GetOrCreate(ctx, s.RequestInfo.RequestObjectReference)
 		}
-		s.sharedStateLink = s.objectCatalog.GetOrCreate(ctx, objectPair)
 	}
 
 	switch s.sharedStateLink.Prepare(cb).TryUse(ctx).GetDecision() {
@@ -101,8 +101,8 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
 	goCtx := ctx.GetContext()
 
-	objectReference := s.RequestObjectReference
-	requestReference := s.RequestReference
+	objectReference := s.RequestInfo.RequestObjectReference
+	requestReference := s.RequestInfo.RequestReference
 	executionResult := s.executionResult
 
 	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
@@ -114,7 +114,7 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 		}
 
 		return func(ctx smachine.AsyncResultContext) {
-			s.internalError = err
+			s.externalError = err
 			if objectDescriptor != nil {
 				s.newObjectDescriptor = objectDescriptor
 			}
@@ -124,32 +124,22 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 
 // it'll panic or execute
 func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext) {
-	goCtx := ctx.GetContext()
+	var (
+		goCtx = ctx.GetContext()
 
-	var executionBytes []byte
-	var executionError string
+		executionBytes []byte
+		executionError string
+	)
 
 	switch {
-	case s.internalError != nil: // execution error
-		executionError = s.internalError.Error()
-	case s.DeduplicatedResult != nil: // result of deduplication
+	case s.externalError != nil: // execution error
+		executionError = s.externalError.Error()
+	case s.RequestInfo.Result != nil: // result of deduplication
 		if s.executionResult != nil {
 			panic("we got deduplicated result and execution result, unreachable")
 		}
-		material := record.Material{}
-		if err := material.Unmarshal(s.DeduplicatedResult.Payload); err != nil {
-			executionError = errors.Wrap(err, "failed to unmarshal deduplicated result").Error()
-			break
-		}
 
-		virtual := record.Unwrap(&material.Virtual)
-		result, ok := virtual.(*record.Result)
-		if !ok {
-			executionError = errors.Errorf("unexpected record %T", virtual).Error()
-			break
-		}
-
-		executionBytes = result.Payload
+		executionBytes = s.RequestInfo.GetResultBytes()
 	case s.executionResult != nil: // result of execution
 		executionBytes = s.executionResult.Result()
 	default:
@@ -158,15 +148,23 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 	}
 
 	pl := &payload.ReturnResults{
-		RequestRef: s.RequestReference,
+		RequestRef: s.RequestInfo.RequestReference,
 		Reply:      executionBytes,
 		Error:      executionError,
 	}
 
-	APIRequest := s.Request.APINode.IsEmpty()
+	var (
+		incoming   = s.RequestInfo.Request.(*record.IncomingRequest)
+		APIRequest = s.RequestInfo.Request.IsAPIRequest()
+		target     insolar.Reference
+	)
 	if !APIRequest {
-		pl.Target = s.Request.Caller
-		pl.Reason = s.Request.Reason
+		target = incoming.Caller
+
+		pl.Target = incoming.Caller
+		pl.Reason = incoming.Reason
+	} else {
+		target = incoming.APINode
 	}
 
 	msg, err := payload.NewResultMessage(pl)
@@ -174,28 +172,29 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 		panic("couldn't serialize message: " + err.Error())
 	}
 
-	request := s.Request
 	s.Sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
 		// TODO[bigbes]: there should be retry sender
 		// retrySender := bus.NewWaitOKWithRetrySender(svc, svc, 1)
 
 		var done func()
 		if APIRequest {
-			_, done = svc.SendTarget(goCtx, msg, request.APINode)
+			_, done = svc.SendTarget(goCtx, msg, target)
 		} else {
-			_, done = svc.SendRole(goCtx, msg, insolar.DynamicRoleVirtualExecutor, request.Caller)
+			_, done = svc.SendRole(goCtx, msg, insolar.DynamicRoleVirtualExecutor, target)
 		}
 		done()
-	})
+	}).Send()
+
+	return
 }
 
 func (s *ExecuteIncomingCommon) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.internalError != nil {
+	if s.externalError != nil {
 		return ctx.Jump(s.stepError)
 	}
 	return ctx.Stop()
 }
 
 func (s *ExecuteIncomingCommon) stepError(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	return ctx.Error(s.internalError)
+	return ctx.Error(s.externalError)
 }

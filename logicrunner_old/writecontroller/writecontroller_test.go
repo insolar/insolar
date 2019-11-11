@@ -1,0 +1,183 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package writecontroller
+
+import (
+	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+)
+
+func TestWriteController_Open(t *testing.T) {
+	t.Parallel()
+
+	t.Run("open for correct pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 1)
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple open for same pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 1)
+		require.NoError(t, err)
+
+		err = Open(ctx, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("try to open previous pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 2)
+		require.NoError(t, err)
+
+		err = Open(ctx, 1)
+		require.Error(t, err)
+	})
+}
+
+func TestWriteController_CloseAndWait(t *testing.T) {
+	t.Parallel()
+
+	t.Run("close correct pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		_ = Open(ctx, 1)
+		err := CloseAndWait(ctx, 1)
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple close for same pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		_ = Open(ctx, 1)
+		err := CloseAndWait(ctx, 1)
+		require.NoError(t, err)
+
+		err = CloseAndWait(ctx, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("try to close incorrect pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 2)
+		require.NoError(t, err)
+
+		err = CloseAndWait(ctx, 1)
+		require.Error(t, err)
+
+		err = CloseAndWait(ctx, 3)
+		require.Error(t, err)
+	})
+}
+
+func TestWriteController_Begin(t *testing.T) {
+	t.Parallel()
+
+	t.Run("begin for not-opened pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		_, err := Begin(ctx, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("begin for closed pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 1)
+		require.NoError(t, err)
+		err = CloseAndWait(ctx, 1)
+		require.NoError(t, err)
+
+		_, err = Begin(ctx, 1)
+		require.Error(t, err)
+	})
+
+	t.Run("begin for correct pulse", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 1)
+		require.NoError(t, err)
+
+		for i := 0; i < 1000; i++ {
+			done, _ := Begin(ctx, 1)
+			go func() {
+				time.Sleep((time.Duration)(rand.Int31n(100)) * time.Millisecond)
+				done()
+			}()
+		}
+		err = CloseAndWait(ctx, 1)
+		require.NoError(t, err)
+	})
+
+	t.Run("begin while waiting pulse closing", func(t *testing.T) {
+		t.Parallel()
+		ctx := inslogger.TestContext(t)
+
+		m := NewWriteController()
+		err := Open(ctx, 1)
+		require.NoError(t, err)
+
+		done, _ := Begin(ctx, 1)
+		started := make(chan struct{})
+
+		go func() {
+			close(started)
+			err = CloseAndWait(ctx, 1)
+			require.NoError(t, err)
+		}()
+		<-started
+		time.Sleep(time.Millisecond * 100)
+
+		_, err = Begin(ctx, 1)
+		require.Error(t, err)
+
+		done()
+	})
+}
+
+func TestWriteController_WaitOpened(t *testing.T) {
+	t.Run("", func(t *testing.T) {
+
+	})
+}

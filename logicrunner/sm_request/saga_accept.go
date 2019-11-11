@@ -17,8 +17,6 @@
 package sm_request
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor"
@@ -29,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_sender"
-	"github.com/insolar/insolar/logicrunner/sm_execute_request"
+	"github.com/insolar/insolar/logicrunner/sm_execute_request/outgoing"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
 
@@ -48,31 +46,23 @@ type StateMachineSagaAccept struct {
 	externalError   error
 }
 
-var declSagaAccept smachine.StateMachineDeclaration = declarationSagaAccept{}
+/* -------- Declaration ------------- */
 
-type declarationSagaAccept struct{}
+var declSagaAccept smachine.StateMachineDeclaration = &declarationSagaAccept{}
 
-func (declarationSagaAccept) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
+type declarationSagaAccept struct {
+	smachine.StateMachineDeclTemplate
+}
+
+func (declarationSagaAccept) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
+	s := sm.(*StateMachineSagaAccept)
+	return s.Init
 }
 
 func (declarationSagaAccept) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	s := sm.(*StateMachineSagaAccept)
 
 	injector.MustInject(&s.artifactClient)
-}
-
-func (declarationSagaAccept) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationSagaAccept) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
-}
-
-func (declarationSagaAccept) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
-	s := sm.(*StateMachineSagaAccept)
-	return s.Init
 }
 
 /* -------- Instance ------------- */
@@ -93,15 +83,15 @@ func (s *StateMachineSagaAccept) stepSendOutgoing(ctx smachine.ExecutionContext)
 		return ctx.Error(err)
 	}
 	rec := record.Unwrap(&virtual)
-	outgoing, ok := rec.(*record.OutgoingRequest)
+	outgoingRequest, ok := rec.(*record.OutgoingRequest)
 	if !ok {
 		return ctx.Error(errors.Errorf("unexpected request received %T", rec))
 	}
 
-	sm := sm_execute_request.ExecuteOutgoingSagaRequest{
+	sm := outgoing.ExecuteOutgoingSagaRequest{
 		OutgoingRequestReference: *insolar.NewReference(s.Payload.DetachedRequestID),
 		RequestObjectReference:   *insolar.NewReference(s.Payload.ObjectID),
-		Request:                  outgoing,
+		Request:                  outgoingRequest,
 	}
 	ctx.ReplaceWith(&sm)
 
