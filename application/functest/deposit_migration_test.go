@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
@@ -214,7 +213,8 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 				"deposit.migration",
 				map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
 			if err != nil {
-				fmt.Println(err.(*requester.Error).Data)
+				requestErrorData := checkConvertRequesterError(t, err).Data
+				fmt.Println(requestErrorData)
 			} else {
 				fmt.Println(res)
 			}

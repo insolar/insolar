@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/insolar/gen"
 )
@@ -98,7 +97,9 @@ func TestTransferMoneyToNotObjectRef(t *testing.T) {
 	_, _, err = makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amountStr, "toMemberReference": secondMember.Ref + ".record"})
 	require.Error(t, err)
-	require.Contains(t, strings.Join(err.(*requester.Error).Data.Trace, ": "), "provided reference is not object")
+
+	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not object")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
@@ -134,7 +135,9 @@ func TestTransferMoneyToNotSelfScopedRef(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.Contains(t, strings.Join(err.(*requester.Error).Data.Trace, ": "), "provided reference is not self-scoped")
+
+	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not self-scoped")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
