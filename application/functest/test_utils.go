@@ -343,7 +343,12 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 
 	var errMsg string
 	if err != nil {
-		t.Error(err.Error() + ": " + strings.Join(err.(*requester.Error).Data.Trace, ": "))
+		var suffix string
+		requesterError, ok := err.(*requester.Error)
+		if ok {
+			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
+		}
+		t.Error(err.Error() + suffix)
 	}
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
@@ -366,7 +371,11 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
-		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
+		var suffix string
+		if requesterError, ok := err.(*requester.Error); ok {
+			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
+		}
+		fmt.Println(err.Error() + suffix)
 		return nil, "", err
 	}
 
