@@ -28,7 +28,7 @@ import (
 )
 
 func addMigrationAddresses(adminUrls []string, publicUrls []string, memberKeysDirPath string, addressesPath string, shardsCount int) {
-	insSDK, err := sdk.NewSDK(adminUrls, publicUrls, memberKeysDirPath)
+	insSDK, err := sdk.NewSDK(adminUrls, publicUrls, memberKeysDirPath, sdk.DefaultOptions)
 	check("SDK is not initialized: ", err)
 	var filename string
 	// method AddMigrationAddresses in contract use only 10 shards in one call

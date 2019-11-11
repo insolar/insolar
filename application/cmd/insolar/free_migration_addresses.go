@@ -27,7 +27,7 @@ import (
 var shardsAtOneTime = 10
 
 func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDirPath string, shardsCount int, alertCount int) {
-	insSDK, err := sdk.NewSDK(adminUrls, publicUrls, memberKeysDirPath)
+	insSDK, err := sdk.NewSDK(adminUrls, publicUrls, memberKeysDirPath, sdk.DefaultOptions)
 	check("SDK is not initialized: ", err)
 
 	shoudAlert := map[int]int{}

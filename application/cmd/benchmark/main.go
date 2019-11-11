@@ -68,6 +68,8 @@ var (
 	checkTotalBalance   bool
 	scenarioName        string
 	discoveryNodesLogs  string
+	maxRetries          int
+	retryPeriod         time.Duration
 )
 
 func parseInputParams() {
@@ -88,6 +90,8 @@ func parseInputParams() {
 	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
+	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
+	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
 	pflag.Parse()
 }
 
@@ -366,7 +370,10 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(adminAPIURLs, publicAPIURLs, memberKeys)
+	insSDK, err := sdk.NewSDK(adminAPIURLs, publicAPIURLs, memberKeys, sdk.Options{
+		RetryPeriod: retryPeriod,
+		MaxRetries:  maxRetries,
+	})
 	check("SDK is not initialized: ", err)
 
 	err = insSDK.SetLogLevel(logLevelServer)
