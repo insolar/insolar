@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -133,15 +133,15 @@ func (mmClearAllExcept *FilamentCleanerMock) ClearAllExcept(ids []insolar.ID) {
 		mmClearAllExcept.inspectFuncClearAllExcept(ids)
 	}
 
-	params := &FilamentCleanerMockClearAllExceptParams{ids}
+	mm_params := &FilamentCleanerMockClearAllExceptParams{ids}
 
 	// Record call args
 	mmClearAllExcept.ClearAllExceptMock.mutex.Lock()
-	mmClearAllExcept.ClearAllExceptMock.callArgs = append(mmClearAllExcept.ClearAllExceptMock.callArgs, params)
+	mmClearAllExcept.ClearAllExceptMock.callArgs = append(mmClearAllExcept.ClearAllExceptMock.callArgs, mm_params)
 	mmClearAllExcept.ClearAllExceptMock.mutex.Unlock()
 
 	for _, e := range mmClearAllExcept.ClearAllExceptMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -149,10 +149,10 @@ func (mmClearAllExcept *FilamentCleanerMock) ClearAllExcept(ids []insolar.ID) {
 
 	if mmClearAllExcept.ClearAllExceptMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClearAllExcept.ClearAllExceptMock.defaultExpectation.Counter, 1)
-		want := mmClearAllExcept.ClearAllExceptMock.defaultExpectation.params
-		got := FilamentCleanerMockClearAllExceptParams{ids}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmClearAllExcept.t.Errorf("FilamentCleanerMock.ClearAllExcept got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmClearAllExcept.ClearAllExceptMock.defaultExpectation.params
+		mm_got := FilamentCleanerMockClearAllExceptParams{ids}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClearAllExcept.t.Errorf("FilamentCleanerMock.ClearAllExcept got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -320,15 +320,15 @@ func (mmClearIfLonger *FilamentCleanerMock) ClearIfLonger(limit int) {
 		mmClearIfLonger.inspectFuncClearIfLonger(limit)
 	}
 
-	params := &FilamentCleanerMockClearIfLongerParams{limit}
+	mm_params := &FilamentCleanerMockClearIfLongerParams{limit}
 
 	// Record call args
 	mmClearIfLonger.ClearIfLongerMock.mutex.Lock()
-	mmClearIfLonger.ClearIfLongerMock.callArgs = append(mmClearIfLonger.ClearIfLongerMock.callArgs, params)
+	mmClearIfLonger.ClearIfLongerMock.callArgs = append(mmClearIfLonger.ClearIfLongerMock.callArgs, mm_params)
 	mmClearIfLonger.ClearIfLongerMock.mutex.Unlock()
 
 	for _, e := range mmClearIfLonger.ClearIfLongerMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -336,10 +336,10 @@ func (mmClearIfLonger *FilamentCleanerMock) ClearIfLonger(limit int) {
 
 	if mmClearIfLonger.ClearIfLongerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClearIfLonger.ClearIfLongerMock.defaultExpectation.Counter, 1)
-		want := mmClearIfLonger.ClearIfLongerMock.defaultExpectation.params
-		got := FilamentCleanerMockClearIfLongerParams{limit}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmClearIfLonger.t.Errorf("FilamentCleanerMock.ClearIfLonger got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmClearIfLonger.ClearIfLongerMock.defaultExpectation.params
+		mm_got := FilamentCleanerMockClearIfLongerParams{limit}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmClearIfLonger.t.Errorf("FilamentCleanerMock.ClearIfLonger got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

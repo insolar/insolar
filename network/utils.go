@@ -208,7 +208,7 @@ func IsClosedPipe(err error) bool {
 }
 
 func NewPulseContext(ctx context.Context, pulseNumber uint32) context.Context {
-	insTraceID := "pulse_" + strconv.FormatUint(uint64(pulseNumber), 10)
+	insTraceID := strconv.FormatUint(uint64(pulseNumber), 10) + "_pulse"
 	ctx = inslogger.ContextWithTrace(ctx, insTraceID)
 	return ctx
 }

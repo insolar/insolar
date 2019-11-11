@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // SignatureVerifierMock implements SignatureVerifier
@@ -186,15 +186,15 @@ func (mmIsDigestMethodSupported *SignatureVerifierMock) IsDigestMethodSupported(
 		mmIsDigestMethodSupported.inspectFuncIsDigestMethodSupported(m)
 	}
 
-	params := &SignatureVerifierMockIsDigestMethodSupportedParams{m}
+	mm_params := &SignatureVerifierMockIsDigestMethodSupportedParams{m}
 
 	// Record call args
 	mmIsDigestMethodSupported.IsDigestMethodSupportedMock.mutex.Lock()
-	mmIsDigestMethodSupported.IsDigestMethodSupportedMock.callArgs = append(mmIsDigestMethodSupported.IsDigestMethodSupportedMock.callArgs, params)
+	mmIsDigestMethodSupported.IsDigestMethodSupportedMock.callArgs = append(mmIsDigestMethodSupported.IsDigestMethodSupportedMock.callArgs, mm_params)
 	mmIsDigestMethodSupported.IsDigestMethodSupportedMock.mutex.Unlock()
 
 	for _, e := range mmIsDigestMethodSupported.IsDigestMethodSupportedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -202,17 +202,17 @@ func (mmIsDigestMethodSupported *SignatureVerifierMock) IsDigestMethodSupported(
 
 	if mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation.Counter, 1)
-		want := mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation.params
-		got := SignatureVerifierMockIsDigestMethodSupportedParams{m}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsDigestMethodSupported.t.Errorf("SignatureVerifierMock.IsDigestMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation.params
+		mm_got := SignatureVerifierMockIsDigestMethodSupportedParams{m}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsDigestMethodSupported.t.Errorf("SignatureVerifierMock.IsDigestMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsDigestMethodSupported.IsDigestMethodSupportedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsDigestMethodSupported.t.Fatal("No results are set for the SignatureVerifierMock.IsDigestMethodSupported")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsDigestMethodSupported.funcIsDigestMethodSupported != nil {
 		return mmIsDigestMethodSupported.funcIsDigestMethodSupported(m)
@@ -401,15 +401,15 @@ func (mmIsSignMethodSupported *SignatureVerifierMock) IsSignMethodSupported(m Si
 		mmIsSignMethodSupported.inspectFuncIsSignMethodSupported(m)
 	}
 
-	params := &SignatureVerifierMockIsSignMethodSupportedParams{m}
+	mm_params := &SignatureVerifierMockIsSignMethodSupportedParams{m}
 
 	// Record call args
 	mmIsSignMethodSupported.IsSignMethodSupportedMock.mutex.Lock()
-	mmIsSignMethodSupported.IsSignMethodSupportedMock.callArgs = append(mmIsSignMethodSupported.IsSignMethodSupportedMock.callArgs, params)
+	mmIsSignMethodSupported.IsSignMethodSupportedMock.callArgs = append(mmIsSignMethodSupported.IsSignMethodSupportedMock.callArgs, mm_params)
 	mmIsSignMethodSupported.IsSignMethodSupportedMock.mutex.Unlock()
 
 	for _, e := range mmIsSignMethodSupported.IsSignMethodSupportedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -417,17 +417,17 @@ func (mmIsSignMethodSupported *SignatureVerifierMock) IsSignMethodSupported(m Si
 
 	if mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation.Counter, 1)
-		want := mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation.params
-		got := SignatureVerifierMockIsSignMethodSupportedParams{m}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsSignMethodSupported.t.Errorf("SignatureVerifierMock.IsSignMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation.params
+		mm_got := SignatureVerifierMockIsSignMethodSupportedParams{m}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsSignMethodSupported.t.Errorf("SignatureVerifierMock.IsSignMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsSignMethodSupported.IsSignMethodSupportedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsSignMethodSupported.t.Fatal("No results are set for the SignatureVerifierMock.IsSignMethodSupported")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsSignMethodSupported.funcIsSignMethodSupported != nil {
 		return mmIsSignMethodSupported.funcIsSignMethodSupported(m)
@@ -616,15 +616,15 @@ func (mmIsSignOfSignatureMethodSupported *SignatureVerifierMock) IsSignOfSignatu
 		mmIsSignOfSignatureMethodSupported.inspectFuncIsSignOfSignatureMethodSupported(m)
 	}
 
-	params := &SignatureVerifierMockIsSignOfSignatureMethodSupportedParams{m}
+	mm_params := &SignatureVerifierMockIsSignOfSignatureMethodSupportedParams{m}
 
 	// Record call args
 	mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.mutex.Lock()
-	mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.callArgs = append(mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.callArgs, params)
+	mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.callArgs = append(mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.callArgs, mm_params)
 	mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.mutex.Unlock()
 
 	for _, e := range mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -632,17 +632,17 @@ func (mmIsSignOfSignatureMethodSupported *SignatureVerifierMock) IsSignOfSignatu
 
 	if mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation.Counter, 1)
-		want := mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation.params
-		got := SignatureVerifierMockIsSignOfSignatureMethodSupportedParams{m}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsSignOfSignatureMethodSupported.t.Errorf("SignatureVerifierMock.IsSignOfSignatureMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation.params
+		mm_got := SignatureVerifierMockIsSignOfSignatureMethodSupportedParams{m}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsSignOfSignatureMethodSupported.t.Errorf("SignatureVerifierMock.IsSignOfSignatureMethodSupported got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsSignOfSignatureMethodSupported.IsSignOfSignatureMethodSupportedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsSignOfSignatureMethodSupported.t.Fatal("No results are set for the SignatureVerifierMock.IsSignOfSignatureMethodSupported")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsSignOfSignatureMethodSupported.funcIsSignOfSignatureMethodSupported != nil {
 		return mmIsSignOfSignatureMethodSupported.funcIsSignOfSignatureMethodSupported(m)
@@ -832,15 +832,15 @@ func (mmIsValidDataSignature *SignatureVerifierMock) IsValidDataSignature(data i
 		mmIsValidDataSignature.inspectFuncIsValidDataSignature(data, signature)
 	}
 
-	params := &SignatureVerifierMockIsValidDataSignatureParams{data, signature}
+	mm_params := &SignatureVerifierMockIsValidDataSignatureParams{data, signature}
 
 	// Record call args
 	mmIsValidDataSignature.IsValidDataSignatureMock.mutex.Lock()
-	mmIsValidDataSignature.IsValidDataSignatureMock.callArgs = append(mmIsValidDataSignature.IsValidDataSignatureMock.callArgs, params)
+	mmIsValidDataSignature.IsValidDataSignatureMock.callArgs = append(mmIsValidDataSignature.IsValidDataSignatureMock.callArgs, mm_params)
 	mmIsValidDataSignature.IsValidDataSignatureMock.mutex.Unlock()
 
 	for _, e := range mmIsValidDataSignature.IsValidDataSignatureMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -848,17 +848,17 @@ func (mmIsValidDataSignature *SignatureVerifierMock) IsValidDataSignature(data i
 
 	if mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation.Counter, 1)
-		want := mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation.params
-		got := SignatureVerifierMockIsValidDataSignatureParams{data, signature}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsValidDataSignature.t.Errorf("SignatureVerifierMock.IsValidDataSignature got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation.params
+		mm_got := SignatureVerifierMockIsValidDataSignatureParams{data, signature}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsValidDataSignature.t.Errorf("SignatureVerifierMock.IsValidDataSignature got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsValidDataSignature.IsValidDataSignatureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsValidDataSignature.t.Fatal("No results are set for the SignatureVerifierMock.IsValidDataSignature")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsValidDataSignature.funcIsValidDataSignature != nil {
 		return mmIsValidDataSignature.funcIsValidDataSignature(data, signature)
@@ -1048,15 +1048,15 @@ func (mmIsValidDigestSignature *SignatureVerifierMock) IsValidDigestSignature(di
 		mmIsValidDigestSignature.inspectFuncIsValidDigestSignature(digest, signature)
 	}
 
-	params := &SignatureVerifierMockIsValidDigestSignatureParams{digest, signature}
+	mm_params := &SignatureVerifierMockIsValidDigestSignatureParams{digest, signature}
 
 	// Record call args
 	mmIsValidDigestSignature.IsValidDigestSignatureMock.mutex.Lock()
-	mmIsValidDigestSignature.IsValidDigestSignatureMock.callArgs = append(mmIsValidDigestSignature.IsValidDigestSignatureMock.callArgs, params)
+	mmIsValidDigestSignature.IsValidDigestSignatureMock.callArgs = append(mmIsValidDigestSignature.IsValidDigestSignatureMock.callArgs, mm_params)
 	mmIsValidDigestSignature.IsValidDigestSignatureMock.mutex.Unlock()
 
 	for _, e := range mmIsValidDigestSignature.IsValidDigestSignatureMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -1064,17 +1064,17 @@ func (mmIsValidDigestSignature *SignatureVerifierMock) IsValidDigestSignature(di
 
 	if mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation.Counter, 1)
-		want := mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation.params
-		got := SignatureVerifierMockIsValidDigestSignatureParams{digest, signature}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsValidDigestSignature.t.Errorf("SignatureVerifierMock.IsValidDigestSignature got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation.params
+		mm_got := SignatureVerifierMockIsValidDigestSignatureParams{digest, signature}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsValidDigestSignature.t.Errorf("SignatureVerifierMock.IsValidDigestSignature got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsValidDigestSignature.IsValidDigestSignatureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsValidDigestSignature.t.Fatal("No results are set for the SignatureVerifierMock.IsValidDigestSignature")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsValidDigestSignature.funcIsValidDigestSignature != nil {
 		return mmIsValidDigestSignature.funcIsValidDigestSignature(digest, signature)

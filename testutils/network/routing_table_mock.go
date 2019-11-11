@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 )
@@ -152,15 +152,15 @@ func (mmResolve *RoutingTableMock) Resolve(r1 insolar.Reference) (hp1 *host.Host
 		mmResolve.inspectFuncResolve(r1)
 	}
 
-	params := &RoutingTableMockResolveParams{r1}
+	mm_params := &RoutingTableMockResolveParams{r1}
 
 	// Record call args
 	mmResolve.ResolveMock.mutex.Lock()
-	mmResolve.ResolveMock.callArgs = append(mmResolve.ResolveMock.callArgs, params)
+	mmResolve.ResolveMock.callArgs = append(mmResolve.ResolveMock.callArgs, mm_params)
 	mmResolve.ResolveMock.mutex.Unlock()
 
 	for _, e := range mmResolve.ResolveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.hp1, e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmResolve *RoutingTableMock) Resolve(r1 insolar.Reference) (hp1 *host.Host
 
 	if mmResolve.ResolveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmResolve.ResolveMock.defaultExpectation.Counter, 1)
-		want := mmResolve.ResolveMock.defaultExpectation.params
-		got := RoutingTableMockResolveParams{r1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmResolve.t.Errorf("RoutingTableMock.Resolve got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmResolve.ResolveMock.defaultExpectation.params
+		mm_got := RoutingTableMockResolveParams{r1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmResolve.t.Errorf("RoutingTableMock.Resolve got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmResolve.ResolveMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmResolve.ResolveMock.defaultExpectation.results
+		if mm_results == nil {
 			mmResolve.t.Fatal("No results are set for the RoutingTableMock.Resolve")
 		}
-		return (*results).hp1, (*results).err
+		return (*mm_results).hp1, (*mm_results).err
 	}
 	if mmResolve.funcResolve != nil {
 		return mmResolve.funcResolve(r1)

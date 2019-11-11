@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
@@ -140,11 +140,11 @@ func (mmAsByteString *InboundMock) AsByteString() (b1 longbits.ByteString) {
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the InboundMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -283,11 +283,11 @@ func (mmGetNameAddress *InboundMock) GetNameAddress() (n1 Name) {
 	if mmGetNameAddress.GetNameAddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNameAddress.GetNameAddressMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNameAddress.GetNameAddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNameAddress.GetNameAddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNameAddress.t.Fatal("No results are set for the InboundMock.GetNameAddress")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetNameAddress.funcGetNameAddress != nil {
 		return mmGetNameAddress.funcGetNameAddress()
@@ -426,11 +426,11 @@ func (mmGetTransportCert *InboundMock) GetTransportCert() (c1 cryptkit.Certifica
 	if mmGetTransportCert.GetTransportCertMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetTransportCert.GetTransportCertMock.defaultExpectation.Counter, 1)
 
-		results := mmGetTransportCert.GetTransportCertMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetTransportCert.GetTransportCertMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetTransportCert.t.Fatal("No results are set for the InboundMock.GetTransportCert")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetTransportCert.funcGetTransportCert != nil {
 		return mmGetTransportCert.funcGetTransportCert()
@@ -569,11 +569,11 @@ func (mmGetTransportKey *InboundMock) GetTransportKey() (s1 cryptkit.SignatureKe
 	if mmGetTransportKey.GetTransportKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetTransportKey.GetTransportKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetTransportKey.GetTransportKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetTransportKey.GetTransportKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetTransportKey.t.Fatal("No results are set for the InboundMock.GetTransportKey")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetTransportKey.funcGetTransportKey != nil {
 		return mmGetTransportKey.funcGetTransportKey()

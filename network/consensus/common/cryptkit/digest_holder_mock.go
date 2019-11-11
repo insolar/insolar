@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/longbits"
 )
 
@@ -193,11 +193,11 @@ func (mmAsByteString *DigestHolderMock) AsByteString() (b1 longbits.ByteString) 
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the DigestHolderMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -336,11 +336,11 @@ func (mmAsBytes *DigestHolderMock) AsBytes() (ba1 []byte) {
 	if mmAsBytes.AsBytesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsBytes.AsBytesMock.defaultExpectation.Counter, 1)
 
-		results := mmAsBytes.AsBytesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsBytes.AsBytesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsBytes.t.Fatal("No results are set for the DigestHolderMock.AsBytes")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmAsBytes.funcAsBytes != nil {
 		return mmAsBytes.funcAsBytes()
@@ -479,11 +479,11 @@ func (mmCopyOfDigest *DigestHolderMock) CopyOfDigest() (d1 Digest) {
 	if mmCopyOfDigest.CopyOfDigestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCopyOfDigest.CopyOfDigestMock.defaultExpectation.Counter, 1)
 
-		results := mmCopyOfDigest.CopyOfDigestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCopyOfDigest.CopyOfDigestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCopyOfDigest.t.Fatal("No results are set for the DigestHolderMock.CopyOfDigest")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmCopyOfDigest.funcCopyOfDigest != nil {
 		return mmCopyOfDigest.funcCopyOfDigest()
@@ -655,15 +655,15 @@ func (mmEquals *DigestHolderMock) Equals(other DigestHolder) (b1 bool) {
 		mmEquals.inspectFuncEquals(other)
 	}
 
-	params := &DigestHolderMockEqualsParams{other}
+	mm_params := &DigestHolderMockEqualsParams{other}
 
 	// Record call args
 	mmEquals.EqualsMock.mutex.Lock()
-	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, params)
+	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, mm_params)
 	mmEquals.EqualsMock.mutex.Unlock()
 
 	for _, e := range mmEquals.EqualsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -671,17 +671,17 @@ func (mmEquals *DigestHolderMock) Equals(other DigestHolder) (b1 bool) {
 
 	if mmEquals.EqualsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEquals.EqualsMock.defaultExpectation.Counter, 1)
-		want := mmEquals.EqualsMock.defaultExpectation.params
-		got := DigestHolderMockEqualsParams{other}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEquals.t.Errorf("DigestHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEquals.EqualsMock.defaultExpectation.params
+		mm_got := DigestHolderMockEqualsParams{other}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEquals.t.Errorf("DigestHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmEquals.EqualsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmEquals.EqualsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmEquals.t.Fatal("No results are set for the DigestHolderMock.Equals")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmEquals.funcEquals != nil {
 		return mmEquals.funcEquals(other)
@@ -837,11 +837,11 @@ func (mmFixedByteSize *DigestHolderMock) FixedByteSize() (i1 int) {
 	if mmFixedByteSize.FixedByteSizeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFixedByteSize.FixedByteSizeMock.defaultExpectation.Counter, 1)
 
-		results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFixedByteSize.t.Fatal("No results are set for the DigestHolderMock.FixedByteSize")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmFixedByteSize.funcFixedByteSize != nil {
 		return mmFixedByteSize.funcFixedByteSize()
@@ -980,11 +980,11 @@ func (mmFoldToUint64 *DigestHolderMock) FoldToUint64() (u1 uint64) {
 	if mmFoldToUint64.FoldToUint64Mock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFoldToUint64.FoldToUint64Mock.defaultExpectation.Counter, 1)
 
-		results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
+		if mm_results == nil {
 			mmFoldToUint64.t.Fatal("No results are set for the DigestHolderMock.FoldToUint64")
 		}
-		return (*results).u1
+		return (*mm_results).u1
 	}
 	if mmFoldToUint64.funcFoldToUint64 != nil {
 		return mmFoldToUint64.funcFoldToUint64()
@@ -1123,11 +1123,11 @@ func (mmGetDigestMethod *DigestHolderMock) GetDigestMethod() (d1 DigestMethod) {
 	if mmGetDigestMethod.GetDigestMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDigestMethod.GetDigestMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDigestMethod.t.Fatal("No results are set for the DigestHolderMock.GetDigestMethod")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetDigestMethod.funcGetDigestMethod != nil {
 		return mmGetDigestMethod.funcGetDigestMethod()
@@ -1300,15 +1300,15 @@ func (mmRead *DigestHolderMock) Read(p []byte) (n int, err error) {
 		mmRead.inspectFuncRead(p)
 	}
 
-	params := &DigestHolderMockReadParams{p}
+	mm_params := &DigestHolderMockReadParams{p}
 
 	// Record call args
 	mmRead.ReadMock.mutex.Lock()
-	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, params)
+	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, mm_params)
 	mmRead.ReadMock.mutex.Unlock()
 
 	for _, e := range mmRead.ReadMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1316,17 +1316,17 @@ func (mmRead *DigestHolderMock) Read(p []byte) (n int, err error) {
 
 	if mmRead.ReadMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRead.ReadMock.defaultExpectation.Counter, 1)
-		want := mmRead.ReadMock.defaultExpectation.params
-		got := DigestHolderMockReadParams{p}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRead.t.Errorf("DigestHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRead.ReadMock.defaultExpectation.params
+		mm_got := DigestHolderMockReadParams{p}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRead.t.Errorf("DigestHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRead.ReadMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRead.ReadMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRead.t.Fatal("No results are set for the DigestHolderMock.Read")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmRead.funcRead != nil {
 		return mmRead.funcRead(p)
@@ -1515,15 +1515,15 @@ func (mmSignWith *DigestHolderMock) SignWith(signer DigestSigner) (s1 SignedDige
 		mmSignWith.inspectFuncSignWith(signer)
 	}
 
-	params := &DigestHolderMockSignWithParams{signer}
+	mm_params := &DigestHolderMockSignWithParams{signer}
 
 	// Record call args
 	mmSignWith.SignWithMock.mutex.Lock()
-	mmSignWith.SignWithMock.callArgs = append(mmSignWith.SignWithMock.callArgs, params)
+	mmSignWith.SignWithMock.callArgs = append(mmSignWith.SignWithMock.callArgs, mm_params)
 	mmSignWith.SignWithMock.mutex.Unlock()
 
 	for _, e := range mmSignWith.SignWithMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -1531,17 +1531,17 @@ func (mmSignWith *DigestHolderMock) SignWith(signer DigestSigner) (s1 SignedDige
 
 	if mmSignWith.SignWithMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSignWith.SignWithMock.defaultExpectation.Counter, 1)
-		want := mmSignWith.SignWithMock.defaultExpectation.params
-		got := DigestHolderMockSignWithParams{signer}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSignWith.t.Errorf("DigestHolderMock.SignWith got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSignWith.SignWithMock.defaultExpectation.params
+		mm_got := DigestHolderMockSignWithParams{signer}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSignWith.t.Errorf("DigestHolderMock.SignWith got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSignWith.SignWithMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSignWith.SignWithMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSignWith.t.Fatal("No results are set for the DigestHolderMock.SignWith")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmSignWith.funcSignWith != nil {
 		return mmSignWith.funcSignWith(signer)
@@ -1731,15 +1731,15 @@ func (mmWriteTo *DigestHolderMock) WriteTo(w io.Writer) (n int64, err error) {
 		mmWriteTo.inspectFuncWriteTo(w)
 	}
 
-	params := &DigestHolderMockWriteToParams{w}
+	mm_params := &DigestHolderMockWriteToParams{w}
 
 	// Record call args
 	mmWriteTo.WriteToMock.mutex.Lock()
-	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, params)
+	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, mm_params)
 	mmWriteTo.WriteToMock.mutex.Unlock()
 
 	for _, e := range mmWriteTo.WriteToMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1747,17 +1747,17 @@ func (mmWriteTo *DigestHolderMock) WriteTo(w io.Writer) (n int64, err error) {
 
 	if mmWriteTo.WriteToMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWriteTo.WriteToMock.defaultExpectation.Counter, 1)
-		want := mmWriteTo.WriteToMock.defaultExpectation.params
-		got := DigestHolderMockWriteToParams{w}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWriteTo.t.Errorf("DigestHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWriteTo.WriteToMock.defaultExpectation.params
+		mm_got := DigestHolderMockWriteToParams{w}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWriteTo.t.Errorf("DigestHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWriteTo.WriteToMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWriteTo.WriteToMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWriteTo.t.Fatal("No results are set for the DigestHolderMock.WriteTo")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmWriteTo.funcWriteTo != nil {
 		return mmWriteTo.funcWriteTo(w)

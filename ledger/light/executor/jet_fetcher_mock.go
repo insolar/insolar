@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -163,15 +163,15 @@ func (mmFetch *JetFetcherMock) Fetch(ctx context.Context, target insolar.ID, pul
 		mmFetch.inspectFuncFetch(ctx, target, pulse)
 	}
 
-	params := &JetFetcherMockFetchParams{ctx, target, pulse}
+	mm_params := &JetFetcherMockFetchParams{ctx, target, pulse}
 
 	// Record call args
 	mmFetch.FetchMock.mutex.Lock()
-	mmFetch.FetchMock.callArgs = append(mmFetch.FetchMock.callArgs, params)
+	mmFetch.FetchMock.callArgs = append(mmFetch.FetchMock.callArgs, mm_params)
 	mmFetch.FetchMock.mutex.Unlock()
 
 	for _, e := range mmFetch.FetchMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ip1, e.results.err
 		}
@@ -179,17 +179,17 @@ func (mmFetch *JetFetcherMock) Fetch(ctx context.Context, target insolar.ID, pul
 
 	if mmFetch.FetchMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFetch.FetchMock.defaultExpectation.Counter, 1)
-		want := mmFetch.FetchMock.defaultExpectation.params
-		got := JetFetcherMockFetchParams{ctx, target, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFetch.t.Errorf("JetFetcherMock.Fetch got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFetch.FetchMock.defaultExpectation.params
+		mm_got := JetFetcherMockFetchParams{ctx, target, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFetch.t.Errorf("JetFetcherMock.Fetch got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFetch.FetchMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFetch.FetchMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFetch.t.Fatal("No results are set for the JetFetcherMock.Fetch")
 		}
-		return (*results).ip1, (*results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmFetch.funcFetch != nil {
 		return mmFetch.funcFetch(ctx, target, pulse)
@@ -354,15 +354,15 @@ func (mmRelease *JetFetcherMock) Release(ctx context.Context, jetID insolar.JetI
 		mmRelease.inspectFuncRelease(ctx, jetID, pulse)
 	}
 
-	params := &JetFetcherMockReleaseParams{ctx, jetID, pulse}
+	mm_params := &JetFetcherMockReleaseParams{ctx, jetID, pulse}
 
 	// Record call args
 	mmRelease.ReleaseMock.mutex.Lock()
-	mmRelease.ReleaseMock.callArgs = append(mmRelease.ReleaseMock.callArgs, params)
+	mmRelease.ReleaseMock.callArgs = append(mmRelease.ReleaseMock.callArgs, mm_params)
 	mmRelease.ReleaseMock.mutex.Unlock()
 
 	for _, e := range mmRelease.ReleaseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -370,10 +370,10 @@ func (mmRelease *JetFetcherMock) Release(ctx context.Context, jetID insolar.JetI
 
 	if mmRelease.ReleaseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRelease.ReleaseMock.defaultExpectation.Counter, 1)
-		want := mmRelease.ReleaseMock.defaultExpectation.params
-		got := JetFetcherMockReleaseParams{ctx, jetID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRelease.t.Errorf("JetFetcherMock.Release got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRelease.ReleaseMock.defaultExpectation.params
+		mm_got := JetFetcherMockReleaseParams{ctx, jetID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRelease.t.Errorf("JetFetcherMock.Release got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

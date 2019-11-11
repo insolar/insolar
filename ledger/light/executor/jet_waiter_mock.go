@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -153,15 +153,15 @@ func (mmWait *JetWaiterMock) Wait(ctx context.Context, jetID insolar.JetID, puls
 		mmWait.inspectFuncWait(ctx, jetID, pulse)
 	}
 
-	params := &JetWaiterMockWaitParams{ctx, jetID, pulse}
+	mm_params := &JetWaiterMockWaitParams{ctx, jetID, pulse}
 
 	// Record call args
 	mmWait.WaitMock.mutex.Lock()
-	mmWait.WaitMock.callArgs = append(mmWait.WaitMock.callArgs, params)
+	mmWait.WaitMock.callArgs = append(mmWait.WaitMock.callArgs, mm_params)
 	mmWait.WaitMock.mutex.Unlock()
 
 	for _, e := range mmWait.WaitMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -169,17 +169,17 @@ func (mmWait *JetWaiterMock) Wait(ctx context.Context, jetID insolar.JetID, puls
 
 	if mmWait.WaitMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWait.WaitMock.defaultExpectation.Counter, 1)
-		want := mmWait.WaitMock.defaultExpectation.params
-		got := JetWaiterMockWaitParams{ctx, jetID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWait.t.Errorf("JetWaiterMock.Wait got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWait.WaitMock.defaultExpectation.params
+		mm_got := JetWaiterMockWaitParams{ctx, jetID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWait.t.Errorf("JetWaiterMock.Wait got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWait.WaitMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWait.WaitMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWait.t.Fatal("No results are set for the JetWaiterMock.Wait")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmWait.funcWait != nil {
 		return mmWait.funcWait(ctx, jetID, pulse)

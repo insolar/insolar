@@ -17,6 +17,8 @@
 package executor
 
 import (
+	"time"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 )
@@ -33,6 +35,18 @@ var (
 		"requests_abandoned",
 		"Amount of abandoned requests on heavy",
 		stats.UnitDimensionless,
+	)
+
+	statBackupTime = stats.Int64(
+		"backup_time",
+		"duration backup process",
+		"s",
+	)
+
+	statBadgerValueGCTime = stats.Int64(
+		"badger_value_gc_time",
+		"duration of badger's value GC",
+		"s",
 	)
 )
 
@@ -55,6 +69,18 @@ func init() {
 			Description: statAbandonedRequests.Description(),
 			Measure:     statAbandonedRequests,
 			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statBackupTime.Name(),
+			Description: statBackupTime.Description(),
+			Measure:     statBackupTime,
+			Aggregation: view.Distribution(0.0, float64(time.Minute)),
+		},
+		&view.View{
+			Name:        statBadgerValueGCTime.Name(),
+			Description: statBadgerValueGCTime.Description(),
+			Measure:     statBadgerValueGCTime,
+			Aggregation: view.Distribution(0.0, float64(time.Minute)*2),
 		},
 	)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -196,15 +196,15 @@ func (mmDone *ExecutionRegistryMock) Done(transcript *common.Transcript) (b1 boo
 		mmDone.inspectFuncDone(transcript)
 	}
 
-	params := &ExecutionRegistryMockDoneParams{transcript}
+	mm_params := &ExecutionRegistryMockDoneParams{transcript}
 
 	// Record call args
 	mmDone.DoneMock.mutex.Lock()
-	mmDone.DoneMock.callArgs = append(mmDone.DoneMock.callArgs, params)
+	mmDone.DoneMock.callArgs = append(mmDone.DoneMock.callArgs, mm_params)
 	mmDone.DoneMock.mutex.Unlock()
 
 	for _, e := range mmDone.DoneMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -212,17 +212,17 @@ func (mmDone *ExecutionRegistryMock) Done(transcript *common.Transcript) (b1 boo
 
 	if mmDone.DoneMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDone.DoneMock.defaultExpectation.Counter, 1)
-		want := mmDone.DoneMock.defaultExpectation.params
-		got := ExecutionRegistryMockDoneParams{transcript}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDone.t.Errorf("ExecutionRegistryMock.Done got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDone.DoneMock.defaultExpectation.params
+		mm_got := ExecutionRegistryMockDoneParams{transcript}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDone.t.Errorf("ExecutionRegistryMock.Done got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmDone.DoneMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDone.DoneMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDone.t.Fatal("No results are set for the ExecutionRegistryMock.Done")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmDone.funcDone != nil {
 		return mmDone.funcDone(transcript)
@@ -411,15 +411,15 @@ func (mmGetActiveTranscript *ExecutionRegistryMock) GetActiveTranscript(req inso
 		mmGetActiveTranscript.inspectFuncGetActiveTranscript(req)
 	}
 
-	params := &ExecutionRegistryMockGetActiveTranscriptParams{req}
+	mm_params := &ExecutionRegistryMockGetActiveTranscriptParams{req}
 
 	// Record call args
 	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Lock()
-	mmGetActiveTranscript.GetActiveTranscriptMock.callArgs = append(mmGetActiveTranscript.GetActiveTranscriptMock.callArgs, params)
+	mmGetActiveTranscript.GetActiveTranscriptMock.callArgs = append(mmGetActiveTranscript.GetActiveTranscriptMock.callArgs, mm_params)
 	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Unlock()
 
 	for _, e := range mmGetActiveTranscript.GetActiveTranscriptMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.tp1
 		}
@@ -427,17 +427,17 @@ func (mmGetActiveTranscript *ExecutionRegistryMock) GetActiveTranscript(req inso
 
 	if mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.params
-		got := ExecutionRegistryMockGetActiveTranscriptParams{req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveTranscript.t.Errorf("ExecutionRegistryMock.GetActiveTranscript got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.params
+		mm_got := ExecutionRegistryMockGetActiveTranscriptParams{req}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetActiveTranscript.t.Errorf("ExecutionRegistryMock.GetActiveTranscript got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetActiveTranscript.t.Fatal("No results are set for the ExecutionRegistryMock.GetActiveTranscript")
 		}
-		return (*results).tp1
+		return (*mm_results).tp1
 	}
 	if mmGetActiveTranscript.funcGetActiveTranscript != nil {
 		return mmGetActiveTranscript.funcGetActiveTranscript(req)
@@ -593,11 +593,11 @@ func (mmIsEmpty *ExecutionRegistryMock) IsEmpty() (b1 bool) {
 	if mmIsEmpty.IsEmptyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsEmpty.IsEmptyMock.defaultExpectation.Counter, 1)
 
-		results := mmIsEmpty.IsEmptyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsEmpty.IsEmptyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsEmpty.t.Fatal("No results are set for the ExecutionRegistryMock.IsEmpty")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsEmpty.funcIsEmpty != nil {
 		return mmIsEmpty.funcIsEmpty()
@@ -736,11 +736,11 @@ func (mmLength *ExecutionRegistryMock) Length() (i1 int) {
 	if mmLength.LengthMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLength.LengthMock.defaultExpectation.Counter, 1)
 
-		results := mmLength.LengthMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLength.LengthMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLength.t.Fatal("No results are set for the ExecutionRegistryMock.Length")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmLength.funcLength != nil {
 		return mmLength.funcLength()
@@ -912,15 +912,15 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (pa1 []payl
 		mmOnPulse.inspectFuncOnPulse(ctx)
 	}
 
-	params := &ExecutionRegistryMockOnPulseParams{ctx}
+	mm_params := &ExecutionRegistryMockOnPulseParams{ctx}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
-	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, params)
+	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, mm_params)
 	mmOnPulse.OnPulseMock.mutex.Unlock()
 
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.pa1
 		}
@@ -928,17 +928,17 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (pa1 []payl
 
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
-		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := ExecutionRegistryMockOnPulseParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOnPulse.t.Errorf("ExecutionRegistryMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOnPulse.OnPulseMock.defaultExpectation.params
+		mm_got := ExecutionRegistryMockOnPulseParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOnPulse.t.Errorf("ExecutionRegistryMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOnPulse.OnPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOnPulse.OnPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOnPulse.t.Fatal("No results are set for the ExecutionRegistryMock.OnPulse")
 		}
-		return (*results).pa1
+		return (*mm_results).pa1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx)
@@ -1128,15 +1128,15 @@ func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcrip
 		mmRegister.inspectFuncRegister(ctx, transcript)
 	}
 
-	params := &ExecutionRegistryMockRegisterParams{ctx, transcript}
+	mm_params := &ExecutionRegistryMockRegisterParams{ctx, transcript}
 
 	// Record call args
 	mmRegister.RegisterMock.mutex.Lock()
-	mmRegister.RegisterMock.callArgs = append(mmRegister.RegisterMock.callArgs, params)
+	mmRegister.RegisterMock.callArgs = append(mmRegister.RegisterMock.callArgs, mm_params)
 	mmRegister.RegisterMock.mutex.Unlock()
 
 	for _, e := range mmRegister.RegisterMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1144,17 +1144,17 @@ func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcrip
 
 	if mmRegister.RegisterMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRegister.RegisterMock.defaultExpectation.Counter, 1)
-		want := mmRegister.RegisterMock.defaultExpectation.params
-		got := ExecutionRegistryMockRegisterParams{ctx, transcript}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRegister.t.Errorf("ExecutionRegistryMock.Register got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRegister.RegisterMock.defaultExpectation.params
+		mm_got := ExecutionRegistryMockRegisterParams{ctx, transcript}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRegister.t.Errorf("ExecutionRegistryMock.Register got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRegister.RegisterMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRegister.RegisterMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRegister.t.Fatal("No results are set for the ExecutionRegistryMock.Register")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmRegister.funcRegister != nil {
 		return mmRegister.funcRegister(ctx, transcript)

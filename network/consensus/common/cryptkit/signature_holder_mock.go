@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/longbits"
 )
 
@@ -184,11 +184,11 @@ func (mmAsByteString *SignatureHolderMock) AsByteString() (b1 longbits.ByteStrin
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the SignatureHolderMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -327,11 +327,11 @@ func (mmAsBytes *SignatureHolderMock) AsBytes() (ba1 []byte) {
 	if mmAsBytes.AsBytesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsBytes.AsBytesMock.defaultExpectation.Counter, 1)
 
-		results := mmAsBytes.AsBytesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsBytes.AsBytesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsBytes.t.Fatal("No results are set for the SignatureHolderMock.AsBytes")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmAsBytes.funcAsBytes != nil {
 		return mmAsBytes.funcAsBytes()
@@ -470,11 +470,11 @@ func (mmCopyOfSignature *SignatureHolderMock) CopyOfSignature() (s1 Signature) {
 	if mmCopyOfSignature.CopyOfSignatureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCopyOfSignature.CopyOfSignatureMock.defaultExpectation.Counter, 1)
 
-		results := mmCopyOfSignature.CopyOfSignatureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCopyOfSignature.CopyOfSignatureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCopyOfSignature.t.Fatal("No results are set for the SignatureHolderMock.CopyOfSignature")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmCopyOfSignature.funcCopyOfSignature != nil {
 		return mmCopyOfSignature.funcCopyOfSignature()
@@ -646,15 +646,15 @@ func (mmEquals *SignatureHolderMock) Equals(other SignatureHolder) (b1 bool) {
 		mmEquals.inspectFuncEquals(other)
 	}
 
-	params := &SignatureHolderMockEqualsParams{other}
+	mm_params := &SignatureHolderMockEqualsParams{other}
 
 	// Record call args
 	mmEquals.EqualsMock.mutex.Lock()
-	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, params)
+	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, mm_params)
 	mmEquals.EqualsMock.mutex.Unlock()
 
 	for _, e := range mmEquals.EqualsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -662,17 +662,17 @@ func (mmEquals *SignatureHolderMock) Equals(other SignatureHolder) (b1 bool) {
 
 	if mmEquals.EqualsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEquals.EqualsMock.defaultExpectation.Counter, 1)
-		want := mmEquals.EqualsMock.defaultExpectation.params
-		got := SignatureHolderMockEqualsParams{other}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEquals.t.Errorf("SignatureHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEquals.EqualsMock.defaultExpectation.params
+		mm_got := SignatureHolderMockEqualsParams{other}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEquals.t.Errorf("SignatureHolderMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmEquals.EqualsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmEquals.EqualsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmEquals.t.Fatal("No results are set for the SignatureHolderMock.Equals")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmEquals.funcEquals != nil {
 		return mmEquals.funcEquals(other)
@@ -828,11 +828,11 @@ func (mmFixedByteSize *SignatureHolderMock) FixedByteSize() (i1 int) {
 	if mmFixedByteSize.FixedByteSizeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFixedByteSize.FixedByteSizeMock.defaultExpectation.Counter, 1)
 
-		results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFixedByteSize.FixedByteSizeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFixedByteSize.t.Fatal("No results are set for the SignatureHolderMock.FixedByteSize")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmFixedByteSize.funcFixedByteSize != nil {
 		return mmFixedByteSize.funcFixedByteSize()
@@ -971,11 +971,11 @@ func (mmFoldToUint64 *SignatureHolderMock) FoldToUint64() (u1 uint64) {
 	if mmFoldToUint64.FoldToUint64Mock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFoldToUint64.FoldToUint64Mock.defaultExpectation.Counter, 1)
 
-		results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFoldToUint64.FoldToUint64Mock.defaultExpectation.results
+		if mm_results == nil {
 			mmFoldToUint64.t.Fatal("No results are set for the SignatureHolderMock.FoldToUint64")
 		}
-		return (*results).u1
+		return (*mm_results).u1
 	}
 	if mmFoldToUint64.funcFoldToUint64 != nil {
 		return mmFoldToUint64.funcFoldToUint64()
@@ -1114,11 +1114,11 @@ func (mmGetSignatureMethod *SignatureHolderMock) GetSignatureMethod() (s1 Signat
 	if mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureMethod.t.Fatal("No results are set for the SignatureHolderMock.GetSignatureMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureMethod.funcGetSignatureMethod != nil {
 		return mmGetSignatureMethod.funcGetSignatureMethod()
@@ -1291,15 +1291,15 @@ func (mmRead *SignatureHolderMock) Read(p []byte) (n int, err error) {
 		mmRead.inspectFuncRead(p)
 	}
 
-	params := &SignatureHolderMockReadParams{p}
+	mm_params := &SignatureHolderMockReadParams{p}
 
 	// Record call args
 	mmRead.ReadMock.mutex.Lock()
-	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, params)
+	mmRead.ReadMock.callArgs = append(mmRead.ReadMock.callArgs, mm_params)
 	mmRead.ReadMock.mutex.Unlock()
 
 	for _, e := range mmRead.ReadMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1307,17 +1307,17 @@ func (mmRead *SignatureHolderMock) Read(p []byte) (n int, err error) {
 
 	if mmRead.ReadMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRead.ReadMock.defaultExpectation.Counter, 1)
-		want := mmRead.ReadMock.defaultExpectation.params
-		got := SignatureHolderMockReadParams{p}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRead.t.Errorf("SignatureHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRead.ReadMock.defaultExpectation.params
+		mm_got := SignatureHolderMockReadParams{p}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRead.t.Errorf("SignatureHolderMock.Read got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRead.ReadMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRead.ReadMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRead.t.Fatal("No results are set for the SignatureHolderMock.Read")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmRead.funcRead != nil {
 		return mmRead.funcRead(p)
@@ -1507,15 +1507,15 @@ func (mmWriteTo *SignatureHolderMock) WriteTo(w io.Writer) (n int64, err error) 
 		mmWriteTo.inspectFuncWriteTo(w)
 	}
 
-	params := &SignatureHolderMockWriteToParams{w}
+	mm_params := &SignatureHolderMockWriteToParams{w}
 
 	// Record call args
 	mmWriteTo.WriteToMock.mutex.Lock()
-	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, params)
+	mmWriteTo.WriteToMock.callArgs = append(mmWriteTo.WriteToMock.callArgs, mm_params)
 	mmWriteTo.WriteToMock.mutex.Unlock()
 
 	for _, e := range mmWriteTo.WriteToMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.n, e.results.err
 		}
@@ -1523,17 +1523,17 @@ func (mmWriteTo *SignatureHolderMock) WriteTo(w io.Writer) (n int64, err error) 
 
 	if mmWriteTo.WriteToMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWriteTo.WriteToMock.defaultExpectation.Counter, 1)
-		want := mmWriteTo.WriteToMock.defaultExpectation.params
-		got := SignatureHolderMockWriteToParams{w}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWriteTo.t.Errorf("SignatureHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWriteTo.WriteToMock.defaultExpectation.params
+		mm_got := SignatureHolderMockWriteToParams{w}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWriteTo.t.Errorf("SignatureHolderMock.WriteTo got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmWriteTo.WriteToMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmWriteTo.WriteToMock.defaultExpectation.results
+		if mm_results == nil {
 			mmWriteTo.t.Fatal("No results are set for the SignatureHolderMock.WriteTo")
 		}
-		return (*results).n, (*results).err
+		return (*mm_results).n, (*mm_results).err
 	}
 	if mmWriteTo.funcWriteTo != nil {
 		return mmWriteTo.funcWriteTo(w)

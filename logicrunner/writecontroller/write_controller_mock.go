@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -180,15 +180,15 @@ func (mmBegin *WriteControllerMock) Begin(ctx context.Context, pulse insolar.Pul
 		mmBegin.inspectFuncBegin(ctx, pulse)
 	}
 
-	params := &WriteControllerMockBeginParams{ctx, pulse}
+	mm_params := &WriteControllerMockBeginParams{ctx, pulse}
 
 	// Record call args
 	mmBegin.BeginMock.mutex.Lock()
-	mmBegin.BeginMock.callArgs = append(mmBegin.BeginMock.callArgs, params)
+	mmBegin.BeginMock.callArgs = append(mmBegin.BeginMock.callArgs, mm_params)
 	mmBegin.BeginMock.mutex.Unlock()
 
 	for _, e := range mmBegin.BeginMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.f1, e.results.err
 		}
@@ -196,17 +196,17 @@ func (mmBegin *WriteControllerMock) Begin(ctx context.Context, pulse insolar.Pul
 
 	if mmBegin.BeginMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBegin.BeginMock.defaultExpectation.Counter, 1)
-		want := mmBegin.BeginMock.defaultExpectation.params
-		got := WriteControllerMockBeginParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBegin.t.Errorf("WriteControllerMock.Begin got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBegin.BeginMock.defaultExpectation.params
+		mm_got := WriteControllerMockBeginParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBegin.t.Errorf("WriteControllerMock.Begin got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBegin.BeginMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBegin.BeginMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBegin.t.Fatal("No results are set for the WriteControllerMock.Begin")
 		}
-		return (*results).f1, (*results).err
+		return (*mm_results).f1, (*mm_results).err
 	}
 	if mmBegin.funcBegin != nil {
 		return mmBegin.funcBegin(ctx, pulse)
@@ -396,15 +396,15 @@ func (mmCloseAndWait *WriteControllerMock) CloseAndWait(ctx context.Context, pul
 		mmCloseAndWait.inspectFuncCloseAndWait(ctx, pulse)
 	}
 
-	params := &WriteControllerMockCloseAndWaitParams{ctx, pulse}
+	mm_params := &WriteControllerMockCloseAndWaitParams{ctx, pulse}
 
 	// Record call args
 	mmCloseAndWait.CloseAndWaitMock.mutex.Lock()
-	mmCloseAndWait.CloseAndWaitMock.callArgs = append(mmCloseAndWait.CloseAndWaitMock.callArgs, params)
+	mmCloseAndWait.CloseAndWaitMock.callArgs = append(mmCloseAndWait.CloseAndWaitMock.callArgs, mm_params)
 	mmCloseAndWait.CloseAndWaitMock.mutex.Unlock()
 
 	for _, e := range mmCloseAndWait.CloseAndWaitMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -412,17 +412,17 @@ func (mmCloseAndWait *WriteControllerMock) CloseAndWait(ctx context.Context, pul
 
 	if mmCloseAndWait.CloseAndWaitMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCloseAndWait.CloseAndWaitMock.defaultExpectation.Counter, 1)
-		want := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.params
-		got := WriteControllerMockCloseAndWaitParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCloseAndWait.t.Errorf("WriteControllerMock.CloseAndWait got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.params
+		mm_got := WriteControllerMockCloseAndWaitParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCloseAndWait.t.Errorf("WriteControllerMock.CloseAndWait got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCloseAndWait.CloseAndWaitMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCloseAndWait.t.Fatal("No results are set for the WriteControllerMock.CloseAndWait")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmCloseAndWait.funcCloseAndWait != nil {
 		return mmCloseAndWait.funcCloseAndWait(ctx, pulse)
@@ -612,15 +612,15 @@ func (mmOpen *WriteControllerMock) Open(ctx context.Context, pulse insolar.Pulse
 		mmOpen.inspectFuncOpen(ctx, pulse)
 	}
 
-	params := &WriteControllerMockOpenParams{ctx, pulse}
+	mm_params := &WriteControllerMockOpenParams{ctx, pulse}
 
 	// Record call args
 	mmOpen.OpenMock.mutex.Lock()
-	mmOpen.OpenMock.callArgs = append(mmOpen.OpenMock.callArgs, params)
+	mmOpen.OpenMock.callArgs = append(mmOpen.OpenMock.callArgs, mm_params)
 	mmOpen.OpenMock.mutex.Unlock()
 
 	for _, e := range mmOpen.OpenMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -628,17 +628,17 @@ func (mmOpen *WriteControllerMock) Open(ctx context.Context, pulse insolar.Pulse
 
 	if mmOpen.OpenMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOpen.OpenMock.defaultExpectation.Counter, 1)
-		want := mmOpen.OpenMock.defaultExpectation.params
-		got := WriteControllerMockOpenParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOpen.t.Errorf("WriteControllerMock.Open got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOpen.OpenMock.defaultExpectation.params
+		mm_got := WriteControllerMockOpenParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOpen.t.Errorf("WriteControllerMock.Open got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOpen.OpenMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOpen.OpenMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOpen.t.Fatal("No results are set for the WriteControllerMock.Open")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmOpen.funcOpen != nil {
 		return mmOpen.funcOpen(ctx, pulse)
@@ -801,15 +801,15 @@ func (mmWaitOpened *WriteControllerMock) WaitOpened(ctx context.Context) {
 		mmWaitOpened.inspectFuncWaitOpened(ctx)
 	}
 
-	params := &WriteControllerMockWaitOpenedParams{ctx}
+	mm_params := &WriteControllerMockWaitOpenedParams{ctx}
 
 	// Record call args
 	mmWaitOpened.WaitOpenedMock.mutex.Lock()
-	mmWaitOpened.WaitOpenedMock.callArgs = append(mmWaitOpened.WaitOpenedMock.callArgs, params)
+	mmWaitOpened.WaitOpenedMock.callArgs = append(mmWaitOpened.WaitOpenedMock.callArgs, mm_params)
 	mmWaitOpened.WaitOpenedMock.mutex.Unlock()
 
 	for _, e := range mmWaitOpened.WaitOpenedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -817,10 +817,10 @@ func (mmWaitOpened *WriteControllerMock) WaitOpened(ctx context.Context) {
 
 	if mmWaitOpened.WaitOpenedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmWaitOpened.WaitOpenedMock.defaultExpectation.Counter, 1)
-		want := mmWaitOpened.WaitOpenedMock.defaultExpectation.params
-		got := WriteControllerMockWaitOpenedParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmWaitOpened.t.Errorf("WriteControllerMock.WaitOpened got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmWaitOpened.WaitOpenedMock.defaultExpectation.params
+		mm_got := WriteControllerMockWaitOpenedParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmWaitOpened.t.Errorf("WriteControllerMock.WaitOpened got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

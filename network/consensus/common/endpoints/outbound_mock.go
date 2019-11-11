@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/longbits"
 )
@@ -158,11 +158,11 @@ func (mmAsByteString *OutboundMock) AsByteString() (b1 longbits.ByteString) {
 	if mmAsByteString.AsByteStringMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAsByteString.AsByteStringMock.defaultExpectation.Counter, 1)
 
-		results := mmAsByteString.AsByteStringMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAsByteString.AsByteStringMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAsByteString.t.Fatal("No results are set for the OutboundMock.AsByteString")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
@@ -334,15 +334,15 @@ func (mmCanAccept *OutboundMock) CanAccept(connection Inbound) (b1 bool) {
 		mmCanAccept.inspectFuncCanAccept(connection)
 	}
 
-	params := &OutboundMockCanAcceptParams{connection}
+	mm_params := &OutboundMockCanAcceptParams{connection}
 
 	// Record call args
 	mmCanAccept.CanAcceptMock.mutex.Lock()
-	mmCanAccept.CanAcceptMock.callArgs = append(mmCanAccept.CanAcceptMock.callArgs, params)
+	mmCanAccept.CanAcceptMock.callArgs = append(mmCanAccept.CanAcceptMock.callArgs, mm_params)
 	mmCanAccept.CanAcceptMock.mutex.Unlock()
 
 	for _, e := range mmCanAccept.CanAcceptMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -350,17 +350,17 @@ func (mmCanAccept *OutboundMock) CanAccept(connection Inbound) (b1 bool) {
 
 	if mmCanAccept.CanAcceptMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCanAccept.CanAcceptMock.defaultExpectation.Counter, 1)
-		want := mmCanAccept.CanAcceptMock.defaultExpectation.params
-		got := OutboundMockCanAcceptParams{connection}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCanAccept.t.Errorf("OutboundMock.CanAccept got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCanAccept.CanAcceptMock.defaultExpectation.params
+		mm_got := OutboundMockCanAcceptParams{connection}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCanAccept.t.Errorf("OutboundMock.CanAccept got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCanAccept.CanAcceptMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCanAccept.CanAcceptMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCanAccept.t.Fatal("No results are set for the OutboundMock.CanAccept")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmCanAccept.funcCanAccept != nil {
 		return mmCanAccept.funcCanAccept(connection)
@@ -516,11 +516,11 @@ func (mmGetEndpointType *OutboundMock) GetEndpointType() (n1 NodeEndpointType) {
 	if mmGetEndpointType.GetEndpointTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetEndpointType.GetEndpointTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetEndpointType.GetEndpointTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetEndpointType.GetEndpointTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetEndpointType.t.Fatal("No results are set for the OutboundMock.GetEndpointType")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetEndpointType.funcGetEndpointType != nil {
 		return mmGetEndpointType.funcGetEndpointType()
@@ -659,11 +659,11 @@ func (mmGetIPAddress *OutboundMock) GetIPAddress() (i1 IPAddress) {
 	if mmGetIPAddress.GetIPAddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIPAddress.GetIPAddressMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIPAddress.GetIPAddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIPAddress.GetIPAddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIPAddress.t.Fatal("No results are set for the OutboundMock.GetIPAddress")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmGetIPAddress.funcGetIPAddress != nil {
 		return mmGetIPAddress.funcGetIPAddress()
@@ -802,11 +802,11 @@ func (mmGetNameAddress *OutboundMock) GetNameAddress() (n1 Name) {
 	if mmGetNameAddress.GetNameAddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNameAddress.GetNameAddressMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNameAddress.GetNameAddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNameAddress.GetNameAddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNameAddress.t.Fatal("No results are set for the OutboundMock.GetNameAddress")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetNameAddress.funcGetNameAddress != nil {
 		return mmGetNameAddress.funcGetNameAddress()
@@ -945,11 +945,11 @@ func (mmGetRelayID *OutboundMock) GetRelayID() (s1 insolar.ShortNodeID) {
 	if mmGetRelayID.GetRelayIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRelayID.GetRelayIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetRelayID.GetRelayIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetRelayID.GetRelayIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetRelayID.t.Fatal("No results are set for the OutboundMock.GetRelayID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetRelayID.funcGetRelayID != nil {
 		return mmGetRelayID.funcGetRelayID()

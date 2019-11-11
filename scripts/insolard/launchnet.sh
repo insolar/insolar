@@ -2,6 +2,8 @@
 set -em
 # requires: lsof, awk, sed, grep, pgrep
 
+export GO111MODULE=on
+
 # Changeable environment variables (parameters)
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
@@ -192,7 +194,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
+    go run -mod=vendor scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 

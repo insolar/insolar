@@ -1,3 +1,6 @@
+export GO111MODULE ?= on
+export GOSUMDB ?= sum.golang.org
+
 BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artifacts
 INSOLAR = insolar
@@ -15,10 +18,11 @@ KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
 
-
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
-GOBUILD ?= go build
+GOBUILD ?= go build -mod=vendor
+GOTEST ?= go test -mod=vendor
+
 FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
@@ -47,7 +51,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
 
 .PHONY: all
-all: clean submodule install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: clean submodule pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
 .PHONY: submodule
 submodule: ## init git submodule
@@ -74,17 +78,17 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/install_build_tools.sh
+	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
-install-deps: install-build-tools ## install dep and codegen tools
+install-deps: ensure install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
-	GOPATH=`go env GOPATH` go generate -x $(ALL_PACKAGES)
+	go generate -x $(ALL_PACKAGES)
 
 .PHONY: test_git_no_changes
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
@@ -92,11 +96,12 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	dep ensure
+	go mod vendor
+
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(BADGER) $(HEAVY_BADGER_TOOL)
+build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -151,21 +156,17 @@ $(HEALTHCHECK):
 $(KEEPERD):
 	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
 
-.PHONY: $(BADGER)
-$(BADGER):
-	GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
-
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
 	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
-	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -178,7 +179,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./...
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest ./...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -188,12 +189,12 @@ test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of coverage file
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=count $(TESTED_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=count $(TESTED_PACKAGES)
 	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
@@ -201,29 +202,29 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
 
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
@@ -244,11 +245,11 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
-		protoc -I/usr/local/include -I./ \
+	protoc -I./vendor -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
     		ledger/heavy/exporter/record_exporter.proto
-		protoc -I/usr/local/include -I./ \
+	protoc -I./vendor -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
     		ledger/heavy/exporter/pulse_exporter.proto

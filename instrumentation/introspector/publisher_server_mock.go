@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_introproto "github.com/insolar/insolar/instrumentation/introspector/introproto"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 )
@@ -172,15 +172,15 @@ func (mmGetMessagesFilters *PublisherServerMock) GetMessagesFilters(ctx context.
 		mmGetMessagesFilters.inspectFuncGetMessagesFilters(ctx, ep1)
 	}
 
-	params := &PublisherServerMockGetMessagesFiltersParams{ctx, ep1}
+	mm_params := &PublisherServerMockGetMessagesFiltersParams{ctx, ep1}
 
 	// Record call args
 	mmGetMessagesFilters.GetMessagesFiltersMock.mutex.Lock()
-	mmGetMessagesFilters.GetMessagesFiltersMock.callArgs = append(mmGetMessagesFilters.GetMessagesFiltersMock.callArgs, params)
+	mmGetMessagesFilters.GetMessagesFiltersMock.callArgs = append(mmGetMessagesFilters.GetMessagesFiltersMock.callArgs, mm_params)
 	mmGetMessagesFilters.GetMessagesFiltersMock.mutex.Unlock()
 
 	for _, e := range mmGetMessagesFilters.GetMessagesFiltersMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ap1, e.results.err
 		}
@@ -188,17 +188,17 @@ func (mmGetMessagesFilters *PublisherServerMock) GetMessagesFilters(ctx context.
 
 	if mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation.Counter, 1)
-		want := mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation.params
-		got := PublisherServerMockGetMessagesFiltersParams{ctx, ep1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetMessagesFilters.t.Errorf("PublisherServerMock.GetMessagesFilters got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation.params
+		mm_got := PublisherServerMockGetMessagesFiltersParams{ctx, ep1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetMessagesFilters.t.Errorf("PublisherServerMock.GetMessagesFilters got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMessagesFilters.GetMessagesFiltersMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMessagesFilters.t.Fatal("No results are set for the PublisherServerMock.GetMessagesFilters")
 		}
-		return (*results).ap1, (*results).err
+		return (*mm_results).ap1, (*mm_results).err
 	}
 	if mmGetMessagesFilters.funcGetMessagesFilters != nil {
 		return mmGetMessagesFilters.funcGetMessagesFilters(ctx, ep1)
@@ -389,15 +389,15 @@ func (mmGetMessagesStat *PublisherServerMock) GetMessagesStat(ctx context.Contex
 		mmGetMessagesStat.inspectFuncGetMessagesStat(ctx, ep1)
 	}
 
-	params := &PublisherServerMockGetMessagesStatParams{ctx, ep1}
+	mm_params := &PublisherServerMockGetMessagesStatParams{ctx, ep1}
 
 	// Record call args
 	mmGetMessagesStat.GetMessagesStatMock.mutex.Lock()
-	mmGetMessagesStat.GetMessagesStatMock.callArgs = append(mmGetMessagesStat.GetMessagesStatMock.callArgs, params)
+	mmGetMessagesStat.GetMessagesStatMock.callArgs = append(mmGetMessagesStat.GetMessagesStatMock.callArgs, mm_params)
 	mmGetMessagesStat.GetMessagesStatMock.mutex.Unlock()
 
 	for _, e := range mmGetMessagesStat.GetMessagesStatMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ap1, e.results.err
 		}
@@ -405,17 +405,17 @@ func (mmGetMessagesStat *PublisherServerMock) GetMessagesStat(ctx context.Contex
 
 	if mmGetMessagesStat.GetMessagesStatMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMessagesStat.GetMessagesStatMock.defaultExpectation.Counter, 1)
-		want := mmGetMessagesStat.GetMessagesStatMock.defaultExpectation.params
-		got := PublisherServerMockGetMessagesStatParams{ctx, ep1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetMessagesStat.t.Errorf("PublisherServerMock.GetMessagesStat got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetMessagesStat.GetMessagesStatMock.defaultExpectation.params
+		mm_got := PublisherServerMockGetMessagesStatParams{ctx, ep1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetMessagesStat.t.Errorf("PublisherServerMock.GetMessagesStat got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetMessagesStat.GetMessagesStatMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMessagesStat.GetMessagesStatMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMessagesStat.t.Fatal("No results are set for the PublisherServerMock.GetMessagesStat")
 		}
-		return (*results).ap1, (*results).err
+		return (*mm_results).ap1, (*mm_results).err
 	}
 	if mmGetMessagesStat.funcGetMessagesStat != nil {
 		return mmGetMessagesStat.funcGetMessagesStat(ctx, ep1)
@@ -606,15 +606,15 @@ func (mmSetMessagesFilter *PublisherServerMock) SetMessagesFilter(ctx context.Co
 		mmSetMessagesFilter.inspectFuncSetMessagesFilter(ctx, mp1)
 	}
 
-	params := &PublisherServerMockSetMessagesFilterParams{ctx, mp1}
+	mm_params := &PublisherServerMockSetMessagesFilterParams{ctx, mp1}
 
 	// Record call args
 	mmSetMessagesFilter.SetMessagesFilterMock.mutex.Lock()
-	mmSetMessagesFilter.SetMessagesFilterMock.callArgs = append(mmSetMessagesFilter.SetMessagesFilterMock.callArgs, params)
+	mmSetMessagesFilter.SetMessagesFilterMock.callArgs = append(mmSetMessagesFilter.SetMessagesFilterMock.callArgs, mm_params)
 	mmSetMessagesFilter.SetMessagesFilterMock.mutex.Unlock()
 
 	for _, e := range mmSetMessagesFilter.SetMessagesFilterMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.mp2, e.results.err
 		}
@@ -622,17 +622,17 @@ func (mmSetMessagesFilter *PublisherServerMock) SetMessagesFilter(ctx context.Co
 
 	if mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation.Counter, 1)
-		want := mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation.params
-		got := PublisherServerMockSetMessagesFilterParams{ctx, mp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetMessagesFilter.t.Errorf("PublisherServerMock.SetMessagesFilter got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation.params
+		mm_got := PublisherServerMockSetMessagesFilterParams{ctx, mp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetMessagesFilter.t.Errorf("PublisherServerMock.SetMessagesFilter got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSetMessagesFilter.SetMessagesFilterMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSetMessagesFilter.t.Fatal("No results are set for the PublisherServerMock.SetMessagesFilter")
 		}
-		return (*results).mp2, (*results).err
+		return (*mm_results).mp2, (*mm_results).err
 	}
 	if mmSetMessagesFilter.funcSetMessagesFilter != nil {
 		return mmSetMessagesFilter.funcSetMessagesFilter(ctx, mp1)

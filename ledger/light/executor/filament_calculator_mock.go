@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -192,15 +192,15 @@ func (mmOpenedRequests *FilamentCalculatorMock) OpenedRequests(ctx context.Conte
 		mmOpenedRequests.inspectFuncOpenedRequests(ctx, pulse, objectID, pendingOnly)
 	}
 
-	params := &FilamentCalculatorMockOpenedRequestsParams{ctx, pulse, objectID, pendingOnly}
+	mm_params := &FilamentCalculatorMockOpenedRequestsParams{ctx, pulse, objectID, pendingOnly}
 
 	// Record call args
 	mmOpenedRequests.OpenedRequestsMock.mutex.Lock()
-	mmOpenedRequests.OpenedRequestsMock.callArgs = append(mmOpenedRequests.OpenedRequestsMock.callArgs, params)
+	mmOpenedRequests.OpenedRequestsMock.callArgs = append(mmOpenedRequests.OpenedRequestsMock.callArgs, mm_params)
 	mmOpenedRequests.OpenedRequestsMock.mutex.Unlock()
 
 	for _, e := range mmOpenedRequests.OpenedRequestsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ca1, e.results.err
 		}
@@ -208,17 +208,17 @@ func (mmOpenedRequests *FilamentCalculatorMock) OpenedRequests(ctx context.Conte
 
 	if mmOpenedRequests.OpenedRequestsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOpenedRequests.OpenedRequestsMock.defaultExpectation.Counter, 1)
-		want := mmOpenedRequests.OpenedRequestsMock.defaultExpectation.params
-		got := FilamentCalculatorMockOpenedRequestsParams{ctx, pulse, objectID, pendingOnly}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOpenedRequests.t.Errorf("FilamentCalculatorMock.OpenedRequests got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOpenedRequests.OpenedRequestsMock.defaultExpectation.params
+		mm_got := FilamentCalculatorMockOpenedRequestsParams{ctx, pulse, objectID, pendingOnly}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOpenedRequests.t.Errorf("FilamentCalculatorMock.OpenedRequests got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOpenedRequests.OpenedRequestsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOpenedRequests.OpenedRequestsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOpenedRequests.t.Fatal("No results are set for the FilamentCalculatorMock.OpenedRequests")
 		}
-		return (*results).ca1, (*results).err
+		return (*mm_results).ca1, (*mm_results).err
 	}
 	if mmOpenedRequests.funcOpenedRequests != nil {
 		return mmOpenedRequests.funcOpenedRequests(ctx, pulse, objectID, pendingOnly)
@@ -412,15 +412,15 @@ func (mmRequestDuplicate *FilamentCalculatorMock) RequestDuplicate(ctx context.C
 		mmRequestDuplicate.inspectFuncRequestDuplicate(ctx, objectID, requestID, request)
 	}
 
-	params := &FilamentCalculatorMockRequestDuplicateParams{ctx, objectID, requestID, request}
+	mm_params := &FilamentCalculatorMockRequestDuplicateParams{ctx, objectID, requestID, request}
 
 	// Record call args
 	mmRequestDuplicate.RequestDuplicateMock.mutex.Lock()
-	mmRequestDuplicate.RequestDuplicateMock.callArgs = append(mmRequestDuplicate.RequestDuplicateMock.callArgs, params)
+	mmRequestDuplicate.RequestDuplicateMock.callArgs = append(mmRequestDuplicate.RequestDuplicateMock.callArgs, mm_params)
 	mmRequestDuplicate.RequestDuplicateMock.mutex.Unlock()
 
 	for _, e := range mmRequestDuplicate.RequestDuplicateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.foundRequest, e.results.foundResult, e.results.err
 		}
@@ -428,17 +428,17 @@ func (mmRequestDuplicate *FilamentCalculatorMock) RequestDuplicate(ctx context.C
 
 	if mmRequestDuplicate.RequestDuplicateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRequestDuplicate.RequestDuplicateMock.defaultExpectation.Counter, 1)
-		want := mmRequestDuplicate.RequestDuplicateMock.defaultExpectation.params
-		got := FilamentCalculatorMockRequestDuplicateParams{ctx, objectID, requestID, request}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRequestDuplicate.t.Errorf("FilamentCalculatorMock.RequestDuplicate got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRequestDuplicate.RequestDuplicateMock.defaultExpectation.params
+		mm_got := FilamentCalculatorMockRequestDuplicateParams{ctx, objectID, requestID, request}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRequestDuplicate.t.Errorf("FilamentCalculatorMock.RequestDuplicate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRequestDuplicate.RequestDuplicateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRequestDuplicate.RequestDuplicateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRequestDuplicate.t.Fatal("No results are set for the FilamentCalculatorMock.RequestDuplicate")
 		}
-		return (*results).foundRequest, (*results).foundResult, (*results).err
+		return (*mm_results).foundRequest, (*mm_results).foundResult, (*mm_results).err
 	}
 	if mmRequestDuplicate.funcRequestDuplicate != nil {
 		return mmRequestDuplicate.funcRequestDuplicate(ctx, objectID, requestID, request)
@@ -631,15 +631,15 @@ func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, ob
 		mmRequestInfo.inspectFuncRequestInfo(ctx, objectID, requestID, pulse)
 	}
 
-	params := &FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID, pulse}
+	mm_params := &FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID, pulse}
 
 	// Record call args
 	mmRequestInfo.RequestInfoMock.mutex.Lock()
-	mmRequestInfo.RequestInfoMock.callArgs = append(mmRequestInfo.RequestInfoMock.callArgs, params)
+	mmRequestInfo.RequestInfoMock.callArgs = append(mmRequestInfo.RequestInfoMock.callArgs, mm_params)
 	mmRequestInfo.RequestInfoMock.mutex.Unlock()
 
 	for _, e := range mmRequestInfo.RequestInfoMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.requestInfo, e.results.err
 		}
@@ -647,17 +647,17 @@ func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, ob
 
 	if mmRequestInfo.RequestInfoMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRequestInfo.RequestInfoMock.defaultExpectation.Counter, 1)
-		want := mmRequestInfo.RequestInfoMock.defaultExpectation.params
-		got := FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRequestInfo.t.Errorf("FilamentCalculatorMock.RequestInfo got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRequestInfo.RequestInfoMock.defaultExpectation.params
+		mm_got := FilamentCalculatorMockRequestInfoParams{ctx, objectID, requestID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRequestInfo.t.Errorf("FilamentCalculatorMock.RequestInfo got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRequestInfo.RequestInfoMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRequestInfo.RequestInfoMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRequestInfo.t.Fatal("No results are set for the FilamentCalculatorMock.RequestInfo")
 		}
-		return (*results).requestInfo, (*results).err
+		return (*mm_results).requestInfo, (*mm_results).err
 	}
 	if mmRequestInfo.funcRequestInfo != nil {
 		return mmRequestInfo.funcRequestInfo(ctx, objectID, requestID, pulse)
@@ -850,15 +850,15 @@ func (mmRequests *FilamentCalculatorMock) Requests(ctx context.Context, objectID
 		mmRequests.inspectFuncRequests(ctx, objectID, from, readUntil)
 	}
 
-	params := &FilamentCalculatorMockRequestsParams{ctx, objectID, from, readUntil}
+	mm_params := &FilamentCalculatorMockRequestsParams{ctx, objectID, from, readUntil}
 
 	// Record call args
 	mmRequests.RequestsMock.mutex.Lock()
-	mmRequests.RequestsMock.callArgs = append(mmRequests.RequestsMock.callArgs, params)
+	mmRequests.RequestsMock.callArgs = append(mmRequests.RequestsMock.callArgs, mm_params)
 	mmRequests.RequestsMock.mutex.Unlock()
 
 	for _, e := range mmRequests.RequestsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ca1, e.results.err
 		}
@@ -866,17 +866,17 @@ func (mmRequests *FilamentCalculatorMock) Requests(ctx context.Context, objectID
 
 	if mmRequests.RequestsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRequests.RequestsMock.defaultExpectation.Counter, 1)
-		want := mmRequests.RequestsMock.defaultExpectation.params
-		got := FilamentCalculatorMockRequestsParams{ctx, objectID, from, readUntil}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRequests.t.Errorf("FilamentCalculatorMock.Requests got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRequests.RequestsMock.defaultExpectation.params
+		mm_got := FilamentCalculatorMockRequestsParams{ctx, objectID, from, readUntil}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRequests.t.Errorf("FilamentCalculatorMock.Requests got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRequests.RequestsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRequests.RequestsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRequests.t.Fatal("No results are set for the FilamentCalculatorMock.Requests")
 		}
-		return (*results).ca1, (*results).err
+		return (*mm_results).ca1, (*mm_results).err
 	}
 	if mmRequests.funcRequests != nil {
 		return mmRequests.funcRequests(ctx, objectID, from, readUntil)
@@ -1069,15 +1069,15 @@ func (mmResultDuplicate *FilamentCalculatorMock) ResultDuplicate(ctx context.Con
 		mmResultDuplicate.inspectFuncResultDuplicate(ctx, objectID, resultID, result)
 	}
 
-	params := &FilamentCalculatorMockResultDuplicateParams{ctx, objectID, resultID, result}
+	mm_params := &FilamentCalculatorMockResultDuplicateParams{ctx, objectID, resultID, result}
 
 	// Record call args
 	mmResultDuplicate.ResultDuplicateMock.mutex.Lock()
-	mmResultDuplicate.ResultDuplicateMock.callArgs = append(mmResultDuplicate.ResultDuplicateMock.callArgs, params)
+	mmResultDuplicate.ResultDuplicateMock.callArgs = append(mmResultDuplicate.ResultDuplicateMock.callArgs, mm_params)
 	mmResultDuplicate.ResultDuplicateMock.mutex.Unlock()
 
 	for _, e := range mmResultDuplicate.ResultDuplicateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.foundResult, e.results.err
 		}
@@ -1085,17 +1085,17 @@ func (mmResultDuplicate *FilamentCalculatorMock) ResultDuplicate(ctx context.Con
 
 	if mmResultDuplicate.ResultDuplicateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmResultDuplicate.ResultDuplicateMock.defaultExpectation.Counter, 1)
-		want := mmResultDuplicate.ResultDuplicateMock.defaultExpectation.params
-		got := FilamentCalculatorMockResultDuplicateParams{ctx, objectID, resultID, result}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmResultDuplicate.t.Errorf("FilamentCalculatorMock.ResultDuplicate got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmResultDuplicate.ResultDuplicateMock.defaultExpectation.params
+		mm_got := FilamentCalculatorMockResultDuplicateParams{ctx, objectID, resultID, result}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmResultDuplicate.t.Errorf("FilamentCalculatorMock.ResultDuplicate got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmResultDuplicate.ResultDuplicateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmResultDuplicate.ResultDuplicateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmResultDuplicate.t.Fatal("No results are set for the FilamentCalculatorMock.ResultDuplicate")
 		}
-		return (*results).foundResult, (*results).err
+		return (*mm_results).foundResult, (*mm_results).err
 	}
 	if mmResultDuplicate.funcResultDuplicate != nil {
 		return mmResultDuplicate.funcResultDuplicate(ctx, objectID, resultID, result)

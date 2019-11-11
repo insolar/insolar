@@ -10,7 +10,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -154,15 +154,15 @@ func (mmSetAtomic *AtomicRecordModifierMock) SetAtomic(ctx context.Context, reco
 		mmSetAtomic.inspectFuncSetAtomic(ctx, records...)
 	}
 
-	params := &AtomicRecordModifierMockSetAtomicParams{ctx, records}
+	mm_params := &AtomicRecordModifierMockSetAtomicParams{ctx, records}
 
 	// Record call args
 	mmSetAtomic.SetAtomicMock.mutex.Lock()
-	mmSetAtomic.SetAtomicMock.callArgs = append(mmSetAtomic.SetAtomicMock.callArgs, params)
+	mmSetAtomic.SetAtomicMock.callArgs = append(mmSetAtomic.SetAtomicMock.callArgs, mm_params)
 	mmSetAtomic.SetAtomicMock.mutex.Unlock()
 
 	for _, e := range mmSetAtomic.SetAtomicMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -170,17 +170,17 @@ func (mmSetAtomic *AtomicRecordModifierMock) SetAtomic(ctx context.Context, reco
 
 	if mmSetAtomic.SetAtomicMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetAtomic.SetAtomicMock.defaultExpectation.Counter, 1)
-		want := mmSetAtomic.SetAtomicMock.defaultExpectation.params
-		got := AtomicRecordModifierMockSetAtomicParams{ctx, records}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetAtomic.t.Errorf("AtomicRecordModifierMock.SetAtomic got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetAtomic.SetAtomicMock.defaultExpectation.params
+		mm_got := AtomicRecordModifierMockSetAtomicParams{ctx, records}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetAtomic.t.Errorf("AtomicRecordModifierMock.SetAtomic got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSetAtomic.SetAtomicMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSetAtomic.SetAtomicMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSetAtomic.t.Fatal("No results are set for the AtomicRecordModifierMock.SetAtomic")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSetAtomic.funcSetAtomic != nil {
 		return mmSetAtomic.funcSetAtomic(ctx, records...)

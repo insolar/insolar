@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 )
 
-const XNS = "XNS"
 const numConfirmation = 2
 
 // Deposit is like wallet. It holds migrated money.

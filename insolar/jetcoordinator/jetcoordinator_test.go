@@ -20,13 +20,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -64,7 +64,7 @@ func TestCoordinator(t *testing.T) {
 }
 
 func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
-	s.cm = &component.Manager{}
+	s.cm = component.NewManager(nil)
 	s.ctx = inslogger.TestContext(s.T())
 
 	ps := insolarPulse.NewStorageMem()

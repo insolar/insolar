@@ -20,7 +20,7 @@ package internal
 
 import (
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/introspector"
 	"github.com/insolar/insolar/instrumentation/introspector/pubsubwrap"

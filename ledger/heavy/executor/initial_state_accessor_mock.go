@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -153,15 +153,15 @@ func (mmGet *InitialStateAccessorMock) Get(ctx context.Context, lightExecutor in
 		mmGet.inspectFuncGet(ctx, lightExecutor, pulse)
 	}
 
-	params := &InitialStateAccessorMockGetParams{ctx, lightExecutor, pulse}
+	mm_params := &InitialStateAccessorMockGetParams{ctx, lightExecutor, pulse}
 
 	// Record call args
 	mmGet.GetMock.mutex.Lock()
-	mmGet.GetMock.callArgs = append(mmGet.GetMock.callArgs, params)
+	mmGet.GetMock.callArgs = append(mmGet.GetMock.callArgs, mm_params)
 	mmGet.GetMock.mutex.Unlock()
 
 	for _, e := range mmGet.GetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ip1
 		}
@@ -169,17 +169,17 @@ func (mmGet *InitialStateAccessorMock) Get(ctx context.Context, lightExecutor in
 
 	if mmGet.GetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGet.GetMock.defaultExpectation.Counter, 1)
-		want := mmGet.GetMock.defaultExpectation.params
-		got := InitialStateAccessorMockGetParams{ctx, lightExecutor, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGet.t.Errorf("InitialStateAccessorMock.Get got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGet.GetMock.defaultExpectation.params
+		mm_got := InitialStateAccessorMockGetParams{ctx, lightExecutor, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGet.t.Errorf("InitialStateAccessorMock.Get got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGet.GetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGet.GetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGet.t.Fatal("No results are set for the InitialStateAccessorMock.Get")
 		}
-		return (*results).ip1
+		return (*mm_results).ip1
 	}
 	if mmGet.funcGet != nil {
 		return mmGet.funcGet(ctx, lightExecutor, pulse)

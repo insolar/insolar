@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
@@ -286,15 +286,15 @@ func (mmCreateBuilder *ExpectedMock) CreateBuilder(ctx context.Context, pn pulse
 		mmCreateBuilder.inspectFuncCreateBuilder(ctx, pn)
 	}
 
-	params := &ExpectedMockCreateBuilderParams{ctx, pn}
+	mm_params := &ExpectedMockCreateBuilderParams{ctx, pn}
 
 	// Record call args
 	mmCreateBuilder.CreateBuilderMock.mutex.Lock()
-	mmCreateBuilder.CreateBuilderMock.callArgs = append(mmCreateBuilder.CreateBuilderMock.callArgs, params)
+	mmCreateBuilder.CreateBuilderMock.callArgs = append(mmCreateBuilder.CreateBuilderMock.callArgs, mm_params)
 	mmCreateBuilder.CreateBuilderMock.mutex.Unlock()
 
 	for _, e := range mmCreateBuilder.CreateBuilderMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -302,17 +302,17 @@ func (mmCreateBuilder *ExpectedMock) CreateBuilder(ctx context.Context, pn pulse
 
 	if mmCreateBuilder.CreateBuilderMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCreateBuilder.CreateBuilderMock.defaultExpectation.Counter, 1)
-		want := mmCreateBuilder.CreateBuilderMock.defaultExpectation.params
-		got := ExpectedMockCreateBuilderParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCreateBuilder.t.Errorf("ExpectedMock.CreateBuilder got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCreateBuilder.CreateBuilderMock.defaultExpectation.params
+		mm_got := ExpectedMockCreateBuilderParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCreateBuilder.t.Errorf("ExpectedMock.CreateBuilder got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCreateBuilder.CreateBuilderMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCreateBuilder.CreateBuilderMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCreateBuilder.t.Fatal("No results are set for the ExpectedMock.CreateBuilder")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmCreateBuilder.funcCreateBuilder != nil {
 		return mmCreateBuilder.funcCreateBuilder(ctx, pn)
@@ -468,11 +468,11 @@ func (mmGetCensusState *ExpectedMock) GetCensusState() (s1 State) {
 	if mmGetCensusState.GetCensusStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCensusState.GetCensusStateMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCensusState.GetCensusStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCensusState.GetCensusStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCensusState.t.Fatal("No results are set for the ExpectedMock.GetCensusState")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetCensusState.funcGetCensusState != nil {
 		return mmGetCensusState.funcGetCensusState()
@@ -611,11 +611,11 @@ func (mmGetCloudStateHash *ExpectedMock) GetCloudStateHash() (c1 proofs.CloudSta
 	if mmGetCloudStateHash.GetCloudStateHashMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCloudStateHash.GetCloudStateHashMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCloudStateHash.GetCloudStateHashMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCloudStateHash.GetCloudStateHashMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCloudStateHash.t.Fatal("No results are set for the ExpectedMock.GetCloudStateHash")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetCloudStateHash.funcGetCloudStateHash != nil {
 		return mmGetCloudStateHash.funcGetCloudStateHash()
@@ -754,11 +754,11 @@ func (mmGetEvictedPopulation *ExpectedMock) GetEvictedPopulation() (e1 EvictedPo
 	if mmGetEvictedPopulation.GetEvictedPopulationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetEvictedPopulation.GetEvictedPopulationMock.defaultExpectation.Counter, 1)
 
-		results := mmGetEvictedPopulation.GetEvictedPopulationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetEvictedPopulation.GetEvictedPopulationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetEvictedPopulation.t.Fatal("No results are set for the ExpectedMock.GetEvictedPopulation")
 		}
-		return (*results).e1
+		return (*mm_results).e1
 	}
 	if mmGetEvictedPopulation.funcGetEvictedPopulation != nil {
 		return mmGetEvictedPopulation.funcGetEvictedPopulation()
@@ -897,11 +897,11 @@ func (mmGetExpectedPulseNumber *ExpectedMock) GetExpectedPulseNumber() (n1 pulse
 	if mmGetExpectedPulseNumber.GetExpectedPulseNumberMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExpectedPulseNumber.GetExpectedPulseNumberMock.defaultExpectation.Counter, 1)
 
-		results := mmGetExpectedPulseNumber.GetExpectedPulseNumberMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExpectedPulseNumber.GetExpectedPulseNumberMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExpectedPulseNumber.t.Fatal("No results are set for the ExpectedMock.GetExpectedPulseNumber")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetExpectedPulseNumber.funcGetExpectedPulseNumber != nil {
 		return mmGetExpectedPulseNumber.funcGetExpectedPulseNumber()
@@ -1040,11 +1040,11 @@ func (mmGetGlobulaStateHash *ExpectedMock) GetGlobulaStateHash() (g1 proofs.Glob
 	if mmGetGlobulaStateHash.GetGlobulaStateHashMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetGlobulaStateHash.GetGlobulaStateHashMock.defaultExpectation.Counter, 1)
 
-		results := mmGetGlobulaStateHash.GetGlobulaStateHashMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetGlobulaStateHash.GetGlobulaStateHashMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetGlobulaStateHash.t.Fatal("No results are set for the ExpectedMock.GetGlobulaStateHash")
 		}
-		return (*results).g1
+		return (*mm_results).g1
 	}
 	if mmGetGlobulaStateHash.funcGetGlobulaStateHash != nil {
 		return mmGetGlobulaStateHash.funcGetGlobulaStateHash()
@@ -1183,11 +1183,11 @@ func (mmGetMandateRegistry *ExpectedMock) GetMandateRegistry() (m1 MandateRegist
 	if mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMandateRegistry.t.Fatal("No results are set for the ExpectedMock.GetMandateRegistry")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetMandateRegistry.funcGetMandateRegistry != nil {
 		return mmGetMandateRegistry.funcGetMandateRegistry()
@@ -1326,11 +1326,11 @@ func (mmGetMisbehaviorRegistry *ExpectedMock) GetMisbehaviorRegistry() (m1 Misbe
 	if mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMisbehaviorRegistry.t.Fatal("No results are set for the ExpectedMock.GetMisbehaviorRegistry")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetMisbehaviorRegistry.funcGetMisbehaviorRegistry != nil {
 		return mmGetMisbehaviorRegistry.funcGetMisbehaviorRegistry()
@@ -1470,11 +1470,11 @@ func (mmGetNearestPulseData *ExpectedMock) GetNearestPulseData() (b1 bool, d1 pu
 	if mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNearestPulseData.GetNearestPulseDataMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNearestPulseData.t.Fatal("No results are set for the ExpectedMock.GetNearestPulseData")
 		}
-		return (*results).b1, (*results).d1
+		return (*mm_results).b1, (*mm_results).d1
 	}
 	if mmGetNearestPulseData.funcGetNearestPulseData != nil {
 		return mmGetNearestPulseData.funcGetNearestPulseData()
@@ -1613,11 +1613,11 @@ func (mmGetOfflinePopulation *ExpectedMock) GetOfflinePopulation() (o1 OfflinePo
 	if mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOfflinePopulation.t.Fatal("No results are set for the ExpectedMock.GetOfflinePopulation")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetOfflinePopulation.funcGetOfflinePopulation != nil {
 		return mmGetOfflinePopulation.funcGetOfflinePopulation()
@@ -1756,11 +1756,11 @@ func (mmGetOnlinePopulation *ExpectedMock) GetOnlinePopulation() (o1 OnlinePopul
 	if mmGetOnlinePopulation.GetOnlinePopulationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOnlinePopulation.GetOnlinePopulationMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOnlinePopulation.GetOnlinePopulationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOnlinePopulation.GetOnlinePopulationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOnlinePopulation.t.Fatal("No results are set for the ExpectedMock.GetOnlinePopulation")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetOnlinePopulation.funcGetOnlinePopulation != nil {
 		return mmGetOnlinePopulation.funcGetOnlinePopulation()
@@ -1899,11 +1899,11 @@ func (mmGetPrevious *ExpectedMock) GetPrevious() (a1 Active) {
 	if mmGetPrevious.GetPreviousMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPrevious.GetPreviousMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPrevious.GetPreviousMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPrevious.GetPreviousMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPrevious.t.Fatal("No results are set for the ExpectedMock.GetPrevious")
 		}
-		return (*results).a1
+		return (*mm_results).a1
 	}
 	if mmGetPrevious.funcGetPrevious != nil {
 		return mmGetPrevious.funcGetPrevious()
@@ -2075,15 +2075,15 @@ func (mmGetProfileFactory *ExpectedMock) GetProfileFactory(ksf cryptkit.KeyStore
 		mmGetProfileFactory.inspectFuncGetProfileFactory(ksf)
 	}
 
-	params := &ExpectedMockGetProfileFactoryParams{ksf}
+	mm_params := &ExpectedMockGetProfileFactoryParams{ksf}
 
 	// Record call args
 	mmGetProfileFactory.GetProfileFactoryMock.mutex.Lock()
-	mmGetProfileFactory.GetProfileFactoryMock.callArgs = append(mmGetProfileFactory.GetProfileFactoryMock.callArgs, params)
+	mmGetProfileFactory.GetProfileFactoryMock.callArgs = append(mmGetProfileFactory.GetProfileFactoryMock.callArgs, mm_params)
 	mmGetProfileFactory.GetProfileFactoryMock.mutex.Unlock()
 
 	for _, e := range mmGetProfileFactory.GetProfileFactoryMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.f1
 		}
@@ -2091,17 +2091,17 @@ func (mmGetProfileFactory *ExpectedMock) GetProfileFactory(ksf cryptkit.KeyStore
 
 	if mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation.Counter, 1)
-		want := mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation.params
-		got := ExpectedMockGetProfileFactoryParams{ksf}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetProfileFactory.t.Errorf("ExpectedMock.GetProfileFactory got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation.params
+		mm_got := ExpectedMockGetProfileFactoryParams{ksf}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetProfileFactory.t.Errorf("ExpectedMock.GetProfileFactory got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetProfileFactory.GetProfileFactoryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetProfileFactory.t.Fatal("No results are set for the ExpectedMock.GetProfileFactory")
 		}
-		return (*results).f1
+		return (*mm_results).f1
 	}
 	if mmGetProfileFactory.funcGetProfileFactory != nil {
 		return mmGetProfileFactory.funcGetProfileFactory(ksf)
@@ -2257,11 +2257,11 @@ func (mmGetPulseNumber *ExpectedMock) GetPulseNumber() (n1 pulse.Number) {
 	if mmGetPulseNumber.GetPulseNumberMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPulseNumber.t.Fatal("No results are set for the ExpectedMock.GetPulseNumber")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetPulseNumber.funcGetPulseNumber != nil {
 		return mmGetPulseNumber.funcGetPulseNumber()
@@ -2400,11 +2400,11 @@ func (mmIsActive *ExpectedMock) IsActive() (b1 bool) {
 	if mmIsActive.IsActiveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsActive.IsActiveMock.defaultExpectation.Counter, 1)
 
-		results := mmIsActive.IsActiveMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsActive.IsActiveMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsActive.t.Fatal("No results are set for the ExpectedMock.IsActive")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsActive.funcIsActive != nil {
 		return mmIsActive.funcIsActive()
@@ -2576,15 +2576,15 @@ func (mmMakeActive *ExpectedMock) MakeActive(pd pulse.Data) (a1 Active) {
 		mmMakeActive.inspectFuncMakeActive(pd)
 	}
 
-	params := &ExpectedMockMakeActiveParams{pd}
+	mm_params := &ExpectedMockMakeActiveParams{pd}
 
 	// Record call args
 	mmMakeActive.MakeActiveMock.mutex.Lock()
-	mmMakeActive.MakeActiveMock.callArgs = append(mmMakeActive.MakeActiveMock.callArgs, params)
+	mmMakeActive.MakeActiveMock.callArgs = append(mmMakeActive.MakeActiveMock.callArgs, mm_params)
 	mmMakeActive.MakeActiveMock.mutex.Unlock()
 
 	for _, e := range mmMakeActive.MakeActiveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.a1
 		}
@@ -2592,17 +2592,17 @@ func (mmMakeActive *ExpectedMock) MakeActive(pd pulse.Data) (a1 Active) {
 
 	if mmMakeActive.MakeActiveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMakeActive.MakeActiveMock.defaultExpectation.Counter, 1)
-		want := mmMakeActive.MakeActiveMock.defaultExpectation.params
-		got := ExpectedMockMakeActiveParams{pd}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmMakeActive.t.Errorf("ExpectedMock.MakeActive got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmMakeActive.MakeActiveMock.defaultExpectation.params
+		mm_got := ExpectedMockMakeActiveParams{pd}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMakeActive.t.Errorf("ExpectedMock.MakeActive got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmMakeActive.MakeActiveMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMakeActive.MakeActiveMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMakeActive.t.Fatal("No results are set for the ExpectedMock.MakeActive")
 		}
-		return (*results).a1
+		return (*mm_results).a1
 	}
 	if mmMakeActive.funcMakeActive != nil {
 		return mmMakeActive.funcMakeActive(pd)
@@ -2791,15 +2791,15 @@ func (mmRebuild *ExpectedMock) Rebuild(pn pulse.Number) (b1 Built) {
 		mmRebuild.inspectFuncRebuild(pn)
 	}
 
-	params := &ExpectedMockRebuildParams{pn}
+	mm_params := &ExpectedMockRebuildParams{pn}
 
 	// Record call args
 	mmRebuild.RebuildMock.mutex.Lock()
-	mmRebuild.RebuildMock.callArgs = append(mmRebuild.RebuildMock.callArgs, params)
+	mmRebuild.RebuildMock.callArgs = append(mmRebuild.RebuildMock.callArgs, mm_params)
 	mmRebuild.RebuildMock.mutex.Unlock()
 
 	for _, e := range mmRebuild.RebuildMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -2807,17 +2807,17 @@ func (mmRebuild *ExpectedMock) Rebuild(pn pulse.Number) (b1 Built) {
 
 	if mmRebuild.RebuildMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRebuild.RebuildMock.defaultExpectation.Counter, 1)
-		want := mmRebuild.RebuildMock.defaultExpectation.params
-		got := ExpectedMockRebuildParams{pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRebuild.t.Errorf("ExpectedMock.Rebuild got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRebuild.RebuildMock.defaultExpectation.params
+		mm_got := ExpectedMockRebuildParams{pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRebuild.t.Errorf("ExpectedMock.Rebuild got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRebuild.RebuildMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRebuild.RebuildMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRebuild.t.Fatal("No results are set for the ExpectedMock.Rebuild")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmRebuild.funcRebuild != nil {
 		return mmRebuild.funcRebuild(pn)

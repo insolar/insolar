@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -190,11 +190,11 @@ func (mmGetMemberPacket *PacketParserMock) GetMemberPacket() (m1 MemberPacketRea
 	if mmGetMemberPacket.GetMemberPacketMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMemberPacket.GetMemberPacketMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMemberPacket.GetMemberPacketMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMemberPacket.GetMemberPacketMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMemberPacket.t.Fatal("No results are set for the PacketParserMock.GetMemberPacket")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetMemberPacket.funcGetMemberPacket != nil {
 		return mmGetMemberPacket.funcGetMemberPacket()
@@ -333,11 +333,11 @@ func (mmGetPacketSignature *PacketParserMock) GetPacketSignature() (s1 cryptkit.
 	if mmGetPacketSignature.GetPacketSignatureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPacketSignature.GetPacketSignatureMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPacketSignature.GetPacketSignatureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPacketSignature.GetPacketSignatureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPacketSignature.t.Fatal("No results are set for the PacketParserMock.GetPacketSignature")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetPacketSignature.funcGetPacketSignature != nil {
 		return mmGetPacketSignature.funcGetPacketSignature()
@@ -476,11 +476,11 @@ func (mmGetPacketType *PacketParserMock) GetPacketType() (p1 phases.PacketType) 
 	if mmGetPacketType.GetPacketTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPacketType.GetPacketTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPacketType.GetPacketTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPacketType.GetPacketTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPacketType.t.Fatal("No results are set for the PacketParserMock.GetPacketType")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPacketType.funcGetPacketType != nil {
 		return mmGetPacketType.funcGetPacketType()
@@ -619,11 +619,11 @@ func (mmGetPulseNumber *PacketParserMock) GetPulseNumber() (n1 pulse.Number) {
 	if mmGetPulseNumber.GetPulseNumberMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPulseNumber.GetPulseNumberMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPulseNumber.t.Fatal("No results are set for the PacketParserMock.GetPulseNumber")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetPulseNumber.funcGetPulseNumber != nil {
 		return mmGetPulseNumber.funcGetPulseNumber()
@@ -762,11 +762,11 @@ func (mmGetPulsePacket *PacketParserMock) GetPulsePacket() (p1 PulsePacketReader
 	if mmGetPulsePacket.GetPulsePacketMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPulsePacket.GetPulsePacketMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPulsePacket.GetPulsePacketMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPulsePacket.GetPulsePacketMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPulsePacket.t.Fatal("No results are set for the PacketParserMock.GetPulsePacket")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPulsePacket.funcGetPulsePacket != nil {
 		return mmGetPulsePacket.funcGetPulsePacket()
@@ -905,11 +905,11 @@ func (mmGetReceiverID *PacketParserMock) GetReceiverID() (s1 insolar.ShortNodeID
 	if mmGetReceiverID.GetReceiverIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetReceiverID.GetReceiverIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetReceiverID.GetReceiverIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetReceiverID.GetReceiverIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetReceiverID.t.Fatal("No results are set for the PacketParserMock.GetReceiverID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetReceiverID.funcGetReceiverID != nil {
 		return mmGetReceiverID.funcGetReceiverID()
@@ -1048,11 +1048,11 @@ func (mmGetSourceID *PacketParserMock) GetSourceID() (s1 insolar.ShortNodeID) {
 	if mmGetSourceID.GetSourceIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSourceID.GetSourceIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSourceID.GetSourceIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSourceID.GetSourceIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSourceID.t.Fatal("No results are set for the PacketParserMock.GetSourceID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSourceID.funcGetSourceID != nil {
 		return mmGetSourceID.funcGetSourceID()
@@ -1191,11 +1191,11 @@ func (mmGetTargetID *PacketParserMock) GetTargetID() (s1 insolar.ShortNodeID) {
 	if mmGetTargetID.GetTargetIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetTargetID.GetTargetIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetTargetID.GetTargetIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetTargetID.GetTargetIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetTargetID.t.Fatal("No results are set for the PacketParserMock.GetTargetID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetTargetID.funcGetTargetID != nil {
 		return mmGetTargetID.funcGetTargetID()
@@ -1334,11 +1334,11 @@ func (mmIsRelayForbidden *PacketParserMock) IsRelayForbidden() (b1 bool) {
 	if mmIsRelayForbidden.IsRelayForbiddenMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsRelayForbidden.IsRelayForbiddenMock.defaultExpectation.Counter, 1)
 
-		results := mmIsRelayForbidden.IsRelayForbiddenMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsRelayForbidden.IsRelayForbiddenMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsRelayForbidden.t.Fatal("No results are set for the PacketParserMock.IsRelayForbidden")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsRelayForbidden.funcIsRelayForbidden != nil {
 		return mmIsRelayForbidden.funcIsRelayForbidden()
@@ -1478,11 +1478,11 @@ func (mmParsePacketBody *PacketParserMock) ParsePacketBody() (p1 PacketParser, e
 	if mmParsePacketBody.ParsePacketBodyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmParsePacketBody.ParsePacketBodyMock.defaultExpectation.Counter, 1)
 
-		results := mmParsePacketBody.ParsePacketBodyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmParsePacketBody.ParsePacketBodyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmParsePacketBody.t.Fatal("No results are set for the PacketParserMock.ParsePacketBody")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmParsePacketBody.funcParsePacketBody != nil {
 		return mmParsePacketBody.funcParsePacketBody()
