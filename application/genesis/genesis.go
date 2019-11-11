@@ -286,7 +286,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(ApplicationIncentivesUnholdDate-pulse.MinTimePulse)),
+			int64(pulse.OfUnixTime(ApplicationIncentivesUnholdDate)-pulse.MinTimePulse),
 			ApplicationIncentivesVesting,
 			ApplicationIncentivesVestingStep,
 			appfoundation.Vesting2,
@@ -314,7 +314,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameNetworkIncentivesAccounts[i], application.GenesisNameRootDomain))
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(NetworkIncentivesUnholdDate-pulse.MinTimePulse)),
+			int64(pulse.OfUnixTime(NetworkIncentivesUnholdDate)-pulse.MinTimePulse),
 			NetworkIncentivesVesting,
 			NetworkIncentivesVestingStep,
 			appfoundation.Vesting2,
@@ -342,7 +342,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFoundationAccounts[i], application.GenesisNameRootDomain))
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FoundationUnholdDate-pulse.MinTimePulse)),
+			int64(pulse.OfUnixTime(FoundationUnholdDate)-pulse.MinTimePulse),
 			FoundationVesting,
 			FoundationVestingStep,
 			appfoundation.Vesting2,
@@ -370,7 +370,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFundsAccounts[i], application.GenesisNameRootDomain))
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FundsUnholdDate-pulse.MinTimePulse)),
+			int64(pulse.OfUnixTime(FundsUnholdDate)-pulse.MinTimePulse),
 			FundsVesting,
 			FundsVestingStep,
 			appfoundation.Vesting2,
@@ -398,7 +398,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameEnterpriseAccounts[i], application.GenesisNameRootDomain))
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(EnterpriseUnholdDate-pulse.MinTimePulse)),
+			int64(pulse.OfUnixTime(EnterpriseUnholdDate)-pulse.MinTimePulse),
 			EnterpriseVesting,
 			EnterpriseVestingStep,
 			appfoundation.Vesting2,
