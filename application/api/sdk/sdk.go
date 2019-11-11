@@ -24,10 +24,12 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/insolar"
@@ -56,6 +58,16 @@ type memberKeys struct {
 	Public  string `json:"public_key"`
 }
 
+type Options struct {
+	RetryPeriod time.Duration
+	MaxRetries  int
+}
+
+var DefaultOptions = Options{
+	RetryPeriod: 0,
+	MaxRetries:  0,
+}
+
 // SDK is used to send messages to API
 type SDK struct {
 	adminAPIURLs           *ringBuffer
@@ -65,10 +77,11 @@ type SDK struct {
 	migrationDaemonMembers []*requester.UserConfigJSON
 	feeMember              *requester.UserConfigJSON
 	logLevel               string
+	options                Options
 }
 
 // NewSDK creates insSDK object
-func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (*SDK, error) {
+func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, options Options) (*SDK, error) {
 	adminBuffer := &ringBuffer{urls: adminUrls}
 	publicBuffer := &ringBuffer{urls: publicUrls}
 
@@ -116,6 +129,7 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
 		feeMember:              feeMember,
 		logLevel:               "",
+		options:                options,
 	}
 
 	if len(response.MigrationDaemonMembers) < application.GenesisAmountMigrationDaemonMembers {
@@ -468,8 +482,30 @@ func (sdk *SDK) DepositTransfer(amount string, member Member, ethTxHash string) 
 
 func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
+	logger := inslogger.FromContext(ctx)
 
-	body, err := sdk.sendRequest(ctx, urls, method, params, user)
+	var body []byte
+	var err error
+	var i int
+	if sdk.options.MaxRetries < 0 {
+		i = sdk.options.MaxRetries
+	}
+	for i <= sdk.options.MaxRetries {
+		body, err = sdk.sendRequest(ctx, urls, method, params, user)
+		if err != nil {
+			if err, ok := errors.Cause(err).(*requester.Error); ok {
+				if err.Code == api.ServiceUnavailableError {
+					logger.Infof("Service unavailable: retrying in %s", sdk.options.RetryPeriod)
+					time.Sleep(sdk.options.RetryPeriod)
+					if sdk.options.MaxRetries >= 0 { // retry infinitely if MaxRetries < 0
+						i++
+					}
+					continue
+				}
+			}
+		}
+		break
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}
