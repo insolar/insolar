@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/costcenter"
-	"github.com/insolar/insolar/application/builtin/proxy/deposit"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -36,93 +35,6 @@ type Account struct {
 
 func New(balance string) (*Account, error) {
 	return &Account{Balance: balance}, nil
-}
-
-type destination interface {
-	Accept(appfoundation.SagaAcceptInfo) error
-}
-
-// Transfer transfers funds to giver reference.
-func (a *Account) transfer(
-	amountStr string, destinationObject destination, fromMember insolar.Reference, request insolar.Reference,
-) error {
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return fmt.Errorf("can't parse amountStr")
-	}
-	balance, ok := new(big.Int).SetString(a.Balance, 10)
-	if !ok {
-		return fmt.Errorf("can't parse account balance")
-	}
-
-	newBalance, err := safemath.Sub(balance, amount)
-	if err != nil {
-		return fmt.Errorf("not enough balance for transfer: %s", err.Error())
-	}
-	a.Balance = newBalance.String()
-	return destinationObject.Accept(appfoundation.SagaAcceptInfo{
-		Amount:     amountStr,
-		FromMember: fromMember,
-		Request:    request,
-	})
-}
-
-// Accept accepts transfer to balance.
-//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
-func (a *Account) Accept(arg appfoundation.SagaAcceptInfo) error {
-
-	amount := new(big.Int)
-	amount, ok := amount.SetString(arg.Amount, 10)
-	if !ok {
-		return fmt.Errorf("can't parse input amount")
-	}
-
-	balance := new(big.Int)
-	balance, ok = balance.SetString(a.Balance, 10)
-	if !ok {
-		return fmt.Errorf("can't parse account balance")
-	}
-
-	b, err := safemath.Add(balance, amount)
-	if err != nil {
-		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
-	}
-	a.Balance = b.String()
-
-	return nil
-}
-
-// RollBack rolls back transfer to balance.
-func (a *Account) RollBack(amountStr string) error {
-
-	amount := new(big.Int)
-	amount, ok := amount.SetString(amountStr, 10)
-	if !ok {
-		return fmt.Errorf("can't parse input amount")
-	}
-
-	balance := new(big.Int)
-	balance, ok = balance.SetString(a.Balance, 10)
-	if !ok {
-		return fmt.Errorf("can't parse account balance")
-	}
-
-	b, err := safemath.Sub(balance, amount)
-	if err != nil {
-		return fmt.Errorf("failed to sub amount from balance: %s", err.Error())
-	}
-	a.Balance = b.String()
-
-	return nil
-}
-
-// TransferToDeposit transfers funds to deposit.
-// TODO: unused?
-func (a *Account) TransferToDeposit(
-	amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
-) error {
-	to := deposit.GetObject(toDeposit)
-	return a.transfer(amountStr, to, fromMember, request)
 }
 
 // GetBalance gets total balance.
