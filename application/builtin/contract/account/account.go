@@ -117,23 +117,12 @@ func (a *Account) RollBack(amountStr string) error {
 }
 
 // TransferToDeposit transfers funds to deposit.
+// TODO: unused?
 func (a *Account) TransferToDeposit(
 	amountStr string, toDeposit insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
 ) error {
 	to := deposit.GetObject(toDeposit)
 	return a.transfer(amountStr, to, fromMember, request)
-}
-
-// TransferToMember transfers funds to member.
-func (a *Account) TransferToMember(
-	amountStr string, toMember insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
-) error {
-	to := member.GetObject(toMember)
-	return to.Accept(appfoundation.SagaAcceptInfo{
-		Amount:     amountStr,
-		FromMember: fromMember,
-		Request:    request,
-	})
 }
 
 // GetBalance gets total balance.
@@ -200,19 +189,31 @@ func (a *Account) Transfer(
 	}
 	a.Balance = newBalance.String()
 
-	err = a.TransferToMember(amountStr, *toMember, fromMember, request)
+	err = a.transferToMember(amountStr, *toMember, fromMember, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer amount: %s", err.Error())
 	}
 
 	if feeStr != "0" {
-		err = a.TransferToMember(feeStr, *toFeeMember, fromMember, request)
+		err = a.transferToMember(feeStr, *toFeeMember, fromMember, request)
 		if err != nil {
 			return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
 		}
 	}
 
 	return member.TransferResponse{Fee: feeStr}, nil
+}
+
+// transferToMember transfers funds to member.
+func (a *Account) transferToMember(
+	amountStr string, toMember insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+) error {
+	to := member.GetObject(toMember)
+	return to.Accept(appfoundation.SagaAcceptInfo{
+		Amount:     amountStr,
+		FromMember: fromMember,
+		Request:    request,
+	})
 }
 
 // IncreaseBalance increases the current balance by the amount.

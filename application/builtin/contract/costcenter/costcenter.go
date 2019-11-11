@@ -37,12 +37,12 @@ func New(feeMember *insolar.Reference, fee string) (*CostCenter, error) {
 
 // GetFeeMember gets fee member reference.
 // ins:immutable
-func (cc CostCenter) GetFeeMember() (*insolar.Reference, error) {
+func (cc *CostCenter) GetFeeMember() (*insolar.Reference, error) {
 	return cc.FeeMember, nil
 }
 
 // CalcFee calculates fee for amount. Returns fee.
 // ins:immutable
-func (cc CostCenter) CalcFee(amountStr string) (string, error) {
+func (cc *CostCenter) CalcFee(amountStr string) (string, error) {
 	return cc.Fee, nil
 }

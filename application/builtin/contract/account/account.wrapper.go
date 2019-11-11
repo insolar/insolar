@@ -251,63 +251,6 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, er
 	return state, ret, err
 }
 
-func INSMETHOD_TransferToMember(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Account)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 4)
-	var args0 string
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
-	var args2 insolar.Reference
-	args[2] = &args2
-	var args3 insolar.Reference
-	args[3] = &args3
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.TransferToMember(args0, args1, args2, args3)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSMETHOD_GetBalance(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -519,7 +462,6 @@ func Initialize() insolar.ContractWrapper {
 			"Accept":            INSMETHOD_Accept,
 			"RollBack":          INSMETHOD_RollBack,
 			"TransferToDeposit": INSMETHOD_TransferToDeposit,
-			"TransferToMember":  INSMETHOD_TransferToMember,
 			"GetBalance":        INSMETHOD_GetBalance,
 			"Transfer":          INSMETHOD_Transfer,
 			"IncreaseBalance":   INSMETHOD_IncreaseBalance,

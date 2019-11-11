@@ -48,7 +48,6 @@ func RootDomain(pkShardCount int) application.GenesisContractState {
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			PublicKeyShards: genesisrefs.ContractPublicKeyShards(pkShardCount),
-			NodeDomain:      genesisrefs.ContractNodeDomain,
 		}),
 	}
 }

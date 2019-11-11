@@ -30,7 +30,6 @@ import (
 type RootDomain struct {
 	foundation.BaseContract
 	PublicKeyShards []insolar.Reference
-	NodeDomain      insolar.Reference
 }
 
 // GetMemberByPublicKey gets member reference by public key.
@@ -52,12 +51,6 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 	}
 
 	return ref, nil
-}
-
-// GetNodeDomainRef returns reference of NodeDomain instance
-// ins:immutable
-func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
-	return rd.NodeDomain, nil
 }
 
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.

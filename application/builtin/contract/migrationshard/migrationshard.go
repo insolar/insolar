@@ -39,7 +39,7 @@ func New(migrationAddresses []string) (*MigrationShard, error) {
 
 // GetMigrationAddressesAmount gets amount of free migration addresses
 // ins:immutable
-func (s MigrationShard) GetMigrationAddressesAmount() (int, error) {
+func (s *MigrationShard) GetMigrationAddressesAmount() (int, error) {
 	return len(s.FreeMigrationAddresses), nil
 }
 
@@ -62,7 +62,7 @@ func (s *MigrationShard) GetFreeMigrationAddress() (string, error) {
 
 // GetRef gets ref by key.
 // ins:immutable
-func (s MigrationShard) GetRef(key string) (string, error) {
+func (s *MigrationShard) GetRef(key string) (string, error) {
 	if ref, ok := s.Map[key]; !ok {
 		return "", errors.New("failed to find reference by key")
 	} else {
