@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -51,21 +50,17 @@ type RunnerOptions struct {
 
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
-	Cfg             *configuration.LogicRunner
-	ArtifactManager artifacts.Client
+	Cfg *configuration.LogicRunner
 
 	clientMutex sync.Mutex
 	client      *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.LogicRunner, am artifacts.Client) (*GoPlugin, error) {
-	gp := GoPlugin{
-		Cfg:             conf,
-		ArtifactManager: am,
+func NewGoPlugin(conf *configuration.LogicRunner) *GoPlugin {
+	return &GoPlugin{
+		Cfg: conf,
 	}
-
-	return &gp, nil
 }
 
 const timeout = time.Minute * 10

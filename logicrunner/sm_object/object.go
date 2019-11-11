@@ -54,13 +54,12 @@ type SharedObjectState struct {
 	ObjectInfo
 }
 
-func NewObjectSM(objectReference insolar.Reference) *ObjectSM {
+func NewObjectSM(objectReference insolar.Reference, exists bool) *ObjectSM {
 	return &ObjectSM{
-		StateMachineDeclTemplate: smachine.StateMachineDeclTemplate{},
 		SharedObjectState: SharedObjectState{
 			ObjectInfo: ObjectInfo{ObjectReference: objectReference},
 		},
-		readyToWorkCtl: smachine.BoolConditionalLink{},
+		oldObject: exists,
 	}
 }
 
@@ -71,7 +70,10 @@ type ObjectSM struct {
 	readyToWorkCtl           smachine.BoolConditionalLink
 	previousExecutorFinished smachine.BoolConditionalLink
 	previousResultSaved      smachine.BoolConditionalLink
+	oldObject                bool
 }
+
+/* -------- Declaration ------------- */
 
 func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	injector.MustInject(&sm.artifactClient)
@@ -82,6 +84,8 @@ func (sm *ObjectSM) InjectDependencies(_ smachine.StateMachine, _ smachine.SlotL
 func (sm *ObjectSM) GetInitStateFor(smachine.StateMachine) smachine.InitFunc {
 	return sm.Init
 }
+
+/* -------- Instance ------------- */
 
 func (sm *ObjectSM) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
 	return sm
@@ -119,13 +123,8 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
 	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
 
-	pair := ObjectPair{
-		Pulse:           sm.pulseSlot.PulseData().PulseNumber,
-		ObjectReference: sm.ObjectReference,
-	}
-
 	sdl := ctx.Share(&sm.SharedObjectState, 0)
-	if !ctx.Publish(pair, sdl) {
+	if !ctx.Publish(sm.ObjectReference, sdl) {
 		return ctx.Stop()
 	}
 	return ctx.Jump(sm.stepCheckPreviousExecutor)
@@ -183,11 +182,18 @@ func (sm *ObjectSM) stepGetPendingsInformation(ctx smachine.ExecutionContext) sm
 	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(sm.stepCheckPreviousExecutor)
 }
 
+// we should check here only if not creation request here
 func (sm *ObjectSM) stepGetLatestValidatedState(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.migrateStop)
 
 	goCtx := ctx.GetContext()
 	objectReference := sm.ObjectReference
+
+	if !sm.oldObject {
+		sm.oldObject = true
+		sm.IsReadyToWork = true
+		return ctx.Jump(sm.stateGotLatestValidatedStatePrototypeAndCode)
+	}
 
 	return sm.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		var err error

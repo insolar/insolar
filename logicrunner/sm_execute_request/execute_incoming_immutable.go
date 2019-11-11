@@ -17,8 +17,6 @@
 package sm_execute_request
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/record"
@@ -29,7 +27,9 @@ import (
 )
 
 type ExecuteIncomingImmutableRequest struct {
-	ExecuteIncomingCommon
+	smachine.StateMachineDeclTemplate
+
+	*ExecuteIncomingCommon
 }
 
 /* -------- Declaration ------------- */
@@ -42,18 +42,6 @@ func (s *ExecuteIncomingImmutableRequest) InjectDependencies(smachine.StateMachi
 	return
 }
 
-func (s *ExecuteIncomingImmutableRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
-}
-
-func (s *ExecuteIncomingImmutableRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
-}
-
-func (s *ExecuteIncomingImmutableRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
 /* -------- Instance ------------- */
 
 func (s *ExecuteIncomingImmutableRequest) GetStateMachineDeclaration() smachine.StateMachineDeclaration {
@@ -61,11 +49,16 @@ func (s *ExecuteIncomingImmutableRequest) GetStateMachineDeclaration() smachine.
 }
 
 func (s *ExecuteIncomingImmutableRequest) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	sdl := ctx.Share(&s.SharedRequestState, 0)
+	if !ctx.Publish(s.SharedRequestState.RequestInfo.RequestReference, sdl) {
+		return ctx.Stop()
+	}
+
 	return ctx.Jump(s.stepTakeLock)
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepTakeLock(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.DeduplicatedResult != nil {
+	if s.RequestInfo.Result != nil {
 		return ctx.Jump(s.stepReturnResult)
 	}
 
@@ -82,16 +75,16 @@ func (s *ExecuteIncomingImmutableRequest) stepExecute(ctx smachine.ExecutionCont
 	goCtx := ctx.GetContext()
 
 	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
-		result, err := svc.Execute(goCtx, transcript)
+		_, err := svc.ExecutionStart(goCtx, transcript)
 		return func(ctx smachine.AsyncResultContext) {
-			s.internalError = err
-			s.executionResult = result
+			s.externalError = err
+			// s.executionResult = result
 		}
 	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepRegisterResult)
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepRegisterResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.internalError != nil {
+	if s.externalError != nil {
 		return ctx.Jump(s.stepStop)
 	}
 
@@ -117,16 +110,24 @@ func (s *ExecuteIncomingImmutableRequest) stepSetLastObjectState(ctx smachine.Ex
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepReturnResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if s.Request.ReturnMode != record.ReturnSaga {
-		if s.RequestReference.IsEmpty() {
+	var (
+		goCtx    = ctx.GetContext()
+		logger   = inslogger.FromContext(goCtx)
+		incoming = s.RequestInfo.Request.(*record.IncomingRequest)
+	)
+
+	switch incoming.ReturnMode {
+	case record.ReturnResult:
+		if s.RequestInfo.RequestReference.IsEmpty() {
 			panic("unreachable")
 		}
 
 		s.internalSendResult(ctx)
-	} else {
-		logger := inslogger.FromContext(ctx.GetContext())
+	case record.ReturnSaga:
 		logger.Debug("Not sending result, request type is Saga")
+	default:
+		return ctx.Errorf("unknown ReturnMode: %s", incoming.ReturnMode.String())
 	}
 
-	return ctx.Stop()
+	return ctx.Jump(s.stepStop)
 }

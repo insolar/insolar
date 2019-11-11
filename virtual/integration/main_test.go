@@ -52,7 +52,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/logicrunner/requestexecutor"
+	"github.com/insolar/insolar/logicrunner_old/requestexecutor"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -218,7 +218,7 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
 	}
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, ClientBus)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(

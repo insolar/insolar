@@ -24,8 +24,10 @@ import (
 
 	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 )
 
@@ -55,14 +57,15 @@ func (c *conveyorDispatcher) Process(msg *message.Message) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload.Meta")
 	}
-	meta, ok := pl.(*payload.Meta)
+	plMeta, ok := pl.(*payload.Meta)
 	if !ok {
 		return errors.Errorf("unexpected type: %T (expected payload.Meta)", pl)
 	}
 
-	return c.conveyor.AddInput(context.Background(), meta.Pulse, &DispatcherMessage{
+	ctx, _ := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(meta.TraceID))
+	return c.conveyor.AddInput(ctx, plMeta.Pulse, &DispatcherMessage{
 		MessageMeta: msg.Metadata,
-		PayloadMeta: meta,
+		PayloadMeta: plMeta,
 	})
 }
 

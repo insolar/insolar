@@ -17,8 +17,6 @@
 package sm_request
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor/injector"
@@ -40,12 +38,17 @@ type StateMachineUpdateJet struct {
 	externalError error
 }
 
-var declUpdateJet smachine.StateMachineDeclaration = declarationUpdateJet{}
+var declUpdateJet smachine.StateMachineDeclaration = &declarationUpdateJet{}
 
-type declarationUpdateJet struct{}
+type declarationUpdateJet struct {
+	smachine.StateMachineDeclTemplate
+}
 
-func (declarationUpdateJet) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
+/* -------- Declaration ------------- */
+
+func (declarationUpdateJet) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
+	s := sm.(*StateMachineUpdateJet)
+	return s.Init
 }
 
 func (declarationUpdateJet) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
@@ -53,19 +56,6 @@ func (declarationUpdateJet) InjectDependencies(sm smachine.StateMachine, _ smach
 
 	injector.MustInject(&s.sender)
 	injector.MustInject(&s.jetStorage)
-}
-
-func (declarationUpdateJet) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationUpdateJet) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
-}
-
-func (declarationUpdateJet) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
-	s := sm.(*StateMachineUpdateJet)
-	return s.Init
 }
 
 /* -------- Instance ------------- */

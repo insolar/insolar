@@ -17,8 +17,6 @@
 package sm_request
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar/payload"
@@ -30,29 +28,19 @@ type StateMachineAdditionalCall struct {
 	Payload *payload.AdditionalCallFromPreviousExecutor
 }
 
-var declAdditionalCall smachine.StateMachineDeclaration = declarationAdditionalCall{}
+var declAdditionalCall smachine.StateMachineDeclaration = &declarationAdditionalCall{}
 
-type declarationAdditionalCall struct{}
-
-func (declarationAdditionalCall) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
-}
-
-func (declarationAdditionalCall) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	_ = sm.(*StateMachineAdditionalCall)
-}
-
-func (declarationAdditionalCall) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationAdditionalCall) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
+type declarationAdditionalCall struct {
+	smachine.StateMachineDeclTemplate
 }
 
 func (declarationAdditionalCall) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
 	s := sm.(*StateMachineAdditionalCall)
 	return s.Init
+}
+
+func (declarationAdditionalCall) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
+	_ = sm.(*StateMachineAdditionalCall)
 }
 
 /* -------- Instance ------------- */

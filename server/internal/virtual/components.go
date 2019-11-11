@@ -132,7 +132,7 @@ func initComponents(
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(
