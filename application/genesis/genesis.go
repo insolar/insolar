@@ -65,11 +65,11 @@ const (
 	MigrationDaemonVesting     = 31536000   // 365 days
 	MigrationDaemonVestingStep = 2629746    // 1 month
 
-	EnterpriseUnholdDate  = 0
+	EnterpriseUnholdDate  = pulse.UnixTimeOfMinTimePulse
 	EnterpriseVesting     = 10
 	EnterpriseVestingStep = 10
 
-	FundsUnholdDate  = 0
+	FundsUnholdDate  = pulse.UnixTimeOfMinTimePulse
 	FundsVesting     = 10
 	FundsVestingStep = 10
 
