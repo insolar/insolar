@@ -134,55 +134,6 @@ func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) ([]byte, []byte,
 	return state, ret, err
 }
 
-func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetNodeDomainRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetNodeDomainRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetNodeDomainRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetNodeDomainRef()
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -236,64 +187,13 @@ func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, [
 	return state, ret, err
 }
 
-func INSMETHOD_CreateHelloWorld(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeCreateHelloWorld ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeCreateHelloWorld ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeCreateHelloWorld ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.CreateHelloWorld()
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			"GetMemberByPublicKey":       INSMETHOD_GetMemberByPublicKey,
-			"GetNodeDomainRef":           INSMETHOD_GetNodeDomainRef,
 			"AddNewMemberToPublicKeyMap": INSMETHOD_AddNewMemberToPublicKeyMap,
-			"CreateHelloWorld":           INSMETHOD_CreateHelloWorld,
 		},
 		Constructors: insolar.ContractConstructors{},
 	}

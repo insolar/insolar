@@ -187,57 +187,6 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte
 	return state, ret, err
 }
 
-func INSMETHOD_RemoveNode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(NodeDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeRemoveNode ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeRemoveNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 1)
-	var args0 insolar.Reference
-	args[0] = &args0
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeRemoveNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.RemoveNode(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSCONSTRUCTOR_NewNodeDomain(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -289,7 +238,6 @@ func Initialize() insolar.ContractWrapper {
 		Methods: insolar.ContractMethods{
 			"RegisterNode":          INSMETHOD_RegisterNode,
 			"GetNodeRefByPublicKey": INSMETHOD_GetNodeRefByPublicKey,
-			"RemoveNode":            INSMETHOD_RemoveNode,
 		},
 		Constructors: insolar.ContractConstructors{
 			"NewNodeDomain": INSCONSTRUCTOR_NewNodeDomain,

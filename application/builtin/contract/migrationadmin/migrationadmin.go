@@ -53,7 +53,7 @@ const (
 	StatusInactivate = "inactive"
 )
 
-//Call internal function migration admin from api.
+// MigrationAdminCall internal function migration admin from api.
 func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, nameMethod string, caller insolar.Reference) (interface{}, error) {
 
 	switch nameMethod {

@@ -25,14 +25,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
+const XNS = "XNS"
+
 // Wallet - basic wallet contract.
 type Wallet struct {
 	foundation.BaseContract
 	Accounts foundation.StableMap
 	Deposits foundation.StableMap
 }
-
-const XNS = "XNS"
 
 // New creates new wallet.
 func New(accountReference insolar.Reference) (*Wallet, error) {
@@ -49,6 +49,8 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 	}, nil
 }
 
+// GetAccount returns account ref
+// ins:immutable
 func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	accountReference, ok := w.Accounts[assetName]
 	if !ok {
@@ -58,16 +60,17 @@ func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 }
 
 // Transfer transfers money to given wallet.
+// ins:immutable
 func (w *Wallet) Transfer(
-	rootDomainRef insolar.Reference, assetName string, amountStr string,
-	toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference,
+	assetName string, amountStr string, toMember *insolar.Reference,
+	fromMember insolar.Reference, request insolar.Reference,
 ) (interface{}, error) {
 	accRef, err := w.GetAccount(assetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
-	return acc.Transfer(rootDomainRef, amountStr, toMember, fromMember, request)
+	return acc.Transfer(amountStr, toMember, fromMember, request)
 }
 
 // GetBalance gets balance by asset name.
@@ -93,7 +96,7 @@ func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 // GetDeposits get all deposits for this wallet
 // ins:immutable
 func (w *Wallet) GetDeposits() ([]interface{}, error) {
-	result := []interface{}{}
+	result := make([]interface{}, 0)
 	for _, dRef := range w.Deposits {
 
 		reference, err := insolar.NewObjectReferenceFromString(dRef)

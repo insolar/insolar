@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 )
 
-const XNS = "XNS"
 const numConfirmation = 2
 
 // Deposit is like wallet. It holds migrated money.
@@ -46,6 +45,23 @@ type Deposit struct {
 	Lockup                  int64                     `json:"lockupInPulses"`
 	Vesting                 int64                     `json:"vestingInPulses"`
 	VestingStep             int64                     `json:"vestingStepInPulses"`
+}
+
+// New creates new deposit.
+func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
+
+	migrationDaemonConfirms := make(foundation.StableMap)
+
+	return &Deposit{
+		Balance:                 "0",
+		MigrationDaemonConfirms: migrationDaemonConfirms,
+		Amount:                  "0",
+		TxHash:                  txHash,
+		Lockup:                  lockup,
+		Vesting:                 vesting,
+		VestingStep:             vestingStep,
+		VestingType:             appfoundation.DefaultVesting,
+	}, nil
 }
 
 // Form of Deposit that is applied in API
@@ -67,31 +83,8 @@ type DaemonConfirm struct {
 	Amount    string `json:"amount"`
 }
 
-func (d Deposit) toOut() DepositOut {
-	var daemonConfirms = make([]DaemonConfirm, 0, len(d.MigrationDaemonConfirms))
-	var pulseDepositUnHold int64
-	for k, v := range d.MigrationDaemonConfirms {
-		daemonConfirms = append(daemonConfirms, DaemonConfirm{Reference: k, Amount: v})
-	}
-	t, err := d.PulseDepositUnHold.AsApproximateTime()
-	if err == nil {
-		pulseDepositUnHold = t.Unix()
-	}
-	return DepositOut{
-		Balance:                 d.Balance,
-		HoldStartDate:           pulseDepositUnHold - d.Lockup,
-		PulseDepositUnHold:      pulseDepositUnHold,
-		MigrationDaemonConfirms: daemonConfirms,
-		Amount:                  d.Amount,
-		TxHash:                  d.TxHash,
-		VestingType:             d.VestingType,
-		Lockup:                  d.Lockup,
-		Vesting:                 d.Vesting,
-		VestingStep:             d.VestingStep,
-	}
-}
-
 // GetTxHash gets transaction hash.
+// ins:immutable
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
@@ -108,27 +101,30 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 	return d.PulseDepositUnHold, nil
 }
 
-// New creates new deposit.
-func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
-
-	migrationDaemonConfirms := make(foundation.StableMap)
-
-	return &Deposit{
-		Balance:                 "0",
-		MigrationDaemonConfirms: migrationDaemonConfirms,
-		Amount:                  "0",
-		TxHash:                  txHash,
-		Lockup:                  lockup,
-		Vesting:                 vesting,
-		VestingStep:             vestingStep,
-		VestingType:             appfoundation.DefaultVesting,
-	}, nil
-}
-
 // Itself gets deposit information.
 // ins:immutable
 func (d *Deposit) Itself() (interface{}, error) {
-	return d.toOut(), nil
+	var daemonConfirms = make([]DaemonConfirm, 0, len(d.MigrationDaemonConfirms))
+	var pulseDepositUnHold int64
+	for k, v := range d.MigrationDaemonConfirms {
+		daemonConfirms = append(daemonConfirms, DaemonConfirm{Reference: k, Amount: v})
+	}
+	t, err := d.PulseDepositUnHold.AsApproximateTime()
+	if err == nil {
+		pulseDepositUnHold = t.Unix()
+	}
+	return &DepositOut{
+		Balance:                 d.Balance,
+		HoldStartDate:           pulseDepositUnHold - d.Lockup,
+		PulseDepositUnHold:      pulseDepositUnHold,
+		MigrationDaemonConfirms: daemonConfirms,
+		Amount:                  d.Amount,
+		TxHash:                  d.TxHash,
+		VestingType:             d.VestingType,
+		Lockup:                  d.Lockup,
+		Vesting:                 d.Vesting,
+		VestingStep:             d.VestingStep,
+	}, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
@@ -170,11 +166,7 @@ func (d *Deposit) Confirm(
 		}
 
 		err = deposit.GetObject(*maDeposit).TransferToDeposit(
-			amountStr,
-			d.GetReference(),
-			appfoundation.GetMigrationAdminMember(),
-			request,
-			toMember,
+			amountStr, d.GetReference(), appfoundation.GetMigrationAdminMember(), request, toMember,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
