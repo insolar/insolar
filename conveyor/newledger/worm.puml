@@ -1,0 +1,100 @@
+@startuml
+
+hide empty methods
+hide empty attributes
+
+class StorageUnit {
+    ID = pulseRange.LeftBound
+}
+
+class StorageSection {
+}
+StorageUnit "1" *-- StorageSection
+
+enum SectionType {
+    StorageControlSection
+    MainSection
+    DustSection
+    UtilitySection
+    ...
+    CryptographySection(s)
+    CompatibilitySection(s)
+    CustomSection(s)
+    --
+    +retentionPolicy
+    +storagePolicy
+    +cryptographyScheme
+}
+
+SectionType - (StorageUnit, StorageSection)
+
+
+class JetDrop {
+    PulseNumber
+}
+StorageUnit "1" o-- JetDrop
+
+abstract JetDropLifeline
+JetDrop "1" -- "1" JetDropLifeline
+StorageSection <. JetDropLifeline: stored in the\n ControlSection
+
+class JetDropRevision {
+    additional revisions can be created for
+    compaction or truncation
+}
+JetDropLifeline "1" *-- JetDropRevision
+together {
+    class JetDropOpening {
+        PulseData
+        NodeListDelta
+        PrevDropHash
+    }
+    JetDropLifeline "1" *- "1" JetDropOpening
+    JetDropLifeline "1" *- "1" JetDropClosing
+    JetDropOpening -[hidden]- JetDropClosing
+}
+
+package Physical <<rectangle>> {
+    StorageSection *-- RecordDirectory
+    StorageSection *-- RecordBodyStorage
+    note as PhysicalNote
+        Storage-specific entries, e.g. files or tables.
+        Each section will contain 1 or 2 files.
+        Each storage unit (=drop for now) will have
+        at least 3 files (Ctl + Main sections).
+    end note
+    RecordDirectory .[dotted]. PhysicalNote
+    RecordBodyStorage .[dotted]. PhysicalNote
+}
+
+Physical . JetDropRevision
+JetDropRevision "1" o-- JetDropSection
+
+SectionDirectory "1" -right- "1" SectionContent
+RecordBodyStorage "1" *--- SectionContent
+RecordDirectory "1" *--- SectionDirectory
+JetDropSection "1" o-- SectionContent
+JetDropSection "1" o-- SectionDirectory
+
+package JetRecord <<rectangle>> {
+    class UtilityPayload {
+        SectionType
+    }
+    RecordID "0..1" -- "0..1" UtilityRecordID
+    UtilityRecordID "1" - UtilityPayload
+    package AppProvidedData <<rectangle>> {
+        RecordID "1" - "1" BasePayload
+        class ExtraPayload {
+            SectionType
+        }
+        BasePayload "1" . ExtraPayload
+    }
+}
+
+SectionDirectory "1" *-- RecordID
+SectionDirectory *---- UtilityRecordID
+SectionContent "1" *-- BasePayload
+SectionContent "1" *-- ExtraPayload
+SectionContent "1" *-- UtilityPayload
+
+@enduml

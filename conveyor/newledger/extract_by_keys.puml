@@ -1,0 +1,19 @@
+@startuml
+title Extract By Keys
+|Requester|
+start
+:Read([]Key, ExtractFn);
+:MapKeys([]Key) -> map[Partition][]Key;
+:MapPartitions([]Partition) -> map[Storage][]Partition;
+:ForEach -> ReadKeys(Storage, map[Partition][]Key, ExtractFn);
+|Storage(s)|
+fork
+:Get(Partition).GetKeys([]Key) -> []RawValue;
+:Extract([]RawValue, ExtractFn) -> []ResultValue;
+end fork
+:SendBack([]ResultValue);
+|Requester|
+:Collect []ResultValue;
+:return []ResultValue;
+stop
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+title Extract By Filter
+|Requester|
+start
+:Read(FilterFn, ExtractFn);
+:PreFilterPartitions(FilterFn) -> map[Storage][]Partition;
+:ForEach -> FilterKeys(Storage, []Partition, FilterFn, ExtractFn);
+|Storage(s)|
+fork
+:ForEachPartition -> Filter(FilterFn) -> []RawValue;
+:Extract([]RawValue, ExtractFn) -> []ResultValue;
+end fork
+:SendBack([]ResultValue);
+|Requester|
+:Collect []ResultValue;
+:return []ResultValue;
+stop
+@enduml

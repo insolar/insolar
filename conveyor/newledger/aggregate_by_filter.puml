@@ -1,0 +1,20 @@
+@startuml
+title Aggregate By Filter
+|Requester|
+start
+:Aggregate(FilterFn, ExtractFn, Aggregator);
+:PreFilterPartitions(FilterFn) -> map[Storage][]Partition;
+:ForEach -> FilterKeys(Storage, []Partition, FilterFn, ExtractFn, Aggregator);
+|Storage(s)|
+fork
+:ForEachPartition -> Filter(FilterFn) -> []RawValue;
+:Extract([]RawValue, ExtractFn) -> []ResultValue;
+:Aggregate([]ResultValue, Aggregator.ValueToInterim) -> InterimValue;
+end fork
+:Aggregate(map[Partition]InterimValue, Aggregator.InterimToInterim) -> InterimValue;
+:SendBack(InterimValue);
+|Requester|
+:Aggregate(map[Storage]InterimValue, Aggregator.InterimToResult) -> ResultValue;
+:return ResultValue;
+stop
+@enduml

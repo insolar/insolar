@@ -1,0 +1,22 @@
+@startuml
+title Aggregate By Keys
+|Requester|
+start
+:AggregateByKeys([]Key, ExtractFn, Aggregator);
+:MapKeys([]Key) -> map[Partition][]Key;
+:PreFilterPartitions(FilterFn, []Partition) -> []Partition;
+:MapPartitions([]Partition) -> map[Storage][]Partition;
+:ForEach -> AggregateKeys(Storage, map[Partition][]Key, ExtractFn, Aggregator);
+|Storage(s)|
+fork
+:Get(Partition).GetKeys([]Key) -> []RawValue;
+:Extract([]RawValue, ExtractFn) -> []ResultValue;
+:Aggregate([]ResultValue, Aggregator.ValueToInterim) -> InterimValue;
+end fork
+:Aggregate(map[Partition]InterimValue, Aggregator.InterimToInterim) -> InterimValue;
+:SendBack(InterimValue);
+|Requester|
+:Aggregate(map[Storage]InterimValue, Aggregator.InterimToResult) -> ResultValue;
+:return ResultValue;
+stop
+@enduml
