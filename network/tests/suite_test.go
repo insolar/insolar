@@ -63,7 +63,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/gen"
@@ -116,7 +115,7 @@ func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
 	cfg.Level = level.String()
 	cfg.Formatter = insolar.TextFormat.String()
 
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, utils.RandTraceID()+"_main", "", "")
+	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, "", "")
 	return ctx
 }
 

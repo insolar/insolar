@@ -78,7 +78,7 @@ func main() {
 
 	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "test_pulsar")
+	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {

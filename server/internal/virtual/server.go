@@ -71,7 +71,7 @@ func (s *Server) Serve() {
 	nodeRef := certManager.GetCertificate().GetNodeRef().String()
 
 	traceID := utils.RandTraceID() + "_main"
-	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, nodeRef, nodeRole)
 	log.InitTicker()
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

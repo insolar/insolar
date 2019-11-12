@@ -129,7 +129,7 @@ func NewServer(
 	mManager machinesmanager.MachinesManager) (*Server, error) {
 
 	traceID := utils.RandTraceID() + "_main"
-	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, "", "")
 
 	if mManager == nil {
 		mManager = machinesmanager.NewMachinesManager()

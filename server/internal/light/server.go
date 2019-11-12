@@ -76,7 +76,7 @@ func (s *Server) Serve() {
 			nodeReference = certManager.GetCertificate().GetNodeRef().String()
 		}
 
-		ctx, logger = inslogger.InitNodeLogger(ctx, cfg.Log, mainTraceID, nodeReference, nodeRole)
+		ctx, logger = inslogger.InitNodeLogger(ctx, cfg.Log, nodeReference, nodeRole)
 		log.InitTicker()
 	}
 

@@ -18,6 +18,7 @@ package inslogger
 
 import (
 	"context"
+	"runtime/debug"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -28,20 +29,14 @@ import (
 
 type loggerKey struct{}
 
-func InitNodeLogger(
-	ctx context.Context,
-	cfg configuration.Log,
-	traceID, nodeRef, nodeRole string,
-) (
-	context.Context, insolar.Logger,
-) {
+func InitNodeLogger(ctx context.Context, cfg configuration.Log, nodeRef, nodeRole string) (context.Context, insolar.Logger) {
 	inslog, err := logger.NewGlobalLogger(cfg)
 	if err != nil {
 		panic(err)
 	}
 
 	ctx = SetLogger(ctx, inslog)
-	ctx, _ = WithTraceField(ctx, traceID)
+	// ctx, _ = WithTraceField(ctx, traceID)
 	if nodeRef != "" {
 		ctx, _ = WithField(ctx, "nodeid", nodeRef)
 	}
@@ -116,7 +111,7 @@ func WithFields(ctx context.Context, fields map[string]interface{}) (context.Con
 func WithTraceField(ctx context.Context, traceid string) (context.Context, insolar.Logger) {
 	ctx, err := utils.SetInsTraceID(ctx, traceid)
 	if err != nil {
-		getLogger(ctx).Error(err)
+		getLogger(ctx).WithField("backtrace", string(debug.Stack())).Error(err)
 	}
 	return WithField(ctx, "traceid", traceid)
 }

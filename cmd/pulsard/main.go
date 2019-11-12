@@ -87,7 +87,7 @@ func main() {
 
 	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "pulsar")
+	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, "", "pulsar")
 
 	jaegerflush := func() {}
 	if pCfg.Tracer.Jaeger.AgentEndpoint != "" {
