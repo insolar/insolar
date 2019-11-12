@@ -14,7 +14,7 @@
 //    limitations under the License.
 ///
 
-package newledger
+package ledger_v2
 
 // This structure is intended for incremental/streamed write with some abilities to detect corruptions and to do self heal.
 // MUST: Strict order of field
