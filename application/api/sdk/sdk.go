@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"strings"
 	"sync"
@@ -486,25 +487,25 @@ func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, meth
 
 	var body []byte
 	var err error
-	var i int
-	if sdk.options.MaxRetries < 0 {
-		i = sdk.options.MaxRetries
+	maxRetries := int64(sdk.options.MaxRetries)
+	if maxRetries < 0 {
+		maxRetries = math.MaxInt64
 	}
-	for i <= sdk.options.MaxRetries {
+	for i := int64(0); i <= maxRetries; i++ {
 		body, err = sdk.sendRequest(ctx, urls, method, params, user)
-		if err != nil {
-			if err, ok := errors.Cause(err).(*requester.Error); ok {
-				if err.Code == api.ServiceUnavailableError {
-					logger.Infof("Service unavailable: retrying in %s", sdk.options.RetryPeriod)
-					time.Sleep(sdk.options.RetryPeriod)
-					if sdk.options.MaxRetries >= 0 { // retry infinitely if MaxRetries < 0
-						i++
-					}
-					continue
-				}
-			}
+		if err == nil {
+			break
 		}
-		break
+		unwrappedError, ok := errors.Cause(err).(*requester.Error)
+		if !ok {
+			break
+		}
+		if unwrappedError.Code != api.ServiceUnavailableError {
+			break
+		}
+
+		logger.Infof("Service unavailable: retrying in %s", sdk.options.RetryPeriod)
+		time.Sleep(sdk.options.RetryPeriod)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
