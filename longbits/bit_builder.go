@@ -31,15 +31,18 @@ const (
 )
 
 func NewBitBuilder(direction BitBuilderDirection, expectedLen int) BitBuilder {
-	var buf []byte
 	if expectedLen > 0 {
-		buf = make([]byte, 0, expectedLen)
+		return AppendBitBuilder(make([]byte, 0, expectedLen), direction)
 	}
+	return AppendBitBuilder(nil, direction)
+}
+
+func AppendBitBuilder(appendTo []byte, direction BitBuilderDirection) BitBuilder {
 	switch direction {
 	case FirstLow:
-		return BitBuilder{accInit: initFirstLow, accBit: initFirstLow, bytes: buf}
+		return BitBuilder{accInit: initFirstLow, accBit: initFirstLow, bytes: appendTo}
 	case FirstHigh:
-		return BitBuilder{accInit: initFirstHigh, accBit: initFirstHigh, bytes: buf}
+		return BitBuilder{accInit: initFirstHigh, accBit: initFirstHigh, bytes: appendTo}
 	default:
 		panic("illegal value")
 	}
