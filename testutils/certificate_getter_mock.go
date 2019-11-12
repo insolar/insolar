@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -153,15 +153,15 @@ func (mmGetCert *CertificateGetterMock) GetCert(ctx context.Context, rp1 *mm_ins
 		mmGetCert.inspectFuncGetCert(ctx, rp1)
 	}
 
-	params := &CertificateGetterMockGetCertParams{ctx, rp1}
+	mm_params := &CertificateGetterMockGetCertParams{ctx, rp1}
 
 	// Record call args
 	mmGetCert.GetCertMock.mutex.Lock()
-	mmGetCert.GetCertMock.callArgs = append(mmGetCert.GetCertMock.callArgs, params)
+	mmGetCert.GetCertMock.callArgs = append(mmGetCert.GetCertMock.callArgs, mm_params)
 	mmGetCert.GetCertMock.mutex.Unlock()
 
 	for _, e := range mmGetCert.GetCertMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.c2, e.results.err
 		}
@@ -169,17 +169,17 @@ func (mmGetCert *CertificateGetterMock) GetCert(ctx context.Context, rp1 *mm_ins
 
 	if mmGetCert.GetCertMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCert.GetCertMock.defaultExpectation.Counter, 1)
-		want := mmGetCert.GetCertMock.defaultExpectation.params
-		got := CertificateGetterMockGetCertParams{ctx, rp1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetCert.t.Errorf("CertificateGetterMock.GetCert got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetCert.GetCertMock.defaultExpectation.params
+		mm_got := CertificateGetterMockGetCertParams{ctx, rp1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetCert.t.Errorf("CertificateGetterMock.GetCert got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetCert.GetCertMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCert.GetCertMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCert.t.Fatal("No results are set for the CertificateGetterMock.GetCert")
 		}
-		return (*results).c2, (*results).err
+		return (*mm_results).c2, (*mm_results).err
 	}
 	if mmGetCert.funcGetCert != nil {
 		return mmGetCert.funcGetCert(ctx, rp1)

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // AborterMock implements Aborter
@@ -125,15 +125,15 @@ func (mmAbort *AborterMock) Abort(ctx context.Context, reason string) {
 		mmAbort.inspectFuncAbort(ctx, reason)
 	}
 
-	params := &AborterMockAbortParams{ctx, reason}
+	mm_params := &AborterMockAbortParams{ctx, reason}
 
 	// Record call args
 	mmAbort.AbortMock.mutex.Lock()
-	mmAbort.AbortMock.callArgs = append(mmAbort.AbortMock.callArgs, params)
+	mmAbort.AbortMock.callArgs = append(mmAbort.AbortMock.callArgs, mm_params)
 	mmAbort.AbortMock.mutex.Unlock()
 
 	for _, e := range mmAbort.AbortMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -141,10 +141,10 @@ func (mmAbort *AborterMock) Abort(ctx context.Context, reason string) {
 
 	if mmAbort.AbortMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAbort.AbortMock.defaultExpectation.Counter, 1)
-		want := mmAbort.AbortMock.defaultExpectation.params
-		got := AborterMockAbortParams{ctx, reason}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAbort.t.Errorf("AborterMock.Abort got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAbort.AbortMock.defaultExpectation.params
+		mm_got := AborterMockAbortParams{ctx, reason}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAbort.t.Errorf("AborterMock.Abort got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

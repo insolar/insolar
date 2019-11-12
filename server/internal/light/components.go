@@ -26,9 +26,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -55,7 +55,7 @@ import (
 )
 
 type components struct {
-	cmp               component.Manager
+	cmp               *component.Manager
 	NodeRef, NodeRole string
 	replicator        executor.LightReplicator
 	cleaner           executor.Cleaner
@@ -83,7 +83,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 
 		publicKey, err := CryptoService.GetPublicKey()
@@ -99,7 +99,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	comps := &components{}
-	comps.cmp = component.Manager{}
+	comps.cmp = component.NewManager(nil)
 	comps.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	comps.NodeRole = CertManager.GetCertificate().GetRole().String()
 
@@ -115,7 +115,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		subscriber = pubsub
 		publisher = pubsub
 		// Wrapped watermill publisher for introspection.
-		publisher = internal.PublisherWrapper(ctx, &comps.cmp, cfg.Introspection, publisher)
+		publisher = internal.PublisherWrapper(ctx, comps.cmp, cfg.Introspection, publisher)
 	}
 
 	// Network.
@@ -125,7 +125,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &comps.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, comps.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -237,7 +237,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		writeController := executor.NewWriteController()
 		hotWaitReleaser := executor.NewChannelWaiter()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoScheme)
 
 		jetFetcher := executor.NewFetcher(Nodes, Jets, Sender, Coordinator)

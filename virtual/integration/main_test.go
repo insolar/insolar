@@ -31,9 +31,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/insolar/component-manager"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -128,14 +128,14 @@ func NewServer(
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 	mManager machinesmanager.MachinesManager) (*Server, error) {
 
-	traceID := "main_" + utils.RandTraceID()
+	traceID := utils.RandTraceID() + "_main"
 	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
 
 	if mManager == nil {
 		mManager = machinesmanager.NewMachinesManager()
 	}
 
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	// Cryptography.
 	var (
@@ -343,7 +343,7 @@ func NewServer(
 		contractRequester: contractRequester,
 		test:              t,
 		pm:                PulseManager,
-		componentManager:  &cm,
+		componentManager:  cm,
 		stopper:           stopper,
 		pulse:             *insolar.GenesisPulse,
 		clientSender:      ClientBus,

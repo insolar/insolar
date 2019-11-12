@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -163,15 +163,15 @@ func (mmCheckRequest *RequestCheckerMock) CheckRequest(ctx context.Context, requ
 		mmCheckRequest.inspectFuncCheckRequest(ctx, requestID, request)
 	}
 
-	params := &RequestCheckerMockCheckRequestParams{ctx, requestID, request}
+	mm_params := &RequestCheckerMockCheckRequestParams{ctx, requestID, request}
 
 	// Record call args
 	mmCheckRequest.CheckRequestMock.mutex.Lock()
-	mmCheckRequest.CheckRequestMock.callArgs = append(mmCheckRequest.CheckRequestMock.callArgs, params)
+	mmCheckRequest.CheckRequestMock.callArgs = append(mmCheckRequest.CheckRequestMock.callArgs, mm_params)
 	mmCheckRequest.CheckRequestMock.mutex.Unlock()
 
 	for _, e := range mmCheckRequest.CheckRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -179,17 +179,17 @@ func (mmCheckRequest *RequestCheckerMock) CheckRequest(ctx context.Context, requ
 
 	if mmCheckRequest.CheckRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCheckRequest.CheckRequestMock.defaultExpectation.Counter, 1)
-		want := mmCheckRequest.CheckRequestMock.defaultExpectation.params
-		got := RequestCheckerMockCheckRequestParams{ctx, requestID, request}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCheckRequest.t.Errorf("RequestCheckerMock.CheckRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCheckRequest.CheckRequestMock.defaultExpectation.params
+		mm_got := RequestCheckerMockCheckRequestParams{ctx, requestID, request}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCheckRequest.t.Errorf("RequestCheckerMock.CheckRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCheckRequest.CheckRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCheckRequest.CheckRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCheckRequest.t.Fatal("No results are set for the RequestCheckerMock.CheckRequest")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmCheckRequest.funcCheckRequest != nil {
 		return mmCheckRequest.funcCheckRequest(ctx, requestID, request)
@@ -380,15 +380,15 @@ func (mmValidateRequest *RequestCheckerMock) ValidateRequest(ctx context.Context
 		mmValidateRequest.inspectFuncValidateRequest(ctx, requestID, request)
 	}
 
-	params := &RequestCheckerMockValidateRequestParams{ctx, requestID, request}
+	mm_params := &RequestCheckerMockValidateRequestParams{ctx, requestID, request}
 
 	// Record call args
 	mmValidateRequest.ValidateRequestMock.mutex.Lock()
-	mmValidateRequest.ValidateRequestMock.callArgs = append(mmValidateRequest.ValidateRequestMock.callArgs, params)
+	mmValidateRequest.ValidateRequestMock.callArgs = append(mmValidateRequest.ValidateRequestMock.callArgs, mm_params)
 	mmValidateRequest.ValidateRequestMock.mutex.Unlock()
 
 	for _, e := range mmValidateRequest.ValidateRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -396,17 +396,17 @@ func (mmValidateRequest *RequestCheckerMock) ValidateRequest(ctx context.Context
 
 	if mmValidateRequest.ValidateRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmValidateRequest.ValidateRequestMock.defaultExpectation.Counter, 1)
-		want := mmValidateRequest.ValidateRequestMock.defaultExpectation.params
-		got := RequestCheckerMockValidateRequestParams{ctx, requestID, request}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmValidateRequest.t.Errorf("RequestCheckerMock.ValidateRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmValidateRequest.ValidateRequestMock.defaultExpectation.params
+		mm_got := RequestCheckerMockValidateRequestParams{ctx, requestID, request}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmValidateRequest.t.Errorf("RequestCheckerMock.ValidateRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmValidateRequest.ValidateRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmValidateRequest.ValidateRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmValidateRequest.t.Fatal("No results are set for the RequestCheckerMock.ValidateRequest")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmValidateRequest.funcValidateRequest != nil {
 		return mmValidateRequest.funcValidateRequest(ctx, requestID, request)

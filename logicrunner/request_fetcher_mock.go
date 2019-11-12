@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -134,15 +134,15 @@ func (mmAbort *RequestFetcherMock) Abort(ctx context.Context) {
 		mmAbort.inspectFuncAbort(ctx)
 	}
 
-	params := &RequestFetcherMockAbortParams{ctx}
+	mm_params := &RequestFetcherMockAbortParams{ctx}
 
 	// Record call args
 	mmAbort.AbortMock.mutex.Lock()
-	mmAbort.AbortMock.callArgs = append(mmAbort.AbortMock.callArgs, params)
+	mmAbort.AbortMock.callArgs = append(mmAbort.AbortMock.callArgs, mm_params)
 	mmAbort.AbortMock.mutex.Unlock()
 
 	for _, e := range mmAbort.AbortMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -150,10 +150,10 @@ func (mmAbort *RequestFetcherMock) Abort(ctx context.Context) {
 
 	if mmAbort.AbortMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAbort.AbortMock.defaultExpectation.Counter, 1)
-		want := mmAbort.AbortMock.defaultExpectation.params
-		got := RequestFetcherMockAbortParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAbort.t.Errorf("RequestFetcherMock.Abort got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAbort.AbortMock.defaultExpectation.params
+		mm_got := RequestFetcherMockAbortParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAbort.t.Errorf("RequestFetcherMock.Abort got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -347,15 +347,15 @@ func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context) (c
 		mmFetchPendings.inspectFuncFetchPendings(ctx)
 	}
 
-	params := &RequestFetcherMockFetchPendingsParams{ctx}
+	mm_params := &RequestFetcherMockFetchPendingsParams{ctx}
 
 	// Record call args
 	mmFetchPendings.FetchPendingsMock.mutex.Lock()
-	mmFetchPendings.FetchPendingsMock.callArgs = append(mmFetchPendings.FetchPendingsMock.callArgs, params)
+	mmFetchPendings.FetchPendingsMock.callArgs = append(mmFetchPendings.FetchPendingsMock.callArgs, mm_params)
 	mmFetchPendings.FetchPendingsMock.mutex.Unlock()
 
 	for _, e := range mmFetchPendings.FetchPendingsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ch1
 		}
@@ -363,17 +363,17 @@ func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context) (c
 
 	if mmFetchPendings.FetchPendingsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFetchPendings.FetchPendingsMock.defaultExpectation.Counter, 1)
-		want := mmFetchPendings.FetchPendingsMock.defaultExpectation.params
-		got := RequestFetcherMockFetchPendingsParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFetchPendings.t.Errorf("RequestFetcherMock.FetchPendings got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFetchPendings.FetchPendingsMock.defaultExpectation.params
+		mm_got := RequestFetcherMockFetchPendingsParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFetchPendings.t.Errorf("RequestFetcherMock.FetchPendings got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFetchPendings.FetchPendingsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFetchPendings.FetchPendingsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFetchPendings.t.Fatal("No results are set for the RequestFetcherMock.FetchPendings")
 		}
-		return (*results).ch1
+		return (*mm_results).ch1
 	}
 	if mmFetchPendings.funcFetchPendings != nil {
 		return mmFetchPendings.funcFetchPendings(ctx)

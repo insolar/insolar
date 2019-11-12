@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -135,15 +135,15 @@ func (mmCloseAllUntil *JetReleaserMock) CloseAllUntil(ctx context.Context, pulse
 		mmCloseAllUntil.inspectFuncCloseAllUntil(ctx, pulse)
 	}
 
-	params := &JetReleaserMockCloseAllUntilParams{ctx, pulse}
+	mm_params := &JetReleaserMockCloseAllUntilParams{ctx, pulse}
 
 	// Record call args
 	mmCloseAllUntil.CloseAllUntilMock.mutex.Lock()
-	mmCloseAllUntil.CloseAllUntilMock.callArgs = append(mmCloseAllUntil.CloseAllUntilMock.callArgs, params)
+	mmCloseAllUntil.CloseAllUntilMock.callArgs = append(mmCloseAllUntil.CloseAllUntilMock.callArgs, mm_params)
 	mmCloseAllUntil.CloseAllUntilMock.mutex.Unlock()
 
 	for _, e := range mmCloseAllUntil.CloseAllUntilMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -151,10 +151,10 @@ func (mmCloseAllUntil *JetReleaserMock) CloseAllUntil(ctx context.Context, pulse
 
 	if mmCloseAllUntil.CloseAllUntilMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCloseAllUntil.CloseAllUntilMock.defaultExpectation.Counter, 1)
-		want := mmCloseAllUntil.CloseAllUntilMock.defaultExpectation.params
-		got := JetReleaserMockCloseAllUntilParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCloseAllUntil.t.Errorf("JetReleaserMock.CloseAllUntil got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCloseAllUntil.CloseAllUntilMock.defaultExpectation.params
+		mm_got := JetReleaserMockCloseAllUntilParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCloseAllUntil.t.Errorf("JetReleaserMock.CloseAllUntil got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -350,15 +350,15 @@ func (mmUnlock *JetReleaserMock) Unlock(ctx context.Context, pulse insolar.Pulse
 		mmUnlock.inspectFuncUnlock(ctx, pulse, jetID)
 	}
 
-	params := &JetReleaserMockUnlockParams{ctx, pulse, jetID}
+	mm_params := &JetReleaserMockUnlockParams{ctx, pulse, jetID}
 
 	// Record call args
 	mmUnlock.UnlockMock.mutex.Lock()
-	mmUnlock.UnlockMock.callArgs = append(mmUnlock.UnlockMock.callArgs, params)
+	mmUnlock.UnlockMock.callArgs = append(mmUnlock.UnlockMock.callArgs, mm_params)
 	mmUnlock.UnlockMock.mutex.Unlock()
 
 	for _, e := range mmUnlock.UnlockMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -366,17 +366,17 @@ func (mmUnlock *JetReleaserMock) Unlock(ctx context.Context, pulse insolar.Pulse
 
 	if mmUnlock.UnlockMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUnlock.UnlockMock.defaultExpectation.Counter, 1)
-		want := mmUnlock.UnlockMock.defaultExpectation.params
-		got := JetReleaserMockUnlockParams{ctx, pulse, jetID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUnlock.t.Errorf("JetReleaserMock.Unlock got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUnlock.UnlockMock.defaultExpectation.params
+		mm_got := JetReleaserMockUnlockParams{ctx, pulse, jetID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUnlock.t.Errorf("JetReleaserMock.Unlock got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUnlock.UnlockMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUnlock.UnlockMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUnlock.t.Fatal("No results are set for the JetReleaserMock.Unlock")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmUnlock.funcUnlock != nil {
 		return mmUnlock.funcUnlock(ctx, pulse, jetID)

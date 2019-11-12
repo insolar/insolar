@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmMakeBackup *BackupMakerMock) MakeBackup(ctx context.Context, lastFinaliz
 		mmMakeBackup.inspectFuncMakeBackup(ctx, lastFinalizedPulse)
 	}
 
-	params := &BackupMakerMockMakeBackupParams{ctx, lastFinalizedPulse}
+	mm_params := &BackupMakerMockMakeBackupParams{ctx, lastFinalizedPulse}
 
 	// Record call args
 	mmMakeBackup.MakeBackupMock.mutex.Lock()
-	mmMakeBackup.MakeBackupMock.callArgs = append(mmMakeBackup.MakeBackupMock.callArgs, params)
+	mmMakeBackup.MakeBackupMock.callArgs = append(mmMakeBackup.MakeBackupMock.callArgs, mm_params)
 	mmMakeBackup.MakeBackupMock.mutex.Unlock()
 
 	for _, e := range mmMakeBackup.MakeBackupMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmMakeBackup *BackupMakerMock) MakeBackup(ctx context.Context, lastFinaliz
 
 	if mmMakeBackup.MakeBackupMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMakeBackup.MakeBackupMock.defaultExpectation.Counter, 1)
-		want := mmMakeBackup.MakeBackupMock.defaultExpectation.params
-		got := BackupMakerMockMakeBackupParams{ctx, lastFinalizedPulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmMakeBackup.t.Errorf("BackupMakerMock.MakeBackup got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmMakeBackup.MakeBackupMock.defaultExpectation.params
+		mm_got := BackupMakerMockMakeBackupParams{ctx, lastFinalizedPulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMakeBackup.t.Errorf("BackupMakerMock.MakeBackup got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmMakeBackup.MakeBackupMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMakeBackup.MakeBackupMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMakeBackup.t.Fatal("No results are set for the BackupMakerMock.MakeBackup")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmMakeBackup.funcMakeBackup != nil {
 		return mmMakeBackup.funcMakeBackup(ctx, lastFinalizedPulse)

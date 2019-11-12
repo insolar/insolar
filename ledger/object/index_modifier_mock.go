@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -163,15 +163,15 @@ func (mmSetIndex *IndexModifierMock) SetIndex(ctx context.Context, pn insolar.Pu
 		mmSetIndex.inspectFuncSetIndex(ctx, pn, index)
 	}
 
-	params := &IndexModifierMockSetIndexParams{ctx, pn, index}
+	mm_params := &IndexModifierMockSetIndexParams{ctx, pn, index}
 
 	// Record call args
 	mmSetIndex.SetIndexMock.mutex.Lock()
-	mmSetIndex.SetIndexMock.callArgs = append(mmSetIndex.SetIndexMock.callArgs, params)
+	mmSetIndex.SetIndexMock.callArgs = append(mmSetIndex.SetIndexMock.callArgs, mm_params)
 	mmSetIndex.SetIndexMock.mutex.Unlock()
 
 	for _, e := range mmSetIndex.SetIndexMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -179,17 +179,17 @@ func (mmSetIndex *IndexModifierMock) SetIndex(ctx context.Context, pn insolar.Pu
 
 	if mmSetIndex.SetIndexMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetIndex.SetIndexMock.defaultExpectation.Counter, 1)
-		want := mmSetIndex.SetIndexMock.defaultExpectation.params
-		got := IndexModifierMockSetIndexParams{ctx, pn, index}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetIndex.t.Errorf("IndexModifierMock.SetIndex got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetIndex.SetIndexMock.defaultExpectation.params
+		mm_got := IndexModifierMockSetIndexParams{ctx, pn, index}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetIndex.t.Errorf("IndexModifierMock.SetIndex got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSetIndex.SetIndexMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSetIndex.SetIndexMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSetIndex.t.Fatal("No results are set for the IndexModifierMock.SetIndex")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSetIndex.funcSetIndex != nil {
 		return mmSetIndex.funcSetIndex(ctx, pn, index)
@@ -379,15 +379,15 @@ func (mmUpdateLastKnownPulse *IndexModifierMock) UpdateLastKnownPulse(ctx contex
 		mmUpdateLastKnownPulse.inspectFuncUpdateLastKnownPulse(ctx, pn)
 	}
 
-	params := &IndexModifierMockUpdateLastKnownPulseParams{ctx, pn}
+	mm_params := &IndexModifierMockUpdateLastKnownPulseParams{ctx, pn}
 
 	// Record call args
 	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.mutex.Lock()
-	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs = append(mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs, params)
+	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs = append(mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs, mm_params)
 	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.mutex.Unlock()
 
 	for _, e := range mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -395,17 +395,17 @@ func (mmUpdateLastKnownPulse *IndexModifierMock) UpdateLastKnownPulse(ctx contex
 
 	if mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.Counter, 1)
-		want := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.params
-		got := IndexModifierMockUpdateLastKnownPulseParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpdateLastKnownPulse.t.Errorf("IndexModifierMock.UpdateLastKnownPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.params
+		mm_got := IndexModifierMockUpdateLastKnownPulseParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdateLastKnownPulse.t.Errorf("IndexModifierMock.UpdateLastKnownPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmUpdateLastKnownPulse.t.Fatal("No results are set for the IndexModifierMock.UpdateLastKnownPulse")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmUpdateLastKnownPulse.funcUpdateLastKnownPulse != nil {
 		return mmUpdateLastKnownPulse.funcUpdateLastKnownPulse(ctx, pn)

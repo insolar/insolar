@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -132,11 +132,11 @@ func (mmCode *CodeDescriptorMock) Code() (ba1 []byte, err error) {
 	if mmCode.CodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCode.CodeMock.defaultExpectation.Counter, 1)
 
-		results := mmCode.CodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCode.CodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCode.t.Fatal("No results are set for the CodeDescriptorMock.Code")
 		}
-		return (*results).ba1, (*results).err
+		return (*mm_results).ba1, (*mm_results).err
 	}
 	if mmCode.funcCode != nil {
 		return mmCode.funcCode()
@@ -275,11 +275,11 @@ func (mmMachineType *CodeDescriptorMock) MachineType() (m1 insolar.MachineType) 
 	if mmMachineType.MachineTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMachineType.MachineTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmMachineType.MachineTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMachineType.MachineTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMachineType.t.Fatal("No results are set for the CodeDescriptorMock.MachineType")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmMachineType.funcMachineType != nil {
 		return mmMachineType.funcMachineType()
@@ -418,11 +418,11 @@ func (mmRef *CodeDescriptorMock) Ref() (rp1 *insolar.Reference) {
 	if mmRef.RefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRef.RefMock.defaultExpectation.Counter, 1)
 
-		results := mmRef.RefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRef.RefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRef.t.Fatal("No results are set for the CodeDescriptorMock.Ref")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmRef.funcRef != nil {
 		return mmRef.funcRef()

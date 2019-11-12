@@ -60,7 +60,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	mock "github.com/insolar/insolar/testutils/network"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"

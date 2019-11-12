@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // DigestSignerMock implements DigestSigner
@@ -124,11 +124,11 @@ func (mmGetSignMethod *DigestSignerMock) GetSignMethod() (s1 SignMethod) {
 	if mmGetSignMethod.GetSignMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignMethod.GetSignMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignMethod.GetSignMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignMethod.t.Fatal("No results are set for the DigestSignerMock.GetSignMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignMethod.funcGetSignMethod != nil {
 		return mmGetSignMethod.funcGetSignMethod()
@@ -300,15 +300,15 @@ func (mmSignDigest *DigestSignerMock) SignDigest(digest Digest) (s1 Signature) {
 		mmSignDigest.inspectFuncSignDigest(digest)
 	}
 
-	params := &DigestSignerMockSignDigestParams{digest}
+	mm_params := &DigestSignerMockSignDigestParams{digest}
 
 	// Record call args
 	mmSignDigest.SignDigestMock.mutex.Lock()
-	mmSignDigest.SignDigestMock.callArgs = append(mmSignDigest.SignDigestMock.callArgs, params)
+	mmSignDigest.SignDigestMock.callArgs = append(mmSignDigest.SignDigestMock.callArgs, mm_params)
 	mmSignDigest.SignDigestMock.mutex.Unlock()
 
 	for _, e := range mmSignDigest.SignDigestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.s1
 		}
@@ -316,17 +316,17 @@ func (mmSignDigest *DigestSignerMock) SignDigest(digest Digest) (s1 Signature) {
 
 	if mmSignDigest.SignDigestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSignDigest.SignDigestMock.defaultExpectation.Counter, 1)
-		want := mmSignDigest.SignDigestMock.defaultExpectation.params
-		got := DigestSignerMockSignDigestParams{digest}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSignDigest.t.Errorf("DigestSignerMock.SignDigest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSignDigest.SignDigestMock.defaultExpectation.params
+		mm_got := DigestSignerMockSignDigestParams{digest}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSignDigest.t.Errorf("DigestSignerMock.SignDigest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSignDigest.SignDigestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSignDigest.SignDigestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSignDigest.t.Fatal("No results are set for the DigestSignerMock.SignDigest")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmSignDigest.funcSignDigest != nil {
 		return mmSignDigest.funcSignDigest(digest)

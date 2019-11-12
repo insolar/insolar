@@ -9,7 +9,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // StreamTransportMock implements transport.StreamTransport
@@ -144,11 +144,11 @@ func (mmAddress *StreamTransportMock) Address() (s1 string) {
 	if mmAddress.AddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddress.AddressMock.defaultExpectation.Counter, 1)
 
-		results := mmAddress.AddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddress.AddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddress.t.Fatal("No results are set for the StreamTransportMock.Address")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmAddress.funcAddress != nil {
 		return mmAddress.funcAddress()
@@ -322,15 +322,15 @@ func (mmDial *StreamTransportMock) Dial(ctx context.Context, address string) (r1
 		mmDial.inspectFuncDial(ctx, address)
 	}
 
-	params := &StreamTransportMockDialParams{ctx, address}
+	mm_params := &StreamTransportMockDialParams{ctx, address}
 
 	// Record call args
 	mmDial.DialMock.mutex.Lock()
-	mmDial.DialMock.callArgs = append(mmDial.DialMock.callArgs, params)
+	mmDial.DialMock.callArgs = append(mmDial.DialMock.callArgs, mm_params)
 	mmDial.DialMock.mutex.Unlock()
 
 	for _, e := range mmDial.DialMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.r1, e.results.err
 		}
@@ -338,17 +338,17 @@ func (mmDial *StreamTransportMock) Dial(ctx context.Context, address string) (r1
 
 	if mmDial.DialMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDial.DialMock.defaultExpectation.Counter, 1)
-		want := mmDial.DialMock.defaultExpectation.params
-		got := StreamTransportMockDialParams{ctx, address}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDial.t.Errorf("StreamTransportMock.Dial got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDial.DialMock.defaultExpectation.params
+		mm_got := StreamTransportMockDialParams{ctx, address}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDial.t.Errorf("StreamTransportMock.Dial got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmDial.DialMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDial.DialMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDial.t.Fatal("No results are set for the StreamTransportMock.Dial")
 		}
-		return (*results).r1, (*results).err
+		return (*mm_results).r1, (*mm_results).err
 	}
 	if mmDial.funcDial != nil {
 		return mmDial.funcDial(ctx, address)
@@ -537,15 +537,15 @@ func (mmStart *StreamTransportMock) Start(ctx context.Context) (err error) {
 		mmStart.inspectFuncStart(ctx)
 	}
 
-	params := &StreamTransportMockStartParams{ctx}
+	mm_params := &StreamTransportMockStartParams{ctx}
 
 	// Record call args
 	mmStart.StartMock.mutex.Lock()
-	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, params)
+	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, mm_params)
 	mmStart.StartMock.mutex.Unlock()
 
 	for _, e := range mmStart.StartMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -553,17 +553,17 @@ func (mmStart *StreamTransportMock) Start(ctx context.Context) (err error) {
 
 	if mmStart.StartMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStart.StartMock.defaultExpectation.Counter, 1)
-		want := mmStart.StartMock.defaultExpectation.params
-		got := StreamTransportMockStartParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStart.t.Errorf("StreamTransportMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStart.StartMock.defaultExpectation.params
+		mm_got := StreamTransportMockStartParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStart.t.Errorf("StreamTransportMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStart.StartMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStart.StartMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStart.t.Fatal("No results are set for the StreamTransportMock.Start")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmStart.funcStart != nil {
 		return mmStart.funcStart(ctx)
@@ -752,15 +752,15 @@ func (mmStop *StreamTransportMock) Stop(ctx context.Context) (err error) {
 		mmStop.inspectFuncStop(ctx)
 	}
 
-	params := &StreamTransportMockStopParams{ctx}
+	mm_params := &StreamTransportMockStopParams{ctx}
 
 	// Record call args
 	mmStop.StopMock.mutex.Lock()
-	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, params)
+	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, mm_params)
 	mmStop.StopMock.mutex.Unlock()
 
 	for _, e := range mmStop.StopMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -768,17 +768,17 @@ func (mmStop *StreamTransportMock) Stop(ctx context.Context) (err error) {
 
 	if mmStop.StopMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
-		want := mmStop.StopMock.defaultExpectation.params
-		got := StreamTransportMockStopParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStop.t.Errorf("StreamTransportMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStop.StopMock.defaultExpectation.params
+		mm_got := StreamTransportMockStopParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStop.t.Errorf("StreamTransportMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStop.StopMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStop.StopMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStop.t.Fatal("No results are set for the StreamTransportMock.Stop")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmStop.funcStop != nil {
 		return mmStop.funcStop(ctx)

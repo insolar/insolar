@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-package signer
+// +build tools
 
-import (
-	"github.com/insolar/insolar/insolar"
-)
+package tools
 
-// UnmarshalParams unmarshalls params
-func UnmarshalParams(data []byte, to ...interface{}) error {
-	return insolar.Deserialize(data, to)
-}
+import _ "golang.org/x/tools/cmd/stringer"
+import _ "github.com/gogo/protobuf/protoc-gen-gogoslick"
+import _ "github.com/golang/protobuf/protoc-gen-go"
+import _ "github.com/dgraph-io/badger/badger"
+import _ "github.com/gojuno/minimock/v3/cmd/minimock"

@@ -26,9 +26,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -59,7 +59,7 @@ type bootstrapComponents struct {
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
-	earlyComponents := component.Manager{}
+	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	checkError(ctx, err, "failed to load KeyStore: ")
@@ -108,7 +108,7 @@ func initComponents(
 	certManager insolar.CertificateManager,
 
 ) (*component.Manager, func()) {
-	cm := component.Manager{}
+	cm := component.NewManager(nil)
 
 	// Watermill.
 	var (
@@ -122,10 +122,10 @@ func initComponents(
 		subscriber = pubsub
 		publisher = pubsub
 		// Wrapped watermill Publisher for introspection.
-		publisher = internal.PublisherWrapper(ctx, &cm, cfg.Introspection, publisher)
+		publisher = internal.PublisherWrapper(ctx, cm, cfg.Introspection, publisher)
 	}
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, cm)
 	checkError(ctx, err, "failed to start Network")
 
 	metricsComp := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
@@ -224,7 +224,7 @@ func initComponents(
 	// this should be done after Init due to inject
 	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
-	return &cm, startWatermill(
+	return cm, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,

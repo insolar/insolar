@@ -2,6 +2,8 @@
 set -em
 # requires: lsof, awk, sed, grep, pgrep
 
+export GO111MODULE=on
+
 # Changeable environment variables (parameters)
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
@@ -192,7 +194,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
+    go run -mod=vendor scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 
@@ -392,14 +394,6 @@ wait_for_complete_network_state()
     done
 }
 
-# used only when backup is switched on
-generate_last_backup_info()
-{
-    echo "generate file with last backup info: $DISCOVERY_NODES_DATA/1/data/last_backup_info.json"
-    mkdir -p $DISCOVERY_NODES_DATA/1/data
-    echo "{ \"LastBackupedVersion\": 0 }" > $DISCOVERY_NODES_DATA/1/data/last_backup_info.json
-}
-
 bootstrap()
 {
     echo "bootstrap start"
@@ -413,7 +407,6 @@ bootstrap()
     generate_root_member_keys
     generate_insolard_configs
     generate_migration_addresses
-    generate_last_backup_info
 
     echo "start bootstrap ..."
     CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"

@@ -230,55 +230,6 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(NodeRecord)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.Destroy()
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSCONSTRUCTOR_NewNodeRecord(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -335,7 +286,6 @@ func Initialize() insolar.ContractWrapper {
 			"GetNodeInfo":  INSMETHOD_GetNodeInfo,
 			"GetPublicKey": INSMETHOD_GetPublicKey,
 			"GetRole":      INSMETHOD_GetRole,
-			"Destroy":      INSMETHOD_Destroy,
 		},
 		Constructors: insolar.ContractConstructors{
 			"NewNodeRecord": INSCONSTRUCTOR_NewNodeRecord,

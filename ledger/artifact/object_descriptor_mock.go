@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -171,11 +171,11 @@ func (mmChildPointer *ObjectDescriptorMock) ChildPointer() (ip1 *insolar.ID) {
 	if mmChildPointer.ChildPointerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmChildPointer.ChildPointerMock.defaultExpectation.Counter, 1)
 
-		results := mmChildPointer.ChildPointerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmChildPointer.ChildPointerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmChildPointer.t.Fatal("No results are set for the ObjectDescriptorMock.ChildPointer")
 		}
-		return (*results).ip1
+		return (*mm_results).ip1
 	}
 	if mmChildPointer.funcChildPointer != nil {
 		return mmChildPointer.funcChildPointer()
@@ -315,11 +315,11 @@ func (mmCode *ObjectDescriptorMock) Code() (rp1 *insolar.Reference, err error) {
 	if mmCode.CodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCode.CodeMock.defaultExpectation.Counter, 1)
 
-		results := mmCode.CodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCode.CodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCode.t.Fatal("No results are set for the ObjectDescriptorMock.Code")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmCode.funcCode != nil {
 		return mmCode.funcCode()
@@ -458,11 +458,11 @@ func (mmHeadRef *ObjectDescriptorMock) HeadRef() (rp1 *insolar.Reference) {
 	if mmHeadRef.HeadRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHeadRef.HeadRefMock.defaultExpectation.Counter, 1)
 
-		results := mmHeadRef.HeadRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHeadRef.HeadRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHeadRef.t.Fatal("No results are set for the ObjectDescriptorMock.HeadRef")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmHeadRef.funcHeadRef != nil {
 		return mmHeadRef.funcHeadRef()
@@ -601,11 +601,11 @@ func (mmIsPrototype *ObjectDescriptorMock) IsPrototype() (b1 bool) {
 	if mmIsPrototype.IsPrototypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsPrototype.IsPrototypeMock.defaultExpectation.Counter, 1)
 
-		results := mmIsPrototype.IsPrototypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsPrototype.IsPrototypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsPrototype.t.Fatal("No results are set for the ObjectDescriptorMock.IsPrototype")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsPrototype.funcIsPrototype != nil {
 		return mmIsPrototype.funcIsPrototype()
@@ -744,11 +744,11 @@ func (mmMemory *ObjectDescriptorMock) Memory() (ba1 []byte) {
 	if mmMemory.MemoryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMemory.MemoryMock.defaultExpectation.Counter, 1)
 
-		results := mmMemory.MemoryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMemory.MemoryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMemory.t.Fatal("No results are set for the ObjectDescriptorMock.Memory")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmMemory.funcMemory != nil {
 		return mmMemory.funcMemory()
@@ -887,11 +887,11 @@ func (mmParent *ObjectDescriptorMock) Parent() (rp1 *insolar.Reference) {
 	if mmParent.ParentMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmParent.ParentMock.defaultExpectation.Counter, 1)
 
-		results := mmParent.ParentMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmParent.ParentMock.defaultExpectation.results
+		if mm_results == nil {
 			mmParent.t.Fatal("No results are set for the ObjectDescriptorMock.Parent")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmParent.funcParent != nil {
 		return mmParent.funcParent()
@@ -1031,11 +1031,11 @@ func (mmPrototype *ObjectDescriptorMock) Prototype() (rp1 *insolar.Reference, er
 	if mmPrototype.PrototypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPrototype.PrototypeMock.defaultExpectation.Counter, 1)
 
-		results := mmPrototype.PrototypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPrototype.PrototypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPrototype.t.Fatal("No results are set for the ObjectDescriptorMock.Prototype")
 		}
-		return (*results).rp1, (*results).err
+		return (*mm_results).rp1, (*mm_results).err
 	}
 	if mmPrototype.funcPrototype != nil {
 		return mmPrototype.funcPrototype()
@@ -1174,11 +1174,11 @@ func (mmStateID *ObjectDescriptorMock) StateID() (ip1 *insolar.ID) {
 	if mmStateID.StateIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStateID.StateIDMock.defaultExpectation.Counter, 1)
 
-		results := mmStateID.StateIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStateID.StateIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStateID.t.Fatal("No results are set for the ObjectDescriptorMock.StateID")
 		}
-		return (*results).ip1
+		return (*mm_results).ip1
 	}
 	if mmStateID.funcStateID != nil {
 		return mmStateID.funcStateID()

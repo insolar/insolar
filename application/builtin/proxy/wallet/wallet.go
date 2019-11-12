@@ -162,7 +162,7 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // GetAccount is proxy generated method
-func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
+func (r *Wallet) GetAccountAsMutable(assetName string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = assetName
 
@@ -202,7 +202,7 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 }
 
 // GetAccountAsImmutable is proxy generated method
-func (r *Wallet) GetAccountAsImmutable(assetName string) (*insolar.Reference, error) {
+func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = assetName
 
@@ -242,14 +242,13 @@ func (r *Wallet) GetAccountAsImmutable(assetName string) (*insolar.Reference, er
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
-	var args [6]interface{}
-	args[0] = rootDomainRef
-	args[1] = assetName
-	args[2] = amountStr
-	args[3] = toMember
-	args[4] = fromMember
-	args[5] = request
+func (r *Wallet) TransferAsMutable(assetName string, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
+	var args [5]interface{}
+	args[0] = assetName
+	args[1] = amountStr
+	args[2] = toMember
+	args[3] = fromMember
+	args[4] = request
 
 	var argsSerialized []byte
 
@@ -287,14 +286,13 @@ func (r *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, assetName string, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
-	var args [6]interface{}
-	args[0] = rootDomainRef
-	args[1] = assetName
-	args[2] = amountStr
-	args[3] = toMember
-	args[4] = fromMember
-	args[5] = request
+func (r *Wallet) Transfer(assetName string, amountStr string, toMember *insolar.Reference, fromMember insolar.Reference, request insolar.Reference) (interface{}, error) {
+	var args [5]interface{}
+	args[0] = assetName
+	args[1] = amountStr
+	args[2] = toMember
+	args[3] = fromMember
+	args[4] = request
 
 	var argsSerialized []byte
 

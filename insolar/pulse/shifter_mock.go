@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmShift *ShifterMock) Shift(ctx context.Context, pn insolar.PulseNumber) (
 		mmShift.inspectFuncShift(ctx, pn)
 	}
 
-	params := &ShifterMockShiftParams{ctx, pn}
+	mm_params := &ShifterMockShiftParams{ctx, pn}
 
 	// Record call args
 	mmShift.ShiftMock.mutex.Lock()
-	mmShift.ShiftMock.callArgs = append(mmShift.ShiftMock.callArgs, params)
+	mmShift.ShiftMock.callArgs = append(mmShift.ShiftMock.callArgs, mm_params)
 	mmShift.ShiftMock.mutex.Unlock()
 
 	for _, e := range mmShift.ShiftMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmShift *ShifterMock) Shift(ctx context.Context, pn insolar.PulseNumber) (
 
 	if mmShift.ShiftMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmShift.ShiftMock.defaultExpectation.Counter, 1)
-		want := mmShift.ShiftMock.defaultExpectation.params
-		got := ShifterMockShiftParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmShift.t.Errorf("ShifterMock.Shift got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmShift.ShiftMock.defaultExpectation.params
+		mm_got := ShifterMockShiftParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmShift.t.Errorf("ShifterMock.Shift got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmShift.ShiftMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmShift.ShiftMock.defaultExpectation.results
+		if mm_results == nil {
 			mmShift.t.Fatal("No results are set for the ShifterMock.Shift")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmShift.funcShift != nil {
 		return mmShift.funcShift(ctx, pn)

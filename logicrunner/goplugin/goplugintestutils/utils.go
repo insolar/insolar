@@ -80,10 +80,7 @@ type ContractsBuilder struct {
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
 func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc jet.Coordinator) *ContractsBuilder {
-	tmpDir, err := ioutil.TempDir("", "test-")
-	if err != nil {
-		return nil
-	}
+	tmpDir := insolar.ContractBuildTmpDir("test-")
 
 	cb := &ContractsBuilder{
 		root:    tmpDir,
@@ -99,7 +96,6 @@ func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc j
 	return cb
 }
 
-// NotifyAboutPulse deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root) // nolint: errcheck
@@ -231,7 +227,8 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 }
 
 func (cb *ContractsBuilder) proxy(name string) error {
-	dstDir := filepath.Join(cb.root, "src/proxy", name)
+	root := insolar.RootModuleDir()
+	dstDir := filepath.Join(root, "application/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {
@@ -275,10 +272,13 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	cmd := exec.Command(
 		"go", "build",
 		"-buildmode=plugin",
+		// "-trimpath", // if enable this option, the plugin will not load
+		"-mod=vendor",
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
 	)
 	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
+	cmd.Env = append(cmd.Env, "GO111MODULE=on")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't build contract: "+string(out))

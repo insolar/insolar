@@ -26,7 +26,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
@@ -75,9 +74,7 @@ func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 		launchnet.MigrationDaemons[countThreeActiveDaemon-1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "migration is done for this deposit Test_TxHash")
 }
 
@@ -100,9 +97,7 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 		&launchnet.MigrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "the member is not migration daemon")
 }
 
@@ -115,9 +110,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "0", "ethTxHash": "TxHash", "migrationAddress": member.MigrationAddress})
 
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "amount must be greater than zero")
 	require.Nil(t, result)
 }
@@ -130,9 +123,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": member.MigrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'amount' param")
 	require.Nil(t, result)
 }
@@ -142,9 +133,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 
 	result, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, launchnet.MigrationDaemons[0],
 		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": member.MigrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
 
@@ -179,9 +168,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 		launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "confirm from this migration daemon already exists")
 }
 
@@ -200,9 +187,7 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 		launchnet.MigrationDaemons[2],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to check amount in confirmation from migration daemon")
 }
 
@@ -228,7 +213,8 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 				"deposit.migration",
 				map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
 			if err != nil {
-				fmt.Println(err.(*requester.Error).Data)
+				requestErrorData := checkConvertRequesterError(t, err).Data
+				fmt.Println(requestErrorData)
 			} else {
 				fmt.Println(res)
 			}

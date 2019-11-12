@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -41,8 +41,6 @@ import (
 )
 
 func TestRPCMethods_New(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	m := NewRPCMethods(
 		artifacts.NewClientMock(t),
 		artifacts.NewDescriptorsCacheMock(t),

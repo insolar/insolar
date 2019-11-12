@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -180,11 +180,11 @@ func (mmGetDiscoveryNodes *CertificateMock) GetDiscoveryNodes() (da1 []mm_insola
 	if mmGetDiscoveryNodes.GetDiscoveryNodesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDiscoveryNodes.GetDiscoveryNodesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDiscoveryNodes.GetDiscoveryNodesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDiscoveryNodes.GetDiscoveryNodesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDiscoveryNodes.t.Fatal("No results are set for the CertificateMock.GetDiscoveryNodes")
 		}
-		return (*results).da1
+		return (*mm_results).da1
 	}
 	if mmGetDiscoveryNodes.funcGetDiscoveryNodes != nil {
 		return mmGetDiscoveryNodes.funcGetDiscoveryNodes()
@@ -323,11 +323,11 @@ func (mmGetDiscoverySigns *CertificateMock) GetDiscoverySigns() (m1 map[mm_insol
 	if mmGetDiscoverySigns.GetDiscoverySignsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDiscoverySigns.GetDiscoverySignsMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDiscoverySigns.GetDiscoverySignsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDiscoverySigns.GetDiscoverySignsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDiscoverySigns.t.Fatal("No results are set for the CertificateMock.GetDiscoverySigns")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetDiscoverySigns.funcGetDiscoverySigns != nil {
 		return mmGetDiscoverySigns.funcGetDiscoverySigns()
@@ -466,11 +466,11 @@ func (mmGetMajorityRule *CertificateMock) GetMajorityRule() (i1 int) {
 	if mmGetMajorityRule.GetMajorityRuleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMajorityRule.GetMajorityRuleMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMajorityRule.GetMajorityRuleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMajorityRule.GetMajorityRuleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMajorityRule.t.Fatal("No results are set for the CertificateMock.GetMajorityRule")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmGetMajorityRule.funcGetMajorityRule != nil {
 		return mmGetMajorityRule.funcGetMajorityRule()
@@ -611,11 +611,11 @@ func (mmGetMinRoles *CertificateMock) GetMinRoles() (virtual uint, heavyMaterial
 	if mmGetMinRoles.GetMinRolesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMinRoles.GetMinRolesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMinRoles.GetMinRolesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMinRoles.GetMinRolesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMinRoles.t.Fatal("No results are set for the CertificateMock.GetMinRoles")
 		}
-		return (*results).virtual, (*results).heavyMaterial, (*results).lightMaterial
+		return (*mm_results).virtual, (*mm_results).heavyMaterial, (*mm_results).lightMaterial
 	}
 	if mmGetMinRoles.funcGetMinRoles != nil {
 		return mmGetMinRoles.funcGetMinRoles()
@@ -754,11 +754,11 @@ func (mmGetNodeRef *CertificateMock) GetNodeRef() (rp1 *mm_insolar.Reference) {
 	if mmGetNodeRef.GetNodeRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNodeRef.GetNodeRefMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNodeRef.GetNodeRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNodeRef.GetNodeRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNodeRef.t.Fatal("No results are set for the CertificateMock.GetNodeRef")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmGetNodeRef.funcGetNodeRef != nil {
 		return mmGetNodeRef.funcGetNodeRef()
@@ -897,11 +897,11 @@ func (mmGetPublicKey *CertificateMock) GetPublicKey() (p1 crypto.PublicKey) {
 	if mmGetPublicKey.GetPublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKey.GetPublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKey.t.Fatal("No results are set for the CertificateMock.GetPublicKey")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPublicKey.funcGetPublicKey != nil {
 		return mmGetPublicKey.funcGetPublicKey()
@@ -1040,11 +1040,11 @@ func (mmGetRole *CertificateMock) GetRole() (s1 mm_insolar.StaticRole) {
 	if mmGetRole.GetRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRole.GetRoleMock.defaultExpectation.Counter, 1)
 
-		results := mmGetRole.GetRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetRole.GetRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetRole.t.Fatal("No results are set for the CertificateMock.GetRole")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetRole.funcGetRole != nil {
 		return mmGetRole.funcGetRole()
@@ -1183,11 +1183,11 @@ func (mmGetRootDomainReference *CertificateMock) GetRootDomainReference() (rp1 *
 	if mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation.Counter, 1)
 
-		results := mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetRootDomainReference.t.Fatal("No results are set for the CertificateMock.GetRootDomainReference")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmGetRootDomainReference.funcGetRootDomainReference != nil {
 		return mmGetRootDomainReference.funcGetRootDomainReference()
@@ -1326,11 +1326,11 @@ func (mmSerializeNodePart *CertificateMock) SerializeNodePart() (ba1 []byte) {
 	if mmSerializeNodePart.SerializeNodePartMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSerializeNodePart.SerializeNodePartMock.defaultExpectation.Counter, 1)
 
-		results := mmSerializeNodePart.SerializeNodePartMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSerializeNodePart.SerializeNodePartMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSerializeNodePart.t.Fatal("No results are set for the CertificateMock.SerializeNodePart")
 		}
-		return (*results).ba1
+		return (*mm_results).ba1
 	}
 	if mmSerializeNodePart.funcSerializeNodePart != nil {
 		return mmSerializeNodePart.funcSerializeNodePart()

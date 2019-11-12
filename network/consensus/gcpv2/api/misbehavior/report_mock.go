@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
@@ -148,11 +148,11 @@ func (mmCaptureMark *ReportMock) CaptureMark() (p1 interface{}) {
 	if mmCaptureMark.CaptureMarkMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCaptureMark.CaptureMarkMock.defaultExpectation.Counter, 1)
 
-		results := mmCaptureMark.CaptureMarkMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCaptureMark.CaptureMarkMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCaptureMark.t.Fatal("No results are set for the ReportMock.CaptureMark")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmCaptureMark.funcCaptureMark != nil {
 		return mmCaptureMark.funcCaptureMark()
@@ -291,11 +291,11 @@ func (mmDetails *ReportMock) Details() (pa1 []interface{}) {
 	if mmDetails.DetailsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDetails.DetailsMock.defaultExpectation.Counter, 1)
 
-		results := mmDetails.DetailsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDetails.DetailsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDetails.t.Fatal("No results are set for the ReportMock.Details")
 		}
-		return (*results).pa1
+		return (*mm_results).pa1
 	}
 	if mmDetails.funcDetails != nil {
 		return mmDetails.funcDetails()
@@ -434,11 +434,11 @@ func (mmMisbehaviorType *ReportMock) MisbehaviorType() (t1 Type) {
 	if mmMisbehaviorType.MisbehaviorTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMisbehaviorType.MisbehaviorTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmMisbehaviorType.MisbehaviorTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMisbehaviorType.MisbehaviorTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMisbehaviorType.t.Fatal("No results are set for the ReportMock.MisbehaviorType")
 		}
-		return (*results).t1
+		return (*mm_results).t1
 	}
 	if mmMisbehaviorType.funcMisbehaviorType != nil {
 		return mmMisbehaviorType.funcMisbehaviorType()
@@ -577,11 +577,11 @@ func (mmViolatorHost *ReportMock) ViolatorHost() (i1 endpoints.InboundConnection
 	if mmViolatorHost.ViolatorHostMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmViolatorHost.ViolatorHostMock.defaultExpectation.Counter, 1)
 
-		results := mmViolatorHost.ViolatorHostMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmViolatorHost.ViolatorHostMock.defaultExpectation.results
+		if mm_results == nil {
 			mmViolatorHost.t.Fatal("No results are set for the ReportMock.ViolatorHost")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmViolatorHost.funcViolatorHost != nil {
 		return mmViolatorHost.funcViolatorHost()
@@ -720,11 +720,11 @@ func (mmViolatorNode *ReportMock) ViolatorNode() (b1 profiles.BaseNode) {
 	if mmViolatorNode.ViolatorNodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmViolatorNode.ViolatorNodeMock.defaultExpectation.Counter, 1)
 
-		results := mmViolatorNode.ViolatorNodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmViolatorNode.ViolatorNodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmViolatorNode.t.Fatal("No results are set for the ReportMock.ViolatorNode")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmViolatorNode.funcViolatorNode != nil {
 		return mmViolatorNode.funcViolatorNode()

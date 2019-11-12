@@ -21,7 +21,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/builtin/proxy/helloworld"
 	"github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -31,7 +30,6 @@ import (
 type RootDomain struct {
 	foundation.BaseContract
 	PublicKeyShards []insolar.Reference
-	NodeDomain      insolar.Reference
 }
 
 // GetMemberByPublicKey gets member reference by public key.
@@ -55,14 +53,6 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 	return ref, nil
 }
 
-// GetNodeDomainRef returns reference of NodeDomain instance
-// ins:immutable
-func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
-	return rd.NodeDomain, nil
-}
-
-var INSATTR_Info_API = true
-
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
 // ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
@@ -77,14 +67,4 @@ func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef ins
 		return errors.Wrap(err, "failed to set reference in public key shard")
 	}
 	return nil
-}
-
-func (rd *RootDomain) CreateHelloWorld() (string, error) {
-	helloWorldHolder := helloworld.New()
-	m, err := helloWorldHolder.AsChild(rd.GetReference())
-	if err != nil {
-		return "", fmt.Errorf("failed to save as child: %s", err.Error())
-	}
-
-	return m.GetReference().String(), nil
 }

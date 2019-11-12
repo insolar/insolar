@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 )
 
@@ -124,15 +124,15 @@ func (mmAddReport *MisbehaviorRegistryMock) AddReport(report misbehavior.Report)
 		mmAddReport.inspectFuncAddReport(report)
 	}
 
-	params := &MisbehaviorRegistryMockAddReportParams{report}
+	mm_params := &MisbehaviorRegistryMockAddReportParams{report}
 
 	// Record call args
 	mmAddReport.AddReportMock.mutex.Lock()
-	mmAddReport.AddReportMock.callArgs = append(mmAddReport.AddReportMock.callArgs, params)
+	mmAddReport.AddReportMock.callArgs = append(mmAddReport.AddReportMock.callArgs, mm_params)
 	mmAddReport.AddReportMock.mutex.Unlock()
 
 	for _, e := range mmAddReport.AddReportMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -140,10 +140,10 @@ func (mmAddReport *MisbehaviorRegistryMock) AddReport(report misbehavior.Report)
 
 	if mmAddReport.AddReportMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddReport.AddReportMock.defaultExpectation.Counter, 1)
-		want := mmAddReport.AddReportMock.defaultExpectation.params
-		got := MisbehaviorRegistryMockAddReportParams{report}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddReport.t.Errorf("MisbehaviorRegistryMock.AddReport got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAddReport.AddReportMock.defaultExpectation.params
+		mm_got := MisbehaviorRegistryMockAddReportParams{report}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAddReport.t.Errorf("MisbehaviorRegistryMock.AddReport got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

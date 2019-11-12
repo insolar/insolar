@@ -70,7 +70,7 @@ func (s *Server) Serve() {
 	nodeRole := certManager.GetCertificate().GetRole().String()
 	nodeRef := certManager.GetCertificate().GetNodeRef().String()
 
-	traceID := "main_" + utils.RandTraceID()
+	traceID := utils.RandTraceID() + "_main"
 	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
 	log.InitTicker()
 

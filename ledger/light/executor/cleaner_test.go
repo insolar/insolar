@@ -21,7 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -31,7 +33,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCleaner_cleanPulse(t *testing.T) {
@@ -104,7 +105,7 @@ func TestCleaner_clean(t *testing.T) {
 	defer ctrl.Finish()
 
 	jm := jet.NewCleanerMock(ctrl)
-	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	jm.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	nm := node.NewModifierMock(ctrl)
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
@@ -159,7 +160,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	ctrl := minimock.NewController(t)
 
 	jm := jet.NewCleanerMock(ctrl)
-	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
+	jm.DeleteForPNMock.Set(DeleteForPNMock(t, calculatedPulse.PulseNumber))
 
 	nm := node.NewModifierMock(ctrl)
 	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)

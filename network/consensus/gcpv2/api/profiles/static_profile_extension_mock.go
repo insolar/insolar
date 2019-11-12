@@ -7,7 +7,7 @@ import (
 	"time"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -176,11 +176,11 @@ func (mmGetExtraEndpoints *StaticProfileExtensionMock) GetExtraEndpoints() (oa1 
 	if mmGetExtraEndpoints.GetExtraEndpointsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExtraEndpoints.GetExtraEndpointsMock.defaultExpectation.Counter, 1)
 
-		results := mmGetExtraEndpoints.GetExtraEndpointsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExtraEndpoints.GetExtraEndpointsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExtraEndpoints.t.Fatal("No results are set for the StaticProfileExtensionMock.GetExtraEndpoints")
 		}
-		return (*results).oa1
+		return (*mm_results).oa1
 	}
 	if mmGetExtraEndpoints.funcGetExtraEndpoints != nil {
 		return mmGetExtraEndpoints.funcGetExtraEndpoints()
@@ -319,11 +319,11 @@ func (mmGetIntroducedNodeID *StaticProfileExtensionMock) GetIntroducedNodeID() (
 	if mmGetIntroducedNodeID.GetIntroducedNodeIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIntroducedNodeID.GetIntroducedNodeIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIntroducedNodeID.GetIntroducedNodeIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIntroducedNodeID.GetIntroducedNodeIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIntroducedNodeID.t.Fatal("No results are set for the StaticProfileExtensionMock.GetIntroducedNodeID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetIntroducedNodeID.funcGetIntroducedNodeID != nil {
 		return mmGetIntroducedNodeID.funcGetIntroducedNodeID()
@@ -462,11 +462,11 @@ func (mmGetIssuedAtPulse *StaticProfileExtensionMock) GetIssuedAtPulse() (n1 pul
 	if mmGetIssuedAtPulse.GetIssuedAtPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIssuedAtPulse.GetIssuedAtPulseMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIssuedAtPulse.GetIssuedAtPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIssuedAtPulse.GetIssuedAtPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIssuedAtPulse.t.Fatal("No results are set for the StaticProfileExtensionMock.GetIssuedAtPulse")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetIssuedAtPulse.funcGetIssuedAtPulse != nil {
 		return mmGetIssuedAtPulse.funcGetIssuedAtPulse()
@@ -605,11 +605,11 @@ func (mmGetIssuedAtTime *StaticProfileExtensionMock) GetIssuedAtTime() (t1 time.
 	if mmGetIssuedAtTime.GetIssuedAtTimeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIssuedAtTime.GetIssuedAtTimeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIssuedAtTime.GetIssuedAtTimeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIssuedAtTime.GetIssuedAtTimeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIssuedAtTime.t.Fatal("No results are set for the StaticProfileExtensionMock.GetIssuedAtTime")
 		}
-		return (*results).t1
+		return (*mm_results).t1
 	}
 	if mmGetIssuedAtTime.funcGetIssuedAtTime != nil {
 		return mmGetIssuedAtTime.funcGetIssuedAtTime()
@@ -748,11 +748,11 @@ func (mmGetIssuerID *StaticProfileExtensionMock) GetIssuerID() (s1 insolar.Short
 	if mmGetIssuerID.GetIssuerIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIssuerID.GetIssuerIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIssuerID.GetIssuerIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIssuerID.GetIssuerIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIssuerID.t.Fatal("No results are set for the StaticProfileExtensionMock.GetIssuerID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetIssuerID.funcGetIssuerID != nil {
 		return mmGetIssuerID.funcGetIssuerID()
@@ -891,11 +891,11 @@ func (mmGetIssuerSignature *StaticProfileExtensionMock) GetIssuerSignature() (s1
 	if mmGetIssuerSignature.GetIssuerSignatureMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIssuerSignature.GetIssuerSignatureMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIssuerSignature.GetIssuerSignatureMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIssuerSignature.GetIssuerSignatureMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIssuerSignature.t.Fatal("No results are set for the StaticProfileExtensionMock.GetIssuerSignature")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetIssuerSignature.funcGetIssuerSignature != nil {
 		return mmGetIssuerSignature.funcGetIssuerSignature()
@@ -1034,11 +1034,11 @@ func (mmGetPowerLevels *StaticProfileExtensionMock) GetPowerLevels() (p1 member.
 	if mmGetPowerLevels.GetPowerLevelsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPowerLevels.GetPowerLevelsMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPowerLevels.GetPowerLevelsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPowerLevels.GetPowerLevelsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPowerLevels.t.Fatal("No results are set for the StaticProfileExtensionMock.GetPowerLevels")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPowerLevels.funcGetPowerLevels != nil {
 		return mmGetPowerLevels.funcGetPowerLevels()
@@ -1177,11 +1177,11 @@ func (mmGetReference *StaticProfileExtensionMock) GetReference() (r1 insolar.Ref
 	if mmGetReference.GetReferenceMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetReference.GetReferenceMock.defaultExpectation.Counter, 1)
 
-		results := mmGetReference.GetReferenceMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetReference.GetReferenceMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetReference.t.Fatal("No results are set for the StaticProfileExtensionMock.GetReference")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmGetReference.funcGetReference != nil {
 		return mmGetReference.funcGetReference()

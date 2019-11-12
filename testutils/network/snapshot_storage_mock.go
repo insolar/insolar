@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
 )
@@ -161,15 +161,15 @@ func (mmAppend *SnapshotStorageMock) Append(pulse insolar.PulseNumber, snapshot 
 		mmAppend.inspectFuncAppend(pulse, snapshot)
 	}
 
-	params := &SnapshotStorageMockAppendParams{pulse, snapshot}
+	mm_params := &SnapshotStorageMockAppendParams{pulse, snapshot}
 
 	// Record call args
 	mmAppend.AppendMock.mutex.Lock()
-	mmAppend.AppendMock.callArgs = append(mmAppend.AppendMock.callArgs, params)
+	mmAppend.AppendMock.callArgs = append(mmAppend.AppendMock.callArgs, mm_params)
 	mmAppend.AppendMock.mutex.Unlock()
 
 	for _, e := range mmAppend.AppendMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -177,17 +177,17 @@ func (mmAppend *SnapshotStorageMock) Append(pulse insolar.PulseNumber, snapshot 
 
 	if mmAppend.AppendMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAppend.AppendMock.defaultExpectation.Counter, 1)
-		want := mmAppend.AppendMock.defaultExpectation.params
-		got := SnapshotStorageMockAppendParams{pulse, snapshot}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAppend.t.Errorf("SnapshotStorageMock.Append got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAppend.AppendMock.defaultExpectation.params
+		mm_got := SnapshotStorageMockAppendParams{pulse, snapshot}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAppend.t.Errorf("SnapshotStorageMock.Append got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAppend.AppendMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAppend.AppendMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAppend.t.Fatal("No results are set for the SnapshotStorageMock.Append")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmAppend.funcAppend != nil {
 		return mmAppend.funcAppend(pulse, snapshot)
@@ -377,15 +377,15 @@ func (mmForPulseNumber *SnapshotStorageMock) ForPulseNumber(p1 insolar.PulseNumb
 		mmForPulseNumber.inspectFuncForPulseNumber(p1)
 	}
 
-	params := &SnapshotStorageMockForPulseNumberParams{p1}
+	mm_params := &SnapshotStorageMockForPulseNumberParams{p1}
 
 	// Record call args
 	mmForPulseNumber.ForPulseNumberMock.mutex.Lock()
-	mmForPulseNumber.ForPulseNumberMock.callArgs = append(mmForPulseNumber.ForPulseNumberMock.callArgs, params)
+	mmForPulseNumber.ForPulseNumberMock.callArgs = append(mmForPulseNumber.ForPulseNumberMock.callArgs, mm_params)
 	mmForPulseNumber.ForPulseNumberMock.mutex.Unlock()
 
 	for _, e := range mmForPulseNumber.ForPulseNumberMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.sp1, e.results.err
 		}
@@ -393,17 +393,17 @@ func (mmForPulseNumber *SnapshotStorageMock) ForPulseNumber(p1 insolar.PulseNumb
 
 	if mmForPulseNumber.ForPulseNumberMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForPulseNumber.ForPulseNumberMock.defaultExpectation.Counter, 1)
-		want := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.params
-		got := SnapshotStorageMockForPulseNumberParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForPulseNumber.t.Errorf("SnapshotStorageMock.ForPulseNumber got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.params
+		mm_got := SnapshotStorageMockForPulseNumberParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForPulseNumber.t.Errorf("SnapshotStorageMock.ForPulseNumber got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForPulseNumber.ForPulseNumberMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForPulseNumber.t.Fatal("No results are set for the SnapshotStorageMock.ForPulseNumber")
 		}
-		return (*results).sp1, (*results).err
+		return (*mm_results).sp1, (*mm_results).err
 	}
 	if mmForPulseNumber.funcForPulseNumber != nil {
 		return mmForPulseNumber.funcForPulseNumber(p1)

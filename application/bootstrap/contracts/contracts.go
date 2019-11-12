@@ -48,7 +48,6 @@ func RootDomain(pkShardCount int) application.GenesisContractState {
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			PublicKeyShards: genesisrefs.ContractPublicKeyShards(pkShardCount),
-			NodeDomain:      genesisrefs.ContractNodeDomain,
 		}),
 	}
 }
@@ -64,7 +63,7 @@ func NodeDomain() application.GenesisContractState {
 }
 
 func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) application.GenesisContractState {
-	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", *insolar.NewEmptyReference())
+	m, err := member.New(publicKey, "", *insolar.NewEmptyReference())
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}

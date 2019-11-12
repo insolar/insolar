@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -136,11 +136,11 @@ func (mmGetPublicKey *CryptographyServiceMock) GetPublicKey() (p1 crypto.PublicK
 	if mmGetPublicKey.GetPublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKey.GetPublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKey.GetPublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKey.t.Fatal("No results are set for the CryptographyServiceMock.GetPublicKey")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmGetPublicKey.funcGetPublicKey != nil {
 		return mmGetPublicKey.funcGetPublicKey()
@@ -313,15 +313,15 @@ func (mmSign *CryptographyServiceMock) Sign(ba1 []byte) (sp1 *mm_insolar.Signatu
 		mmSign.inspectFuncSign(ba1)
 	}
 
-	params := &CryptographyServiceMockSignParams{ba1}
+	mm_params := &CryptographyServiceMockSignParams{ba1}
 
 	// Record call args
 	mmSign.SignMock.mutex.Lock()
-	mmSign.SignMock.callArgs = append(mmSign.SignMock.callArgs, params)
+	mmSign.SignMock.callArgs = append(mmSign.SignMock.callArgs, mm_params)
 	mmSign.SignMock.mutex.Unlock()
 
 	for _, e := range mmSign.SignMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.sp1, e.results.err
 		}
@@ -329,17 +329,17 @@ func (mmSign *CryptographyServiceMock) Sign(ba1 []byte) (sp1 *mm_insolar.Signatu
 
 	if mmSign.SignMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSign.SignMock.defaultExpectation.Counter, 1)
-		want := mmSign.SignMock.defaultExpectation.params
-		got := CryptographyServiceMockSignParams{ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSign.t.Errorf("CryptographyServiceMock.Sign got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSign.SignMock.defaultExpectation.params
+		mm_got := CryptographyServiceMockSignParams{ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSign.t.Errorf("CryptographyServiceMock.Sign got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSign.SignMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSign.SignMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSign.t.Fatal("No results are set for the CryptographyServiceMock.Sign")
 		}
-		return (*results).sp1, (*results).err
+		return (*mm_results).sp1, (*mm_results).err
 	}
 	if mmSign.funcSign != nil {
 		return mmSign.funcSign(ba1)
@@ -530,15 +530,15 @@ func (mmVerify *CryptographyServiceMock) Verify(p1 crypto.PublicKey, s1 mm_insol
 		mmVerify.inspectFuncVerify(p1, s1, ba1)
 	}
 
-	params := &CryptographyServiceMockVerifyParams{p1, s1, ba1}
+	mm_params := &CryptographyServiceMockVerifyParams{p1, s1, ba1}
 
 	// Record call args
 	mmVerify.VerifyMock.mutex.Lock()
-	mmVerify.VerifyMock.callArgs = append(mmVerify.VerifyMock.callArgs, params)
+	mmVerify.VerifyMock.callArgs = append(mmVerify.VerifyMock.callArgs, mm_params)
 	mmVerify.VerifyMock.mutex.Unlock()
 
 	for _, e := range mmVerify.VerifyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -546,17 +546,17 @@ func (mmVerify *CryptographyServiceMock) Verify(p1 crypto.PublicKey, s1 mm_insol
 
 	if mmVerify.VerifyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmVerify.VerifyMock.defaultExpectation.Counter, 1)
-		want := mmVerify.VerifyMock.defaultExpectation.params
-		got := CryptographyServiceMockVerifyParams{p1, s1, ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmVerify.t.Errorf("CryptographyServiceMock.Verify got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmVerify.VerifyMock.defaultExpectation.params
+		mm_got := CryptographyServiceMockVerifyParams{p1, s1, ba1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmVerify.t.Errorf("CryptographyServiceMock.Verify got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmVerify.VerifyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmVerify.VerifyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmVerify.t.Fatal("No results are set for the CryptographyServiceMock.Verify")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmVerify.funcVerify != nil {
 		return mmVerify.funcVerify(p1, s1, ba1)

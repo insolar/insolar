@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -146,15 +146,15 @@ func (mmSendAbandonedOutgoingRequest *OutgoingRequestSenderMock) SendAbandonedOu
 		mmSendAbandonedOutgoingRequest.inspectFuncSendAbandonedOutgoingRequest(ctx, reqRef, req)
 	}
 
-	params := &OutgoingRequestSenderMockSendAbandonedOutgoingRequestParams{ctx, reqRef, req}
+	mm_params := &OutgoingRequestSenderMockSendAbandonedOutgoingRequestParams{ctx, reqRef, req}
 
 	// Record call args
 	mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.mutex.Lock()
-	mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.callArgs = append(mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.callArgs, params)
+	mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.callArgs = append(mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.callArgs, mm_params)
 	mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.mutex.Unlock()
 
 	for _, e := range mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -162,10 +162,10 @@ func (mmSendAbandonedOutgoingRequest *OutgoingRequestSenderMock) SendAbandonedOu
 
 	if mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.defaultExpectation.Counter, 1)
-		want := mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.defaultExpectation.params
-		got := OutgoingRequestSenderMockSendAbandonedOutgoingRequestParams{ctx, reqRef, req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendAbandonedOutgoingRequest.t.Errorf("OutgoingRequestSenderMock.SendAbandonedOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendAbandonedOutgoingRequest.SendAbandonedOutgoingRequestMock.defaultExpectation.params
+		mm_got := OutgoingRequestSenderMockSendAbandonedOutgoingRequestParams{ctx, reqRef, req}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendAbandonedOutgoingRequest.t.Errorf("OutgoingRequestSenderMock.SendAbandonedOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -363,15 +363,15 @@ func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx 
 		mmSendOutgoingRequest.inspectFuncSendOutgoingRequest(ctx, reqRef, req)
 	}
 
-	params := &OutgoingRequestSenderMockSendOutgoingRequestParams{ctx, reqRef, req}
+	mm_params := &OutgoingRequestSenderMockSendOutgoingRequestParams{ctx, reqRef, req}
 
 	// Record call args
 	mmSendOutgoingRequest.SendOutgoingRequestMock.mutex.Lock()
-	mmSendOutgoingRequest.SendOutgoingRequestMock.callArgs = append(mmSendOutgoingRequest.SendOutgoingRequestMock.callArgs, params)
+	mmSendOutgoingRequest.SendOutgoingRequestMock.callArgs = append(mmSendOutgoingRequest.SendOutgoingRequestMock.callArgs, mm_params)
 	mmSendOutgoingRequest.SendOutgoingRequestMock.mutex.Unlock()
 
 	for _, e := range mmSendOutgoingRequest.SendOutgoingRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.a1, e.results.ip1, e.results.err
 		}
@@ -379,17 +379,17 @@ func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx 
 
 	if mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation.Counter, 1)
-		want := mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation.params
-		got := OutgoingRequestSenderMockSendOutgoingRequestParams{ctx, reqRef, req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendOutgoingRequest.t.Errorf("OutgoingRequestSenderMock.SendOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation.params
+		mm_got := OutgoingRequestSenderMockSendOutgoingRequestParams{ctx, reqRef, req}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendOutgoingRequest.t.Errorf("OutgoingRequestSenderMock.SendOutgoingRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendOutgoingRequest.SendOutgoingRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendOutgoingRequest.t.Fatal("No results are set for the OutgoingRequestSenderMock.SendOutgoingRequest")
 		}
-		return (*results).a1, (*results).ip1, (*results).err
+		return (*mm_results).a1, (*mm_results).ip1, (*mm_results).err
 	}
 	if mmSendOutgoingRequest.funcSendOutgoingRequest != nil {
 		return mmSendOutgoingRequest.funcSendOutgoingRequest(ctx, reqRef, req)
@@ -552,15 +552,15 @@ func (mmStop *OutgoingRequestSenderMock) Stop(ctx context.Context) {
 		mmStop.inspectFuncStop(ctx)
 	}
 
-	params := &OutgoingRequestSenderMockStopParams{ctx}
+	mm_params := &OutgoingRequestSenderMockStopParams{ctx}
 
 	// Record call args
 	mmStop.StopMock.mutex.Lock()
-	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, params)
+	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, mm_params)
 	mmStop.StopMock.mutex.Unlock()
 
 	for _, e := range mmStop.StopMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -568,10 +568,10 @@ func (mmStop *OutgoingRequestSenderMock) Stop(ctx context.Context) {
 
 	if mmStop.StopMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
-		want := mmStop.StopMock.defaultExpectation.params
-		got := OutgoingRequestSenderMockStopParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStop.t.Errorf("OutgoingRequestSenderMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStop.StopMock.defaultExpectation.params
+		mm_got := OutgoingRequestSenderMockStopParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStop.t.Errorf("OutgoingRequestSenderMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

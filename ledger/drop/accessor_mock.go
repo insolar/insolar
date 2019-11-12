@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -154,15 +154,15 @@ func (mmForPulse *AccessorMock) ForPulse(ctx context.Context, jetID insolar.JetI
 		mmForPulse.inspectFuncForPulse(ctx, jetID, pulse)
 	}
 
-	params := &AccessorMockForPulseParams{ctx, jetID, pulse}
+	mm_params := &AccessorMockForPulseParams{ctx, jetID, pulse}
 
 	// Record call args
 	mmForPulse.ForPulseMock.mutex.Lock()
-	mmForPulse.ForPulseMock.callArgs = append(mmForPulse.ForPulseMock.callArgs, params)
+	mmForPulse.ForPulseMock.callArgs = append(mmForPulse.ForPulseMock.callArgs, mm_params)
 	mmForPulse.ForPulseMock.mutex.Unlock()
 
 	for _, e := range mmForPulse.ForPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.d1, e.results.err
 		}
@@ -170,17 +170,17 @@ func (mmForPulse *AccessorMock) ForPulse(ctx context.Context, jetID insolar.JetI
 
 	if mmForPulse.ForPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForPulse.ForPulseMock.defaultExpectation.Counter, 1)
-		want := mmForPulse.ForPulseMock.defaultExpectation.params
-		got := AccessorMockForPulseParams{ctx, jetID, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForPulse.t.Errorf("AccessorMock.ForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForPulse.ForPulseMock.defaultExpectation.params
+		mm_got := AccessorMockForPulseParams{ctx, jetID, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForPulse.t.Errorf("AccessorMock.ForPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForPulse.ForPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForPulse.ForPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForPulse.t.Fatal("No results are set for the AccessorMock.ForPulse")
 		}
-		return (*results).d1, (*results).err
+		return (*mm_results).d1, (*mm_results).err
 	}
 	if mmForPulse.funcForPulse != nil {
 		return mmForPulse.funcForPulse(ctx, jetID, pulse)

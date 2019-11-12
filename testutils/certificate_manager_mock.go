@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -115,11 +115,11 @@ func (mmGetCertificate *CertificateManagerMock) GetCertificate() (c1 mm_insolar.
 	if mmGetCertificate.GetCertificateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCertificate.GetCertificateMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCertificate.GetCertificateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCertificate.GetCertificateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCertificate.t.Fatal("No results are set for the CertificateManagerMock.GetCertificate")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetCertificate.funcGetCertificate != nil {
 		return mmGetCertificate.funcGetCertificate()

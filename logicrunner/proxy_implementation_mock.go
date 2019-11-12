@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -182,15 +182,15 @@ func (mmDeactivateObject *ProxyImplementationMock) DeactivateObject(ctx context.
 		mmDeactivateObject.inspectFuncDeactivateObject(ctx, tp1, u1, up1)
 	}
 
-	params := &ProxyImplementationMockDeactivateObjectParams{ctx, tp1, u1, up1}
+	mm_params := &ProxyImplementationMockDeactivateObjectParams{ctx, tp1, u1, up1}
 
 	// Record call args
 	mmDeactivateObject.DeactivateObjectMock.mutex.Lock()
-	mmDeactivateObject.DeactivateObjectMock.callArgs = append(mmDeactivateObject.DeactivateObjectMock.callArgs, params)
+	mmDeactivateObject.DeactivateObjectMock.callArgs = append(mmDeactivateObject.DeactivateObjectMock.callArgs, mm_params)
 	mmDeactivateObject.DeactivateObjectMock.mutex.Unlock()
 
 	for _, e := range mmDeactivateObject.DeactivateObjectMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -198,17 +198,17 @@ func (mmDeactivateObject *ProxyImplementationMock) DeactivateObject(ctx context.
 
 	if mmDeactivateObject.DeactivateObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDeactivateObject.DeactivateObjectMock.defaultExpectation.Counter, 1)
-		want := mmDeactivateObject.DeactivateObjectMock.defaultExpectation.params
-		got := ProxyImplementationMockDeactivateObjectParams{ctx, tp1, u1, up1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDeactivateObject.t.Errorf("ProxyImplementationMock.DeactivateObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDeactivateObject.DeactivateObjectMock.defaultExpectation.params
+		mm_got := ProxyImplementationMockDeactivateObjectParams{ctx, tp1, u1, up1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeactivateObject.t.Errorf("ProxyImplementationMock.DeactivateObject got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmDeactivateObject.DeactivateObjectMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDeactivateObject.DeactivateObjectMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDeactivateObject.t.Fatal("No results are set for the ProxyImplementationMock.DeactivateObject")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmDeactivateObject.funcDeactivateObject != nil {
 		return mmDeactivateObject.funcDeactivateObject(ctx, tp1, u1, up1)
@@ -400,15 +400,15 @@ func (mmGetCode *ProxyImplementationMock) GetCode(ctx context.Context, tp1 *comm
 		mmGetCode.inspectFuncGetCode(ctx, tp1, u1, up1)
 	}
 
-	params := &ProxyImplementationMockGetCodeParams{ctx, tp1, u1, up1}
+	mm_params := &ProxyImplementationMockGetCodeParams{ctx, tp1, u1, up1}
 
 	// Record call args
 	mmGetCode.GetCodeMock.mutex.Lock()
-	mmGetCode.GetCodeMock.callArgs = append(mmGetCode.GetCodeMock.callArgs, params)
+	mmGetCode.GetCodeMock.callArgs = append(mmGetCode.GetCodeMock.callArgs, mm_params)
 	mmGetCode.GetCodeMock.mutex.Unlock()
 
 	for _, e := range mmGetCode.GetCodeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -416,17 +416,17 @@ func (mmGetCode *ProxyImplementationMock) GetCode(ctx context.Context, tp1 *comm
 
 	if mmGetCode.GetCodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCode.GetCodeMock.defaultExpectation.Counter, 1)
-		want := mmGetCode.GetCodeMock.defaultExpectation.params
-		got := ProxyImplementationMockGetCodeParams{ctx, tp1, u1, up1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetCode.t.Errorf("ProxyImplementationMock.GetCode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetCode.GetCodeMock.defaultExpectation.params
+		mm_got := ProxyImplementationMockGetCodeParams{ctx, tp1, u1, up1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetCode.t.Errorf("ProxyImplementationMock.GetCode got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetCode.GetCodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCode.GetCodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCode.t.Fatal("No results are set for the ProxyImplementationMock.GetCode")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmGetCode.funcGetCode != nil {
 		return mmGetCode.funcGetCode(ctx, tp1, u1, up1)
@@ -618,15 +618,15 @@ func (mmRouteCall *ProxyImplementationMock) RouteCall(ctx context.Context, tp1 *
 		mmRouteCall.inspectFuncRouteCall(ctx, tp1, u1, up1)
 	}
 
-	params := &ProxyImplementationMockRouteCallParams{ctx, tp1, u1, up1}
+	mm_params := &ProxyImplementationMockRouteCallParams{ctx, tp1, u1, up1}
 
 	// Record call args
 	mmRouteCall.RouteCallMock.mutex.Lock()
-	mmRouteCall.RouteCallMock.callArgs = append(mmRouteCall.RouteCallMock.callArgs, params)
+	mmRouteCall.RouteCallMock.callArgs = append(mmRouteCall.RouteCallMock.callArgs, mm_params)
 	mmRouteCall.RouteCallMock.mutex.Unlock()
 
 	for _, e := range mmRouteCall.RouteCallMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -634,17 +634,17 @@ func (mmRouteCall *ProxyImplementationMock) RouteCall(ctx context.Context, tp1 *
 
 	if mmRouteCall.RouteCallMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRouteCall.RouteCallMock.defaultExpectation.Counter, 1)
-		want := mmRouteCall.RouteCallMock.defaultExpectation.params
-		got := ProxyImplementationMockRouteCallParams{ctx, tp1, u1, up1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRouteCall.t.Errorf("ProxyImplementationMock.RouteCall got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRouteCall.RouteCallMock.defaultExpectation.params
+		mm_got := ProxyImplementationMockRouteCallParams{ctx, tp1, u1, up1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRouteCall.t.Errorf("ProxyImplementationMock.RouteCall got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRouteCall.RouteCallMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRouteCall.RouteCallMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRouteCall.t.Fatal("No results are set for the ProxyImplementationMock.RouteCall")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmRouteCall.funcRouteCall != nil {
 		return mmRouteCall.funcRouteCall(ctx, tp1, u1, up1)
@@ -836,15 +836,15 @@ func (mmSaveAsChild *ProxyImplementationMock) SaveAsChild(ctx context.Context, t
 		mmSaveAsChild.inspectFuncSaveAsChild(ctx, tp1, u1, up1)
 	}
 
-	params := &ProxyImplementationMockSaveAsChildParams{ctx, tp1, u1, up1}
+	mm_params := &ProxyImplementationMockSaveAsChildParams{ctx, tp1, u1, up1}
 
 	// Record call args
 	mmSaveAsChild.SaveAsChildMock.mutex.Lock()
-	mmSaveAsChild.SaveAsChildMock.callArgs = append(mmSaveAsChild.SaveAsChildMock.callArgs, params)
+	mmSaveAsChild.SaveAsChildMock.callArgs = append(mmSaveAsChild.SaveAsChildMock.callArgs, mm_params)
 	mmSaveAsChild.SaveAsChildMock.mutex.Unlock()
 
 	for _, e := range mmSaveAsChild.SaveAsChildMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -852,17 +852,17 @@ func (mmSaveAsChild *ProxyImplementationMock) SaveAsChild(ctx context.Context, t
 
 	if mmSaveAsChild.SaveAsChildMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSaveAsChild.SaveAsChildMock.defaultExpectation.Counter, 1)
-		want := mmSaveAsChild.SaveAsChildMock.defaultExpectation.params
-		got := ProxyImplementationMockSaveAsChildParams{ctx, tp1, u1, up1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSaveAsChild.t.Errorf("ProxyImplementationMock.SaveAsChild got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSaveAsChild.SaveAsChildMock.defaultExpectation.params
+		mm_got := ProxyImplementationMockSaveAsChildParams{ctx, tp1, u1, up1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSaveAsChild.t.Errorf("ProxyImplementationMock.SaveAsChild got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSaveAsChild.SaveAsChildMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSaveAsChild.SaveAsChildMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSaveAsChild.t.Fatal("No results are set for the ProxyImplementationMock.SaveAsChild")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSaveAsChild.funcSaveAsChild != nil {
 		return mmSaveAsChild.funcSaveAsChild(ctx, tp1, u1, up1)
