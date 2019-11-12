@@ -154,6 +154,50 @@ func (p *BitBuilder) Append(bit bool) {
 	}
 }
 
+func (p *BitBuilder) AppendSubByte(value byte, bitLen uint8) {
+	switch {
+	case bitLen == 0:
+		return
+	case bitLen == 1:
+		p.Append(value&1 != 0)
+	case bitLen < 8:
+	case bitLen == 8:
+		p.AppendByte(value)
+	default:
+		panic("illegal value")
+	}
+
+	p.ensure()
+	usedCount, normFn, revFn := p.align()
+	value &= revFn(0xFF, 8-bitLen)
+
+	remainCount := 8 - usedCount
+	switch {
+	case usedCount == 0:
+		p.accBit = normFn(p.accBit, bitLen)
+		p.accumulator = value
+		return
+	case remainCount < bitLen:
+		p.accBit = normFn(p.accBit, bitLen)
+		p.accumulator |= normFn(value, usedCount)
+		return
+	default:
+		p.accumulator |= normFn(value, usedCount)
+		remainCount -= bitLen
+	}
+
+	p.bytes = append(p.bytes, p.accumulator)
+	p.accBit = p.accInit
+	if remainCount == 0 {
+		p.accumulator = 0
+		return
+	}
+
+	usedCount = 8 - remainCount
+	p.accBit = normFn(p.accBit, usedCount)
+	p.accumulator = revFn(value, usedCount)
+}
+
 func (p *BitBuilder) AppendNBit(bitCount int, bit int) {
 	p.AppendN(bitCount, bit != 0)
 }
