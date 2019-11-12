@@ -76,6 +76,38 @@ func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 	require.Contains(t, s, "zerolog_adapter_test.go:73")
 }
 
+func TestZeroLogAdapter_InheritFields(t *testing.T) {
+	pCfg := logadapter.ParsedLogConfig{
+		OutputType: insolar.DefaultLogOutput,
+		LogLevel:   insolar.InfoLevel,
+		Output: logadapter.OutputConfig{
+			Format: insolar.DefaultLogFormat,
+		},
+	}
+	msgFmt := logadapter.GetDefaultLogMsgFormatter()
+
+	log, err := NewZerologAdapter(pCfg, msgFmt)
+
+	require.NoError(t, err)
+	require.NotNil(t, log)
+
+	var buf bytes.Buffer
+	log, err = log.Copy().WithOutput(&buf).WithCaller(insolar.CallerField).WithField("field1", "value1").Build()
+	require.NoError(t, err)
+
+	log = log.WithField("field2", "value2")
+
+	var buf2 bytes.Buffer
+	log, err = log.Copy().WithOutput(&buf2).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+
+	s := buf2.String()
+	require.Contains(t, s, "value1")
+	require.Contains(t, s, "value2")
+}
+
 func TestZeroLogAdapter_Fatal(t *testing.T) {
 	zc := logadapter.Config{}
 
