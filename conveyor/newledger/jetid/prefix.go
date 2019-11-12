@@ -18,9 +18,12 @@ package jetid
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"math/bits"
 	"strings"
+
+	"github.com/insolar/insolar/longbits"
 )
 
 type Prefix uint32
@@ -247,50 +250,40 @@ func (p *PrefixTree) printRow(prefix Prefix, pLen uint8) {
 	fmt.Println(b.String())
 }
 
-//func (p *PrefixTree) Serialize() []byte {
-//	switch p.maxDepth {
-//	case 0:
-//		return nil
-//	case p.minDepth:
-//		return []byte{p.minDepth}
-//	}
-//	bitLen := 1<<p.maxDepth
-//	bb := longbits.NewBitBuilder((bitLen + 7)>>3)
-//	bb = bb.AppendAlignedByte(p.minDepth | (p.maxDepth << 4))
-//
-//	lastDepth := p.minDepth
-//	lastPrefix := uint16(0)
-//
-//	for flopFlop := 0;; flopFlop ^= 1 {
-//		prefixLen, ok := p.getPrefixLength(lastPrefix)
-//		if !ok {
-//			panic("illegal state")
-//		}
-//		switch {
-//		case prefixLen > lastDepth:
-//			bb = bb.AppendN(int(prefixLen - lastDepth - 1), true)
-//			fallthrough
-//		case prefixLen == lastDepth:
-//			bb.Append(false)
-//		default:
-//			bb = bb.AppendN(int(lastDepth - prefixLen - 1), false)
-//		}
-//		switch {
-//		case flopFlop == 0:
-//			lastDepth = prefixLen
-//			lastPrefix ^= 1 << (prefixLen - 1)
-//			continue
-//		case prefixLen > p.minDepth:
-//
-//		default:
-//			lastDepth = prefixLen - 1
-//			lastPrefix ^= 3 << (lastDepth - 1)
-//			continue
-//		}
-//	}
-//
-//
-//
-//	r, _ := bb.Done()
-//	return r
-//}
+const simpleSerializeV1 = 0
+
+// TODO Deserialize
+func (p *PrefixTree) SimpleSerialize(w io.Writer) error {
+	if p.maxDepth == 0 {
+		panic("illegal state")
+	}
+	if _, e := w.Write([]byte{simpleSerializeV1, p.minDepth | p.maxDepth<<4}); e != nil {
+		return e
+	}
+	delta := p.maxDepth - p.minDepth
+	if delta == 0 {
+		return nil
+	}
+	maxBound := 1 << (p.maxDepth - 1)
+	switch encodingBits := bits.Len8(delta); encodingBits {
+	case 4:
+		_, e := w.Write(p.lenNibles[:maxBound])
+		return e
+	case 1:
+		bb := longbits.NewBitBuilder(longbits.FirstLow, (maxBound+3)>>2)
+		for _, b := range p.lenNibles[:maxBound] {
+			bb.Append(b&0x0F > p.minDepth)
+			bb.Append((b >> 4) > p.minDepth)
+		}
+		_, e := w.Write(bb.DoneToBytes())
+		return e
+	default:
+		bb := longbits.NewBitBuilder(longbits.FirstLow, (maxBound+4-encodingBits)/encodingBits)
+		for _, b := range p.lenNibles[:maxBound] {
+			bb.AppendSubByte(b&0x0F-p.minDepth, uint8(encodingBits))
+			bb.AppendSubByte((b>>4)-p.minDepth, uint8(encodingBits))
+		}
+		_, e := w.Write(bb.DoneToBytes())
+		return e
+	}
+}
