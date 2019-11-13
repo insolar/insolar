@@ -251,13 +251,14 @@ func (p *PrefixTree) printRow(prefix Prefix, pLen uint8) {
 }
 
 const simpleSerializeV1 = 0
+const compactSerializeV1 = 1
 
 // TODO Deserialize
 func (p *PrefixTree) SimpleSerialize(w io.Writer) error {
 	if p.maxDepth == 0 {
 		panic("illegal state")
 	}
-	if _, e := w.Write([]byte{simpleSerializeV1, p.minDepth | p.maxDepth<<4}); e != nil {
+	if _, e := w.Write([]byte{simpleSerializeV1, p.minDepth - 1 | (p.maxDepth-1)<<4}); e != nil {
 		return e
 	}
 	delta := p.maxDepth - p.minDepth
@@ -286,4 +287,200 @@ func (p *PrefixTree) SimpleSerialize(w io.Writer) error {
 		_, e := w.Write(bb.DoneToBytes())
 		return e
 	}
+}
+
+func (p *PrefixTree) CompactSerialize(w io.Writer) error {
+	if p.maxDepth == 0 || p.maxDepth < p.minDepth {
+		panic("illegal state")
+	}
+	if _, e := w.Write([]byte{compactSerializeV1, p.minDepth - 1 | (p.maxDepth-1)<<4}); e != nil {
+		return e
+	}
+	if p.maxDepth == p.minDepth {
+		return nil
+	}
+	bb := longbits.NewBitBuilder(longbits.FirstLow, len(p.lenNibles))
+
+	maxPrefix := 1 << p.minDepth
+	for prefix := 0; prefix < maxPrefix; prefix++ {
+		p.serializeMainBranch(&bb, uint16(prefix), p.minDepth)
+	}
+
+	_, e := w.Write(bb.DoneToBytes())
+	return e
+}
+
+func (p *PrefixTree) serializeMainBranch(bb *longbits.BitBuilder, prefix uint16, minDepth uint8) {
+	depth, ok := p.getPrefixLength(prefix)
+	if !ok {
+		panic("illegal state")
+	}
+
+	maxDelta := p.maxDepth - minDepth
+	//delta := depth - minDepth
+	// zero-branch is written explicitly
+	bb.AppendSubByte(depth-minDepth, uint8(bits.Len8(maxDelta)))
+
+	// zero-branch is accompanied by one-branches, one at each depth level
+	for branchDepth := depth; branchDepth > minDepth; branchDepth-- {
+		if branchDepth == p.maxDepth {
+			continue
+		}
+		branchPrefix := prefix | 1<<(branchDepth-1)
+		p.serializeSubBranch(bb, branchPrefix, branchDepth)
+	}
+}
+
+func (p *PrefixTree) serializeSubBranch(bb *longbits.BitBuilder, prefix uint16, minDepth uint8) {
+	depth, ok := p.getPrefixLength(prefix)
+	if !ok {
+		panic("illegal state")
+	}
+	if p.maxDepth <= minDepth {
+		panic("illegal state")
+	}
+	if depth < minDepth {
+		panic("illegal state")
+	}
+	delta := depth - minDepth
+	if delta == 0 {
+		bb.Append(false)
+		return
+	}
+	bb.Append(true)
+
+	maxDelta := p.maxDepth - minDepth
+	bb.AppendSubByte(depth-minDepth, uint8(bits.Len8(maxDelta)))
+
+	// zero-branch is accompanied by one-branches, one at each depth level
+	for branchDepth := depth; branchDepth > minDepth; branchDepth-- {
+		if depth == p.maxDepth {
+			continue
+		}
+
+		branchPrefix := prefix | 1<<(branchDepth-1)
+		p.serializeSubBranch(bb, branchPrefix, branchDepth)
+	}
+}
+
+func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
+	if p.maxDepth != 0 || p.minDepth != 0 {
+		panic("illegal state")
+	}
+	switch b, e := r.ReadByte(); {
+	case e != nil:
+		return e
+	case b != compactSerializeV1:
+		return fmt.Errorf("unsupported type: %d", b)
+	}
+
+	switch b, e := r.ReadByte(); {
+	case e != nil:
+		return e
+	default:
+		p.minDepth = b&0x0F + 1
+		p.maxDepth = b>>4 + 1
+		switch {
+		case p.minDepth > p.maxDepth:
+			return fmt.Errorf("invalid content: %d", b)
+		case p.minDepth == p.maxDepth:
+			return p.generatePrefectTree()
+		}
+	}
+	br := longbits.NewBitIoReader(longbits.FirstLow, r)
+
+	maxPrefix := 1 << p.minDepth
+	for prefix := 0; prefix < maxPrefix; prefix++ {
+		if e := p.deserializeMainBranch(br, uint16(prefix), p.minDepth); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
+func (p *PrefixTree) generatePrefectTree() error {
+	// the perfect tree
+	upperBound := 1 << p.minDepth
+	p.leafCounts[p.minDepth] = uint16(upperBound)
+	upperBound >>= 1
+	entry := (p.minDepth - 1) | (p.minDepth-1)<<4
+	for i := 0; i < upperBound; i++ {
+		p.lenNibles[i] = entry
+	}
+	return nil
+}
+
+func (p *PrefixTree) deserializeMainBranch(br *longbits.BitIoReader, prefix uint16, minDepth uint8) error {
+	//depth, ok := p.getPrefixLength(prefix)
+	//if !ok {
+	//	panic("illegal state")
+	//}
+
+	maxDelta := p.maxDepth - minDepth
+	//delta := depth - minDepth
+	// zero-branch is written explicitly
+	depth := minDepth
+	if delta, e := br.ReadSubByte(uint8(bits.Len8(maxDelta))); e != nil {
+		return e
+	} else {
+		depth += delta
+	}
+	if depth < minDepth {
+		panic("illegal state")
+	}
+
+	// TODO add a zero-branch
+
+	// zero-branch is accompanied by one-branches, one at each depth level
+	for branchDepth := depth; branchDepth > minDepth; branchDepth-- {
+		if branchDepth == p.maxDepth {
+			// TODO add a one-branch
+			continue
+		}
+		branchPrefix := prefix | 1<<(branchDepth-1)
+		if e := p.deserializeSubBranch(br, branchPrefix, branchDepth); e != nil {
+			return e
+		}
+	}
+
+	return nil
+}
+
+func (p *PrefixTree) deserializeSubBranch(br *longbits.BitIoReader, prefix uint16, minDepth uint8) error {
+	if p.maxDepth <= minDepth {
+		panic("illegal state")
+	}
+	switch b, e := br.ReadBool(); {
+	case e != nil:
+		return e
+	case !b:
+		// TODO add a one-branch (minDepth)
+		return nil
+	}
+
+	maxDelta := p.maxDepth - minDepth
+	depth := minDepth
+	if delta, e := br.ReadSubByte(uint8(bits.Len8(maxDelta))); e != nil {
+		return e
+	} else {
+		depth += delta
+	}
+	if depth < minDepth {
+		panic("illegal state")
+	}
+
+	// zero-branch is accompanied by one-branches, one at each depth level
+	for branchDepth := depth; branchDepth > minDepth; branchDepth-- {
+		if depth == p.maxDepth {
+			continue
+		}
+
+		branchPrefix := prefix | 1<<(branchDepth-1)
+		if e := p.deserializeSubBranch(br, branchPrefix, branchDepth); e != nil {
+			return e
+		}
+	}
+
+	return nil
 }

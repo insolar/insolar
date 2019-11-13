@@ -16,7 +16,13 @@
 
 package jetid
 
-import "testing"
+import (
+	"bytes"
+	"encoding/hex"
+	"fmt"
+	"github.com/stretchr/testify/require"
+	"testing"
+)
 
 func TestPrefixTree_Print(t *testing.T) {
 	pt := PrefixTree{}
@@ -103,4 +109,51 @@ func TestPrefixTree_SplitMax1(t *testing.T) {
 	pt.PrintTable()
 	pt.Merge(32767, 16)
 	pt.PrintTable()
+}
+
+func TestPrefixTree_Serialize(t *testing.T) {
+	//{
+	//	hx := hex.Dumper(os.Stdout)
+	//	pt := PrefixTree{}
+	//	pt.Split(0, 0)
+	//	pt.Split(0, 1)
+	//	pt.Split(0, 2)
+	//	pt.Split(0, 3)
+	//	pt.Split(0, 4)
+	//	pt.Split(0, 5)
+	//	pt.PrintTable()
+	//	require.NoError(t, pt.CompactSerialize(hx))
+	//	_ = hx.Close()
+	//	fmt.Println()
+	//}
+
+	{
+		pt := PrefixTree{}
+		pt.Split(0, 0)
+		pt.Split(0, 1)
+		pt.Split(0, 2)
+		pt.Split(0, 3)
+		//pt.Split(0, 4)
+		//pt.Split(0, 5)
+		//pt.Split(0, 6)
+		//pt.Split(0, 0)
+		pt.Split(1, 1)
+		pt.Split(1, 2)
+		pt.Split(2, 2)
+
+		pt.Split(3, 2)
+		//pt.Split(7, 3)
+		//pt.Split(15, 4)
+		//pt.Split(31, 5)
+		//pt.Split(63, 6)
+		pt.PrintTable()
+
+		buf := bytes.Buffer{}
+		require.NoError(t, pt.CompactSerialize(&buf))
+		fmt.Println(hex.Dump(buf.Bytes()))
+
+		pt2 := PrefixTree{}
+		require.NoError(t, pt2.CompactDeserialize(&buf))
+		pt2.PrintTable()
+	}
 }
