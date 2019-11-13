@@ -124,7 +124,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
 	logger := inslogger.FromContext(ctx)
-	msg, err := deserializeMessage(bytes.NewBuffer(args))
+	msg, err := deserializeMessage(args)
 	if err != nil {
 		err = errors.Wrap(err, "error while deserialize msg from buffer")
 		logger.Error(err)

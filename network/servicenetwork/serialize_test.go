@@ -51,7 +51,6 @@
 package servicenetwork
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -86,7 +85,7 @@ func TestMessageToBytes(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, serializedMsg)
 
-	msgOut, err := deserializeMessage(bytes.NewBuffer(serializedMsg))
+	msgOut, err := deserializeMessage(serializedMsg)
 	require.NoError(t, err)
 	require.NotEmpty(t, msgOut)
 

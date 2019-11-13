@@ -51,40 +51,41 @@
 package servicenetwork
 
 import (
-	"bytes"
-	"encoding/gob"
-	"io"
-	"io/ioutil"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/payload"
 )
 
 // serializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
-func serializeMessage(msg *message.Message) (io.Reader, error) {
-	buff := &bytes.Buffer{}
-	enc := gob.NewEncoder(buff)
-	err := enc.Encode(msg)
-	return buff, err
+func serializeMessage(msg *message.Message) ([]byte, error) {
+	buf, err := payload.Marshal(&payload.TransportMessage{
+		UUID:     msg.UUID,
+		Metadata: msg.Metadata,
+		Payload:  msg.Payload,
+	})
+	return buf, err
 }
 
 // deserializeMessage returns decoded signed message.
-func deserializeMessage(buff io.Reader) (*message.Message, error) {
-	var signed message.Message
-	enc := gob.NewDecoder(buff)
-	err := enc.Decode(&signed)
-	return &signed, err
+func deserializeMessage(data []byte) (*message.Message, error) {
+	transportMsg := &payload.TransportMessage{}
+	err := transportMsg.Unmarshal(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal message")
+	}
+	return &message.Message{
+		UUID:     transportMsg.UUID,
+		Metadata: transportMsg.Metadata,
+		Payload:  transportMsg.Payload,
+	}, nil
 }
 
 // messageToBytes deserialize a message.Message (from watermill) to bytes.
 func messageToBytes(msg *message.Message) ([]byte, error) {
-	reqBuff, err := serializeMessage(msg)
+	buf, err := serializeMessage(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to serialize message")
-	}
-	buf, err := ioutil.ReadAll(reqBuff)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read from buffer")
 	}
 	return buf, nil
 }

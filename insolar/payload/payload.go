@@ -79,6 +79,8 @@ const (
 	TypeStillExecuting
 	TypeErrorResultExitsts
 
+	TypeTransportMessage
+
 	// should be the last (required by TypesMap)
 	_latestType
 )
@@ -320,6 +322,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ErrorResultExists:
 		pl.Polymorph = uint32(TypeErrorResultExitsts)
 		return pl.Marshal()
+	case *TransportMessage:
+		pl.Polymorph = uint32(TypeTransportMessage)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -529,6 +534,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeErrorResultExitsts:
 		pl := ErrorResultExists{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeTransportMessage:
+		pl := TransportMessage{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

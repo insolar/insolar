@@ -8,6 +8,14 @@ import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 import "github.com/insolar/insolar/ledger/drop/drop.proto";
 
 
+message TransportMessage {
+    uint32 Polymorph = 16;
+
+    string UUID = 20;
+    map<string,string> Metadata = 21;
+    bytes Payload = 22;
+}
+
 message Meta {
     uint32 Polymorph = 16;
 
