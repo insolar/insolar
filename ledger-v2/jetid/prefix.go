@@ -314,6 +314,13 @@ func (p *PrefixTree) simpleSerialize(w io.Writer) error {
 	}
 }
 
+// General idea of compact serialization is based on the "mountain range" approach to visualize Catalan numbers,
+// yet it is different as we have 2 limits and the left and right bounds can be above the bottom limit.
+// https://en.wikipedia.org/wiki/Catalan_number
+// https://brilliant.org/wiki/catalan-numbers/
+//
+// This implementation is suboptimal and slightly asymmetric for 0- and 1- branches.
+
 func (p *PrefixTree) CompactSerialize(w io.Writer) error {
 	b := p.CompactSerializeToBytes()
 	switch n, e := w.Write(b); {
