@@ -60,10 +60,11 @@ type testReader interface {
 	AlignOffset() uint8
 	ReadBit() int
 	ReadByte() byte
+	ReadSubByte(bitLen uint8) byte
 	IsArrayDepleted() bool
 }
 
-func test_BitReader_Read(t *testing.T, br testReader) {
+func testBitReaderRead(t *testing.T, br testReader) {
 	require.Equal(t, uint8(0), br.AlignOffset())
 	require.Equal(t, 0, br.ReadBit())
 	require.Equal(t, uint8(1), br.AlignOffset())
@@ -99,14 +100,48 @@ func test_BitReader_Read(t *testing.T, br testReader) {
 	require.Equal(t, uint8(0), br.AlignOffset())
 }
 
+func testBitReaderReadSubByte(t *testing.T, br testReader) {
+	require.Equal(t, byte(0), br.ReadSubByte(0))
+	require.Equal(t, uint8(0), br.AlignOffset())
+
+	require.Equal(t, byte(0), br.ReadSubByte(1))
+	require.Equal(t, uint8(1), br.AlignOffset())
+
+	require.Equal(t, byte(2), br.ReadSubByte(2))
+	require.Equal(t, uint8(3), br.AlignOffset())
+	require.Equal(t, byte(0x7E), br.ReadSubByte(7))
+	require.Equal(t, uint8(2), br.AlignOffset())
+
+	require.Equal(t, byte(0x1F), br.ReadSubByte(6))
+	require.Equal(t, uint8(0), br.AlignOffset())
+
+	require.Equal(t, byte(0x15), br.ReadSubByte(7))
+
+	require.Equal(t, byte(0x02), br.ReadSubByte(7))
+	require.Equal(t, byte(0x08), br.ReadSubByte(7))
+	require.Equal(t, byte(0x78), br.ReadSubByte(7))
+	require.Equal(t, byte(0x7F), br.ReadSubByte(7))
+	require.Equal(t, byte(0x7F), br.ReadSubByte(7))
+	require.Equal(t, byte(0x3F), br.ReadSubByte(6))
+
+	require.Equal(t, uint8(0), br.AlignOffset())
+	require.True(t, br.IsArrayDepleted())
+}
+
 func Test_BitReader_ReadFirstLow(t *testing.T) {
 	bytes := []byte{0xF4, 0x7F, 0x15, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
-	test_BitReader_Read(t, NewBitArrayReader(FirstLow, bytes))
-	test_BitReader_Read(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
+	testBitReaderRead(t, NewBitArrayReader(FirstLow, bytes))
+	testBitReaderRead(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
+	testBitReaderReadSubByte(t, NewBitArrayReader(FirstLow, bytes))
+	testBitReaderReadSubByte(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
 }
 
 func Test_BitReader_ReadFirstHigh(t *testing.T) {
 	bytes := []byte{0x2F, 0xFD, 0x58, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
-	test_BitReader_Read(t, NewBitArrayReader(FirstHigh, bytes))
-	test_BitReader_Read(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+	testBitReaderRead(t, NewBitArrayReader(FirstHigh, bytes))
+	testBitReaderRead(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+
+	// TODO decide on "correct" sequence of bits to read sub-bytes
+	//testBitReaderReadSubByte(t, NewBitArrayReader(FirstHigh, bytes))
+	//testBitReaderReadSubByte(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
 }
