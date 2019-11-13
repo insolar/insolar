@@ -96,6 +96,9 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	if err != nil {
 		return errors.Wrap(err, "failed to send message: Receiver in message metadata is invalid")
 	}
+	if node.IsEmpty() {
+		return errors.New("failed to send message: Receiver in message metadata is empty")
+	}
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
