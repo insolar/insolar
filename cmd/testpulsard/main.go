@@ -26,9 +26,9 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
@@ -76,7 +76,6 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	traceID := utils.RandTraceID()
 	ctx := context.Background()
 	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, pCfg)
