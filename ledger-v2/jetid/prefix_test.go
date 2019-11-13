@@ -167,7 +167,6 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	fmt.Println(hex.Dump(bufCopy))
 
 	pt2 := PrefixTree{}
-	pt2.Init() // to make it properly comparable
 	require.NoError(t, pt2.CompactDeserialize(&buf))
 
 	buf2 := bytes.Buffer{}
