@@ -115,6 +115,7 @@ func TestPrefixTree_SplitMax1(t *testing.T) {
 func TestPrefixTree_Serialize(t *testing.T) {
 
 	pt := PrefixTree{}
+	pt.Init() // to make it properly comparable
 	pt.PrintTable()
 
 	pt.Split(0, 0)
@@ -166,6 +167,7 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	fmt.Println(hex.Dump(bufCopy))
 
 	pt2 := PrefixTree{}
+	pt2.Init() // to make it properly comparable
 	require.NoError(t, pt2.CompactDeserialize(&buf))
 
 	buf2 := bytes.Buffer{}
@@ -174,4 +176,5 @@ func TestPrefixTree_Serialize(t *testing.T) {
 		pt2.PrintTable()
 	}
 	require.Equal(t, bufCopy, buf2.Bytes())
+	require.Equal(t, pt, pt2)
 }

@@ -48,6 +48,21 @@ func (p *PrefixTree) MinDepth() uint8 {
 	return p.minDepth
 }
 
+func (p *PrefixTree) IsZero() bool {
+	return p.minDepth == 0 && p.maxDepth == 0 && p.leafCounts[0] == 0
+}
+
+// it is not necessary to call it, but only initialized empty PrefixTree properly supports comparability
+func (p *PrefixTree) Init() {
+	if p.IsZero() {
+		p.leafCounts[0] = 1
+	}
+}
+
+func (p *PrefixTree) IsEmpty() bool {
+	return p.minDepth == 0 && p.maxDepth == 0
+}
+
 func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
 	depth := p.lenNibles[prefix>>1]
 	if prefix&1 != 0 {
@@ -300,6 +315,17 @@ func (p *PrefixTree) simpleSerialize(w io.Writer) error {
 }
 
 func (p *PrefixTree) CompactSerialize(w io.Writer) error {
+	b := p.CompactSerializeToBytes()
+	switch n, e := w.Write(b); {
+	case e != nil:
+		return e
+	case n != len(b):
+		return fmt.Errorf("incomplete write")
+	}
+	return nil
+}
+
+func (p *PrefixTree) CompactSerializeToBytes() []byte {
 	encodedDepth := byte(0)
 	switch {
 	case p.maxDepth < p.minDepth:
@@ -307,22 +333,19 @@ func (p *PrefixTree) CompactSerialize(w io.Writer) error {
 	case p.minDepth > 0:
 		encodedDepth = p.minDepth - 1 | (p.maxDepth-p.minDepth)<<4
 	}
-	if _, e := w.Write([]byte{compactSerializeV1, encodedDepth}); e != nil {
-		return e
-	}
-	if p.maxDepth == p.minDepth {
-		return nil
-	}
 
 	bb := longbits.NewBitBuilder(longbits.FirstLow, len(p.lenNibles))
+	bb.AppendByte(compactSerializeV1)
+	bb.AppendByte(encodedDepth)
 
-	maxPrefix := 1 << p.minDepth
-	for prefix := 0; prefix < maxPrefix; prefix++ {
-		p.serializeBranch(&bb, uint16(prefix), p.minDepth, true)
+	if p.maxDepth != p.minDepth {
+		maxPrefix := 1 << p.minDepth
+		for prefix := 0; prefix < maxPrefix; prefix++ {
+			p.serializeBranch(&bb, uint16(prefix), p.minDepth, true)
+		}
 	}
 
-	_, e := w.Write(bb.DoneToBytes())
-	return e
+	return bb.DoneToBytes()
 }
 
 func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, minDepth uint8, isMain bool) {
@@ -376,6 +399,7 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 		return e
 	case encodedDepth == 0:
 		// empty tree
+		p.leafCounts[0] = 1
 		return nil
 	default:
 		p.minDepth = encodedDepth&0x0F + 1
@@ -383,6 +407,8 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 		if p.minDepth > p.maxDepth {
 			return fmt.Errorf("invalid content: encodedDepth=%x", encodedDepth)
 		}
+		p.mask = (Prefix(1) << p.maxDepth) - 1
+
 		p.generatePrefectTree()
 		if p.minDepth == p.maxDepth {
 			return nil
@@ -401,6 +427,7 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 }
 
 func (p *PrefixTree) generatePrefectTree() {
+	p.leafCounts[0] = 0
 	upperBound := 1 << p.minDepth
 	p.leafCounts[p.minDepth] = uint16(upperBound)
 	upperBound >>= 1
