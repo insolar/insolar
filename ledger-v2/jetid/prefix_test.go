@@ -116,7 +116,6 @@ func TestPrefixTree_Serialize(t *testing.T) {
 
 	pt := PrefixTree{}
 	pt.Init() // to make it properly comparable
-	pt.PrintTable()
 
 	pt.Split(0, 0)
 	//
@@ -176,4 +175,30 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	}
 	require.Equal(t, bufCopy, buf2.Bytes())
 	require.Equal(t, pt, pt2)
+}
+
+func TestPrefixTree_SerializeLargest(t *testing.T) {
+	t.SkipNow()
+
+	pt := PrefixTree{}
+	pt.Init()
+	buildTree(&pt, 0, 0, 16)
+}
+
+func buildTree(pt *PrefixTree, prefix Prefix, baseDepth, minDepth uint8) {
+	const maxDepth = 16
+	for depth := baseDepth; depth < maxDepth; depth++ {
+		pt.Split(prefix, depth)
+		for i := depth + 1; i < maxDepth; i++ {
+			pt.Split(prefix, i)
+			if i < minDepth {
+				buildTree(pt, prefix|Prefix(1)<<i, i+1, minDepth)
+			}
+		}
+		prefix |= Prefix(1) << depth
+
+		b := pt.CompactSerializeToBytes()
+		fmt.Printf("Jets: %5d	MinDepth: %2d	MaxDepth: %2d	Serialized: %5d\n", pt.Count(), pt.MinDepth(), pt.MaxDepth(), len(b))
+	}
+	//pt.PrintTable()
 }

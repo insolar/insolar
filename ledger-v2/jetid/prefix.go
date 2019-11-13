@@ -63,6 +63,17 @@ func (p *PrefixTree) IsEmpty() bool {
 	return p.minDepth == 0 && p.maxDepth == 0
 }
 
+func (p *PrefixTree) Count() int {
+	if p.minDepth == p.maxDepth {
+		return 1 << p.minDepth
+	}
+	total := 0
+	for _, v := range p.leafCounts {
+		total += int(v)
+	}
+	return total
+}
+
 func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
 	depth := p.lenNibles[prefix>>1]
 	if prefix&1 != 0 {
