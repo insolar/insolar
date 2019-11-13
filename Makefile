@@ -162,7 +162,7 @@ $(HEAVY_BADGER_TOOL):
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
@@ -179,7 +179,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest ./...
+	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) -tags slowtest ./...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
