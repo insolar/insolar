@@ -17,13 +17,28 @@
 package longbits
 
 import (
+	"math/bits"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+var testSample = []byte{0xF4, 0x7F, 0x15, 0x01, 0x02, 0xFD, 0xFF, 0xFF}
+
+func copyBits(bytes []byte) []byte {
+	return append([]byte(nil), bytes...)
+}
+
+func reverseBits(bytes []byte) []byte {
+	r := make([]byte, len(bytes))
+	for i, v := range bytes {
+		r[i] = bits.Reverse8(v)
+	}
+	return r
+}
+
 func Test_BitReader_ReadByte(t *testing.T) {
-	bytes := []byte{0xF4, 0x7F, 0x15, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
+	bytes := copyBits(testSample)
 	br := NewBitArrayReader(FirstLow, bytes)
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
@@ -31,7 +46,7 @@ func Test_BitReader_ReadByte(t *testing.T) {
 	}
 	require.True(t, br.IsArrayDepleted())
 
-	br = NewBitArrayReader(FirstHigh, bytes)
+	br = NewBitArrayReader(FirstHigh, reverseBits(bytes))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
 		require.Equal(t, b, br.ReadByte())
@@ -40,7 +55,7 @@ func Test_BitReader_ReadByte(t *testing.T) {
 }
 
 func Test_BitStrReader_ReadByte(t *testing.T) {
-	bytes := []byte{0xF4, 0x7F, 0x15, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
+	bytes := copyBits(testSample)
 	br := NewBitStrReader(FirstLow, NewByteString(bytes))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
@@ -48,7 +63,7 @@ func Test_BitStrReader_ReadByte(t *testing.T) {
 	}
 	require.True(t, br.IsArrayDepleted())
 
-	br = NewBitStrReader(FirstHigh, NewByteString(bytes))
+	br = NewBitStrReader(FirstHigh, NewByteString(reverseBits(bytes)))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
 		require.Equal(t, b, br.ReadByte())
@@ -92,7 +107,7 @@ func testBitReaderRead(t *testing.T, br testReader) {
 	require.Equal(t, byte(0x01), br.ReadByte())
 	require.Equal(t, byte(0x02), br.ReadByte())
 
-	require.Equal(t, byte(0xFF), br.ReadByte())
+	require.Equal(t, byte(0xFD), br.ReadByte())
 	require.Equal(t, byte(0xFF), br.ReadByte())
 	require.Equal(t, byte(0xFF), br.ReadByte())
 
@@ -119,7 +134,7 @@ func testBitReaderReadSubByte(t *testing.T, br testReader) {
 
 	require.Equal(t, byte(0x02), br.ReadSubByte(7))
 	require.Equal(t, byte(0x08), br.ReadSubByte(7))
-	require.Equal(t, byte(0x78), br.ReadSubByte(7))
+	require.Equal(t, byte(0x68), br.ReadSubByte(7))
 	require.Equal(t, byte(0x7F), br.ReadSubByte(7))
 	require.Equal(t, byte(0x7F), br.ReadSubByte(7))
 	require.Equal(t, byte(0x3F), br.ReadSubByte(6))
@@ -129,7 +144,7 @@ func testBitReaderReadSubByte(t *testing.T, br testReader) {
 }
 
 func Test_BitReader_ReadFirstLow(t *testing.T) {
-	bytes := []byte{0xF4, 0x7F, 0x15, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
+	bytes := copyBits(testSample)
 	testBitReaderRead(t, NewBitArrayReader(FirstLow, bytes))
 	testBitReaderRead(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
 	testBitReaderReadSubByte(t, NewBitArrayReader(FirstLow, bytes))
@@ -137,11 +152,9 @@ func Test_BitReader_ReadFirstLow(t *testing.T) {
 }
 
 func Test_BitReader_ReadFirstHigh(t *testing.T) {
-	bytes := []byte{0x2F, 0xFD, 0x58, 0x01, 0x02, 0xFF, 0xFF, 0xFF}
+	bytes := reverseBits(testSample)
 	testBitReaderRead(t, NewBitArrayReader(FirstHigh, bytes))
 	testBitReaderRead(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
-
-	// TODO decide on "correct" sequence of bits to read sub-bytes
-	//testBitReaderReadSubByte(t, NewBitArrayReader(FirstHigh, bytes))
-	//testBitReaderReadSubByte(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+	testBitReaderReadSubByte(t, NewBitArrayReader(FirstHigh, bytes))
+	testBitReaderReadSubByte(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
 }

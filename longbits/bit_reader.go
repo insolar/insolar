@@ -27,18 +27,28 @@ type bitReader struct {
 	accBit      byte
 }
 
-func (p *bitReader) align() (rightShift bool, ofs uint8) {
-	if p.accInit == initFirstLow {
-		if p.accBit == 0 {
-			return false, 0
-		}
-		return false, uint8(bits.TrailingZeros8(p.accBit))
+func (p *bitReader) _rightShift() bool {
+	switch p.accInit {
+	case initFirstLow:
+		return false
+	case initFirstHigh:
+		return true
+	default:
+		panic("illegal state")
 	}
+}
 
-	if p.accBit == 0 {
-		return true, 0
+func (p *bitReader) align() (rightShift bool, ofs uint8) {
+	if p._rightShift() {
+		if p.accBit == 0 {
+			return true, 0
+		}
+		return true, uint8(bits.LeadingZeros8(p.accBit))
 	}
-	return true, uint8(bits.LeadingZeros8(p.accBit))
+	if p.accBit == 0 {
+		return false, 0
+	}
+	return false, uint8(bits.TrailingZeros8(p.accBit))
 }
 
 func (p *bitReader) AlignOffset() uint8 {
@@ -62,9 +72,9 @@ func (p *bitReader) ensure(readFn func() (byte, error)) error {
 	return nil
 }
 
-func (p *bitReader) readNext(readFn func() (byte, error)) (int, uint8, error) {
+func (p *bitReader) readNext(readFn func() (byte, error)) (int, error) {
 	if e := p.ensure(readFn); e != nil {
-		return 0, 0, e
+		return 0, e
 	}
 
 	m := p.accBit
@@ -73,7 +83,7 @@ func (p *bitReader) readNext(readFn func() (byte, error)) (int, uint8, error) {
 	} else {
 		p.accBit <<= 1
 	}
-	return int(p.accumulator & m), m, nil
+	return int(p.accumulator & m), nil
 }
 
 func (p *bitReader) readByte(readFn func() (byte, error)) (byte, error) {
@@ -82,9 +92,16 @@ func (p *bitReader) readByte(readFn func() (byte, error)) (byte, error) {
 		if p.accInit == 0 {
 			p.accInit = initFirstLow
 		}
+		if p._rightShift() {
+			v, e := readFn()
+			return bits.Reverse8(v), e
+		}
 		return readFn()
 	case p.accInit:
 		p.accBit = 0
+		if p._rightShift() {
+			return bits.Reverse8(p.accumulator), nil
+		}
 		return p.accumulator, nil
 	}
 
@@ -99,11 +116,14 @@ func (p *bitReader) readByte(readFn func() (byte, error)) (byte, error) {
 	if rightShift, usedBits := p.align(); rightShift {
 		v <<= usedBits
 		w >>= 8 - usedBits
+		v = bits.Reverse8(v | w)
 	} else {
 		v >>= usedBits
 		w <<= 8 - usedBits
+		v |= w
 	}
-	return v | w, nil
+
+	return v, nil
 }
 
 func (p *bitReader) readSubByte(bitLen uint8, readFn func() (byte, error)) (uint8, error) {
@@ -111,7 +131,7 @@ func (p *bitReader) readSubByte(bitLen uint8, readFn func() (byte, error)) (uint
 	case bitLen == 0:
 		return 0, nil
 	case bitLen == 1:
-		switch v, _, e := p.readNext(readFn); {
+		switch v, e := p.readNext(readFn); {
 		case e != nil:
 			return 0, e
 		case v != 0:
@@ -135,8 +155,11 @@ func (p *bitReader) readSubByte(bitLen uint8, readFn func() (byte, error)) (uint
 	if bitLen <= remainBits {
 		if rightShift {
 			p.accBit >>= bitLen
-			v := p.accumulator &^ ((p.accBit - 1) | p.accBit)
-			return v << usedBits, nil
+			v := p.accumulator
+			if p.accBit != 0 {
+				v &^= (p.accBit << 1) - 1
+			}
+			return bits.Reverse8(v << usedBits), nil
 		} else {
 			p.accBit <<= bitLen
 			v := p.accumulator & (p.accBit - 1)
@@ -157,6 +180,8 @@ func (p *bitReader) readSubByte(bitLen uint8, readFn func() (byte, error)) (uint
 		w := uint16(v)<<8 | uint16(p.accumulator)
 		w <<= bitLen
 		v = uint8(w >> 8)
+		v <<= usedBits - bitLen
+		v = bits.Reverse8(v)
 	} else {
 		p.accBit <<= bitLen
 		v &= 0xFF << usedBits
@@ -192,7 +217,7 @@ type BitIoReader struct {
 }
 
 func (p *BitIoReader) ReadBool() (bool, error) {
-	if v, _, e := p.ReadNext(); v != 0 {
+	if v, e := p.ReadNext(); v != 0 {
 		return true, e
 	} else {
 		return false, e
@@ -200,14 +225,14 @@ func (p *BitIoReader) ReadBool() (bool, error) {
 }
 
 func (p *BitIoReader) ReadBit() (int, error) {
-	if v, _, e := p.ReadNext(); v != 0 {
+	if v, e := p.ReadNext(); v != 0 {
 		return 1, e
 	} else {
 		return 0, e
 	}
 }
 
-func (p *BitIoReader) ReadNext() (int, uint8, error) {
+func (p *BitIoReader) ReadNext() (int, error) {
 	return p.readNext(p.byteReader.ReadByte)
 }
 
@@ -233,15 +258,11 @@ func (p *BitArrayReader) IsArrayDepleted() bool {
 }
 
 func (p *BitArrayReader) ReadBool() bool {
-	if v, _ := p.ReadNext(); v != 0 {
-		return true
-	} else {
-		return false
-	}
+	return p.ReadNext() != 0
 }
 
 func (p *BitArrayReader) ReadBit() int {
-	if v, _ := p.ReadNext(); v != 0 {
+	if p.ReadNext() != 0 {
 		return 1
 	} else {
 		return 0
@@ -254,9 +275,9 @@ func (p *BitArrayReader) _read() (uint8, error) {
 	return v, nil
 }
 
-func (p *BitArrayReader) ReadNext() (int, uint8) {
-	i, b, _ := p.readNext(p._read)
-	return i, b
+func (p *BitArrayReader) ReadNext() int {
+	i, _ := p.readNext(p._read)
+	return i
 }
 
 func (p *BitArrayReader) ReadByte() byte {
@@ -283,15 +304,11 @@ func (p *BitStrReader) IsArrayDepleted() bool {
 }
 
 func (p *BitStrReader) ReadBool() bool {
-	if v, _ := p.ReadNext(); v != 0 {
-		return true
-	} else {
-		return false
-	}
+	return p.ReadNext() != 0
 }
 
 func (p *BitStrReader) ReadBit() int {
-	if v, _ := p.ReadNext(); v != 0 {
+	if p.ReadNext() != 0 {
 		return 1
 	} else {
 		return 0
@@ -304,9 +321,9 @@ func (p *BitStrReader) _read() (uint8, error) {
 	return v, nil
 }
 
-func (p *BitStrReader) ReadNext() (int, uint8) {
-	i, b, _ := p.readNext(p._read)
-	return i, b
+func (p *BitStrReader) ReadNext() int {
+	i, _ := p.readNext(p._read)
+	return i
 }
 
 func (p *BitStrReader) ReadByte() byte {

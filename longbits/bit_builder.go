@@ -81,6 +81,9 @@ func (p *BitBuilder) AppendAlignedByte(b byte) {
 	if p.accBit != p.accInit {
 		panic("illegal state")
 	}
+	if p._rightShift() {
+		b = bits.Reverse8(b)
+	}
 	p.bytes = append(p.bytes, b)
 }
 
@@ -92,30 +95,48 @@ func shiftRight(b, n byte) byte {
 	return b >> n
 }
 
-func (p *BitBuilder) align() (ofs uint8, normFn, revFn func(byte, byte) byte) {
-	switch rightShift, normFn, revFn := p.shift(); {
+func (p *BitBuilder) _align(rightShift bool) uint8 {
+	switch {
 	case p.accBit == p.accInit:
-		return 0, normFn, revFn
+		return 0
 	case rightShift:
-		return uint8(bits.LeadingZeros8(p.accBit)), normFn, revFn
+		return uint8(bits.LeadingZeros8(p.accBit))
 	default:
-		return uint8(bits.TrailingZeros8(p.accBit)), normFn, revFn
+		return uint8(bits.TrailingZeros8(p.accBit))
 	}
 }
 
-func (p *BitBuilder) shift() (right bool, normFn, revFn func(byte, byte) byte) {
+func (p *BitBuilder) align() (rightShift bool, ofs uint8) {
+	switch rightShift := p._rightShift(); {
+	case p.accBit == p.accInit:
+		return rightShift, 0
+	case rightShift:
+		return true, uint8(bits.LeadingZeros8(p.accBit))
+	default:
+		return false, uint8(bits.TrailingZeros8(p.accBit))
+	}
+}
+
+func (p *BitBuilder) _rightShift() bool {
 	switch {
 	case p.accInit == initFirstLow:
-		return false, shiftLeft, shiftRight
+		return false
 	case p.accInit == initFirstHigh:
-		return true, shiftRight, shiftLeft
+		return true
 	default:
 		panic("illegal state")
 	}
 }
 
+func shifters(rightShift bool) (normFn, revFn func(byte, byte) byte) {
+	if rightShift {
+		return shiftRight, shiftLeft
+	}
+	return shiftLeft, shiftRight
+}
+
 func (p *BitBuilder) AlignOffset() uint8 {
-	ofs, _, _ := p.align()
+	_, ofs := p.align()
 	return ofs
 }
 
@@ -141,7 +162,7 @@ func (p *BitBuilder) Append(bit bool) {
 		p.accumulator |= p.accBit
 	}
 
-	if rightShift, _, _ := p.shift(); rightShift {
+	if p._rightShift() {
 		p.accBit >>= 1
 	} else {
 		p.accBit <<= 1
@@ -171,7 +192,12 @@ func (p *BitBuilder) AppendSubByte(value byte, bitLen uint8) {
 	}
 
 	p.ensure()
-	usedCount, normFn, revFn := p.align()
+	rightShift, usedCount := p.align()
+	normFn, revFn := shifters(rightShift)
+	if rightShift {
+		value = bits.Reverse8(value)
+	}
+
 	value &= revFn(0xFF, 8-bitLen)
 
 	remainCount := 8 - usedCount
@@ -222,9 +248,10 @@ func (p *BitBuilder) AppendN(bitCount int, bit bool) {
 func (p *BitBuilder) appendN0(bitCount int) {
 	p.ensure()
 
-	ofs, normFn, _ := p.align()
+	rightShift, usedCount := p.align()
+	normFn, _ := shifters(rightShift)
 
-	if ofs == 0 {
+	if usedCount == 0 {
 		if bitCount < 0 {
 			return
 		}
@@ -233,7 +260,7 @@ func (p *BitBuilder) appendN0(bitCount int) {
 		case bitCount < 0:
 			bitCount = 0
 		default:
-			alignCount := 8 - int(ofs)
+			alignCount := 8 - int(usedCount)
 			if alignCount > bitCount {
 				p.accBit = normFn(p.accBit, uint8(bitCount))
 				return
@@ -259,7 +286,8 @@ func (p *BitBuilder) appendN0(bitCount int) {
 func (p *BitBuilder) appendN1(bitCount int) {
 	p.ensure()
 
-	usedCount, normFn, revFn := p.align()
+	rightShift, usedCount := p.align()
+	normFn, revFn := shifters(rightShift)
 
 	if usedCount == 0 {
 		if bitCount < 0 {
@@ -305,7 +333,13 @@ func (p *BitBuilder) appendN1(bitCount int) {
 func (p *BitBuilder) AppendByte(b byte) {
 	p.ensure()
 
-	usedCount, normFn, revFn := p.align()
+	rightShift, usedCount := p.align()
+	normFn, revFn := shifters(rightShift)
+
+	if rightShift {
+		b = bits.Reverse8(b)
+	}
+
 	if usedCount == 0 {
 		p.bytes = append(p.bytes, b)
 		return
@@ -317,7 +351,7 @@ func (p *BitBuilder) AppendByte(b byte) {
 }
 
 func (p *BitBuilder) dump() []byte {
-	usedCount, _, _ := p.align()
+	_, usedCount := p.align()
 
 	bytes := append(make([]byte, 0, cap(p.bytes)), p.bytes...)
 	if usedCount > 0 {
@@ -327,7 +361,7 @@ func (p *BitBuilder) dump() []byte {
 }
 
 func (p *BitBuilder) Done() ([]byte, int) {
-	usedCount, _, _ := p.align()
+	_, usedCount := p.align()
 
 	bytes := p.bytes
 	p.bytes = nil
