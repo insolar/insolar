@@ -35,18 +35,17 @@ func InitNodeLogger(ctx context.Context, cfg configuration.Log, nodeRef, nodeRol
 		panic(err)
 	}
 
-	ctx = SetLogger(ctx, inslog)
-	// ctx, _ = WithTraceField(ctx, traceID)
+	fields := map[string]interface{}{"loginstance": "node"}
 	if nodeRef != "" {
-		ctx, _ = WithField(ctx, "nodeid", nodeRef)
+		fields["nodeid"] = nodeRef
 	}
 	if nodeRole != "" {
-		ctx, inslog = WithField(ctx, "role", nodeRole)
+		fields["role"] = nodeRole
 	}
+	inslog = inslog.WithFields(fields)
 
+	ctx = SetLogger(ctx, inslog)
 	logger.SetGlobalLogger(inslog)
-
-	ctx, inslog = WithField(ctx, "loginstance", "node")
 
 	return ctx, inslog
 }
