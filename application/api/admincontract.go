@@ -44,12 +44,6 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 		"member.getBalance":          true,
 		"contract.registerNode":      true,
 		"contract.getNodeRef":        true,
-		"CreateHelloWorld":           true,
-		"Greet":                      true,
-		"Count":                      true,
-		"CreateChild":                true,
-		"ReturnObj":                  true,
-		"PulseNumber":                true,
 	}
 	return &AdminContractService{runner: runner, allowedMethods: methods}
 }
