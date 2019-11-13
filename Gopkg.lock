@@ -408,7 +408,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7e8b852581596acce37bcb939a05d7d5ff27156045b50057e659e299c16fc1ca"
+  digest = "1:06c4e87e7489159b6a71aee72232e0851bcac6501d22503965e6ae1c0791fe5b"
   name = "github.com/mmcloughlin/avo"
   packages = [
     "attr",
@@ -784,7 +784,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8430374f97c909c66614e080d08ea19d9730e9264034be270cd638ffa1aed837"
+  digest = "1:83b64839c86038766f23fcc5b5c0e08a60c725efb92ed54460c5af97c032d567"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
@@ -892,6 +892,7 @@
     "github.com/golang/protobuf/proto",
     "github.com/google/gofuzz",
     "github.com/google/gops/agent",
+    "github.com/google/uuid",
     "github.com/gorilla/mux",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",

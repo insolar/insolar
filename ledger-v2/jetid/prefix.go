@@ -255,10 +255,14 @@ const compactSerializeV1 = 1
 
 // TODO Deserialize
 func (p *PrefixTree) SimpleSerialize(w io.Writer) error {
-	if p.maxDepth == 0 {
+	encodedDepth := byte(0)
+	switch {
+	case p.maxDepth < p.minDepth:
 		panic("illegal state")
+	case p.maxDepth > 0:
+		encodedDepth = p.minDepth - 1 | (p.maxDepth-p.minDepth)<<4
 	}
-	if _, e := w.Write([]byte{simpleSerializeV1, p.minDepth - 1 | (p.maxDepth-1)<<4}); e != nil {
+	if _, e := w.Write([]byte{compactSerializeV1, encodedDepth}); e != nil {
 		return e
 	}
 	delta := p.maxDepth - p.minDepth
@@ -290,10 +294,14 @@ func (p *PrefixTree) SimpleSerialize(w io.Writer) error {
 }
 
 func (p *PrefixTree) CompactSerialize(w io.Writer) error {
-	if p.maxDepth == 0 || p.maxDepth < p.minDepth {
+	encodedDepth := byte(0)
+	switch {
+	case p.maxDepth < p.minDepth:
 		panic("illegal state")
+	case p.maxDepth > 0:
+		encodedDepth = p.minDepth - 1 | (p.maxDepth-p.minDepth)<<4
 	}
-	if _, e := w.Write([]byte{compactSerializeV1, p.minDepth - 1 | (p.maxDepth-1)<<4}); e != nil {
+	if _, e := w.Write([]byte{compactSerializeV1, encodedDepth}); e != nil {
 		return e
 	}
 	if p.maxDepth == p.minDepth {
@@ -374,15 +382,18 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 		return fmt.Errorf("unsupported type: %d", b)
 	}
 
-	switch b, e := r.ReadByte(); {
+	switch encodedDepth, e := r.ReadByte(); {
 	case e != nil:
 		return e
+	case encodedDepth == 0:
+		// empty tree
+		return nil
 	default:
-		p.minDepth = b&0x0F + 1
-		p.maxDepth = b>>4 + 1
+		p.minDepth = encodedDepth&0x0F + 1
+		p.maxDepth = encodedDepth>>4 + p.minDepth
 		switch {
 		case p.minDepth > p.maxDepth:
-			return fmt.Errorf("invalid content: %d", b)
+			return fmt.Errorf("invalid content: %d", encodedDepth)
 		case p.minDepth == p.maxDepth:
 			return p.generatePrefectTree()
 		}
