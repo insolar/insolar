@@ -98,7 +98,7 @@ func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc j
 
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
-	err := os.RemoveAll(cb.root) // nolint: errcheck
+	err := os.RemoveAll(cb.root)
 	if err != nil {
 		panic(err)
 	}
