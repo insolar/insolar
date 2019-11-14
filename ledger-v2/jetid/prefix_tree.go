@@ -471,8 +471,10 @@ func (p *PrefixTree) CompactSerialize(w io.Writer) error {
 	return nil
 }
 
+const encodedDepthZeroTree = 0xFF
+
 func (p *PrefixTree) CompactSerializeToBytes() []byte {
-	encodedDepth := byte(0)
+	encodedDepth := uint8(encodedDepthZeroTree)
 	switch {
 	case p.maxDepth < p.minDepth:
 		panic("illegal state")
@@ -547,7 +549,7 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 	switch encodedDepth, e := r.ReadByte(); {
 	case e != nil:
 		return e
-	case encodedDepth == 0:
+	case encodedDepth == encodedDepthZeroTree:
 		// empty tree
 		p.leafCounts[0] = 1
 		return nil
