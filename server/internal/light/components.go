@@ -19,14 +19,13 @@ package light
 import (
 	"context"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -47,6 +46,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -59,6 +59,34 @@ type components struct {
 	NodeRef, NodeRole string
 	replicator        executor.LightReplicator
 	cleaner           executor.Cleaner
+}
+
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+	earlyComponents := component.NewManager(nil)
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load KeyStore")
+	}
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve node public key")
+	}
+
+	certManager, err := certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create new CertificateManager")
+	}
+
+	return certManager, nil
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {

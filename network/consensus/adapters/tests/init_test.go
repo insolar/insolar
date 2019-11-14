@@ -64,7 +64,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/network"
@@ -240,7 +239,7 @@ func initLogger(level insolar.LogLevel) context.Context {
 	cfg.Level = level.String()
 	cfg.Formatter = insolar.TextFormat.String()
 
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, utils.RandTraceID()+"_main", "", "")
+	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, "", "")
 	return ctx
 }
 

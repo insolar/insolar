@@ -211,7 +211,7 @@ func initLogger() context.Context {
 	cfg.Level = "Debug"
 	cfg.Formatter = "text"
 
-	ctx, logger := inslogger.InitNodeLogger(context.Background(), cfg, "", "", "backuper")
+	ctx, logger := inslogger.InitNodeLogger(context.Background(), cfg, "", "backuper")
 	badgerLogger.Logger = logger.WithField("component", "badger")
 
 	return ctx

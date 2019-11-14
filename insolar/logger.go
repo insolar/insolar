@@ -151,6 +151,7 @@ type LoggerBuilder interface {
 	WithField(string, interface{}) LoggerBuilder
 
 	// Adds a dynamically-evaluated field. Fields are deduplicated within a single builder only. When func=nil or func()=nil then the field is omitted.
+	// NB! Dynamically-evaluated fields are not inherited by derived loggers.
 	WithDynamicField(string, func() interface{}) LoggerBuilder
 
 	// Creates a logger.

@@ -59,8 +59,11 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 	ctx, instr := instrumenter.NewMethodInstrument("ContractService.call")
 	defer instr.End()
 
-	logger := inslogger.FromContext(ctx)
-	logger.Infof("[ ContractService.call ] Incoming request: %s", req.RequestURI)
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"callSite": args.CallSite,
+		"uri":      req.RequestURI,
+		"service":  "ContractService",
+	}).Infof("Incoming request")
 
 	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }

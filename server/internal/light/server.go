@@ -24,6 +24,7 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -57,16 +58,33 @@ func (s *Server) Serve() {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	ctx := context.Background()
-	traceID := utils.RandTraceID() + "_main"
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
-	log.InitTicker()
+	var (
+		ctx         = context.Background()
+		mainTraceID = utils.RandTraceID() + "_main"
+		logger      insolar.Logger
+	)
+	{
+		var (
+			nodeRole      = "light_material"
+			nodeReference = ""
+		)
+		certManager, err := initTemporaryCertificateManager(ctx, cfg)
+		if err != nil {
+			log.Warn("Failed to initialize nodeRef, nodeRole fields: ", err.Error())
+		} else {
+			nodeRole = certManager.GetCertificate().GetRole().String()
+			nodeReference = certManager.GetCertificate().GetNodeRef().String()
+		}
+
+		ctx, logger = inslogger.InitNodeLogger(ctx, cfg.Log, nodeReference, nodeRole)
+		log.InitTicker()
+	}
 
 	cmp, err := newComponents(ctx, *cfg)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
-		jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+		jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, mainTraceID, cmp.NodeRef, cmp.NodeRole)
 		defer jaegerFlush()
 	}
 
@@ -78,9 +96,9 @@ func (s *Server) Serve() {
 
 	go func() {
 		sig := <-gracefulStop
-		inslog.Debug("caught sig: ", sig)
+		logger.Debug("caught sig: ", sig)
 
-		inslog.Warn("GRACEFUL STOP APP")
+		logger.Warn("GRACEFUL STOP APP")
 		err = cmp.Stop(ctx)
 		fatal(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
