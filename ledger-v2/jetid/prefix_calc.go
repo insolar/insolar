@@ -21,27 +21,27 @@ import (
 	"io"
 )
 
+const SplitMedian = 7 // makes 0 vs 1 ratio like [0..6] vs [7..15]
+// this enables left branches of jets to be ~23% less loaded
+
 type PrefixCalc struct {
+	OverlapOfs uint8
 }
 
-func (p PrefixCalc) FromSlice(prefixLen int, overlapOfs int, data []byte) Prefix {
+func (p PrefixCalc) FromSlice(prefixLen int, data []byte) Prefix {
 	switch {
 	case prefixLen < 0 || prefixLen > 32:
-		panic("illegal value")
-	case overlapOfs < 0:
 		panic("illegal value")
 	case prefixLen == 0:
 		return 0
 	}
 
-	return p.fromSlice(prefixLen, overlapOfs, data)
+	return p.fromSlice(prefixLen, data)
 }
 
-func (p PrefixCalc) FromReader(prefixLen int, overlapOfs int, data io.Reader) (Prefix, error) {
+func (p PrefixCalc) FromReader(prefixLen int, data io.Reader) (Prefix, error) {
 	switch {
 	case prefixLen < 0 || prefixLen > 32:
-		panic("illegal value")
-	case overlapOfs < 0:
 		panic("illegal value")
 	case data == nil:
 		panic("illegal value")
@@ -49,7 +49,7 @@ func (p PrefixCalc) FromReader(prefixLen int, overlapOfs int, data io.Reader) (P
 		return 0, nil
 	}
 
-	dataBuf := make([]byte, overlapOfs+(prefixLen+1)>>1)
+	dataBuf := make([]byte, int(p.OverlapOfs)+(prefixLen+1)>>1)
 	switch n, err := data.Read(dataBuf); {
 	case err != nil:
 		return 0, err
@@ -57,16 +57,16 @@ func (p PrefixCalc) FromReader(prefixLen int, overlapOfs int, data io.Reader) (P
 		return 0, fmt.Errorf("insufficient data length")
 	}
 
-	return p.fromSlice(prefixLen, overlapOfs, dataBuf), nil
+	return p.fromSlice(prefixLen, dataBuf), nil
 }
 
-func (p PrefixCalc) fromSlice(prefixLen int, overlapOfs int, data []byte) Prefix {
+func (p PrefixCalc) fromSlice(prefixLen int, data []byte) Prefix {
 	result := Prefix(0)
 	bit := Prefix(1)
 
 	for i, d := range data {
-		if overlapOfs > 0 {
-			d ^= data[i+overlapOfs]
+		if p.OverlapOfs > 0 {
+			d ^= data[i+int(p.OverlapOfs)]
 		}
 
 		if d&0xF >= SplitMedian {

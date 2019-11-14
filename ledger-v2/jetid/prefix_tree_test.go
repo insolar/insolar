@@ -66,6 +66,29 @@ func TestPrefixTree_Print(t *testing.T) {
 	pt.PrintTable()
 }
 
+func TestPrefixTree_Propagate(t *testing.T) {
+	pt := NewPrefixTree(true)
+	//pt.Split(0, 0)
+	//pt.Split(0, 1)
+	//pt.Split(0, 2)
+	//pt.Split(0, 3)
+	//pt.Split(0, 4)
+	//pt.Split(0, 5)
+	//pt.Split(0, 6)
+	//pt.Split(0, 7)
+	//pt.Split(0, 8)
+	//pt.Split(0, 9)
+	//pt.Split(0, 10)
+	//pt.Split(0, 11)
+	//pt.Split(0, 12)
+	//pt.Split(0, 13)
+	//pt.Split(0, 14)
+	//pt.Split(0, 15)
+	//pt.PrintTable()
+	//pt.Merge(0, 16)
+	pt.PrintTable()
+}
+
 func TestPrefixTree_SplitMax0(t *testing.T) {
 	pt := PrefixTree{}
 	pt.Split(0, 0)
@@ -156,12 +179,6 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	require.NoError(t, pt.CompactSerialize(&buf))
 	bufCopy := buf.Bytes() // will be ok as we don't write into it further
 
-	{
-		bufSimple := bytes.Buffer{}
-		require.NoError(t, pt.simpleSerialize(&bufSimple))
-		fmt.Printf("Simple:  %5d bytes\n", bufSimple.Len())
-		//fmt.Println(hex.Dump(bufCopy))
-	}
 	fmt.Printf("Compact: %5d bytes\n", len(bufCopy))
 	fmt.Println(hex.Dump(bufCopy))
 
@@ -175,30 +192,4 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	}
 	require.Equal(t, bufCopy, buf2.Bytes())
 	require.Equal(t, pt, pt2)
-}
-
-func TestPrefixTree_SerializeLargest(t *testing.T) {
-	t.SkipNow()
-
-	pt := PrefixTree{}
-	pt.Init()
-	buildTree(&pt, 0, 0, 16)
-}
-
-func buildTree(pt *PrefixTree, prefix Prefix, baseDepth, minDepth uint8) {
-	const maxDepth = 16
-	for depth := baseDepth; depth < maxDepth; depth++ {
-		pt.Split(prefix, depth)
-		for i := depth + 1; i < maxDepth; i++ {
-			pt.Split(prefix, i)
-			if i < minDepth {
-				buildTree(pt, prefix|Prefix(1)<<i, i+1, minDepth)
-			}
-		}
-		prefix |= Prefix(1) << depth
-
-		b := pt.CompactSerializeToBytes()
-		fmt.Printf("Jets: %5d	MinDepth: %2d	MaxDepth: %2d	Serialized: %5d\n", pt.Count(), pt.MinDepth(), pt.MaxDepth(), len(b))
-	}
-	//pt.PrintTable()
 }

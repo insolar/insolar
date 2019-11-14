@@ -28,16 +28,18 @@ import (
 
 type Prefix uint32
 
-const SplitMedian = 7 // makes 0 vs 1 ratio like [0..6] vs [7..15]
-// this enables left branches of jets to be ~23% less loaded
+func NewPrefixTree(autoPropagate bool) PrefixTree {
+	return PrefixTree{autoPropagate: autoPropagate, leafCounts: [17]uint16{0: 1}}
+}
 
 // limited to 65k Jets
 type PrefixTree struct {
-	mask       Prefix
-	minDepth   uint8
-	maxDepth   uint8
-	leafCounts [17]uint16
-	lenNibles  [32768]uint8
+	lenNibles     [32768]uint8
+	leafCounts    [17]uint16
+	minDepth      uint8
+	maxDepth      uint8
+	autoPropagate bool
+	mask          Prefix
 }
 
 func (p *PrefixTree) MaxDepth() uint8 {
@@ -74,7 +76,7 @@ func (p *PrefixTree) Count() int {
 	return total
 }
 
-func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
+func (p *PrefixTree) _getPrefixLength(prefix uint16) (uint8, bool) {
 	depth := p.lenNibles[prefix>>1]
 	if prefix&1 != 0 {
 		depth >>= 4
@@ -88,6 +90,15 @@ func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
 		return 0, prefix == 0
 	default:
 		return 1, prefix <= 1
+	}
+}
+
+func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
+	switch depth, ok := p._getPrefixLength(prefix); {
+	case ok && depth > 0 && bits.Len16(prefix) > int(depth):
+		return depth, false
+	default:
+		return depth, ok
 	}
 }
 
@@ -107,14 +118,8 @@ func (p *PrefixTree) setPrefixLength(prefix uint16, depth uint8) {
 	idx := prefix >> 1
 	d := p.lenNibles[idx]
 	if prefix&1 != 0 {
-		if d&0xF0 != 0 {
-			panic("illegal state")
-		}
 		d = (d & 0x0F) | (depth << 4)
 	} else {
-		if d&0x0F != 0 {
-			panic("illegal state")
-		}
 		d = (d & 0xF0) | (depth & 0x0F)
 	}
 	p.lenNibles[idx] = d
@@ -129,22 +134,30 @@ func (p *PrefixTree) resetPrefixLength(prefix uint16) {
 }
 
 func (p *PrefixTree) FindPrefixLength(prefix Prefix) uint8 {
-	_, l := p.findPrefixLength(uint16(prefix & p.mask))
+	_, l := p.findPrefixLength(prefix)
 	return l
 }
 
-func (p *PrefixTree) findPrefixLength(maskedPrefix uint16) (uint16, uint8) {
-	if depth, ok := p.getPrefixLength(maskedPrefix); ok {
-		return maskedPrefix, depth
-	}
+func (p *PrefixTree) findPrefixLength(prefix Prefix) (uint16, uint8) {
+	maskedPrefix := uint16(prefix & p.mask)
 
+	switch depth, ok := p._getPrefixLength(maskedPrefix); {
+	case ok:
+		return maskedPrefix, depth
+	case p.autoPropagate:
+		// with auto-propagation all entries must have a value
+		panic("illegal state")
+	}
+	return p._findPrefixLength(maskedPrefix)
+}
+
+func (p *PrefixTree) _findPrefixLength(maskedPrefix uint16) (uint16, uint8) {
 	for maskedPrefix > math.MaxUint8 {
 		level := 7 + bits.Len8(uint8(maskedPrefix>>8))
 		hiBit := uint16(1) << uint8(level)
 		maskedPrefix ^= hiBit
 
-		if depth, ok := p.getPrefixLength(maskedPrefix); ok {
-			//p.setPrefixLength(uint16(prefix & p.mask), depth)
+		if depth, ok := p._getPrefixLength(maskedPrefix); ok {
 			return maskedPrefix, depth
 		}
 	}
@@ -153,8 +166,8 @@ func (p *PrefixTree) findPrefixLength(maskedPrefix uint16) (uint16, uint8) {
 		level := bits.Len8(uint8(maskedPrefix)) - 1
 		hiBit := uint16(1) << uint8(level)
 		maskedPrefix ^= hiBit
-		if depth, ok := p.getPrefixLength(maskedPrefix); ok {
-			//p.setPrefixLength(uint16(prefix & p.mask), depth)
+
+		if depth, ok := p._getPrefixLength(maskedPrefix); ok {
 			return maskedPrefix, depth
 		}
 	}
@@ -163,18 +176,28 @@ func (p *PrefixTree) findPrefixLength(maskedPrefix uint16) (uint16, uint8) {
 }
 
 func (p *PrefixTree) Split(prefix Prefix, prefixLimit uint8) {
-	p.split(uint16(prefix&p.mask), prefixLimit)
-}
-
-func (p *PrefixTree) split(prefix uint16, prefixLimit uint8) {
-	maskedPrefix, prefixLen := p.findPrefixLength(prefix)
-	switch {
+	switch maskedPrefix, prefixLen := p.findPrefixLength(prefix); {
 	case prefixLimit != prefixLen:
 		panic("illegal value")
 	case int(prefixLen) >= len(p.leafCounts):
 		panic("illegal value") // TODO return as error?
+	default:
+		p._split(maskedPrefix, prefixLen)
 	}
+}
 
+func (p *PrefixTree) split(maskedPrefix uint16, prefixLimit uint8) {
+	switch prefixLen, ok := p.getPrefixLength(maskedPrefix); {
+	case !ok:
+		panic("illegal value")
+	case prefixLen != prefixLimit:
+		panic("illegal value")
+	default:
+		p._split(maskedPrefix, prefixLen)
+	}
+}
+
+func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8) {
 	switch n := p.leafCounts[prefixLen]; {
 	case n > 1:
 		p.leafCounts[prefixLen] = n - 1
@@ -193,34 +216,56 @@ func (p *PrefixTree) split(prefix uint16, prefixLimit uint8) {
 	if prefixLen == p.maxDepth {
 		p.maxDepth++
 		p.mask = (p.mask << 1) | 1
+		if p.autoPropagate {
+			p.propagateNewDepth(p.maxDepth - 1)
+		}
 	}
 
 	pairedPrefix := maskedPrefix | (1 << prefixLen)
 	prefixLen++
-	p.resetPrefixLength(maskedPrefix)
 	p.setPrefixLength(maskedPrefix, prefixLen)
 	p.setPrefixLength(pairedPrefix, prefixLen)
 	p.leafCounts[prefixLen] += 2
+
+	if p.autoPropagate {
+		p.propagate(maskedPrefix, prefixLen)
+		p.propagate(pairedPrefix, prefixLen)
+	}
 }
 
 func (p *PrefixTree) Merge(prefix Prefix, prefixLimit uint8) {
-	p.merge(uint16(prefix&p.mask), prefixLimit)
-}
-
-func (p *PrefixTree) merge(prefix uint16, prefixLimit uint8) {
-	maskedPrefix, prefixLen := p.findPrefixLength(prefix)
-	switch {
+	switch maskedPrefix, prefixLen := p.findPrefixLength(prefix); {
 	case prefixLimit != prefixLen:
 		panic("illegal value")
 	case prefixLen == 0:
 		panic("illegal value")
+	default:
+		p._merge(maskedPrefix, prefixLen)
 	}
+}
 
-	pairedPrefix := maskedPrefix | (1 << (prefixLen - 1))
-	if maskedPrefix == pairedPrefix {
-		panic("illegal value - only the zero-side is allowed to merge") // TODO return as error?
+func (p *PrefixTree) merge(maskedPrefix uint16, prefixLimit uint8) {
+	switch prefixLen, ok := p.getPrefixLength(maskedPrefix); {
+	case !ok:
+		panic("illegal value")
+	case prefixLen != prefixLimit:
+		panic("illegal value")
+	case prefixLen == 0:
+		panic("illegal value")
+	default:
+		p._merge(maskedPrefix, prefixLen)
 	}
-	if _, pairedPrefixLen := p.findPrefixLength(pairedPrefix); pairedPrefixLen != prefixLen {
+}
+
+func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8) {
+	pairedPrefix := maskedPrefix | (1 << (prefixLen - 1))
+
+	switch pairedPrefixLen, ok := p.getPrefixLength(pairedPrefix); {
+	case maskedPrefix == pairedPrefix:
+		panic("illegal value - only the zero-side is allowed to merge") // TODO return as error?
+	case !ok:
+		panic("illegal value - missing prefix") // TODO return as error?
+	case pairedPrefixLen != prefixLen:
 		panic("illegal value - unbalanced merge pair") // TODO return as error?
 	}
 
@@ -244,10 +289,119 @@ func (p *PrefixTree) merge(prefix uint16, prefixLimit uint8) {
 		p.minDepth--
 	}
 	prefixLen--
+
 	p.resetPrefixLength(pairedPrefix)
 	p.resetPrefixLength(maskedPrefix)
-	p.setPrefixLength(maskedPrefix, prefixLen)
+	if prefixLen > 0 {
+		p.setPrefixLength(maskedPrefix, prefixLen)
+		if p.autoPropagate {
+			p.propagate(maskedPrefix, prefixLen)
+		}
+	}
 	p.leafCounts[prefixLen]++
+
+}
+
+func (p *PrefixTree) propagate(prefix uint16, baseDepth uint8) {
+	switch {
+	case baseDepth == 0 || baseDepth > p.maxDepth:
+		panic("illegal state")
+	case baseDepth == p.maxDepth:
+		return
+	}
+	incStep := 1 << baseDepth
+	if int(prefix) >= incStep {
+		panic("illegal state")
+	}
+	setDepth := (baseDepth - 1) & 0xF
+	maxStep := 1 << p.maxDepth
+	if prefix&1 == 0 {
+		for i := incStep; i < maxStep; i += incStep {
+			idx := (i + int(prefix)) >> 1 // as we count nibles, not bytes
+			p.lenNibles[idx] = p.lenNibles[idx]&0xF0 | setDepth
+		}
+	} else {
+		setDepth <<= 4
+		for i := incStep; i < maxStep; i += incStep {
+			idx := (i + int(prefix)) >> 1 // as we count nibles, not bytes
+			p.lenNibles[idx] = p.lenNibles[idx]&0x0F | setDepth
+		}
+	}
+}
+
+func (p *PrefixTree) propagateNewDepth(prevMaxDepth uint8) {
+	switch {
+	case p.maxDepth < prevMaxDepth:
+		panic("illegal state")
+	case p.maxDepth == prevMaxDepth:
+		return
+	case prevMaxDepth == 0:
+		p.lenNibles[0] = p.lenNibles[0]&0x0F | p.lenNibles[0]<<4
+		if p.maxDepth == 1 {
+			return
+		}
+		fallthrough
+	case prevMaxDepth == 1:
+		for i := 1<<(p.maxDepth-1) - 1; i > 0; i-- {
+			p.lenNibles[i] = p.lenNibles[0]
+		}
+		return
+	}
+
+	source := p.lenNibles[:1<<(prevMaxDepth-1)]
+	max := 1 << (p.maxDepth - 1)
+	for i := len(source); i < max; i += len(source) {
+		copy(p.lenNibles[i:], source)
+	}
+}
+
+func (p *PrefixTree) propagateAll() {
+	panic("not implemented") // TODO propagateAll
+}
+
+func (p *PrefixTree) SetPropagate() {
+	if p.autoPropagate {
+		return
+	}
+	p.autoPropagate = true
+	p.propagateAll()
+}
+
+func (p *PrefixTree) Cleanup() {
+	switch {
+	case p.maxDepth == 16:
+		return
+	case p.maxDepth == 0:
+		if p.autoPropagate {
+			for i := len(p.lenNibles) - 1; i >= 0; i-- {
+				p.lenNibles[i] = 0
+			}
+		}
+		switch p.leafCounts[0] {
+		case 0:
+			p.leafCounts[0] = 1
+		case 1:
+		default:
+			panic("illegal state")
+		}
+	case p.maxDepth > 16:
+		panic("illegal state")
+	default:
+		if p.autoPropagate {
+			for i := 1 << (p.maxDepth - 1); i < len(p.lenNibles); i++ {
+				p.lenNibles[i] = 0
+			}
+		}
+		if p.leafCounts[0] != 0 {
+			panic("illegal state")
+		}
+	}
+
+	for i := len(p.leafCounts) - 1; i > int(p.maxDepth); i-- {
+		if p.leafCounts[i] != 0 {
+			panic("illegal state")
+		}
+	}
 }
 
 func (p *PrefixTree) String() string {
@@ -257,21 +411,21 @@ func (p *PrefixTree) String() string {
 func (p *PrefixTree) PrintTable() {
 	fmt.Printf("min=%d max=%d cnt=%v\n", p.minDepth, p.maxDepth, p.leafCounts)
 	for i := range p.lenNibles {
-		prefix := Prefix(i << 1)
-		if depth, ok := p.getPrefixLength(uint16(prefix)); ok && depth != 0 {
+		prefix := uint16(i << 1)
+		if depth, ok := p.getPrefixLength(prefix); ok {
 			fmt.Printf("%5d [%2d]", prefix, depth)
 			p.printRow(prefix, depth)
 		}
 
 		prefix++
-		if depth, ok := p.getPrefixLength(uint16(prefix)); ok && depth != 0 {
+		if depth, ok := p.getPrefixLength(prefix); ok {
 			fmt.Printf("%5d [%2d]", prefix, depth)
 			p.printRow(prefix, depth)
 		}
 	}
 }
 
-func (p *PrefixTree) printRow(prefix Prefix, pLen uint8) {
+func (p *PrefixTree) printRow(prefix uint16, pLen uint8) {
 	b := strings.Builder{}
 	b.Grow(32)
 	for i := uint8(0); i < pLen; i++ {
@@ -282,55 +436,17 @@ func (p *PrefixTree) printRow(prefix Prefix, pLen uint8) {
 	fmt.Println(b.String())
 }
 
-const simpleSerializeV1 = 0
 const compactSerializeV1 = 1
 
-// TODO remove later - this is only for comparison
-func (p *PrefixTree) simpleSerialize(w io.Writer) error {
-	encodedDepth := byte(0)
-	switch {
-	case p.maxDepth < p.minDepth:
-		panic("illegal state")
-	case p.minDepth > 0:
-		encodedDepth = p.minDepth - 1 | (p.maxDepth-p.minDepth)<<4
-	}
-	if _, e := w.Write([]byte{simpleSerializeV1, encodedDepth}); e != nil {
-		return e
-	}
-	delta := p.maxDepth - p.minDepth
-	if delta == 0 {
-		return nil
-	}
-	maxBound := 1 << (p.maxDepth - 1)
-	switch encodingBits := bits.Len8(delta); encodingBits {
-	case 4:
-		_, e := w.Write(p.lenNibles[:maxBound])
-		return e
-	case 1:
-		bb := longbits.NewBitBuilder(longbits.FirstLow, (maxBound+3)>>2)
-		for _, b := range p.lenNibles[:maxBound] {
-			bb.Append(b&0x0F > p.minDepth)
-			bb.Append((b >> 4) > p.minDepth)
-		}
-		_, e := w.Write(bb.DoneToBytes())
-		return e
-	default:
-		bb := longbits.NewBitBuilder(longbits.FirstLow, (maxBound+4-encodingBits)/encodingBits)
-		for _, b := range p.lenNibles[:maxBound] {
-			bb.AppendSubByte(b&0x0F-p.minDepth, uint8(encodingBits))
-			bb.AppendSubByte((b>>4)-p.minDepth, uint8(encodingBits))
-		}
-		_, e := w.Write(bb.DoneToBytes())
-		return e
-	}
-}
-
-// General idea of compact serialization is based on the "mountain range" approach to visualize Catalan numbers,
-// yet it is different as we have 2 limits and the left and right bounds can be above the bottom limit.
+//
+// General idea of this serialization is based on the "mountain range" approach to visualize Catalan numbers,
+// yet it is different as we have 2 top and bottom limits and the left and right bounds can be above the bottom limit.
 // https://en.wikipedia.org/wiki/Catalan_number
 // https://brilliant.org/wiki/catalan-numbers/
 //
-// This implementation is suboptimal and slightly asymmetric for 0- and 1- branches.
+// This implementation is suboptimal and consumes extra >40% of theoretical minimum (more for small trees),
+// but it takes less for balanced trees (down to 2 bytes for a perfect tree).
+//
 
 func (p *PrefixTree) CompactSerialize(w io.Writer) error {
 	b := p.CompactSerializeToBytes()
@@ -359,15 +475,19 @@ func (p *PrefixTree) CompactSerializeToBytes() []byte {
 	if p.maxDepth != p.minDepth {
 		maxPrefix := 1 << p.minDepth
 		for prefix := 0; prefix < maxPrefix; prefix++ {
-			p.serializeBranch(&bb, uint16(prefix), p.minDepth, true)
+			p.serializeBranch(&bb, uint16(prefix), p.minDepth)
 		}
 	}
 
 	return bb.DoneToBytes()
 }
 
-func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, minDepth uint8, isMain bool) {
+const shallowBitCount = 3 // Meaningful values are 2 or 3. Factually disables use of shallow bit when =4
+
+func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, minDepth uint8) {
 	depth, ok := p.getPrefixLength(prefix)
+	maxDelta := p.maxDepth - minDepth
+	//fmt.Printf("S: %04x %2d %2d %v\n", prefix, minDepth, depth, isShallow)
 	switch {
 	case !ok:
 		panic("illegal state")
@@ -375,7 +495,7 @@ func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, min
 		panic("illegal state")
 	case depth < minDepth:
 		panic("illegal state")
-	case isMain:
+	case maxDelta < 1<<shallowBitCount:
 	case depth == minDepth:
 		bb.AppendBit(0)
 		return
@@ -383,7 +503,7 @@ func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, min
 		bb.AppendBit(1)
 	}
 
-	maxDelta := p.maxDepth - minDepth
+	//fmt.Println(bb.AlignOffset(), bb.CompletedByteCount())
 	bb.AppendSubByte(depth-minDepth, uint8(bits.Len8(maxDelta)))
 
 	// zero-branch is accompanied by one-branches, one at each depth level
@@ -397,7 +517,7 @@ func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, min
 		}
 
 		branchPrefix := prefix | subBranchBit
-		p.serializeBranch(bb, branchPrefix, branchDepth, false)
+		p.serializeBranch(bb, branchPrefix, branchDepth)
 	}
 }
 
@@ -436,9 +556,13 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 
 	maxPrefix := 1 << p.minDepth
 	for prefix := 0; prefix < maxPrefix; prefix++ {
-		if e := p.deserializeBranch(br, uint16(prefix), p.minDepth, true); e != nil {
+		if e := p.deserializeBranch(br, uint16(prefix), p.minDepth); e != nil {
 			return e
 		}
+	}
+
+	if p.autoPropagate {
+		p.propagateAll()
 	}
 
 	return nil
@@ -455,30 +579,36 @@ func (p *PrefixTree) generatePrefectTree() {
 	}
 }
 
-func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, minDepth uint8, isMain bool) error {
+func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, minDepth uint8) error {
+	maxDelta := p.maxDepth - minDepth
 	switch {
 	case p.maxDepth < minDepth:
 		panic("illegal state")
-	case isMain:
+	case maxDelta < 1<<shallowBitCount:
 	default:
 		switch b, e := br.ReadBool(); {
 		case e != nil:
 			return e
 		case !b:
+			//fmt.Printf("D: %04x %2d -- %v\n", prefix, minDepth, isShallow)
 			return nil
 		}
 	}
 
-	maxDelta := p.maxDepth - minDepth
 	depth := minDepth
+	//fmt.Println(br.AlignOffset())
 	if delta, e := br.ReadSubByte(uint8(bits.Len8(maxDelta))); e != nil {
 		return e
 	} else {
 		depth += delta
 	}
-	if depth < minDepth {
+	switch {
+	case depth > p.maxDepth:
+		panic("illegal state")
+	case depth < minDepth:
 		panic("illegal state")
 	}
+	//fmt.Printf("D: %04x %2d %2d %v\n", prefix, minDepth, depth, isShallow)
 
 	// add a zero-branch and all relevant one-branches
 	for i := minDepth; i < depth; i++ {
@@ -496,7 +626,7 @@ func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, 
 		}
 
 		branchPrefix := prefix | subBranchBit
-		if e := p.deserializeBranch(br, branchPrefix, branchDepth, false); e != nil {
+		if e := p.deserializeBranch(br, branchPrefix, branchDepth); e != nil {
 			return e
 		}
 	}
