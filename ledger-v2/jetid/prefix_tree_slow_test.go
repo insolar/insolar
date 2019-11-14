@@ -29,14 +29,22 @@ func TestPrefixTree_SerializeLargest(t *testing.T) {
 	pt := PrefixTree{}
 	pt.Init()
 	m := buildTree(t, &pt, 0, 0, 16)
+	fmt.Println("Max serialized: ", m)
 	require.Less(t, m, 6700)
 }
 
 func buildTree(t *testing.T, pt *PrefixTree, prefix Prefix, baseDepth, minDepth uint8) int {
-	maxSize := 0
+	maxSize := checkTree(t, pt) // zero level
+
 	const maxDepth = 16
 	for depth := baseDepth; depth < maxDepth; depth++ {
 		pt.Split(prefix, depth)
+
+		if m := checkTree(t, pt); maxSize < m {
+			maxSize = m
+		}
+		hadSplit := false
+
 		for i := depth + 1; i < maxDepth; i++ {
 			pt.Split(prefix, i)
 			if i < minDepth {
@@ -44,25 +52,37 @@ func buildTree(t *testing.T, pt *PrefixTree, prefix Prefix, baseDepth, minDepth 
 				if maxSize < m {
 					maxSize = m
 				}
+			} else {
+				hadSplit = true
 			}
 		}
 		prefix |= Prefix(1) << depth
 
-		buf := bytes.Buffer{}
-		require.NoError(t, pt.CompactSerialize(&buf))
-		if m := buf.Len(); maxSize < m {
-			maxSize = m
+		if !hadSplit {
+			continue
 		}
 
-		jetCount := pt.Count()
-		fmt.Printf("Jets: %5d	MinDepth: %2d	MaxDepth: %2d	Serialized: %5d (%2.2f bit per jet) \n",
-			jetCount, pt.MinDepth(), pt.MaxDepth(), buf.Len(), float32(buf.Len()<<3)/float32(jetCount))
-		//fmt.Println(hex.Dump(buf.Bytes()))
-
-		pt2 := PrefixTree{}
-		require.NoError(t, pt2.CompactDeserialize(&buf))
-		require.Equal(t, *pt, pt2)
+		if m := checkTree(t, pt); maxSize < m {
+			maxSize = m
+		}
 	}
 
 	return maxSize
+}
+
+func checkTree(t *testing.T, pt *PrefixTree) int {
+	buf := bytes.Buffer{}
+	require.NoError(t, pt.CompactSerialize(&buf))
+	sz := buf.Len()
+
+	jetCount := pt.Count()
+	fmt.Printf("Jets: %5d	MinDepth: %2d	MaxDepth: %2d	Serialized: %5d (%2.2f bit per jet) \n",
+		jetCount, pt.MinDepth(), pt.MaxDepth(), sz, float32(sz<<3)/float32(jetCount))
+	//fmt.Println(hex.Dump(buf.Bytes()))
+
+	pt2 := PrefixTree{}
+	require.NoError(t, pt2.CompactDeserialize(&buf))
+	require.Equal(t, *pt, pt2)
+
+	return sz
 }
