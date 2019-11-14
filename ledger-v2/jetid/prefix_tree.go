@@ -95,7 +95,11 @@ func (p *PrefixTree) _getPrefixLength(prefix uint16) (uint8, bool) {
 
 func (p *PrefixTree) getPrefixLength(prefix uint16) (uint8, bool) {
 	switch depth, ok := p._getPrefixLength(prefix); {
-	case ok && depth > 0 && bits.Len16(prefix) > int(depth):
+	case !ok || depth == 0:
+		return depth, ok
+	case !p.autoPropagate:
+		return depth, ok
+	case bits.Len16(prefix) > int(depth):
 		return depth, false
 	default:
 		return depth, ok
@@ -409,16 +413,24 @@ func (p *PrefixTree) String() string {
 }
 
 func (p *PrefixTree) PrintTable() {
+	p.printTable(p.getPrefixLength)
+}
+
+func (p *PrefixTree) PrintTableAll() {
+	p.printTable(p._getPrefixLength)
+}
+
+func (p *PrefixTree) printTable(getFn func(uint16) (uint8, bool)) {
 	fmt.Printf("min=%d max=%d cnt=%v\n", p.minDepth, p.maxDepth, p.leafCounts)
 	for i := range p.lenNibles {
 		prefix := uint16(i << 1)
-		if depth, ok := p.getPrefixLength(prefix); ok {
+		if depth, ok := getFn(prefix); ok {
 			fmt.Printf("%5d [%2d]", prefix, depth)
 			p.printRow(prefix, depth)
 		}
 
 		prefix++
-		if depth, ok := p.getPrefixLength(prefix); ok {
+		if depth, ok := getFn(prefix); ok {
 			fmt.Printf("%5d [%2d]", prefix, depth)
 			p.printRow(prefix, depth)
 		}
