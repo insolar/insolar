@@ -186,22 +186,22 @@ func (p *PrefixTree) Split(prefix Prefix, prefixLimit uint8) {
 	case int(prefixLen) >= len(p.leafCounts):
 		panic("illegal value") // TODO return as error?
 	default:
-		p._split(maskedPrefix, prefixLen)
+		p._split(maskedPrefix, prefixLen, p.autoPropagate)
 	}
 }
 
-func (p *PrefixTree) split(maskedPrefix uint16, prefixLimit uint8) {
+func (p *PrefixTree) splitForDeserialize(maskedPrefix uint16, prefixLimit uint8) {
 	switch prefixLen, ok := p.getPrefixLength(maskedPrefix); {
 	case !ok:
 		panic("illegal value")
 	case prefixLen != prefixLimit:
 		panic("illegal value")
 	default:
-		p._split(maskedPrefix, prefixLen)
+		p._split(maskedPrefix, prefixLen, false)
 	}
 }
 
-func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8) {
+func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8, doPropagate bool) {
 	switch n := p.leafCounts[prefixLen]; {
 	case n > 1:
 		p.leafCounts[prefixLen] = n - 1
@@ -231,7 +231,7 @@ func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8) {
 	p.setPrefixLength(pairedPrefix, prefixLen)
 	p.leafCounts[prefixLen] += 2
 
-	if p.autoPropagate {
+	if doPropagate {
 		p.propagate(maskedPrefix, prefixLen)
 		p.propagate(pairedPrefix, prefixLen)
 	}
@@ -647,7 +647,7 @@ func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, 
 
 	// add a zero-branch and all relevant one-branches
 	for i := minDepth; i < depth; i++ {
-		p.split(prefix, i)
+		p.splitForDeserialize(prefix, i)
 	}
 
 	// zero-branch is accompanied by one-branches, one at each depth level
