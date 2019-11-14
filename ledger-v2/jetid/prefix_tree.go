@@ -220,7 +220,7 @@ func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 	if prefixLen == p.maxDepth {
 		p.maxDepth++
 		p.mask = (p.mask << 1) | 1
-		if p.autoPropagate {
+		if doPropagate {
 			p.propagateNewDepth(p.maxDepth - 1)
 		}
 	}
@@ -244,24 +244,24 @@ func (p *PrefixTree) Merge(prefix Prefix, prefixLimit uint8) {
 	case prefixLen == 0:
 		panic("illegal value")
 	default:
-		p._merge(maskedPrefix, prefixLen)
+		p._merge(maskedPrefix, prefixLen, p.autoPropagate)
 	}
 }
 
-func (p *PrefixTree) merge(maskedPrefix uint16, prefixLimit uint8) {
-	switch prefixLen, ok := p.getPrefixLength(maskedPrefix); {
-	case !ok:
-		panic("illegal value")
-	case prefixLen != prefixLimit:
-		panic("illegal value")
-	case prefixLen == 0:
-		panic("illegal value")
-	default:
-		p._merge(maskedPrefix, prefixLen)
-	}
-}
+//func (p *PrefixTree) merge(maskedPrefix uint16, prefixLimit uint8) {
+//	switch prefixLen, ok := p.getPrefixLength(maskedPrefix); {
+//	case !ok:
+//		panic("illegal value")
+//	case prefixLen != prefixLimit:
+//		panic("illegal value")
+//	case prefixLen == 0:
+//		panic("illegal value")
+//	default:
+//		p._merge(maskedPrefix, prefixLen, false)
+//	}
+//}
 
-func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8) {
+func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8, doPropagate bool) {
 	pairedPrefix := maskedPrefix | (1 << (prefixLen - 1))
 
 	switch pairedPrefixLen, ok := p.getPrefixLength(pairedPrefix); {
@@ -298,7 +298,7 @@ func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8) {
 	p.resetPrefixLength(maskedPrefix)
 	if prefixLen > 0 {
 		p.setPrefixLength(maskedPrefix, prefixLen)
-		if p.autoPropagate {
+		if doPropagate {
 			p.propagate(maskedPrefix, prefixLen)
 		}
 	}

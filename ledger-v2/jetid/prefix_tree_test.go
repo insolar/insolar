@@ -138,12 +138,18 @@ func TestPrefixTree_Propagate_Set(t *testing.T) {
 		cp := copyTree(&pt, false)
 		cp.SetPropagate()
 		require.Equal(t, &pt, cp, i+1)
+
+		cp = copyTree(&pt, true)
+		require.Equal(t, &pt, cp, i+1)
 	}
 
 	for i := uint8(1); i <= 15; i++ {
 		splitOne(&pt, i, i)
 		cp := copyTree(&pt, false)
 		cp.SetPropagate()
+		require.Equal(t, &pt, cp, i+1)
+
+		cp = copyTree(&pt, true)
 		require.Equal(t, &pt, cp, i+1)
 	}
 }
