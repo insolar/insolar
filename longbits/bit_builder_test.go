@@ -161,3 +161,21 @@ func TestBitBuilder_FirstHigh(t *testing.T) {
 	require.Equal(t, []byte{0x2F, 0xFE, 0xA8, 0x80, 0x40, 0xBF, 0xFF, 0xFF}, bb.dump())
 	require.Equal(t, 64, bb.Len())
 }
+
+func TestBitBuilder_FirstLow_SubByte(t *testing.T) {
+	bb := BitBuilder{}
+	for i := byte(0); i < 8; i++ {
+		bb.AppendSubByte(i, 3)
+	}
+	require.Equal(t, 24, bb.Len())
+	require.Equal(t, []byte{0x88, 0xC6, 0xFA}, bb.dump())
+}
+
+func TestBitBuilder_FirstHigh_SubByte(t *testing.T) {
+	bb := NewBitBuilder(FirstHigh, 0)
+	for i := byte(0); i < 8; i++ {
+		bb.AppendSubByte(i, 3)
+	}
+	require.Equal(t, 24, bb.Len())
+	require.Equal(t, []byte{0x11, 0x63, 0x5F}, bb.dump())
+}

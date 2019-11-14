@@ -143,7 +143,7 @@ func testBitReaderReadSubByte(t *testing.T, br testReader) {
 	require.True(t, br.IsArrayDepleted())
 }
 
-func Test_BitReader_ReadFirstLow(t *testing.T) {
+func Test_BitReader_FirstLow_Read(t *testing.T) {
 	bytes := copyBits(testSample)
 	testBitReaderRead(t, NewBitArrayReader(FirstLow, bytes))
 	testBitReaderRead(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
@@ -151,10 +151,20 @@ func Test_BitReader_ReadFirstLow(t *testing.T) {
 	testBitReaderReadSubByte(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
 }
 
-func Test_BitReader_ReadFirstHigh(t *testing.T) {
-	bytes := reverseBits(testSample)
-	testBitReaderRead(t, NewBitArrayReader(FirstHigh, bytes))
-	testBitReaderRead(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
-	testBitReaderReadSubByte(t, NewBitArrayReader(FirstHigh, bytes))
-	testBitReaderReadSubByte(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+func testBitReaderReadSubByteCycle(t *testing.T, br testReader) {
+	for i := byte(0); i < 8; i++ {
+		require.Equal(t, i, br.ReadSubByte(3))
+	}
+}
+
+func Test_BitReader_FirstHigh_Read(t *testing.T) {
+	bytes := reverseBits([]byte{0x88, 0xC6, 0xFA})
+	testBitReaderReadSubByteCycle(t, NewBitArrayReader(FirstHigh, bytes))
+	testBitReaderReadSubByteCycle(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+}
+
+func Test_BitReader_FirstLow_SubByte(t *testing.T) {
+	bytes := []byte{0x88, 0xC6, 0xFA}
+	testBitReaderReadSubByteCycle(t, NewBitArrayReader(FirstLow, bytes))
+	testBitReaderReadSubByteCycle(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
 }

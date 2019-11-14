@@ -140,6 +140,10 @@ func (p *BitBuilder) AlignOffset() uint8 {
 	return ofs
 }
 
+func (p *BitBuilder) CompletedByteCount() int {
+	return len(p.bytes)
+}
+
 func (p *BitBuilder) PadWithBit(bit int) {
 	p.PadWith(bit != 0)
 }
@@ -215,7 +219,6 @@ func (p *BitBuilder) AppendSubByte(value byte, bitLen uint8) {
 		bitLen -= remainCount
 	}
 
-	p.accumulator |= normFn(value, usedCount)
 	p.bytes = append(p.bytes, p.accumulator)
 	p.accBit = p.accInit
 	if bitLen == 0 {
@@ -223,7 +226,7 @@ func (p *BitBuilder) AppendSubByte(value byte, bitLen uint8) {
 		return
 	}
 	p.accBit = normFn(p.accBit, bitLen)
-	p.accumulator = revFn(value, 8-bitLen)
+	p.accumulator = revFn(value, remainCount)
 }
 
 func (p *BitBuilder) AppendNBit(bitCount int, bit int) {
