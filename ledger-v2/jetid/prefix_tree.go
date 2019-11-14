@@ -360,7 +360,28 @@ func (p *PrefixTree) propagateNewDepth(prevMaxDepth uint8) {
 }
 
 func (p *PrefixTree) propagateAll() {
-	panic("not implemented") // TODO propagateAll
+	if p.maxDepth <= 1 {
+		return
+	}
+
+	max := uint16(1) << (p.maxDepth - 1)
+	for i := uint16(1); i < max; i++ {
+		v := p.lenNibles[i]
+		switch {
+		case v == 0:
+			p.lenNibles[i] = p._getParentNible(i)
+		case v <= 0x0F:
+			p.lenNibles[i] = v | p._getParentNible(i)&0xF0
+		case v&0x0F == 0:
+			p.lenNibles[i] = v&0xF0 | p._getParentNible(i)&0x0F
+		}
+	}
+}
+
+func (p *PrefixTree) _getParentNible(index uint16) uint8 {
+	highBit := uint16(1) << uint8(bits.Len16(index)-1)
+	index ^= highBit
+	return p.lenNibles[index]
 }
 
 func (p *PrefixTree) SetPropagate() {
