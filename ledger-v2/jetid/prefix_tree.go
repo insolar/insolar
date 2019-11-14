@@ -83,13 +83,14 @@ func (p *PrefixTree) _getPrefixLength(prefix uint16) (uint8, bool) {
 	} else {
 		depth &= 0x0F
 	}
+	// depth == 0 requires a special handling as it is a multi-purpose value
 	switch {
 	case depth != 0:
 		return depth + 1, true
 	case p.maxDepth == 0:
 		return 0, prefix == 0
 	default:
-		return 1, prefix <= 1
+		return 1, prefix <= 1 || p.autoPropagate && p.minDepth == 1
 	}
 }
 
@@ -317,7 +318,7 @@ func (p *PrefixTree) propagate(prefix uint16, baseDepth uint8) {
 	if int(prefix) >= incStep {
 		panic("illegal state")
 	}
-	setDepth := (baseDepth - 1) & 0xF
+	setDepth := baseDepth - 1
 	maxStep := 1 << p.maxDepth
 	if prefix&1 == 0 {
 		for i := incStep; i < maxStep; i += incStep {
@@ -339,13 +340,13 @@ func (p *PrefixTree) propagateNewDepth(prevMaxDepth uint8) {
 		panic("illegal state")
 	case p.maxDepth == prevMaxDepth:
 		return
-	case prevMaxDepth == 0:
-		p.lenNibles[0] = p.lenNibles[0]&0x0F | p.lenNibles[0]<<4
-		if p.maxDepth == 1 {
+	case prevMaxDepth <= 1:
+		if p.lenNibles[0] != 0 {
+			panic("illegal state")
+		}
+		if p.maxDepth <= 1 {
 			return
 		}
-		fallthrough
-	case prevMaxDepth == 1:
 		for i := 1<<(p.maxDepth-1) - 1; i > 0; i-- {
 			p.lenNibles[i] = p.lenNibles[0]
 		}

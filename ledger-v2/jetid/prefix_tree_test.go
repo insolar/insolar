@@ -18,9 +18,11 @@ package jetid
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
+	"math"
+	"math/bits"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -86,17 +88,13 @@ func splitOne(pt *PrefixTree, baseLevel, topLevel uint8) {
 func TestPrefixTree_SplitMax0(t *testing.T) {
 	pt := PrefixTree{}
 	splitZero(&pt, 0, 15)
-	pt.PrintTable()
 	pt.Merge(0, 16)
-	pt.PrintTable()
 }
 
 func TestPrefixTree_SplitMax1(t *testing.T) {
 	pt := PrefixTree{}
 	splitOne(&pt, 0, 15)
-	pt.PrintTable()
 	pt.Merge(32767, 16)
-	pt.PrintTable()
 }
 
 func TestPrefixTree_Serialize(t *testing.T) {
@@ -106,14 +104,13 @@ func TestPrefixTree_Serialize(t *testing.T) {
 
 	splitZero(&pt, 0, 15)
 	splitOne(&pt, 1, 15)
-	pt.PrintTable()
 
 	buf := bytes.Buffer{}
 	require.NoError(t, pt.CompactSerialize(&buf))
 	bufCopy := buf.Bytes() // will be ok as we don't write into it further
 
-	fmt.Printf("Compact: %5d bytes\n", len(bufCopy))
-	fmt.Println(hex.Dump(bufCopy))
+	//fmt.Printf("Compact: %5d bytes\n", len(bufCopy))
+	//fmt.Println(hex.Dump(bufCopy))
 
 	pt2 := PrefixTree{}
 	require.NoError(t, pt2.CompactDeserialize(&buf))
@@ -151,6 +148,115 @@ func TestPrefixTree_Propagate_Set(t *testing.T) {
 
 		cp = copyTree(&pt, true)
 		require.Equal(t, &pt, cp, i+1)
+	}
+}
+
+func TestPrefixTree_Propagate_Get_Performance(t *testing.T) {
+	timings := [2]int64{}
+	for i := 0; i <= 1; i++ {
+		idx := i
+		t.Run(fmt.Sprintf("tree=zero16 propagate=%v", idx != 0), func(t *testing.T) {
+			pt := NewPrefixTree(idx != 0)
+			splitZero(&pt, 0, 15)
+			startedAt := time.Now()
+			for j := 0; j < 10000000; j++ {
+				pt.FindPrefixLength(math.MaxUint16)
+				//require.Equal(t, uint8(1), pt.FindPrefixLength(math.MaxUint16))
+			}
+			timings[idx] = int64(time.Since(startedAt))
+		})
+	}
+	require.Less(t, timings[1], timings[0]>>2) // must be at least 4 times faster
+}
+
+func TestPrefixTree_Propagate_Get_ZeroThenOne(t *testing.T) {
+	for i := 0; i <= 1; i++ {
+		pt := NewPrefixTree(i != 0)
+		for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+			require.Equal(t, uint8(0), pt.FindPrefixLength(i))
+		}
+		splitZero(&pt, 0, 15)
+		mask := Prefix(math.MaxUint16)
+
+		t.Run(fmt.Sprintf("tree=zero16 propagate=%v", pt.autoPropagate), func(t *testing.T) {
+			for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+				masked := i & mask
+				expected := uint8(16)
+				if masked != 0 {
+					expected = uint8(bits.TrailingZeros(uint(masked)) + 1)
+				}
+				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+			}
+		})
+
+		splitOne(&pt, 1, 15)
+
+		t.Run(fmt.Sprintf("tree=zero16+one16 propagate=%v", pt.autoPropagate), func(t *testing.T) {
+			for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+				masked := i & mask
+				expected := uint8(16)
+				switch {
+				case masked == 0:
+				case masked <= 2:
+					expected = 2
+				case masked == math.MaxUint16:
+					expected = 16
+				case masked&1 == 0:
+					expected = uint8(bits.TrailingZeros(uint(masked)) + 1)
+				default:
+					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
+				}
+				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+			}
+		})
+	}
+}
+
+func TestPrefixTree_Propagate_Get_OneThenZero(t *testing.T) {
+	for i := 0; i <= 1; i++ {
+		pt := NewPrefixTree(i != 0)
+		for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+			require.Equal(t, uint8(0), pt.FindPrefixLength(i))
+		}
+		splitOne(&pt, 0, 15)
+		mask := Prefix(math.MaxUint16)
+
+		t.Run(fmt.Sprintf("tree=one16 propagate=%v", pt.autoPropagate), func(t *testing.T) {
+			for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+				masked := i & mask
+				expected := uint8(0)
+				switch {
+				case masked == 0:
+					expected = 1
+				case masked == math.MaxUint16:
+					expected = 16
+				default:
+					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
+				}
+				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+			}
+		})
+
+		splitZero(&pt, 1, 15)
+
+		t.Run(fmt.Sprintf("tree=one16+zero16 propagate=%v", pt.autoPropagate), func(t *testing.T) {
+			for i := Prefix(0); i <= math.MaxUint16*2; i++ {
+				masked := i & mask
+				expected := uint8(16)
+				switch {
+				case masked == 0:
+				case masked <= 2:
+					expected = 2
+				case masked == math.MaxUint16:
+					expected = 16
+				case masked&1 == 0:
+					expected = uint8(bits.TrailingZeros(uint(masked)) + 1)
+				default:
+					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
+				}
+				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+			}
+		})
 	}
 }
 
