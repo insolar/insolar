@@ -52,7 +52,7 @@ func RandTraceID() string {
 	}
 	// We use custom serialization to be able to pass this trace to jaeger TraceID
 	hi, low := binary.LittleEndian.Uint64(traceID[:8]), binary.LittleEndian.Uint64(traceID[8:])
-	return fmt.Sprintf("%x%016x", hi, low)
+	return fmt.Sprintf("%016x%016x", hi, low)
 }
 
 // CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.

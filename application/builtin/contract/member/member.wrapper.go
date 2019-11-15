@@ -92,55 +92,6 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_GetName(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Member)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetName ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetName()
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -216,55 +167,6 @@ func INSMETHOD_GetAccount(object []byte, data []byte) ([]byte, []byte, error) {
 	}
 
 	ret0, ret1 := self.GetAccount(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Member)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetPublicKey()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -444,17 +346,13 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 5)
-	var args0 insolar.Reference
+	args := make([]interface{}, 3)
+	var args0 string
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
-	var args2 string
+	var args2 insolar.Reference
 	args[2] = &args2
-	var args3 string
-	args[3] = &args3
-	var args4 insolar.Reference
-	args[4] = &args4
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -462,7 +360,7 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) ([]byte, []byte, err
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3, args4)
+	ret0, ret1 := New(args0, args1, args2)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}
@@ -500,10 +398,8 @@ func Initialize() insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
-			"GetName":             INSMETHOD_GetName,
 			"GetWallet":           INSMETHOD_GetWallet,
 			"GetAccount":          INSMETHOD_GetAccount,
-			"GetPublicKey":        INSMETHOD_GetPublicKey,
 			"Call":                INSMETHOD_Call,
 			"GetMigrationAddress": INSMETHOD_GetMigrationAddress,
 			"Accept":              INSMETHOD_Accept,

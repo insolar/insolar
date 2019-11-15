@@ -86,9 +86,16 @@ func (v InstrumentationConfig) CanReuseOutputFor(config InstrumentationConfig) b
 	return vTWD == cTWD || vTWD && !cTWD
 }
 
+type FactoryRequirementFlags uint8
+
+const (
+	RequiresLowLatency FactoryRequirementFlags = 1 << iota
+	RequiresParentFields
+)
+
 type Factory interface {
 	PrepareBareOutput(output BareOutput, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
-	CreateNewLogger(level insolar.LogLevel, config Config, lowLatency bool, dynFields map[string]func() interface{}) (insolar.Logger, error)
+	CreateNewLogger(level insolar.LogLevel, config Config, reqs FactoryRequirementFlags, dynFields map[string]func() interface{}) (insolar.Logger, error)
 	CanReuseMsgBuffer() bool
 }
 
@@ -316,7 +323,12 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 	z.Config.Metrics = metrics
 	z.Config.LoggerOutput = output
 
-	logger, err := z.factory.CreateNewLogger(z.level, z.Config, needsLowLatency, z.dynFields)
+	requirements := FactoryRequirementFlags(0) | RequiresParentFields
+	if needsLowLatency {
+		requirements |= RequiresLowLatency
+	}
+
+	logger, err := z.factory.CreateNewLogger(z.level, z.Config, requirements, z.dynFields)
 
 	if len(z.fields) > 0 && logger != nil && err == nil {
 		logger = logger.WithFields(z.fields)

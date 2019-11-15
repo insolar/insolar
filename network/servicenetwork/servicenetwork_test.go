@@ -303,7 +303,7 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	_, err = serviceNetwork.processIncoming(ctx, []byte("ololo"))
 	assert.Error(t, err)
 	msg := message.NewMessage("1", nil)
-	data, err := messageToBytes(msg)
+	data, err := serializeMessage(msg)
 	require.NoError(t, err)
 	_, err = serviceNetwork.processIncoming(ctx, data)
 	assert.NoError(t, err)

@@ -1,5 +1,4 @@
 export GO111MODULE ?= on
-export GOPROXY ?= https://goproxy.io
 export GOSUMDB ?= sum.golang.org
 
 BIN_DIR ?= bin
@@ -97,7 +96,7 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	GOPROXY=$(GOPROXY) go mod vendor
+	go mod vendor
 
 
 .PHONY: build
@@ -163,7 +162,7 @@ $(HEAVY_BADGER_TOOL):
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
@@ -180,7 +179,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags slowtest ./...
+	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) -tags slowtest ./...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -244,6 +243,7 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ network/servicenetwork/watermillmessage.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
 	protoc -I./vendor -I/usr/local/include -I./ \

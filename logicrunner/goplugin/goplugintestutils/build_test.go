@@ -85,6 +85,7 @@ func TestContractsBuilder_Build(t *testing.T) {
 	})
 
 	cb := NewContractBuilder(insgocc, am, pa, j)
+	defer cb.Clean()
 
 	contractMap := make(map[string]string)
 	contractMap["recursive_call_one"] = contractOneCode

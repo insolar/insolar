@@ -21,8 +21,6 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/application/api/requester"
-
 	"github.com/insolar/insolar/application/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
@@ -57,9 +55,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not_existing_public_key")
 }
 
@@ -71,8 +67,6 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'publicKey' param")
 }

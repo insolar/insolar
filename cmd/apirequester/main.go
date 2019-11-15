@@ -55,7 +55,7 @@ func main() {
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
 
-	insSDK, err := sdk.NewSDK([]string{apiAdminURL}, []string{apiPublicURL}, memberKeys)
+	insSDK, err := sdk.NewSDK([]string{apiAdminURL}, []string{apiPublicURL}, memberKeys, sdk.DefaultOptions)
 	check("can't create SDK: ", err)
 
 	// you can modify this manual tests by commenting any of this functions or/and add some new functions if necessary

@@ -156,7 +156,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 	pulseCtx := inslogger.SetLogger(context.Background(), logger)
 
-	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+	traceID := strconv.FormatUint(uint64(pulse.PulseNumber), 10) + "_pulse"
 	pulseCtx, logger = inslogger.WithTraceField(pulseCtx, traceID)
 
 	pulseCtx, span := instracer.StartSpan(pulseCtx, "Pulsar.Distribute")

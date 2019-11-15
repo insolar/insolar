@@ -196,6 +196,11 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	transcriptFeed := fetcher.FetchPendings(ctx)
 
 	go func() {
+		ctx, logger := inslogger.WithFields(context.Background(), map[string]interface{}{
+			"broker": q.name,
+			"object": q.Ref.String(),
+		})
+
 		defer q.stopProcessor(ctx, fetcher, feedMutable, feedImmutable)
 		for {
 			select {
@@ -232,6 +237,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	}()
 
 	reader := func(feed chan *common.Transcript) {
+		ctx, _ := inslogger.WithFields(context.Background(), map[string]interface{}{"broker": q.name})
+
 		for tr := range feed {
 			q.processTranscript(ctx, tr)
 		}
@@ -275,10 +282,8 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	ctx, span := instracer.StartSpan(ctx, "IncomingRequest processing")
 	defer span.Finish()
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"request": transcript.RequestRef.String(),
-		"broker":  q.name,
-	})
+	// ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{})
+	logger := inslogger.FromContext(ctx)
 
 	if !q.canProcessTranscript(ctx, transcript) {
 		// either closed broker or we're executing this already

@@ -99,7 +99,7 @@ kill_port()
     do
         echo -n "killing pid $pid at "
         date
-        kill -ABRT $pid
+        kill $pid
     done
 }
 

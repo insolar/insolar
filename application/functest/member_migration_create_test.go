@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/application/api/requester"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
@@ -45,9 +43,7 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	require.NoError(t, err)
 	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
@@ -59,8 +55,6 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", map[string]interface{}{})
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't set reference because this key already exists")
 }

@@ -20,7 +20,6 @@
 package account
 
 import (
-	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -28,14 +27,6 @@ import (
 
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
-
-	{
-		info := make(map[string]string, 3)
-		info["Type"] = "SagaInfo"
-		info["MethodName"] = "Accept"
-		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
-		result = append(result, info)
-	}
 
 	return result
 }
@@ -88,222 +79,6 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret := []byte{}
 	err = ph.Serialize([]interface{}{self.GetPrototype().Bytes()}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Account)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 1)
-	var args0 appfoundation.SagaAcceptInfo
-	args[0] = &args0
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.Accept(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
-func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Account)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 1)
-	var args0 string
-	args[0] = &args0
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.RollBack(args0)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
-func INSMETHOD_TransferToDeposit(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Account)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 4)
-	var args0 string
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
-	var args2 insolar.Reference
-	args[2] = &args2
-	var args3 insolar.Reference
-	args[3] = &args3
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.TransferToDeposit(args0, args1, args2, args3)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
-func INSMETHOD_TransferToMember(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(Account)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 4)
-	var args0 string
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
-	var args2 insolar.Reference
-	args[2] = &args2
-	var args3 insolar.Reference
-	args[3] = &args3
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeTransferToMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.TransferToMember(args0, args1, args2, args3)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	return state, ret, err
 }
@@ -372,17 +147,15 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 5)
-	var args0 insolar.Reference
+	args := make([]interface{}, 4)
+	var args0 string
 	args[0] = &args0
-	var args1 string
+	var args1 *insolar.Reference
 	args[1] = &args1
-	var args2 *insolar.Reference
+	var args2 insolar.Reference
 	args[2] = &args2
 	var args3 insolar.Reference
 	args[3] = &args3
-	var args4 insolar.Reference
-	args[4] = &args4
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -390,7 +163,7 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.Transfer(args0, args1, args2, args3, args4)
+	ret0, ret1 := self.Transfer(args0, args1, args2, args3)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -518,13 +291,9 @@ func Initialize() insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
-			"Accept":            INSMETHOD_Accept,
-			"RollBack":          INSMETHOD_RollBack,
-			"TransferToDeposit": INSMETHOD_TransferToDeposit,
-			"TransferToMember":  INSMETHOD_TransferToMember,
-			"GetBalance":        INSMETHOD_GetBalance,
-			"Transfer":          INSMETHOD_Transfer,
-			"IncreaseBalance":   INSMETHOD_IncreaseBalance,
+			"GetBalance":      INSMETHOD_GetBalance,
+			"Transfer":        INSMETHOD_Transfer,
+			"IncreaseBalance": INSMETHOD_IncreaseBalance,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

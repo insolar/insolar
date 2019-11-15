@@ -53,11 +53,11 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 )
 
 func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.Pulse, done chan struct{}) {
@@ -123,7 +123,7 @@ func (w *pulseWatchdog) Reset() {
 		w.start()
 		w.started = true
 	} else {
-		inslogger.FromContext(w.ctx).Warn("Resetting new pulse watchdog")
+		inslogger.FromContext(w.ctx).Debug("Resetting new pulse watchdog")
 		w.resetChan <- struct{}{}
 	}
 }

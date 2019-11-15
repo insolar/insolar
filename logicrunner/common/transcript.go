@@ -59,27 +59,28 @@ func NewTranscriptCloneContext(
 		request.Object = convertRecordReferenceToSelfReference(requestRef)
 	}
 
-	var ctx context.Context
+	var prevCtx context.Context
 
 	switch sourceTyped := ctxSource.(type) {
 	case context.Context:
-		ctx = freshContextFromContext(sourceTyped, request.APIRequestID)
+		prevCtx = freshContextFromContext(sourceTyped, request.APIRequestID)
 	case *payload.ServiceData:
-		ctx = contextFromServiceData(sourceTyped)
+		prevCtx = contextFromServiceData(sourceTyped)
 	default:
 		panic(fmt.Errorf("unexpected type of context source: %T", ctxSource))
 	}
 
-	ctx, _ = inslogger.WithFields(
-		ctx,
+	newCtx, _ := inslogger.WithFields(
+		context.Background(),
 		map[string]interface{}{
 			"request": requestRef.String(),
 			"object":  request.Object.String(),
 			"method":  request.Method,
 		},
 	)
+	newCtx, _ = inslogger.WithTraceField(newCtx, inslogger.TraceID(prevCtx))
 
-	return NewTranscript(ctx, requestRef, request)
+	return NewTranscript(newCtx, requestRef, request)
 }
 
 func (t *Transcript) AddOutgoingRequest(
@@ -116,8 +117,6 @@ func contextFromServiceData(data *payload.ServiceData) context.Context {
 
 func freshContextFromContext(ctx context.Context, reqID string) context.Context {
 	res := context.Background()
-
-	res = inslogger.SetLogger(res, inslogger.FromContext(ctx))
 
 	logLevel := inslogger.GetLoggerLevel(ctx)
 	if logLevel != insolar.NoLevel {
