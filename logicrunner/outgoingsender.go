@@ -165,6 +165,8 @@ func newAbandonedSenderActorState(cr insolar.ContractRequester, am artifacts.Cli
 }
 
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
+	logger := inslogger.FromContext(context.Background()).WithField("actor", "outgoingSender")
+
 	switch v := message.(type) {
 	case sendOutgoingRequestMessage:
 		if atomic.LoadInt32(&a.atomicRunningGoroutineCounter) >= OutgoingRequestSenderDefaultGoroutineLimit {
@@ -198,25 +200,27 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 		v.resultChan <- struct{}{}
 		return a, aerr.Terminate
 	default:
-		inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: unexpected message %v", v)
+		logger.Errorf("unexpected message %v", v)
 		return a, nil
 	}
 }
 
 func (a *abandonedSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
+	logger := inslogger.FromContext(context.Background()).WithField("actor", "abandonedSender")
+
 	switch v := message.(type) {
 	case sendAbandonedOutgoingRequestMessage:
 		_, _, err := a.deps.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 		// It's OK to just log an error,  LME will re-send a corresponding notification anyway.
 		if err != nil {
-			inslogger.FromContext(context.Background()).Errorf("AbandonedSenderActor: sendOutgoingRequest failed %v", err)
+			logger.Errorf("sendOutgoingRequest failed %v", err)
 		}
 		return a, nil
 	case stopRequestSenderMessage:
 		v.resultChan <- struct{}{}
 		return a, aerr.Terminate
 	default:
-		inslogger.FromContext(context.Background()).Errorf("AbandonedSenderActor: unexpected message %v", v)
+		logger.Errorf("unexpected message %v", v)
 		return a, nil
 	}
 }

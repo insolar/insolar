@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // FlagMock implements Flag
@@ -142,15 +142,15 @@ func (mmDone *FlagMock) Done(ctx context.Context, isDone func() bool) {
 		mmDone.inspectFuncDone(ctx, isDone)
 	}
 
-	params := &FlagMockDoneParams{ctx, isDone}
+	mm_params := &FlagMockDoneParams{ctx, isDone}
 
 	// Record call args
 	mmDone.DoneMock.mutex.Lock()
-	mmDone.DoneMock.callArgs = append(mmDone.DoneMock.callArgs, params)
+	mmDone.DoneMock.callArgs = append(mmDone.DoneMock.callArgs, mm_params)
 	mmDone.DoneMock.mutex.Unlock()
 
 	for _, e := range mmDone.DoneMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -158,10 +158,10 @@ func (mmDone *FlagMock) Done(ctx context.Context, isDone func() bool) {
 
 	if mmDone.DoneMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDone.DoneMock.defaultExpectation.Counter, 1)
-		want := mmDone.DoneMock.defaultExpectation.params
-		got := FlagMockDoneParams{ctx, isDone}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDone.t.Errorf("FlagMock.Done got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDone.DoneMock.defaultExpectation.params
+		mm_got := FlagMockDoneParams{ctx, isDone}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDone.t.Errorf("FlagMock.Done got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -322,11 +322,11 @@ func (mmIsStopped *FlagMock) IsStopped() (b1 bool) {
 	if mmIsStopped.IsStoppedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsStopped.IsStoppedMock.defaultExpectation.Counter, 1)
 
-		results := mmIsStopped.IsStoppedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsStopped.IsStoppedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsStopped.t.Fatal("No results are set for the FlagMock.IsStopped")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsStopped.funcIsStopped != nil {
 		return mmIsStopped.funcIsStopped()
@@ -498,15 +498,15 @@ func (mmStop *FlagMock) Stop(ctx context.Context) (f1 func()) {
 		mmStop.inspectFuncStop(ctx)
 	}
 
-	params := &FlagMockStopParams{ctx}
+	mm_params := &FlagMockStopParams{ctx}
 
 	// Record call args
 	mmStop.StopMock.mutex.Lock()
-	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, params)
+	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, mm_params)
 	mmStop.StopMock.mutex.Unlock()
 
 	for _, e := range mmStop.StopMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.f1
 		}
@@ -514,17 +514,17 @@ func (mmStop *FlagMock) Stop(ctx context.Context) (f1 func()) {
 
 	if mmStop.StopMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
-		want := mmStop.StopMock.defaultExpectation.params
-		got := FlagMockStopParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStop.t.Errorf("FlagMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStop.StopMock.defaultExpectation.params
+		mm_got := FlagMockStopParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStop.t.Errorf("FlagMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStop.StopMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStop.StopMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStop.t.Fatal("No results are set for the FlagMock.Stop")
 		}
-		return (*results).f1
+		return (*mm_results).f1
 	}
 	if mmStop.funcStop != nil {
 		return mmStop.funcStop(ctx)

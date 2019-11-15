@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -131,11 +131,11 @@ func (mmCode *PrototypeDescriptorMock) Code() (rp1 *insolar.Reference) {
 	if mmCode.CodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCode.CodeMock.defaultExpectation.Counter, 1)
 
-		results := mmCode.CodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCode.CodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCode.t.Fatal("No results are set for the PrototypeDescriptorMock.Code")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmCode.funcCode != nil {
 		return mmCode.funcCode()
@@ -274,11 +274,11 @@ func (mmHeadRef *PrototypeDescriptorMock) HeadRef() (rp1 *insolar.Reference) {
 	if mmHeadRef.HeadRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHeadRef.HeadRefMock.defaultExpectation.Counter, 1)
 
-		results := mmHeadRef.HeadRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHeadRef.HeadRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHeadRef.t.Fatal("No results are set for the PrototypeDescriptorMock.HeadRef")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmHeadRef.funcHeadRef != nil {
 		return mmHeadRef.funcHeadRef()
@@ -417,11 +417,11 @@ func (mmStateID *PrototypeDescriptorMock) StateID() (ip1 *insolar.ID) {
 	if mmStateID.StateIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStateID.StateIDMock.defaultExpectation.Counter, 1)
 
-		results := mmStateID.StateIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStateID.StateIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStateID.t.Fatal("No results are set for the PrototypeDescriptorMock.StateID")
 		}
-		return (*results).ip1
+		return (*mm_results).ip1
 	}
 	if mmStateID.funcStateID != nil {
 		return mmStateID.funcStateID()

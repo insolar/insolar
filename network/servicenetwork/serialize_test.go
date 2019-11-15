@@ -51,7 +51,6 @@
 package servicenetwork
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -70,23 +69,6 @@ func TestSerializeDeserialize(t *testing.T) {
 	require.NotEmpty(t, serializedMsg)
 
 	msgOut, err := deserializeMessage(serializedMsg)
-	require.NoError(t, err)
-	require.NotEmpty(t, msgOut)
-
-	require.Equal(t, msg.Payload, msgOut.Payload)
-	require.Equal(t, msg.Metadata, msgOut.Metadata)
-}
-
-func TestMessageToBytes(t *testing.T) {
-	payload := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), payload)
-	msg.Metadata.Set("testKey", "testValue")
-
-	serializedMsg, err := messageToBytes(msg)
-	require.NoError(t, err)
-	require.NotEmpty(t, serializedMsg)
-
-	msgOut, err := deserializeMessage(bytes.NewBuffer(serializedMsg))
 	require.NoError(t, err)
 	require.NotEmpty(t, msgOut)
 

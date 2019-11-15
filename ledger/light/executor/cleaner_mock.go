@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -134,15 +134,15 @@ func (mmNotifyAboutPulse *CleanerMock) NotifyAboutPulse(ctx context.Context, pn 
 		mmNotifyAboutPulse.inspectFuncNotifyAboutPulse(ctx, pn)
 	}
 
-	params := &CleanerMockNotifyAboutPulseParams{ctx, pn}
+	mm_params := &CleanerMockNotifyAboutPulseParams{ctx, pn}
 
 	// Record call args
 	mmNotifyAboutPulse.NotifyAboutPulseMock.mutex.Lock()
-	mmNotifyAboutPulse.NotifyAboutPulseMock.callArgs = append(mmNotifyAboutPulse.NotifyAboutPulseMock.callArgs, params)
+	mmNotifyAboutPulse.NotifyAboutPulseMock.callArgs = append(mmNotifyAboutPulse.NotifyAboutPulseMock.callArgs, mm_params)
 	mmNotifyAboutPulse.NotifyAboutPulseMock.mutex.Unlock()
 
 	for _, e := range mmNotifyAboutPulse.NotifyAboutPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -150,10 +150,10 @@ func (mmNotifyAboutPulse *CleanerMock) NotifyAboutPulse(ctx context.Context, pn 
 
 	if mmNotifyAboutPulse.NotifyAboutPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNotifyAboutPulse.NotifyAboutPulseMock.defaultExpectation.Counter, 1)
-		want := mmNotifyAboutPulse.NotifyAboutPulseMock.defaultExpectation.params
-		got := CleanerMockNotifyAboutPulseParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNotifyAboutPulse.t.Errorf("CleanerMock.NotifyAboutPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNotifyAboutPulse.NotifyAboutPulseMock.defaultExpectation.params
+		mm_got := CleanerMockNotifyAboutPulseParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNotifyAboutPulse.t.Errorf("CleanerMock.NotifyAboutPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // MetricsRegistryMock implements MetricsRegistry
@@ -133,15 +133,15 @@ func (mmSetOldestAbandonedRequestAge *MetricsRegistryMock) SetOldestAbandonedReq
 		mmSetOldestAbandonedRequestAge.inspectFuncSetOldestAbandonedRequestAge(age)
 	}
 
-	params := &MetricsRegistryMockSetOldestAbandonedRequestAgeParams{age}
+	mm_params := &MetricsRegistryMockSetOldestAbandonedRequestAgeParams{age}
 
 	// Record call args
 	mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.mutex.Lock()
-	mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.callArgs = append(mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.callArgs, params)
+	mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.callArgs = append(mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.callArgs, mm_params)
 	mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.mutex.Unlock()
 
 	for _, e := range mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -149,10 +149,10 @@ func (mmSetOldestAbandonedRequestAge *MetricsRegistryMock) SetOldestAbandonedReq
 
 	if mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.defaultExpectation.Counter, 1)
-		want := mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.defaultExpectation.params
-		got := MetricsRegistryMockSetOldestAbandonedRequestAgeParams{age}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetOldestAbandonedRequestAge.t.Errorf("MetricsRegistryMock.SetOldestAbandonedRequestAge got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetOldestAbandonedRequestAge.SetOldestAbandonedRequestAgeMock.defaultExpectation.params
+		mm_got := MetricsRegistryMockSetOldestAbandonedRequestAgeParams{age}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetOldestAbandonedRequestAge.t.Errorf("MetricsRegistryMock.SetOldestAbandonedRequestAge got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -320,15 +320,15 @@ func (mmUpdateMetrics *MetricsRegistryMock) UpdateMetrics(ctx context.Context) {
 		mmUpdateMetrics.inspectFuncUpdateMetrics(ctx)
 	}
 
-	params := &MetricsRegistryMockUpdateMetricsParams{ctx}
+	mm_params := &MetricsRegistryMockUpdateMetricsParams{ctx}
 
 	// Record call args
 	mmUpdateMetrics.UpdateMetricsMock.mutex.Lock()
-	mmUpdateMetrics.UpdateMetricsMock.callArgs = append(mmUpdateMetrics.UpdateMetricsMock.callArgs, params)
+	mmUpdateMetrics.UpdateMetricsMock.callArgs = append(mmUpdateMetrics.UpdateMetricsMock.callArgs, mm_params)
 	mmUpdateMetrics.UpdateMetricsMock.mutex.Unlock()
 
 	for _, e := range mmUpdateMetrics.UpdateMetricsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -336,10 +336,10 @@ func (mmUpdateMetrics *MetricsRegistryMock) UpdateMetrics(ctx context.Context) {
 
 	if mmUpdateMetrics.UpdateMetricsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmUpdateMetrics.UpdateMetricsMock.defaultExpectation.Counter, 1)
-		want := mmUpdateMetrics.UpdateMetricsMock.defaultExpectation.params
-		got := MetricsRegistryMockUpdateMetricsParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmUpdateMetrics.t.Errorf("MetricsRegistryMock.UpdateMetrics got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmUpdateMetrics.UpdateMetricsMock.defaultExpectation.params
+		mm_got := MetricsRegistryMockUpdateMetricsParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmUpdateMetrics.t.Errorf("MetricsRegistryMock.UpdateMetrics got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

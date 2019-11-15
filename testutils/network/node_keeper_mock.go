@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
 )
@@ -187,15 +187,15 @@ func (mmGetAccessor *NodeKeeperMock) GetAccessor(p1 insolar.PulseNumber) (a1 mm_
 		mmGetAccessor.inspectFuncGetAccessor(p1)
 	}
 
-	params := &NodeKeeperMockGetAccessorParams{p1}
+	mm_params := &NodeKeeperMockGetAccessorParams{p1}
 
 	// Record call args
 	mmGetAccessor.GetAccessorMock.mutex.Lock()
-	mmGetAccessor.GetAccessorMock.callArgs = append(mmGetAccessor.GetAccessorMock.callArgs, params)
+	mmGetAccessor.GetAccessorMock.callArgs = append(mmGetAccessor.GetAccessorMock.callArgs, mm_params)
 	mmGetAccessor.GetAccessorMock.mutex.Unlock()
 
 	for _, e := range mmGetAccessor.GetAccessorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.a1
 		}
@@ -203,17 +203,17 @@ func (mmGetAccessor *NodeKeeperMock) GetAccessor(p1 insolar.PulseNumber) (a1 mm_
 
 	if mmGetAccessor.GetAccessorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetAccessor.GetAccessorMock.defaultExpectation.Counter, 1)
-		want := mmGetAccessor.GetAccessorMock.defaultExpectation.params
-		got := NodeKeeperMockGetAccessorParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetAccessor.t.Errorf("NodeKeeperMock.GetAccessor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetAccessor.GetAccessorMock.defaultExpectation.params
+		mm_got := NodeKeeperMockGetAccessorParams{p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetAccessor.t.Errorf("NodeKeeperMock.GetAccessor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetAccessor.GetAccessorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetAccessor.GetAccessorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetAccessor.t.Fatal("No results are set for the NodeKeeperMock.GetAccessor")
 		}
-		return (*results).a1
+		return (*mm_results).a1
 	}
 	if mmGetAccessor.funcGetAccessor != nil {
 		return mmGetAccessor.funcGetAccessor(p1)
@@ -369,11 +369,11 @@ func (mmGetOrigin *NodeKeeperMock) GetOrigin() (n1 insolar.NetworkNode) {
 	if mmGetOrigin.GetOriginMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOrigin.GetOriginMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOrigin.GetOriginMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOrigin.GetOriginMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOrigin.t.Fatal("No results are set for the NodeKeeperMock.GetOrigin")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetOrigin.funcGetOrigin != nil {
 		return mmGetOrigin.funcGetOrigin()
@@ -520,15 +520,15 @@ func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, 
 		mmMoveSyncToActive.inspectFuncMoveSyncToActive(ctx, p1)
 	}
 
-	params := &NodeKeeperMockMoveSyncToActiveParams{ctx, p1}
+	mm_params := &NodeKeeperMockMoveSyncToActiveParams{ctx, p1}
 
 	// Record call args
 	mmMoveSyncToActive.MoveSyncToActiveMock.mutex.Lock()
-	mmMoveSyncToActive.MoveSyncToActiveMock.callArgs = append(mmMoveSyncToActive.MoveSyncToActiveMock.callArgs, params)
+	mmMoveSyncToActive.MoveSyncToActiveMock.callArgs = append(mmMoveSyncToActive.MoveSyncToActiveMock.callArgs, mm_params)
 	mmMoveSyncToActive.MoveSyncToActiveMock.mutex.Unlock()
 
 	for _, e := range mmMoveSyncToActive.MoveSyncToActiveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -536,10 +536,10 @@ func (mmMoveSyncToActive *NodeKeeperMock) MoveSyncToActive(ctx context.Context, 
 
 	if mmMoveSyncToActive.MoveSyncToActiveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMoveSyncToActive.MoveSyncToActiveMock.defaultExpectation.Counter, 1)
-		want := mmMoveSyncToActive.MoveSyncToActiveMock.defaultExpectation.params
-		got := NodeKeeperMockMoveSyncToActiveParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmMoveSyncToActive.t.Errorf("NodeKeeperMock.MoveSyncToActive got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmMoveSyncToActive.MoveSyncToActiveMock.defaultExpectation.params
+		mm_got := NodeKeeperMockMoveSyncToActiveParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmMoveSyncToActive.t.Errorf("NodeKeeperMock.MoveSyncToActive got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -707,15 +707,15 @@ func (mmSetInitialSnapshot *NodeKeeperMock) SetInitialSnapshot(nodes []insolar.N
 		mmSetInitialSnapshot.inspectFuncSetInitialSnapshot(nodes)
 	}
 
-	params := &NodeKeeperMockSetInitialSnapshotParams{nodes}
+	mm_params := &NodeKeeperMockSetInitialSnapshotParams{nodes}
 
 	// Record call args
 	mmSetInitialSnapshot.SetInitialSnapshotMock.mutex.Lock()
-	mmSetInitialSnapshot.SetInitialSnapshotMock.callArgs = append(mmSetInitialSnapshot.SetInitialSnapshotMock.callArgs, params)
+	mmSetInitialSnapshot.SetInitialSnapshotMock.callArgs = append(mmSetInitialSnapshot.SetInitialSnapshotMock.callArgs, mm_params)
 	mmSetInitialSnapshot.SetInitialSnapshotMock.mutex.Unlock()
 
 	for _, e := range mmSetInitialSnapshot.SetInitialSnapshotMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -723,10 +723,10 @@ func (mmSetInitialSnapshot *NodeKeeperMock) SetInitialSnapshot(nodes []insolar.N
 
 	if mmSetInitialSnapshot.SetInitialSnapshotMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetInitialSnapshot.SetInitialSnapshotMock.defaultExpectation.Counter, 1)
-		want := mmSetInitialSnapshot.SetInitialSnapshotMock.defaultExpectation.params
-		got := NodeKeeperMockSetInitialSnapshotParams{nodes}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetInitialSnapshot.t.Errorf("NodeKeeperMock.SetInitialSnapshot got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetInitialSnapshot.SetInitialSnapshotMock.defaultExpectation.params
+		mm_got := NodeKeeperMockSetInitialSnapshotParams{nodes}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetInitialSnapshot.t.Errorf("NodeKeeperMock.SetInitialSnapshot got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -896,15 +896,15 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, p1 insolar.PulseNumber, 
 		mmSync.inspectFuncSync(ctx, p1, na1)
 	}
 
-	params := &NodeKeeperMockSyncParams{ctx, p1, na1}
+	mm_params := &NodeKeeperMockSyncParams{ctx, p1, na1}
 
 	// Record call args
 	mmSync.SyncMock.mutex.Lock()
-	mmSync.SyncMock.callArgs = append(mmSync.SyncMock.callArgs, params)
+	mmSync.SyncMock.callArgs = append(mmSync.SyncMock.callArgs, mm_params)
 	mmSync.SyncMock.mutex.Unlock()
 
 	for _, e := range mmSync.SyncMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -912,10 +912,10 @@ func (mmSync *NodeKeeperMock) Sync(ctx context.Context, p1 insolar.PulseNumber, 
 
 	if mmSync.SyncMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSync.SyncMock.defaultExpectation.Counter, 1)
-		want := mmSync.SyncMock.defaultExpectation.params
-		got := NodeKeeperMockSyncParams{ctx, p1, na1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSync.t.Errorf("NodeKeeperMock.Sync got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSync.SyncMock.defaultExpectation.params
+		mm_got := NodeKeeperMockSyncParams{ctx, p1, na1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSync.t.Errorf("NodeKeeperMock.Sync got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

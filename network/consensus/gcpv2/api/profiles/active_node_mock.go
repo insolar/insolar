@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -205,11 +205,11 @@ func (mmCanIntroduceJoiner *ActiveNodeMock) CanIntroduceJoiner() (b1 bool) {
 	if mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation.Counter, 1)
 
-		results := mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCanIntroduceJoiner.CanIntroduceJoinerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCanIntroduceJoiner.t.Fatal("No results are set for the ActiveNodeMock.CanIntroduceJoiner")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmCanIntroduceJoiner.funcCanIntroduceJoiner != nil {
 		return mmCanIntroduceJoiner.funcCanIntroduceJoiner()
@@ -348,11 +348,11 @@ func (mmGetDeclaredPower *ActiveNodeMock) GetDeclaredPower() (p1 member.Power) {
 	if mmGetDeclaredPower.GetDeclaredPowerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDeclaredPower.GetDeclaredPowerMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDeclaredPower.GetDeclaredPowerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDeclaredPower.GetDeclaredPowerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDeclaredPower.t.Fatal("No results are set for the ActiveNodeMock.GetDeclaredPower")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetDeclaredPower.funcGetDeclaredPower != nil {
 		return mmGetDeclaredPower.funcGetDeclaredPower()
@@ -491,11 +491,11 @@ func (mmGetIndex *ActiveNodeMock) GetIndex() (i1 member.Index) {
 	if mmGetIndex.GetIndexMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetIndex.GetIndexMock.defaultExpectation.Counter, 1)
 
-		results := mmGetIndex.GetIndexMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetIndex.GetIndexMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetIndex.t.Fatal("No results are set for the ActiveNodeMock.GetIndex")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmGetIndex.funcGetIndex != nil {
 		return mmGetIndex.funcGetIndex()
@@ -634,11 +634,11 @@ func (mmGetNodeID *ActiveNodeMock) GetNodeID() (s1 insolar.ShortNodeID) {
 	if mmGetNodeID.GetNodeIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNodeID.GetNodeIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNodeID.GetNodeIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNodeID.GetNodeIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNodeID.t.Fatal("No results are set for the ActiveNodeMock.GetNodeID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetNodeID.funcGetNodeID != nil {
 		return mmGetNodeID.funcGetNodeID()
@@ -777,11 +777,11 @@ func (mmGetOpMode *ActiveNodeMock) GetOpMode() (o1 member.OpMode) {
 	if mmGetOpMode.GetOpModeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOpMode.GetOpModeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOpMode.GetOpModeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOpMode.GetOpModeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOpMode.t.Fatal("No results are set for the ActiveNodeMock.GetOpMode")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetOpMode.funcGetOpMode != nil {
 		return mmGetOpMode.funcGetOpMode()
@@ -920,11 +920,11 @@ func (mmGetSignatureVerifier *ActiveNodeMock) GetSignatureVerifier() (s1 cryptki
 	if mmGetSignatureVerifier.GetSignatureVerifierMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureVerifier.GetSignatureVerifierMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureVerifier.GetSignatureVerifierMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureVerifier.GetSignatureVerifierMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureVerifier.t.Fatal("No results are set for the ActiveNodeMock.GetSignatureVerifier")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureVerifier.funcGetSignatureVerifier != nil {
 		return mmGetSignatureVerifier.funcGetSignatureVerifier()
@@ -1063,11 +1063,11 @@ func (mmGetStatic *ActiveNodeMock) GetStatic() (s1 StaticProfile) {
 	if mmGetStatic.GetStaticMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetStatic.GetStaticMock.defaultExpectation.Counter, 1)
 
-		results := mmGetStatic.GetStaticMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetStatic.GetStaticMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetStatic.t.Fatal("No results are set for the ActiveNodeMock.GetStatic")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetStatic.funcGetStatic != nil {
 		return mmGetStatic.funcGetStatic()
@@ -1206,11 +1206,11 @@ func (mmHasFullProfile *ActiveNodeMock) HasFullProfile() (b1 bool) {
 	if mmHasFullProfile.HasFullProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHasFullProfile.HasFullProfileMock.defaultExpectation.Counter, 1)
 
-		results := mmHasFullProfile.HasFullProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmHasFullProfile.HasFullProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmHasFullProfile.t.Fatal("No results are set for the ActiveNodeMock.HasFullProfile")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmHasFullProfile.funcHasFullProfile != nil {
 		return mmHasFullProfile.funcHasFullProfile()
@@ -1349,11 +1349,11 @@ func (mmIsJoiner *ActiveNodeMock) IsJoiner() (b1 bool) {
 	if mmIsJoiner.IsJoinerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsJoiner.IsJoinerMock.defaultExpectation.Counter, 1)
 
-		results := mmIsJoiner.IsJoinerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsJoiner.IsJoinerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsJoiner.t.Fatal("No results are set for the ActiveNodeMock.IsJoiner")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsJoiner.funcIsJoiner != nil {
 		return mmIsJoiner.funcIsJoiner()
@@ -1492,11 +1492,11 @@ func (mmIsPowered *ActiveNodeMock) IsPowered() (b1 bool) {
 	if mmIsPowered.IsPoweredMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsPowered.IsPoweredMock.defaultExpectation.Counter, 1)
 
-		results := mmIsPowered.IsPoweredMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsPowered.IsPoweredMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsPowered.t.Fatal("No results are set for the ActiveNodeMock.IsPowered")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsPowered.funcIsPowered != nil {
 		return mmIsPowered.funcIsPowered()
@@ -1635,11 +1635,11 @@ func (mmIsStateful *ActiveNodeMock) IsStateful() (b1 bool) {
 	if mmIsStateful.IsStatefulMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsStateful.IsStatefulMock.defaultExpectation.Counter, 1)
 
-		results := mmIsStateful.IsStatefulMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsStateful.IsStatefulMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsStateful.t.Fatal("No results are set for the ActiveNodeMock.IsStateful")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsStateful.funcIsStateful != nil {
 		return mmIsStateful.funcIsStateful()
@@ -1778,11 +1778,11 @@ func (mmIsVoter *ActiveNodeMock) IsVoter() (b1 bool) {
 	if mmIsVoter.IsVoterMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsVoter.IsVoterMock.defaultExpectation.Counter, 1)
 
-		results := mmIsVoter.IsVoterMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsVoter.IsVoterMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsVoter.t.Fatal("No results are set for the ActiveNodeMock.IsVoter")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsVoter.funcIsVoter != nil {
 		return mmIsVoter.funcIsVoter()

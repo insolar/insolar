@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
@@ -134,11 +134,11 @@ func (mmGetDefaultEndpoint *HostMock) GetDefaultEndpoint() (o1 endpoints.Outboun
 	if mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDefaultEndpoint.t.Fatal("No results are set for the HostMock.GetDefaultEndpoint")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetDefaultEndpoint.funcGetDefaultEndpoint != nil {
 		return mmGetDefaultEndpoint.funcGetDefaultEndpoint()
@@ -277,11 +277,11 @@ func (mmGetPublicKeyStore *HostMock) GetPublicKeyStore() (p1 cryptkit.PublicKeyS
 	if mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKeyStore.t.Fatal("No results are set for the HostMock.GetPublicKeyStore")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPublicKeyStore.funcGetPublicKeyStore != nil {
 		return mmGetPublicKeyStore.funcGetPublicKeyStore()
@@ -453,15 +453,15 @@ func (mmIsAcceptableHost *HostMock) IsAcceptableHost(from endpoints.Inbound) (b1
 		mmIsAcceptableHost.inspectFuncIsAcceptableHost(from)
 	}
 
-	params := &HostMockIsAcceptableHostParams{from}
+	mm_params := &HostMockIsAcceptableHostParams{from}
 
 	// Record call args
 	mmIsAcceptableHost.IsAcceptableHostMock.mutex.Lock()
-	mmIsAcceptableHost.IsAcceptableHostMock.callArgs = append(mmIsAcceptableHost.IsAcceptableHostMock.callArgs, params)
+	mmIsAcceptableHost.IsAcceptableHostMock.callArgs = append(mmIsAcceptableHost.IsAcceptableHostMock.callArgs, mm_params)
 	mmIsAcceptableHost.IsAcceptableHostMock.mutex.Unlock()
 
 	for _, e := range mmIsAcceptableHost.IsAcceptableHostMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -469,17 +469,17 @@ func (mmIsAcceptableHost *HostMock) IsAcceptableHost(from endpoints.Inbound) (b1
 
 	if mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.Counter, 1)
-		want := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.params
-		got := HostMockIsAcceptableHostParams{from}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsAcceptableHost.t.Errorf("HostMock.IsAcceptableHost got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.params
+		mm_got := HostMockIsAcceptableHostParams{from}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsAcceptableHost.t.Errorf("HostMock.IsAcceptableHost got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsAcceptableHost.t.Fatal("No results are set for the HostMock.IsAcceptableHost")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsAcceptableHost.funcIsAcceptableHost != nil {
 		return mmIsAcceptableHost.funcIsAcceptableHost(from)

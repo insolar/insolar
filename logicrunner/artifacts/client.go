@@ -337,7 +337,7 @@ func (m *client) sendGetObject(
 		err error
 		res = &getObjectRes{}
 	)
-	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
+	logger := inslogger.FromContext(ctx).WithField("get_object", head.GetLocal().String())
 
 	pl := payload.GetObject{
 		ObjectID: *head.GetLocal(),

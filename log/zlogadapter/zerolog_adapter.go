@@ -355,9 +355,20 @@ func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
 }
 
 func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel,
-	config logadapter.Config, dynFields map[string]func() interface{}) (insolar.Logger, error) {
+	config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
+	dynFields map[string]func() interface{}, template *zerologAdapter,
+) (insolar.Logger, error) {
 
 	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
+
+	if template != nil && (reqs&logadapter.RequiresParentFields != 0) {
+		// NB! We have to create a new logger and pass the context separately
+		// Otherwise, zerolog will also copy hooks - which we need to get rid of some.
+		inheritedContext := template.logger.With()
+		ls.UpdateContext(func(zerolog.Context) zerolog.Context {
+			return inheritedContext
+		})
+	}
 
 	if ok, name, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
 		// MUST be the first Hook
@@ -388,17 +399,18 @@ func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insol
 	return &zerologAdapter{logger: ls, config: &config}, nil
 }
 
-func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, lowLatency bool,
-	dynFields map[string]func() interface{}) (insolar.Logger, error) {
-
-	var output zerolog.LevelWriter
-	if lowLatency {
-		output = zerologAdapterLLOutput{config.LoggerOutput}
-	} else {
-		output = zerologAdapterOutput{config.LoggerOutput}
+func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs logadapter.FactoryRequirementFlags) zerolog.LevelWriter {
+	if reqs&logadapter.RequiresLowLatency != 0 {
+		return zerologAdapterLLOutput{config.LoggerOutput}
 	}
+	return zerologAdapterOutput{config.LoggerOutput}
+}
 
-	return zf.createNewLogger(output, level, config, dynFields)
+func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
+	dynFields map[string]func() interface{},
+) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(config, reqs)
+	return zf.createNewLogger(output, level, config, reqs, dynFields, nil)
 }
 
 func (zf zerologFactory) CanReuseMsgBuffer() bool {
@@ -440,6 +452,13 @@ func (zf zerologTemplate) GetTemplateConfig() logadapter.Config {
 
 func (zf zerologTemplate) GetTemplateLogger() insolar.Logger {
 	return zf.template
+}
+
+func (zf zerologTemplate) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
+	dynFields map[string]func() interface{},
+) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(config, reqs)
+	return zf.createNewLogger(output, level, config, reqs, dynFields, zf.template)
 }
 
 /* ========================================= */

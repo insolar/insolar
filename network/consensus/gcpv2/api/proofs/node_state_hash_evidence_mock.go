@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
@@ -167,11 +167,11 @@ func (mmCopyOfSignedDigest *NodeStateHashEvidenceMock) CopyOfSignedDigest() (s1 
 	if mmCopyOfSignedDigest.CopyOfSignedDigestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCopyOfSignedDigest.CopyOfSignedDigestMock.defaultExpectation.Counter, 1)
 
-		results := mmCopyOfSignedDigest.CopyOfSignedDigestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCopyOfSignedDigest.CopyOfSignedDigestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCopyOfSignedDigest.t.Fatal("No results are set for the NodeStateHashEvidenceMock.CopyOfSignedDigest")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmCopyOfSignedDigest.funcCopyOfSignedDigest != nil {
 		return mmCopyOfSignedDigest.funcCopyOfSignedDigest()
@@ -343,15 +343,15 @@ func (mmEquals *NodeStateHashEvidenceMock) Equals(o cryptkit.SignedDigestHolder)
 		mmEquals.inspectFuncEquals(o)
 	}
 
-	params := &NodeStateHashEvidenceMockEqualsParams{o}
+	mm_params := &NodeStateHashEvidenceMockEqualsParams{o}
 
 	// Record call args
 	mmEquals.EqualsMock.mutex.Lock()
-	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, params)
+	mmEquals.EqualsMock.callArgs = append(mmEquals.EqualsMock.callArgs, mm_params)
 	mmEquals.EqualsMock.mutex.Unlock()
 
 	for _, e := range mmEquals.EqualsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -359,17 +359,17 @@ func (mmEquals *NodeStateHashEvidenceMock) Equals(o cryptkit.SignedDigestHolder)
 
 	if mmEquals.EqualsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmEquals.EqualsMock.defaultExpectation.Counter, 1)
-		want := mmEquals.EqualsMock.defaultExpectation.params
-		got := NodeStateHashEvidenceMockEqualsParams{o}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmEquals.t.Errorf("NodeStateHashEvidenceMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmEquals.EqualsMock.defaultExpectation.params
+		mm_got := NodeStateHashEvidenceMockEqualsParams{o}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEquals.t.Errorf("NodeStateHashEvidenceMock.Equals got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmEquals.EqualsMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmEquals.EqualsMock.defaultExpectation.results
+		if mm_results == nil {
 			mmEquals.t.Fatal("No results are set for the NodeStateHashEvidenceMock.Equals")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmEquals.funcEquals != nil {
 		return mmEquals.funcEquals(o)
@@ -525,11 +525,11 @@ func (mmGetDigestHolder *NodeStateHashEvidenceMock) GetDigestHolder() (d1 cryptk
 	if mmGetDigestHolder.GetDigestHolderMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDigestHolder.GetDigestHolderMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDigestHolder.GetDigestHolderMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDigestHolder.GetDigestHolderMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDigestHolder.t.Fatal("No results are set for the NodeStateHashEvidenceMock.GetDigestHolder")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetDigestHolder.funcGetDigestHolder != nil {
 		return mmGetDigestHolder.funcGetDigestHolder()
@@ -668,11 +668,11 @@ func (mmGetSignatureHolder *NodeStateHashEvidenceMock) GetSignatureHolder() (s1 
 	if mmGetSignatureHolder.GetSignatureHolderMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureHolder.GetSignatureHolderMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureHolder.GetSignatureHolderMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureHolder.GetSignatureHolderMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureHolder.t.Fatal("No results are set for the NodeStateHashEvidenceMock.GetSignatureHolder")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureHolder.funcGetSignatureHolder != nil {
 		return mmGetSignatureHolder.funcGetSignatureHolder()
@@ -811,11 +811,11 @@ func (mmGetSignatureMethod *NodeStateHashEvidenceMock) GetSignatureMethod() (s1 
 	if mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSignatureMethod.GetSignatureMethodMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSignatureMethod.t.Fatal("No results are set for the NodeStateHashEvidenceMock.GetSignatureMethod")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSignatureMethod.funcGetSignatureMethod != nil {
 		return mmGetSignatureMethod.funcGetSignatureMethod()
@@ -987,15 +987,15 @@ func (mmIsVerifiableBy *NodeStateHashEvidenceMock) IsVerifiableBy(v cryptkit.Sig
 		mmIsVerifiableBy.inspectFuncIsVerifiableBy(v)
 	}
 
-	params := &NodeStateHashEvidenceMockIsVerifiableByParams{v}
+	mm_params := &NodeStateHashEvidenceMockIsVerifiableByParams{v}
 
 	// Record call args
 	mmIsVerifiableBy.IsVerifiableByMock.mutex.Lock()
-	mmIsVerifiableBy.IsVerifiableByMock.callArgs = append(mmIsVerifiableBy.IsVerifiableByMock.callArgs, params)
+	mmIsVerifiableBy.IsVerifiableByMock.callArgs = append(mmIsVerifiableBy.IsVerifiableByMock.callArgs, mm_params)
 	mmIsVerifiableBy.IsVerifiableByMock.mutex.Unlock()
 
 	for _, e := range mmIsVerifiableBy.IsVerifiableByMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -1003,17 +1003,17 @@ func (mmIsVerifiableBy *NodeStateHashEvidenceMock) IsVerifiableBy(v cryptkit.Sig
 
 	if mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation.Counter, 1)
-		want := mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation.params
-		got := NodeStateHashEvidenceMockIsVerifiableByParams{v}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsVerifiableBy.t.Errorf("NodeStateHashEvidenceMock.IsVerifiableBy got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation.params
+		mm_got := NodeStateHashEvidenceMockIsVerifiableByParams{v}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsVerifiableBy.t.Errorf("NodeStateHashEvidenceMock.IsVerifiableBy got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsVerifiableBy.IsVerifiableByMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsVerifiableBy.t.Fatal("No results are set for the NodeStateHashEvidenceMock.IsVerifiableBy")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsVerifiableBy.funcIsVerifiableBy != nil {
 		return mmIsVerifiableBy.funcIsVerifiableBy(v)
@@ -1202,15 +1202,15 @@ func (mmVerifyWith *NodeStateHashEvidenceMock) VerifyWith(v cryptkit.SignatureVe
 		mmVerifyWith.inspectFuncVerifyWith(v)
 	}
 
-	params := &NodeStateHashEvidenceMockVerifyWithParams{v}
+	mm_params := &NodeStateHashEvidenceMockVerifyWithParams{v}
 
 	// Record call args
 	mmVerifyWith.VerifyWithMock.mutex.Lock()
-	mmVerifyWith.VerifyWithMock.callArgs = append(mmVerifyWith.VerifyWithMock.callArgs, params)
+	mmVerifyWith.VerifyWithMock.callArgs = append(mmVerifyWith.VerifyWithMock.callArgs, mm_params)
 	mmVerifyWith.VerifyWithMock.mutex.Unlock()
 
 	for _, e := range mmVerifyWith.VerifyWithMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -1218,17 +1218,17 @@ func (mmVerifyWith *NodeStateHashEvidenceMock) VerifyWith(v cryptkit.SignatureVe
 
 	if mmVerifyWith.VerifyWithMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmVerifyWith.VerifyWithMock.defaultExpectation.Counter, 1)
-		want := mmVerifyWith.VerifyWithMock.defaultExpectation.params
-		got := NodeStateHashEvidenceMockVerifyWithParams{v}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmVerifyWith.t.Errorf("NodeStateHashEvidenceMock.VerifyWith got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmVerifyWith.VerifyWithMock.defaultExpectation.params
+		mm_got := NodeStateHashEvidenceMockVerifyWithParams{v}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmVerifyWith.t.Errorf("NodeStateHashEvidenceMock.VerifyWith got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmVerifyWith.VerifyWithMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmVerifyWith.VerifyWithMock.defaultExpectation.results
+		if mm_results == nil {
 			mmVerifyWith.t.Fatal("No results are set for the NodeStateHashEvidenceMock.VerifyWith")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmVerifyWith.funcVerifyWith != nil {
 		return mmVerifyWith.funcVerifyWith(v)

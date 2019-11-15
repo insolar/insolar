@@ -227,9 +227,7 @@ func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "expected 'map[string]interface{}', got 'string'")
 }
 
@@ -237,9 +235,7 @@ func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
-	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
+	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "call params are nil")
 }
 

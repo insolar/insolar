@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -143,15 +143,15 @@ func (mmLeave *TerminationHandlerMock) Leave(ctx context.Context, p1 insolar.Pul
 		mmLeave.inspectFuncLeave(ctx, p1)
 	}
 
-	params := &TerminationHandlerMockLeaveParams{ctx, p1}
+	mm_params := &TerminationHandlerMockLeaveParams{ctx, p1}
 
 	// Record call args
 	mmLeave.LeaveMock.mutex.Lock()
-	mmLeave.LeaveMock.callArgs = append(mmLeave.LeaveMock.callArgs, params)
+	mmLeave.LeaveMock.callArgs = append(mmLeave.LeaveMock.callArgs, mm_params)
 	mmLeave.LeaveMock.mutex.Unlock()
 
 	for _, e := range mmLeave.LeaveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -159,10 +159,10 @@ func (mmLeave *TerminationHandlerMock) Leave(ctx context.Context, p1 insolar.Pul
 
 	if mmLeave.LeaveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLeave.LeaveMock.defaultExpectation.Counter, 1)
-		want := mmLeave.LeaveMock.defaultExpectation.params
-		got := TerminationHandlerMockLeaveParams{ctx, p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLeave.t.Errorf("TerminationHandlerMock.Leave got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLeave.LeaveMock.defaultExpectation.params
+		mm_got := TerminationHandlerMockLeaveParams{ctx, p1}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLeave.t.Errorf("TerminationHandlerMock.Leave got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -330,15 +330,15 @@ func (mmOnLeaveApproved *TerminationHandlerMock) OnLeaveApproved(ctx context.Con
 		mmOnLeaveApproved.inspectFuncOnLeaveApproved(ctx)
 	}
 
-	params := &TerminationHandlerMockOnLeaveApprovedParams{ctx}
+	mm_params := &TerminationHandlerMockOnLeaveApprovedParams{ctx}
 
 	// Record call args
 	mmOnLeaveApproved.OnLeaveApprovedMock.mutex.Lock()
-	mmOnLeaveApproved.OnLeaveApprovedMock.callArgs = append(mmOnLeaveApproved.OnLeaveApprovedMock.callArgs, params)
+	mmOnLeaveApproved.OnLeaveApprovedMock.callArgs = append(mmOnLeaveApproved.OnLeaveApprovedMock.callArgs, mm_params)
 	mmOnLeaveApproved.OnLeaveApprovedMock.mutex.Unlock()
 
 	for _, e := range mmOnLeaveApproved.OnLeaveApprovedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -346,10 +346,10 @@ func (mmOnLeaveApproved *TerminationHandlerMock) OnLeaveApproved(ctx context.Con
 
 	if mmOnLeaveApproved.OnLeaveApprovedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnLeaveApproved.OnLeaveApprovedMock.defaultExpectation.Counter, 1)
-		want := mmOnLeaveApproved.OnLeaveApprovedMock.defaultExpectation.params
-		got := TerminationHandlerMockOnLeaveApprovedParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOnLeaveApproved.t.Errorf("TerminationHandlerMock.OnLeaveApproved got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOnLeaveApproved.OnLeaveApprovedMock.defaultExpectation.params
+		mm_got := TerminationHandlerMockOnLeaveApprovedParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOnLeaveApproved.t.Errorf("TerminationHandlerMock.OnLeaveApproved got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -510,11 +510,11 @@ func (mmTerminating *TerminationHandlerMock) Terminating() (b1 bool) {
 	if mmTerminating.TerminatingMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmTerminating.TerminatingMock.defaultExpectation.Counter, 1)
 
-		results := mmTerminating.TerminatingMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmTerminating.TerminatingMock.defaultExpectation.results
+		if mm_results == nil {
 			mmTerminating.t.Fatal("No results are set for the TerminationHandlerMock.Terminating")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmTerminating.funcTerminating != nil {
 		return mmTerminating.funcTerminating()

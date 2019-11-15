@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -192,11 +192,11 @@ func (mmGetBriefIntroSignedDigest *StaticProfileMock) GetBriefIntroSignedDigest(
 	if mmGetBriefIntroSignedDigest.GetBriefIntroSignedDigestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.GetBriefIntroSignedDigestMock.defaultExpectation.Counter, 1)
 
-		results := mmGetBriefIntroSignedDigest.GetBriefIntroSignedDigestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetBriefIntroSignedDigest.GetBriefIntroSignedDigestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetBriefIntroSignedDigest.t.Fatal("No results are set for the StaticProfileMock.GetBriefIntroSignedDigest")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetBriefIntroSignedDigest.funcGetBriefIntroSignedDigest != nil {
 		return mmGetBriefIntroSignedDigest.funcGetBriefIntroSignedDigest()
@@ -335,11 +335,11 @@ func (mmGetDefaultEndpoint *StaticProfileMock) GetDefaultEndpoint() (o1 endpoint
 	if mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.Counter, 1)
 
-		results := mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetDefaultEndpoint.GetDefaultEndpointMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetDefaultEndpoint.t.Fatal("No results are set for the StaticProfileMock.GetDefaultEndpoint")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetDefaultEndpoint.funcGetDefaultEndpoint != nil {
 		return mmGetDefaultEndpoint.funcGetDefaultEndpoint()
@@ -478,11 +478,11 @@ func (mmGetExtension *StaticProfileMock) GetExtension() (s1 StaticProfileExtensi
 	if mmGetExtension.GetExtensionMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExtension.GetExtensionMock.defaultExpectation.Counter, 1)
 
-		results := mmGetExtension.GetExtensionMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExtension.GetExtensionMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExtension.t.Fatal("No results are set for the StaticProfileMock.GetExtension")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetExtension.funcGetExtension != nil {
 		return mmGetExtension.funcGetExtension()
@@ -621,11 +621,11 @@ func (mmGetNodePublicKey *StaticProfileMock) GetNodePublicKey() (s1 cryptkit.Sig
 	if mmGetNodePublicKey.GetNodePublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNodePublicKey.GetNodePublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNodePublicKey.GetNodePublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNodePublicKey.GetNodePublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNodePublicKey.t.Fatal("No results are set for the StaticProfileMock.GetNodePublicKey")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetNodePublicKey.funcGetNodePublicKey != nil {
 		return mmGetNodePublicKey.funcGetNodePublicKey()
@@ -764,11 +764,11 @@ func (mmGetPrimaryRole *StaticProfileMock) GetPrimaryRole() (p1 member.PrimaryRo
 	if mmGetPrimaryRole.GetPrimaryRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPrimaryRole.GetPrimaryRoleMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPrimaryRole.GetPrimaryRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPrimaryRole.GetPrimaryRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPrimaryRole.t.Fatal("No results are set for the StaticProfileMock.GetPrimaryRole")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPrimaryRole.funcGetPrimaryRole != nil {
 		return mmGetPrimaryRole.funcGetPrimaryRole()
@@ -907,11 +907,11 @@ func (mmGetPublicKeyStore *StaticProfileMock) GetPublicKeyStore() (p1 cryptkit.P
 	if mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPublicKeyStore.GetPublicKeyStoreMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPublicKeyStore.t.Fatal("No results are set for the StaticProfileMock.GetPublicKeyStore")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPublicKeyStore.funcGetPublicKeyStore != nil {
 		return mmGetPublicKeyStore.funcGetPublicKeyStore()
@@ -1050,11 +1050,11 @@ func (mmGetSpecialRoles *StaticProfileMock) GetSpecialRoles() (s1 member.Special
 	if mmGetSpecialRoles.GetSpecialRolesMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetSpecialRoles.GetSpecialRolesMock.defaultExpectation.Counter, 1)
 
-		results := mmGetSpecialRoles.GetSpecialRolesMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetSpecialRoles.GetSpecialRolesMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetSpecialRoles.t.Fatal("No results are set for the StaticProfileMock.GetSpecialRoles")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetSpecialRoles.funcGetSpecialRoles != nil {
 		return mmGetSpecialRoles.funcGetSpecialRoles()
@@ -1193,11 +1193,11 @@ func (mmGetStartPower *StaticProfileMock) GetStartPower() (p1 member.Power) {
 	if mmGetStartPower.GetStartPowerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetStartPower.GetStartPowerMock.defaultExpectation.Counter, 1)
 
-		results := mmGetStartPower.GetStartPowerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetStartPower.GetStartPowerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetStartPower.t.Fatal("No results are set for the StaticProfileMock.GetStartPower")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetStartPower.funcGetStartPower != nil {
 		return mmGetStartPower.funcGetStartPower()
@@ -1336,11 +1336,11 @@ func (mmGetStaticNodeID *StaticProfileMock) GetStaticNodeID() (s1 insolar.ShortN
 	if mmGetStaticNodeID.GetStaticNodeIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetStaticNodeID.GetStaticNodeIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetStaticNodeID.GetStaticNodeIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetStaticNodeID.GetStaticNodeIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetStaticNodeID.t.Fatal("No results are set for the StaticProfileMock.GetStaticNodeID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmGetStaticNodeID.funcGetStaticNodeID != nil {
 		return mmGetStaticNodeID.funcGetStaticNodeID()
@@ -1512,15 +1512,15 @@ func (mmIsAcceptableHost *StaticProfileMock) IsAcceptableHost(from endpoints.Inb
 		mmIsAcceptableHost.inspectFuncIsAcceptableHost(from)
 	}
 
-	params := &StaticProfileMockIsAcceptableHostParams{from}
+	mm_params := &StaticProfileMockIsAcceptableHostParams{from}
 
 	// Record call args
 	mmIsAcceptableHost.IsAcceptableHostMock.mutex.Lock()
-	mmIsAcceptableHost.IsAcceptableHostMock.callArgs = append(mmIsAcceptableHost.IsAcceptableHostMock.callArgs, params)
+	mmIsAcceptableHost.IsAcceptableHostMock.callArgs = append(mmIsAcceptableHost.IsAcceptableHostMock.callArgs, mm_params)
 	mmIsAcceptableHost.IsAcceptableHostMock.mutex.Unlock()
 
 	for _, e := range mmIsAcceptableHost.IsAcceptableHostMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.b1
 		}
@@ -1528,17 +1528,17 @@ func (mmIsAcceptableHost *StaticProfileMock) IsAcceptableHost(from endpoints.Inb
 
 	if mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.Counter, 1)
-		want := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.params
-		got := StaticProfileMockIsAcceptableHostParams{from}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsAcceptableHost.t.Errorf("StaticProfileMock.IsAcceptableHost got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.params
+		mm_got := StaticProfileMockIsAcceptableHostParams{from}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmIsAcceptableHost.t.Errorf("StaticProfileMock.IsAcceptableHost got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsAcceptableHost.IsAcceptableHostMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsAcceptableHost.t.Fatal("No results are set for the StaticProfileMock.IsAcceptableHost")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsAcceptableHost.funcIsAcceptableHost != nil {
 		return mmIsAcceptableHost.funcIsAcceptableHost(from)

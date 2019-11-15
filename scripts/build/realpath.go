@@ -1,5 +1,8 @@
 //usr/bin/env go run "$0" "$@"; exit "$?"
 // realpath.go - because we don't wand depend on coreutils on MacOS X for building binaries
+
+// +build tools
+
 package main
 
 import (

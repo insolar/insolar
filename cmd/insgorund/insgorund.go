@@ -57,10 +57,14 @@ func main() {
 	if *path == "" {
 		tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")
 		if err != nil {
-			log.Fatal("Couldn't create temp cache dir: ", err)
-			os.Exit(1)
+			log.Fatalf("Couldn't create temp cache dir: %s", err.Error())
 		}
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			err := os.RemoveAll(tmpDir)
+			if err != nil {
+				log.Fatalf("Failed to clean up tmp dir: %s", err.Error())
+			}
+		}()
 		*path = tmpDir
 		log.Debug("ginsider cache dir is " + tmpDir)
 	}
@@ -71,32 +75,27 @@ func main() {
 		codeSlice := strings.Split(*code, ":")
 		if len(codeSlice) != 2 {
 			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
-			os.Exit(1)
 		}
 		ref, err := insolar.NewReferenceFromString(codeSlice[0])
 		if err != nil {
 			log.Fatalf("Couldn't parse ref: %s", err.Error())
-			os.Exit(1)
 		}
 		pluginPath := codeSlice[1]
 
 		err = insider.AddPlugin(*ref, pluginPath)
 		if err != nil {
 			log.Fatalf("Couldn't add plugin by ref %s with .so from %s, err: %s ", ref, pluginPath, err.Error())
-			os.Exit(1)
 		}
 	}
 
 	err = rpc.Register(&ginsider.RPC{GI: insider})
 	if err != nil {
 		log.Fatal("Couldn't register RPC interface: ", err)
-		os.Exit(1)
 	}
 
 	listener, err := net.Listen(*protocol, *listen)
 	if err != nil {
 		log.Fatal("couldn't setup listener on '"+*listen+"':", err)
-		os.Exit(1)
 	}
 
 	var gracefulStop = make(chan os.Signal, 1)
@@ -124,7 +123,6 @@ func main() {
 		err = m.Start(ctx)
 		if err != nil {
 			log.Fatal("couldn't setup metrics ", err)
-			os.Exit(1)
 		}
 
 		defer m.Stop(ctx) // nolint: errcheck

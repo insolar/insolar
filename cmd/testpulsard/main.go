@@ -25,10 +25,10 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
@@ -76,9 +76,8 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "test_pulsar")
+	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
@@ -119,7 +118,7 @@ func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) *pul
 		panic(err)
 	}
 
-	cm := &component.Manager{}
+	cm := component.NewManager(nil)
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, transport.NewFactory(cfg.Pulsar.DistributionTransport))
 	cm.Inject(cryptographyService, pulseDistributor)
 

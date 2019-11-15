@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -177,15 +177,15 @@ func (mmFindRegisteredProfile *MandateRegistryMock) FindRegisteredProfile(host e
 		mmFindRegisteredProfile.inspectFuncFindRegisteredProfile(host)
 	}
 
-	params := &MandateRegistryMockFindRegisteredProfileParams{host}
+	mm_params := &MandateRegistryMockFindRegisteredProfileParams{host}
 
 	// Record call args
 	mmFindRegisteredProfile.FindRegisteredProfileMock.mutex.Lock()
-	mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs = append(mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs, params)
+	mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs = append(mmFindRegisteredProfile.FindRegisteredProfileMock.callArgs, mm_params)
 	mmFindRegisteredProfile.FindRegisteredProfileMock.mutex.Unlock()
 
 	for _, e := range mmFindRegisteredProfile.FindRegisteredProfileMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.h1
 		}
@@ -193,17 +193,17 @@ func (mmFindRegisteredProfile *MandateRegistryMock) FindRegisteredProfile(host e
 
 	if mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.Counter, 1)
-		want := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.params
-		got := MandateRegistryMockFindRegisteredProfileParams{host}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFindRegisteredProfile.t.Errorf("MandateRegistryMock.FindRegisteredProfile got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.params
+		mm_got := MandateRegistryMockFindRegisteredProfileParams{host}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFindRegisteredProfile.t.Errorf("MandateRegistryMock.FindRegisteredProfile got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFindRegisteredProfile.FindRegisteredProfileMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFindRegisteredProfile.t.Fatal("No results are set for the MandateRegistryMock.FindRegisteredProfile")
 		}
-		return (*results).h1
+		return (*mm_results).h1
 	}
 	if mmFindRegisteredProfile.funcFindRegisteredProfile != nil {
 		return mmFindRegisteredProfile.funcFindRegisteredProfile(host)
@@ -359,11 +359,11 @@ func (mmGetCloudIdentity *MandateRegistryMock) GetCloudIdentity() (d1 cryptkit.D
 	if mmGetCloudIdentity.GetCloudIdentityMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCloudIdentity.GetCloudIdentityMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCloudIdentity.GetCloudIdentityMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCloudIdentity.GetCloudIdentityMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCloudIdentity.t.Fatal("No results are set for the MandateRegistryMock.GetCloudIdentity")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetCloudIdentity.funcGetCloudIdentity != nil {
 		return mmGetCloudIdentity.funcGetCloudIdentity()
@@ -502,11 +502,11 @@ func (mmGetConsensusConfiguration *MandateRegistryMock) GetConsensusConfiguratio
 	if mmGetConsensusConfiguration.GetConsensusConfigurationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetConsensusConfiguration.GetConsensusConfigurationMock.defaultExpectation.Counter, 1)
 
-		results := mmGetConsensusConfiguration.GetConsensusConfigurationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetConsensusConfiguration.GetConsensusConfigurationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetConsensusConfiguration.t.Fatal("No results are set for the MandateRegistryMock.GetConsensusConfiguration")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetConsensusConfiguration.funcGetConsensusConfiguration != nil {
 		return mmGetConsensusConfiguration.funcGetConsensusConfiguration()
@@ -645,11 +645,11 @@ func (mmGetPrimingCloudHash *MandateRegistryMock) GetPrimingCloudHash() (c1 proo
 	if mmGetPrimingCloudHash.GetPrimingCloudHashMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPrimingCloudHash.GetPrimingCloudHashMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPrimingCloudHash.GetPrimingCloudHashMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPrimingCloudHash.GetPrimingCloudHashMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPrimingCloudHash.t.Fatal("No results are set for the MandateRegistryMock.GetPrimingCloudHash")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetPrimingCloudHash.funcGetPrimingCloudHash != nil {
 		return mmGetPrimingCloudHash.funcGetPrimingCloudHash()

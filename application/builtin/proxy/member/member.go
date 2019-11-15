@@ -119,13 +119,11 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(rootDomain insolar.Reference, name string, key string, migrationAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
-	var args [5]interface{}
-	args[0] = rootDomain
-	args[1] = name
-	args[2] = key
-	args[3] = migrationAddress
-	args[4] = walletRef
+func New(key string, migrationAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
+	var args [3]interface{}
+	args[0] = key
+	args[1] = migrationAddress
+	args[2] = walletRef
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -198,84 +196,6 @@ func (r *Member) GetCode() (insolar.Reference, error) {
 	}
 
 	return r.Code, nil
-}
-
-// GetName is proxy generated method
-func (r *Member) GetNameAsMutable() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetName", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetNameAsImmutable is proxy generated method
-func (r *Member) GetName() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetName", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
 }
 
 // GetWallet is proxy generated method
@@ -415,84 +335,6 @@ func (r *Member) GetAccount(assetName string) (*insolar.Reference, error) {
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetAccount", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetPublicKey is proxy generated method
-func (r *Member) GetPublicKeyAsMutable() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetPublicKeyAsImmutable is proxy generated method
-func (r *Member) GetPublicKey() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

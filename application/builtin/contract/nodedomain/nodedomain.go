@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/noderecord"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
@@ -39,13 +38,8 @@ func NewNodeDomain() (*NodeDomain, error) {
 	}, nil
 }
 
-func (nd NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecord {
-	return noderecord.GetObject(ref)
-}
-
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
-
 	root := appfoundation.GetRootMember()
 	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
@@ -65,22 +59,10 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 
 // GetNodeRefByPublicKey returns node reference.
 // ins:immutable
-func (nd NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
+func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
 	if !ok {
 		return "", fmt.Errorf("network node not found by public key: %s", publicKey)
 	}
 	return nodeRef, nil
-}
-
-// RemoveNode deletes node from registry.
-func (nd *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
-	node := nd.getNodeRecord(nodeRef)
-	nodePK, err := node.GetPublicKey()
-	if err != nil {
-		return fmt.Errorf("failed to find network node by public key: %s", nodePK)
-	}
-
-	delete(nd.NodeIndexPublicKey, nodePK)
-	return node.Destroy()
 }

@@ -94,10 +94,7 @@ func (rf *requestFetcher) FetchPendings(ctx context.Context) <-chan *common.Tran
 	rf.stopFetching = func() { once.Do(func() { close(aborted) }) }
 	rf.mu.Unlock()
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"object": rf.object.String(),
-	})
-
+	logger := inslogger.FromContext(ctx)
 	logger.Debug("request fetcher starting")
 
 	go func() {

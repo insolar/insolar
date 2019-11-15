@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -126,15 +126,15 @@ func (mmLeave *LeaverMock) Leave(ctx context.Context, ETA mm_insolar.PulseNumber
 		mmLeave.inspectFuncLeave(ctx, ETA)
 	}
 
-	params := &LeaverMockLeaveParams{ctx, ETA}
+	mm_params := &LeaverMockLeaveParams{ctx, ETA}
 
 	// Record call args
 	mmLeave.LeaveMock.mutex.Lock()
-	mmLeave.LeaveMock.callArgs = append(mmLeave.LeaveMock.callArgs, params)
+	mmLeave.LeaveMock.callArgs = append(mmLeave.LeaveMock.callArgs, mm_params)
 	mmLeave.LeaveMock.mutex.Unlock()
 
 	for _, e := range mmLeave.LeaveMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -142,10 +142,10 @@ func (mmLeave *LeaverMock) Leave(ctx context.Context, ETA mm_insolar.PulseNumber
 
 	if mmLeave.LeaveMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLeave.LeaveMock.defaultExpectation.Counter, 1)
-		want := mmLeave.LeaveMock.defaultExpectation.params
-		got := LeaverMockLeaveParams{ctx, ETA}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLeave.t.Errorf("LeaverMock.Leave got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLeave.LeaveMock.defaultExpectation.params
+		mm_got := LeaverMockLeaveParams{ctx, ETA}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLeave.t.Errorf("LeaverMock.Leave got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

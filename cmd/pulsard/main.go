@@ -28,11 +28,10 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
@@ -85,9 +84,8 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "pulsar")
+	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, "", "pulsar")
 
 	jaegerflush := func() {}
 	if pCfg.Tracer.Jaeger.AgentEndpoint != "" {
@@ -150,7 +148,7 @@ func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) (*co
 		panic(err)
 	}
 
-	cm := &component.Manager{}
+	cm := component.NewManager(nil)
 	cm.Register(cryptographyScheme, keyStore, keyProcessor, transport.NewFactory(cfg.Pulsar.DistributionTransport))
 	cm.Inject(cryptographyService, pulseDistributor)
 

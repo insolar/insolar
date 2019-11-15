@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
 	"github.com/pkg/errors"
@@ -91,7 +91,7 @@ func NewKeyStore(path string) (insolar.KeyStore, error) {
 		keyStore: keyStore,
 	}
 
-	manager := component.Manager{}
+	manager := component.NewManager(nil)
 	manager.Inject(
 		cachedKeyStore,
 		keyStore,

@@ -26,7 +26,6 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
@@ -141,7 +140,7 @@ func MakeContractRequest(url string, postP ContractRequest, signature string) (*
 	return req, nil
 }
 
-// GetResponseBodyContract makes request to platform and extracts body
+// GetResponseBodyPlatform makes request to platform and extracts body
 func GetResponseBodyPlatform(url string, method string, params interface{}) ([]byte, error) {
 	request := PlatformRequest{
 		Request: Request{
@@ -212,7 +211,7 @@ func GetSeed(url string) (string, error) {
 		return "", errors.Wrap(err, "[ GetSeed ] Can't unmarshal")
 	}
 	if seedResp.Error != nil {
-		return "", errors.New("[ GetSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
+		return "", seedResp.Error
 	}
 	if len(seedResp.Result.Seed) == 0 {
 		return "", errors.New("[ GetSeed ] Field seed is empty")
@@ -320,7 +319,7 @@ func Info(url string) (*InfoResponse, error) {
 		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
 	}
 	if infoResp.Error != nil {
-		return nil, errors.New("[ Info ] Field 'error' is not nil: " + fmt.Sprint(infoResp.Error))
+		return nil, infoResp.Error
 	}
 
 	return &infoResp.Result, nil
@@ -340,7 +339,7 @@ func Status(url string) (*StatusResponse, error) {
 		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
 	}
 	if statusResp.Error != nil {
-		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
+		return nil, statusResp.Error
 	}
 
 	return &statusResp.Result, nil

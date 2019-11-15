@@ -51,40 +51,29 @@
 package servicenetwork
 
 import (
-	"bytes"
-	"encoding/gob"
-	"io"
-	"io/ioutil"
-
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/pkg/errors"
 )
 
 // serializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
-func serializeMessage(msg *message.Message) (io.Reader, error) {
-	buff := &bytes.Buffer{}
-	enc := gob.NewEncoder(buff)
-	err := enc.Encode(msg)
-	return buff, err
+func serializeMessage(msg *message.Message) ([]byte, error) {
+	wm := &WatermillMessage{
+		UUID:     msg.UUID,
+		Metadata: msg.Metadata,
+		Payload:  msg.Payload,
+	}
+	return wm.Marshal()
 }
 
 // deserializeMessage returns decoded signed message.
-func deserializeMessage(buff io.Reader) (*message.Message, error) {
-	var signed message.Message
-	enc := gob.NewDecoder(buff)
-	err := enc.Decode(&signed)
-	return &signed, err
-}
-
-// messageToBytes deserialize a message.Message (from watermill) to bytes.
-func messageToBytes(msg *message.Message) ([]byte, error) {
-	reqBuff, err := serializeMessage(msg)
+func deserializeMessage(data []byte) (*message.Message, error) {
+	var wm WatermillMessage
+	err := wm.Unmarshal(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize message")
+		return nil, err
 	}
-	buf, err := ioutil.ReadAll(reqBuff)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read from buffer")
-	}
-	return buf, nil
+	return &message.Message{
+		UUID:     wm.UUID,
+		Metadata: wm.Metadata,
+		Payload:  wm.Payload,
+	}, nil
 }

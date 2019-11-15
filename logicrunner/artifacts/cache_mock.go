@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmget *CacheMock) get(ref insolar.Reference, getter func() (val interface{
 		mmget.inspectFuncget(ref, getter)
 	}
 
-	params := &CacheMockgetParams{ref, getter}
+	mm_params := &CacheMockgetParams{ref, getter}
 
 	// Record call args
 	mmget.getMock.mutex.Lock()
-	mmget.getMock.callArgs = append(mmget.getMock.callArgs, params)
+	mmget.getMock.callArgs = append(mmget.getMock.callArgs, mm_params)
 	mmget.getMock.mutex.Unlock()
 
 	for _, e := range mmget.getMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.val, e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmget *CacheMock) get(ref insolar.Reference, getter func() (val interface{
 
 	if mmget.getMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmget.getMock.defaultExpectation.Counter, 1)
-		want := mmget.getMock.defaultExpectation.params
-		got := CacheMockgetParams{ref, getter}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmget.t.Errorf("CacheMock.get got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmget.getMock.defaultExpectation.params
+		mm_got := CacheMockgetParams{ref, getter}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmget.t.Errorf("CacheMock.get got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmget.getMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmget.getMock.defaultExpectation.results
+		if mm_results == nil {
 			mmget.t.Fatal("No results are set for the CacheMock.get")
 		}
-		return (*results).val, (*results).err
+		return (*mm_results).val, (*mm_results).err
 	}
 	if mmget.funcget != nil {
 		return mmget.funcget(ref, getter)

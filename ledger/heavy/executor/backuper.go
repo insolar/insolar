@@ -18,10 +18,8 @@ package executor
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -65,12 +63,11 @@ type BackupInfo struct {
 
 // BackupMakerDefault is component which does incremental backups by consequent invoke MakeBackup()
 type BackupMakerDefault struct {
-	lock                sync.RWMutex
-	lastBackupedVersion uint64
-	lastBackupedPulse   insolar.PulseNumber
-	backuper            store.Backuper
-	config              configuration.Backup
-	db                  store.DB
+	lock              sync.RWMutex
+	lastBackupedPulse insolar.PulseNumber
+	backuper          store.Backuper
+	config            configuration.Backup
+	db                store.DB
 }
 
 func isPathExists(dirName string) error {
@@ -110,16 +107,6 @@ func checkConfig(config configuration.Ledger) error {
 	if len(backupConfig.PostProcessBackupCmd) == 0 {
 		return errors.New("PostProcessBackupCmd can't be empty")
 	}
-	if len(backupConfig.LastBackupInfoFile) == 0 {
-		return errors.New("LastBackupInfoFile can't be empty")
-	}
-	if err := isPathExists(backupConfig.LastBackupInfoFile); err != nil {
-		return errors.Wrap(err, "check LastBackupInfoFile returns error")
-	}
-
-	if filepath.Dir(backupConfig.LastBackupInfoFile) != filepath.Clean(config.Storage.DataDirectory) {
-		return errors.New("LastBackupInfoFile must be in config.Storage.DataDirectory ")
-	}
 
 	return nil
 }
@@ -142,27 +129,6 @@ func loadLastBackupedVersion(fileName string) (uint64, error) {
 	}
 
 	return backupInfo.LastBackupedVersion, nil
-}
-
-// saveLastBackupedInfo rewrites file with last backup version
-func saveLastBackupedInfo(ctx context.Context, to string, lastBackupedVersion uint64) error {
-	backupInfo := LastBackupInfo{
-		LastBackupedVersion: lastBackupedVersion,
-	}
-	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
-	if err != nil {
-		return errors.Wrap(err, "can't marshal last backup info")
-	}
-
-	tmpFile := to + "._tmp"
-
-	err = ioutil.WriteFile(tmpFile, rawInfo, 0600)
-	if err != nil {
-		return errors.Wrapf(err, "can't write file %s", to)
-	}
-
-	err = move(ctx, tmpFile, to)
-	return errors.Wrapf(err, "can't move file %s", to)
 }
 
 type DBInitializedKey byte
@@ -199,22 +165,11 @@ func NewBackupMaker(ctx context.Context,
 	lastBackupedPulse insolar.PulseNumber,
 	db store.DB,
 ) (*BackupMakerDefault, error) {
-	var (
-		lastBackupedVersion uint64
-		err                 error
-	)
 	backupConfig := config.Backup
 	if backupConfig.Enabled {
 		if err := checkConfig(config); err != nil {
 			return nil, errors.Wrap(err, "bad config")
 		}
-
-		lastBackupedVersion, err = loadLastBackupedVersion(backupConfig.LastBackupInfoFile)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to loadLastBackupedVersion")
-		}
-		inslogger.FromContext(ctx).Infof("last backuped version loaded successfully from %s. lastBackupedVersion: %d",
-			backupConfig.LastBackupInfoFile, lastBackupedVersion)
 
 		if err := setDBInitialized(db); err != nil {
 			return nil, errors.Wrap(err, "failed to setDBInitialized")
@@ -225,11 +180,10 @@ func NewBackupMaker(ctx context.Context,
 	}
 
 	return &BackupMakerDefault{
-		backuper:            backuper,
-		config:              backupConfig,
-		lastBackupedPulse:   lastBackupedPulse,
-		db:                  db,
-		lastBackupedVersion: lastBackupedVersion,
+		backuper:          backuper,
+		config:            backupConfig,
+		lastBackupedPulse: lastBackupedPulse,
+		db:                db,
 	}, nil
 }
 
@@ -256,31 +210,6 @@ func waitForFile(ctx context.Context, filePath string, numIterations uint) error
 	}
 
 	return errors.New("no backup confirmation for pulse")
-}
-
-func writeBackupInfoFile(hash string, pulse insolar.PulseNumber, since uint64, upto uint64, to string) error {
-	bi := BackupInfo{
-		SHA256:              hash,
-		Pulse:               pulse,
-		LastBackupedVersion: upto,
-		Since:               since,
-	}
-
-	rawInfo, err := json.MarshalIndent(bi, "", "    ")
-	if err != nil {
-		return errors.Wrap(err, "can't marshal backup info")
-	}
-
-	err = ioutil.WriteFile(to, rawInfo, 0600)
-	return errors.Wrapf(err, "can't write file %s", to)
-}
-
-func calculateFileHash(f *os.File) (string, error) {
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, f); err != nil {
-		return "", errors.Wrap(err, "io.Copy return error")
-	}
-	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 }
 
 type logWrapper struct {
@@ -333,115 +262,44 @@ func NewBackupStartKey(raw []byte) BackupStartKey {
 	return key
 }
 
-// prepareBackup make incremental backup and write auxiliary file with meta info
-func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
+// prepareBackup just set key with new pulse
+func (b *BackupMakerDefault) prepareBackup(pulse insolar.PulseNumber) error {
 	err := b.db.Set(BackupStartKey(pulse), []byte{})
 	if err != nil {
-		return 0, errors.Wrap(err, "Failed to set start backup key")
+		return errors.Wrap(err, "Failed to set start backup key")
 	}
-	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
-	if err != nil {
-		return 0, errors.Wrap(err, "Backup return error")
-	}
-
-	if err := dirHolder.reopenTmpFile(); err != nil {
-		return 0, errors.Wrap(err, "reopenFile return error")
-	}
-
-	fileHash, err := calculateFileHash(dirHolder.tmpFile)
-	if err != nil {
-		return 0, errors.Wrap(err, "calculateFileHash return error")
-	}
-
-	metaInfoFile := filepath.Join(dirHolder.tmpDir, b.config.MetaInfoFile)
-	err = writeBackupInfoFile(fileHash, pulse, b.lastBackupedVersion, currentBT, metaInfoFile)
-	if err != nil {
-		return 0, errors.Wrap(err, "writeBackupInfoFile return error")
-	}
-
-	return currentBT, nil
-}
-
-type tmpDirHolder struct {
-	tmpDir  string
-	tmpFile *os.File
-}
-
-func (t *tmpDirHolder) release(ctx context.Context) {
-	err := t.tmpFile.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal("can't close backup file: ", t.tmpFile, err)
-	}
-
-	err = os.RemoveAll(t.tmpDir)
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal("can't remove backup file: ", t.tmpDir, err)
-	}
-}
-
-func (t *tmpDirHolder) reopenTmpFile() error {
-	if err := t.tmpFile.Close(); err != nil {
-		return errors.Wrapf(err, "can't close file %s", t.tmpFile.Name())
-	}
-
-	reopenedFile, err := os.OpenFile(t.tmpFile.Name(), os.O_RDONLY, 0)
-	if err != nil {
-		return errors.Wrapf(err, "can't open file %s", t.tmpFile.Name())
-	}
-
-	t.tmpFile = reopenedFile
-	return nil
-}
-
-func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) error {
-	tmpDir, err := ioutil.TempDir(where, "tmp-bkp-"+pulse.String()+"-")
-	if err != nil {
-		return errors.Wrapf(err, "can't create tmp dir: %s", where)
-	}
-
-	file, err := os.OpenFile(tmpDir+"/incr.bkp", os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0600)
-	if err != nil {
-		return errors.Wrapf(err, "can't create tmp file. dir: %s", tmpDir)
-	}
-
-	t.tmpDir = tmpDir
-	t.tmpFile = file
 
 	return nil
 }
 
-func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (uint64, error) {
+func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
 
-	dirHolder := &tmpDirHolder{}
-	err := dirHolder.create(b.config.TmpDirectory, lastFinalizedPulse)
+	err := b.prepareBackup(lastFinalizedPulse)
 	if err != nil {
-		return 0, errors.Wrap(err, "can't create tmp dir")
-	}
-	defer dirHolder.release(ctx)
-
-	currentBkpVersion, err := b.prepareBackup(dirHolder, lastFinalizedPulse)
-	if err != nil {
-		return 0, errors.Wrap(err, "prepareBackup returns error")
+		return errors.Wrap(err, "prepareBackup returns error")
 	}
 
 	currentBkpDirName := fmt.Sprintf(b.config.DirNameTemplate, lastFinalizedPulse)
 	currentBkpDirPath := filepath.Join(b.config.TargetDirectory, currentBkpDirName)
-	err = move(ctx, dirHolder.tmpDir, currentBkpDirPath)
+
+	confirmFile := filepath.Join(currentBkpDirPath, b.config.ConfirmFile)
+
+	err = os.MkdirAll(filepath.Dir(confirmFile), 0777)
 	if err != nil {
-		return 0, errors.Wrap(err, "move returns error")
+		return errors.Wrapf(err, "can't create target dir")
 	}
 
 	err = invokeBackupPostProcessCommand(ctx, b.config.PostProcessBackupCmd, currentBkpDirPath)
 	if err != nil {
-		return 0, errors.Wrapf(err, "failed to invoke PostProcessBackupCmd. pulse: %d", lastFinalizedPulse)
+		return errors.Wrapf(err, "failed to invoke PostProcessBackupCmd. pulse: %d", lastFinalizedPulse)
 	}
 
-	err = waitForFile(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
+	err = waitForFile(ctx, confirmFile, b.config.BackupWaitPeriod)
 	if err != nil {
-		return 0, errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
+		return errors.Wrapf(err, "waitForBackup returns error. pulse: %d", lastFinalizedPulse)
 	}
 
-	return currentBkpVersion, nil
+	return nil
 }
 
 func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
@@ -458,17 +316,12 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 		return ErrBackupDisabled
 	}
 
-	currentBkpVersion, err := b.doBackup(ctx, lastFinalizedPulse)
+	err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to doBackup")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
-	b.lastBackupedVersion = currentBkpVersion
-	err = saveLastBackupedInfo(ctx, b.config.LastBackupInfoFile, currentBkpVersion)
-	if err != nil {
-		return errors.Wrap(err, "failed to saveLastBackupedVersion")
-	}
 
 	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
 	return nil

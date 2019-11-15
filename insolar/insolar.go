@@ -18,7 +18,12 @@ package insolar
 
 import (
 	"go/build"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
+
+	"github.com/insolar/insolar/insolar/defaults"
 )
 
 // RootModule holds root module name.
@@ -31,4 +36,18 @@ func RootModuleDir() string {
 		log.Fatal("failed to resolve", RootModule)
 	}
 	return p.Dir
+}
+
+func ContractBuildTmpDir(prefix string) string {
+	dir := filepath.Join(RootModuleDir(), defaults.ArtifactsDir(), "tmp")
+	// create if not exist
+	if err := os.MkdirAll(dir, 0777); err != nil {
+		panic(err)
+	}
+
+	tmpDir, err := ioutil.TempDir(dir, prefix)
+	if err != nil {
+		panic(err)
+	}
+	return tmpDir
 }

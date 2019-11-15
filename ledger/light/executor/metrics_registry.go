@@ -31,7 +31,7 @@ var (
 	)
 )
 
-// go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.MetricsRegistry -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.MetricsRegistry -o ./ -s _mock.go -g
 type MetricsRegistry interface {
 	SetOldestAbandonedRequestAge(age int)
 	UpdateMetrics(ctx context.Context)

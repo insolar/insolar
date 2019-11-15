@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package servicenetwork;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all) = false;
+
+message WatermillMessage {
+    string UUID = 1;
+    map<string, string> Metadata = 2;
+    bytes Payload = 3;
+}

@@ -54,7 +54,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 )
 
 // DatagramHandler interface provides callback method to process received datagrams

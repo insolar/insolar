@@ -19,11 +19,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 )
 
 func TestFinalizationKeeper_WeAreTooYoung(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFinalizationKeeper_WeAreTooYoung(t *testing.T) {
 	jkMock := NewJetKeeperMock(t)
 	jkMock.TopSyncPulseMock.Expect().Return(testPulse + 1)
 
-	calcMock := network.NewPulseCalculatorMock(t)
+	calcMock := insolarPulse.NewCalculatorMock(t)
 	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, testPulse, p1)
 
@@ -50,7 +51,7 @@ func TestFinalizationKeeper_CalculatorReturnError(t *testing.T) {
 
 	testError := errors.New("Test_CalculatorReturnError")
 
-	calcMock := network.NewPulseCalculatorMock(t)
+	calcMock := insolarPulse.NewCalculatorMock(t)
 	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		require.Equal(t, testPulse, p1)
 
@@ -69,7 +70,7 @@ func TestFinalizationKeeper_OldCurrentPulse(t *testing.T) {
 
 	limit := 100
 
-	calcMock := network.NewPulseCalculatorMock(t)
+	calcMock := insolarPulse.NewCalculatorMock(t)
 	calcMock.BackwardsMock.Return(insolar.Pulse{PulseNumber: testPulse + insolar.PulseNumber(limit)}, nil)
 
 	fk := NewFinalizationKeeperDefault(jkMock, calcMock, limit)
@@ -86,7 +87,7 @@ func TestFinalizationKeeper_LimitExceeded(t *testing.T) {
 		jkMock := NewJetKeeperMock(t)
 		jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
-		calcMock := network.NewPulseCalculatorMock(t)
+		calcMock := insolarPulse.NewCalculatorMock(t)
 		calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 			return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
 		})
@@ -105,7 +106,7 @@ func TestFinalizationKeeper_HappyPath(t *testing.T) {
 	jkMock := NewJetKeeperMock(t)
 	jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
-	calcMock := network.NewPulseCalculatorMock(t)
+	calcMock := insolarPulse.NewCalculatorMock(t)
 	calcMock.BackwardsMock.Return(insolar.Pulse{PulseNumber: testPulse - 1}, nil)
 
 	fk := NewFinalizationKeeperDefault(jkMock, calcMock, limit)

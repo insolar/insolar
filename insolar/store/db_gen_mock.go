@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // DBMock implements DB
@@ -176,15 +176,15 @@ func (mmDelete *DBMock) Delete(key Key) (err error) {
 		mmDelete.inspectFuncDelete(key)
 	}
 
-	params := &DBMockDeleteParams{key}
+	mm_params := &DBMockDeleteParams{key}
 
 	// Record call args
 	mmDelete.DeleteMock.mutex.Lock()
-	mmDelete.DeleteMock.callArgs = append(mmDelete.DeleteMock.callArgs, params)
+	mmDelete.DeleteMock.callArgs = append(mmDelete.DeleteMock.callArgs, mm_params)
 	mmDelete.DeleteMock.mutex.Unlock()
 
 	for _, e := range mmDelete.DeleteMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -192,17 +192,17 @@ func (mmDelete *DBMock) Delete(key Key) (err error) {
 
 	if mmDelete.DeleteMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDelete.DeleteMock.defaultExpectation.Counter, 1)
-		want := mmDelete.DeleteMock.defaultExpectation.params
-		got := DBMockDeleteParams{key}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDelete.t.Errorf("DBMock.Delete got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDelete.DeleteMock.defaultExpectation.params
+		mm_got := DBMockDeleteParams{key}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDelete.t.Errorf("DBMock.Delete got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmDelete.DeleteMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmDelete.DeleteMock.defaultExpectation.results
+		if mm_results == nil {
 			mmDelete.t.Fatal("No results are set for the DBMock.Delete")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmDelete.funcDelete != nil {
 		return mmDelete.funcDelete(key)
@@ -392,15 +392,15 @@ func (mmGet *DBMock) Get(key Key) (value []byte, err error) {
 		mmGet.inspectFuncGet(key)
 	}
 
-	params := &DBMockGetParams{key}
+	mm_params := &DBMockGetParams{key}
 
 	// Record call args
 	mmGet.GetMock.mutex.Lock()
-	mmGet.GetMock.callArgs = append(mmGet.GetMock.callArgs, params)
+	mmGet.GetMock.callArgs = append(mmGet.GetMock.callArgs, mm_params)
 	mmGet.GetMock.mutex.Unlock()
 
 	for _, e := range mmGet.GetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.value, e.results.err
 		}
@@ -408,17 +408,17 @@ func (mmGet *DBMock) Get(key Key) (value []byte, err error) {
 
 	if mmGet.GetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGet.GetMock.defaultExpectation.Counter, 1)
-		want := mmGet.GetMock.defaultExpectation.params
-		got := DBMockGetParams{key}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGet.t.Errorf("DBMock.Get got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGet.GetMock.defaultExpectation.params
+		mm_got := DBMockGetParams{key}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGet.t.Errorf("DBMock.Get got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGet.GetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGet.GetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGet.t.Fatal("No results are set for the DBMock.Get")
 		}
-		return (*results).value, (*results).err
+		return (*mm_results).value, (*mm_results).err
 	}
 	if mmGet.funcGet != nil {
 		return mmGet.funcGet(key)
@@ -608,15 +608,15 @@ func (mmNewIterator *DBMock) NewIterator(pivot Key, reverse bool) (i1 Iterator) 
 		mmNewIterator.inspectFuncNewIterator(pivot, reverse)
 	}
 
-	params := &DBMockNewIteratorParams{pivot, reverse}
+	mm_params := &DBMockNewIteratorParams{pivot, reverse}
 
 	// Record call args
 	mmNewIterator.NewIteratorMock.mutex.Lock()
-	mmNewIterator.NewIteratorMock.callArgs = append(mmNewIterator.NewIteratorMock.callArgs, params)
+	mmNewIterator.NewIteratorMock.callArgs = append(mmNewIterator.NewIteratorMock.callArgs, mm_params)
 	mmNewIterator.NewIteratorMock.mutex.Unlock()
 
 	for _, e := range mmNewIterator.NewIteratorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.i1
 		}
@@ -624,17 +624,17 @@ func (mmNewIterator *DBMock) NewIterator(pivot Key, reverse bool) (i1 Iterator) 
 
 	if mmNewIterator.NewIteratorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmNewIterator.NewIteratorMock.defaultExpectation.Counter, 1)
-		want := mmNewIterator.NewIteratorMock.defaultExpectation.params
-		got := DBMockNewIteratorParams{pivot, reverse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmNewIterator.t.Errorf("DBMock.NewIterator got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmNewIterator.NewIteratorMock.defaultExpectation.params
+		mm_got := DBMockNewIteratorParams{pivot, reverse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmNewIterator.t.Errorf("DBMock.NewIterator got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmNewIterator.NewIteratorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmNewIterator.NewIteratorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmNewIterator.t.Fatal("No results are set for the DBMock.NewIterator")
 		}
-		return (*results).i1
+		return (*mm_results).i1
 	}
 	if mmNewIterator.funcNewIterator != nil {
 		return mmNewIterator.funcNewIterator(pivot, reverse)
@@ -824,15 +824,15 @@ func (mmSet *DBMock) Set(key Key, value []byte) (err error) {
 		mmSet.inspectFuncSet(key, value)
 	}
 
-	params := &DBMockSetParams{key, value}
+	mm_params := &DBMockSetParams{key, value}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -840,17 +840,17 @@ func (mmSet *DBMock) Set(key Key, value []byte) (err error) {
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := DBMockSetParams{key, value}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("DBMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := DBMockSetParams{key, value}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("DBMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSet.SetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSet.SetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSet.t.Fatal("No results are set for the DBMock.Set")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSet.funcSet != nil {
 		return mmSet.funcSet(key, value)
