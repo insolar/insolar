@@ -73,7 +73,7 @@ type DataDigester interface {
 }
 
 type PairDigester interface {
-	DataDigester
+	BasicDigester
 	DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) Digest
 }
 
@@ -85,6 +85,11 @@ type SequenceDigester interface {
 
 	FinishSequence() Digest
 }
+
+//type ForkingDigester interface {
+//	SequenceDigester
+//	ForkSequence() SequenceDigester
+//}
 
 type DigestFactory interface {
 	CreatePairDigester() PairDigester

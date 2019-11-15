@@ -58,6 +58,30 @@ import (
 
 var _ cryptkit.SequenceDigester = &StackedCalculator{}
 
+func NewStackedCalculator(digester cryptkit.PairDigester, unbalancedStub cryptkit.Digest) StackedCalculator {
+	if digester == nil {
+		panic("illegal value")
+	}
+	return StackedCalculator{digester: digester, unbalancedStub: unbalancedStub}
+}
+
+// A calculator to do streaming calculation of Merkle-tree by using provided PairDigester.
+// The resulting merkle will have same depth for all branches except for the rightmost branch.
+//
+// When unbalancedStub == nil, then FinishSequence() will create the rightmost branch by recursively
+// applying the same rule - all sub-branches will have same depth except for the rightmost sub-branch.
+//
+// When unbalancedStub != nil, then FinishSequence() will create a perfect tree by using unbalancedStub
+// once per level when a value for the rightmost sub-branch is missing.
+//
+// When AddNext() was never called then FinishSequence() will return a non-nil unbalancedStub otherwise will panic.
+//
+// Complexity (n - a number of added hashes):
+//  - AddNext() is O(1), it does only upto 2 calls to PairDigester.DigestPair()
+//  - FinishSequence() is O(log n), it does log(n) calls to PairDigester.DigestPair()
+//  - ForkSequence() is O(log n), but only copies memory
+//  - Memory is O(log n)
+//
 type StackedCalculator struct {
 	digester       cryptkit.PairDigester
 	unbalancedStub cryptkit.Digest
@@ -142,7 +166,7 @@ func (p *StackedCalculator) ForkSequence() cryptkit.SequenceDigester {
 	return &cp
 }
 
-func (p *StackedCalculator) GetCount() int {
+func (p *StackedCalculator) Count() int {
 	return int(p.count)
 }
 
