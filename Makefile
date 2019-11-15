@@ -1,5 +1,6 @@
 export GO111MODULE ?= on
 export GOSUMDB ?= sum.golang.org
+export GOFLAGS ?= -mod=vendor
 
 BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artifacts
@@ -78,7 +79,7 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	./scripts/build/ls-tools.go | xargs -tI % go install -mod=vendor -v %
+	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
 install-deps: ensure install-build-tools ## install dep and codegen tools
