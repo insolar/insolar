@@ -32,7 +32,7 @@ func buildCLI(name string) (string, error) {
 	binPath := filepath.Join(testdataDir, name)
 
 	out, err := exec.Command(
-		"go", "build",
+		"go", "build", "-mod=vendor",
 		"-o", binPath,
 		filepath.Join(insolarImportPath, name),
 	).CombinedOutput()
