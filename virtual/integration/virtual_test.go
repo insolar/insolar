@@ -199,6 +199,8 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			Object: &objRef,
 			Result: insolar.MustSerialize(expectedRes),
 		}, res)
+
+		s.Stop(ctx)
 	})
 }
 
