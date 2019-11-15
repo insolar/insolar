@@ -17,11 +17,20 @@
 package gen
 
 import (
+	"encoding/binary"
+	"sync/atomic"
+
 	fuzz "github.com/google/gofuzz"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/reference"
 )
+
+var uniqueSeq uint32
+
+func getUnique() uint32 {
+	return atomic.AddUint32(&uniqueSeq, 1)
+}
 
 // ID generates random id.
 func ID() insolar.ID {
@@ -30,6 +39,7 @@ func ID() insolar.ID {
 	f := fuzz.New().NilChance(0).Funcs(func(id *insolar.ID, c fuzz.Continue) {
 		var hash [reference.LocalBinaryHashSize]byte
 		c.Fuzz(&hash)
+		binary.BigEndian.PutUint32(hash[reference.LocalBinaryHashSize-4:], getUnique())
 
 		pn := PulseNumber()
 
@@ -43,16 +53,8 @@ func ID() insolar.ID {
 // UniqueIDs generates multiple random unique IDs.
 func UniqueIDs(a int) []insolar.ID {
 	ids := make([]insolar.ID, a)
-	seen := make(map[insolar.ID]struct{})
-
 	for i := 0; i < a; i++ {
-		for {
-			ids[i] = ID()
-			if _, ok := seen[ids[i]]; !ok {
-				break
-			}
-		}
-		seen[ids[i]] = struct{}{}
+		ids[i] = ID()
 	}
 	return ids
 }
@@ -113,16 +115,9 @@ func RecordReference() insolar.Reference {
 // UniqueReferences generates multiple random unique References.
 func UniqueReferences(a int) []insolar.Reference {
 	refs := make([]insolar.Reference, a)
-	seen := make(map[insolar.Reference]struct{})
 
 	for i := 0; i < a; i++ {
-		for {
-			refs[i] = Reference()
-			if _, ok := seen[refs[i]]; !ok {
-				break
-			}
-		}
-		seen[refs[i]] = struct{}{}
+		refs[i] = Reference()
 	}
 	return refs
 }
@@ -130,16 +125,9 @@ func UniqueReferences(a int) []insolar.Reference {
 // UniqueReferences generates multiple random unique References.
 func UniqueRecordReferences(a int) []insolar.Reference {
 	refs := make([]insolar.Reference, a)
-	seen := make(map[insolar.Reference]struct{})
 
 	for i := 0; i < a; i++ {
-		for {
-			refs[i] = RecordReference()
-			if _, ok := seen[refs[i]]; !ok {
-				break
-			}
-		}
-		seen[refs[i]] = struct{}{}
+		refs[i] = RecordReference()
 	}
 	return refs
 }

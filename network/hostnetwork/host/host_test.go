@@ -126,6 +126,8 @@ func TestHost_Equal(t *testing.T) {
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
+	require.NotEqual(t, id1, id2)
+
 	tests := []struct {
 		id1   insolar.Reference
 		addr1 *Address
@@ -144,7 +146,15 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
+			h1 := Host{NodeID: test.id1, Address: test.addr1}
+			h2 := Host{NodeID: test.id2, Address: test.addr2}
+			if test.equal != h1.Equal(h2) {
+				if test.equal {
+					require.Equal(t, h1, h2)
+				} else {
+					require.NotEqual(t, h1, h2)
+				}
+			}
 		})
 	}
 }
