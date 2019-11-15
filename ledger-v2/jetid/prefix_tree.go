@@ -32,7 +32,29 @@ func NewPrefixTree(autoPropagate bool) PrefixTree {
 	return PrefixTree{autoPropagate: autoPropagate, leafCounts: [17]uint16{0: 1}}
 }
 
-// limited to 65k Jets
+//
+// Prefix tree for jets. Limited to 65536 jets and 16 bit prefix. Root is bit[0].
+// The only difference with usual binary tree is that nodes are added and removed in pairs
+// by Split and Merge operations accordingly.
+//
+// Empty PrefixTree always contains a root (zero) jet.
+//
+// PrefixTree has 2 modes varies by CPU (below, n = number of jets):
+// - non-propagating: Split/Merge are O(1), GetPrefix() is O(log n)
+// - propagating: GetPrefix() is O(1), Split/Merge is amortized O(log n) with peaks of O(n)
+//
+// Memory is always O(1) for any modes (fixed size structure, zero heap activity).
+//
+// PrefixTree can either be created NewPrefixTree() or as a PrefixTree{}.
+// Zero PrefixTree will behave same as NewPrefixTree(false) but will return IsZero()=true until first modification.
+//
+// PrefixTree can be copied and compared as a structure.
+// PrefixTree structures are equal when they have the same mode and same set of jets, irrelevant of Split/Merge sequence.
+// Empty PrefixTree is not equal to a zero PrefixTree.
+//
+// Serialization is supported, with O(n log n) per operation.
+//
+
 type PrefixTree struct {
 	lenNibles     [32768]uint8
 	leafCounts    [17]uint16
@@ -42,10 +64,12 @@ type PrefixTree struct {
 	mask          Prefix
 }
 
+// Maximum prefix length of a jet in this tree.
 func (p *PrefixTree) MaxDepth() uint8 {
 	return p.maxDepth
 }
 
+// Minimum prefix length of a jet in this tree.
 func (p *PrefixTree) MinDepth() uint8 {
 	return p.minDepth
 }
@@ -54,17 +78,20 @@ func (p *PrefixTree) IsZero() bool {
 	return p.minDepth == 0 && p.maxDepth == 0 && p.leafCounts[0] == 0
 }
 
-// it is not necessary to call it, but only initialized empty PrefixTree properly supports comparability
+// Converts zero state tree to a proper empty tree.
+// Only useful for the zero state, is not necessary to call.
 func (p *PrefixTree) Init() {
 	if p.IsZero() {
 		p.leafCounts[0] = 1
 	}
 }
 
+// True when there is only a root jet.
 func (p *PrefixTree) IsEmpty() bool {
 	return p.minDepth == 0 && p.maxDepth == 0
 }
 
+// Returns a total number of jets in this tree. Always >= 1. O(log n)
 func (p *PrefixTree) Count() int {
 	if p.minDepth == p.maxDepth {
 		return 1 << p.minDepth
@@ -138,9 +165,12 @@ func (p *PrefixTree) resetPrefixLength(prefix uint16) {
 	}
 }
 
-func (p *PrefixTree) FindPrefixLength(prefix Prefix) uint8 {
-	_, l := p.findPrefixLength(prefix)
-	return l
+// Returns number of denotative bits for the given prefix and masked prefix, with denotative bits only.
+// Number of denotative bits is [0..16].
+// O(log n) for non-propagating and O(1) for propagating mode.
+func (p *PrefixTree) GetPrefix(prefix Prefix) (Prefix, uint8) {
+	pfx, l := p.findPrefixLength(prefix)
+	return Prefix(pfx), l
 }
 
 func (p *PrefixTree) findPrefixLength(prefix Prefix) (uint16, uint8) {
@@ -180,9 +210,13 @@ func (p *PrefixTree) _findPrefixLength(maskedPrefix uint16) (uint16, uint8) {
 	panic("illegal state")
 }
 
+// Splits the given jet into 2 sub-jets (converts a leaf node into a full node with 2 leafs).
+// (prefixLimit) - number of valuable bits in the given prefix. Will panic when prefixLimit is less than actual prefix length for the given prefix.
+//
+// O(1) for non-propagating and amortized O(log n) for propagating mode.
 func (p *PrefixTree) Split(prefix Prefix, prefixLimit uint8) {
 	switch maskedPrefix, prefixLen := p.findPrefixLength(prefix); {
-	case prefixLimit != prefixLen:
+	case prefixLimit < prefixLen:
 		panic("illegal value")
 	case int(prefixLen) >= len(p.leafCounts):
 		panic("illegal value") // TODO return as error?
@@ -222,7 +256,7 @@ func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 		p.maxDepth++
 		p.mask = (p.mask << 1) | 1
 		if doPropagate {
-			p.propagateNewDepth(p.maxDepth - 1)
+			p.propagateAllocatedDepth(p.maxDepth - 1)
 		}
 	}
 
@@ -238,9 +272,14 @@ func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 	}
 }
 
+// Merges the given sub-jet with its pair into a jet (a full node with 2 leafs is converted into a leaf).
+// (prefix) - must be zero-branch jet (has the highest denotative bit =0, or prefix[prefixLen]=0)
+// (prefixLimit) - number of valuable bits in the given prefix. Will panic when prefixLimit is less than actual prefix length for the given prefix.
+//
+// O(1) for non-propagating and amortized O(log n) for propagating mode.
 func (p *PrefixTree) Merge(prefix Prefix, prefixLimit uint8) {
 	switch maskedPrefix, prefixLen := p.findPrefixLength(prefix); {
-	case prefixLimit != prefixLen:
+	case prefixLimit < prefixLen:
 		panic("illegal value")
 	case prefixLen == 0:
 		panic("illegal value")
@@ -284,6 +323,7 @@ func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 		case prefixLen:
 			p.maxDepth--
 			p.mask >>= 1
+			// TODO clean up
 		}
 		p.leafCounts[prefixLen] = 0
 	default:
@@ -334,7 +374,7 @@ func (p *PrefixTree) propagate(prefix uint16, baseDepth uint8) {
 	}
 }
 
-func (p *PrefixTree) propagateNewDepth(prevMaxDepth uint8) {
+func (p *PrefixTree) propagateAllocatedDepth(prevMaxDepth uint8) {
 	switch {
 	case p.maxDepth < prevMaxDepth:
 		panic("illegal state")
@@ -393,6 +433,7 @@ func (p *PrefixTree) SetPropagate() {
 	p.propagateAll()
 }
 
+// TODO remove?
 func (p *PrefixTree) Cleanup() {
 	switch {
 	case p.maxDepth == 16:
@@ -434,10 +475,12 @@ func (p *PrefixTree) String() string {
 	return fmt.Sprintf("min=%d max=%d cnt=%v", p.minDepth, p.maxDepth, p.leafCounts)
 }
 
+// Prints a list of jets to StdOut
 func (p *PrefixTree) PrintTable() {
 	p.printTable(p.getPrefixLength)
 }
 
+// Prints a list of jets and propagated jets to StdOut
 func (p *PrefixTree) PrintTableAll() {
 	p.printTable(p._getPrefixLength)
 }
@@ -470,7 +513,7 @@ func (p *PrefixTree) printRow(prefix uint16, pLen uint8) {
 	fmt.Println(b.String())
 }
 
-const compactSerializeV1 = 1
+const CompactSerializeV1 = 1
 
 //
 // General idea of this serialization is based on the "mountain range" approach to visualize Catalan numbers,
@@ -478,10 +521,14 @@ const compactSerializeV1 = 1
 // https://en.wikipedia.org/wiki/Catalan_number
 // https://brilliant.org/wiki/catalan-numbers/
 //
-// This implementation is suboptimal and consumes extra >40% of theoretical minimum (more for small trees),
+// This implementation is suboptimal and consumes extra >40% of theoretical minimum,
 // but it takes less for balanced trees (down to 2 bytes for a perfect tree).
 //
-
+// Approximate size of a serialized binary is 2 + 0.85*Count()
+// First byte is always =CompactSerializeV1
+//
+// O(n log n)
+//
 func (p *PrefixTree) CompactSerialize(w io.Writer) error {
 	b := p.CompactSerializeToBytes()
 	switch n, e := w.Write(b); {
@@ -505,7 +552,7 @@ func (p *PrefixTree) CompactSerializeToBytes() []byte {
 	}
 
 	bb := longbits.NewBitBuilder(longbits.FirstLow, len(p.lenNibles))
-	bb.AppendByte(compactSerializeV1)
+	bb.AppendByte(CompactSerializeV1)
 	bb.AppendByte(encodedDepth)
 
 	if p.maxDepth != p.minDepth {
@@ -557,6 +604,12 @@ func (p *PrefixTree) serializeBranch(bb *longbits.BitBuilder, prefix uint16, min
 	}
 }
 
+// Reads the serialized content. Doesn't change propagation mode.
+// Can only be called on an empty tree otherwise panics.
+//
+// O(n log n)
+//
+
 func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 	if p.maxDepth != 0 || p.minDepth != 0 {
 		panic("illegal state")
@@ -564,7 +617,7 @@ func (p *PrefixTree) CompactDeserialize(r io.ByteReader) error {
 	switch b, e := r.ReadByte(); {
 	case e != nil:
 		return e
-	case b != compactSerializeV1:
+	case b != CompactSerializeV1:
 		return fmt.Errorf("unsupported type: %d", b)
 	}
 
@@ -619,7 +672,7 @@ func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, 
 	maxDelta := p.maxDepth - minDepth
 	switch {
 	case p.maxDepth < minDepth:
-		panic("illegal state")
+		return fmt.Errorf("maxDepth < minDepth")
 	case maxDelta < 1<<shallowBitCount:
 	default:
 		switch b, e := br.ReadBool(); {
@@ -640,9 +693,9 @@ func (p *PrefixTree) deserializeBranch(br *longbits.BitIoReader, prefix uint16, 
 	}
 	switch {
 	case depth > p.maxDepth:
-		panic("illegal state")
+		return fmt.Errorf("depth > p.maxDepth")
 	case depth < minDepth:
-		panic("illegal state")
+		return fmt.Errorf("depth < minDepth")
 	}
 	//fmt.Printf("D: %04x %2d %2d %v\n", prefix, minDepth, depth, isShallow)
 

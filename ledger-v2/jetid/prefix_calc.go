@@ -24,10 +24,32 @@ import (
 const SplitMedian = 7 // makes 0 vs 1 ratio like [0..6] vs [7..15]
 // this enables left branches of jets to be ~23% less loaded
 
-type PrefixCalc struct {
-	OverlapOfs uint8
+//
+// Default prefix calculator, requires 12 bytes for 16 bit prefix and uses SplitMedian const for mis-balancing.
+//
+// Recommended use:
+// 		bitPrefix := NewPrefixCalc().FromXXX(prefixTree.MaxDepth(), reference)
+//        or
+// 		bitPrefix := NewPrefixCalc().FromXXX(16, reference)
+//		...
+//		bitPrefix, bitPrefixLen = prefixTree.GetPrefix(bitPrefix)
+//
+func NewPrefixCalc() PrefixCalc {
+	return PrefixCalc{4, SplitMedian}
 }
 
+//
+// Converts a byte sequence into a bit prefix for PrefixTree.
+//
+// Must set OverlapOfs>0 when a structured header is present within a byte sequence.
+// When OverlapOfs !=0, then the calculator will mix b[n]^b[n + OverlapOfs]
+//
+type PrefixCalc struct {
+	OverlapOfs  uint8
+	SplitMedian uint8
+}
+
+// Converts data[:OverlapOfs + (prefixLen)/2] into prefixLen bits.
 func (p PrefixCalc) FromSlice(prefixLen int, data []byte) Prefix {
 	switch {
 	case prefixLen < 0 || prefixLen > 32:
@@ -39,6 +61,7 @@ func (p PrefixCalc) FromSlice(prefixLen int, data []byte) Prefix {
 	return p.fromSlice(prefixLen, data)
 }
 
+// Converts data[:OverlapOfs + (prefixLen)/2] into prefixLen bits.
 func (p PrefixCalc) FromReader(prefixLen int, data io.Reader) (Prefix, error) {
 	switch {
 	case prefixLen < 0 || prefixLen > 32:
@@ -69,7 +92,7 @@ func (p PrefixCalc) fromSlice(prefixLen int, data []byte) Prefix {
 			d ^= data[i+int(p.OverlapOfs)]
 		}
 
-		if d&0xF >= SplitMedian {
+		if d&0xF >= p.SplitMedian {
 			result |= bit
 		}
 		if prefixLen == 1 {
@@ -77,7 +100,7 @@ func (p PrefixCalc) fromSlice(prefixLen int, data []byte) Prefix {
 		}
 		bit <<= 1
 
-		if (d >> 4) >= SplitMedian {
+		if (d >> 4) >= p.SplitMedian {
 			result |= bit
 		}
 		prefixLen -= 2

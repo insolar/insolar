@@ -160,8 +160,8 @@ func TestPrefixTree_Propagate_Get_Performance(t *testing.T) {
 			splitZero(&pt, 0, 15)
 			startedAt := time.Now()
 			for j := 0; j < 10000000; j++ {
-				pt.FindPrefixLength(math.MaxUint16)
-				//require.Equal(t, uint8(1), pt.FindPrefixLength(math.MaxUint16))
+				pt.GetPrefix(math.MaxUint16)
+				//require.Equal(t, uint8(1), pt.GetPrefix(math.MaxUint16))
 			}
 			timings[idx] = int64(time.Since(startedAt))
 		})
@@ -173,7 +173,8 @@ func TestPrefixTree_Propagate_Get_ZeroThenOne(t *testing.T) {
 	for i := 0; i <= 1; i++ {
 		pt := NewPrefixTree(i != 0)
 		for i := Prefix(0); i <= math.MaxUint16*2; i++ {
-			require.Equal(t, uint8(0), pt.FindPrefixLength(i))
+			_, l := pt.GetPrefix(i)
+			require.Equal(t, uint8(0), l)
 		}
 		splitZero(&pt, 0, 15)
 		mask := Prefix(math.MaxUint16)
@@ -185,7 +186,8 @@ func TestPrefixTree_Propagate_Get_ZeroThenOne(t *testing.T) {
 				if masked != 0 {
 					expected = uint8(bits.TrailingZeros(uint(masked)) + 1)
 				}
-				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+				_, l := pt.GetPrefix(i)
+				require.Equal(t, expected, l, i)
 			}
 		})
 
@@ -206,7 +208,8 @@ func TestPrefixTree_Propagate_Get_ZeroThenOne(t *testing.T) {
 				default:
 					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
 				}
-				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+				_, l := pt.GetPrefix(i)
+				require.Equal(t, expected, l, i)
 			}
 		})
 	}
@@ -216,7 +219,8 @@ func TestPrefixTree_Propagate_Get_OneThenZero(t *testing.T) {
 	for i := 0; i <= 1; i++ {
 		pt := NewPrefixTree(i != 0)
 		for i := Prefix(0); i <= math.MaxUint16*2; i++ {
-			require.Equal(t, uint8(0), pt.FindPrefixLength(i))
+			_, l := pt.GetPrefix(i)
+			require.Equal(t, uint8(0), l)
 		}
 		splitOne(&pt, 0, 15)
 		mask := Prefix(math.MaxUint16)
@@ -233,7 +237,8 @@ func TestPrefixTree_Propagate_Get_OneThenZero(t *testing.T) {
 				default:
 					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
 				}
-				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+				_, l := pt.GetPrefix(i)
+				require.Equal(t, expected, l, i)
 			}
 		})
 
@@ -254,7 +259,8 @@ func TestPrefixTree_Propagate_Get_OneThenZero(t *testing.T) {
 				default:
 					expected = uint8(bits.TrailingZeros(^uint(masked)) + 1)
 				}
-				require.Equal(t, expected, pt.FindPrefixLength(i), i)
+				_, l := pt.GetPrefix(i)
+				require.Equal(t, expected, l, i)
 			}
 		})
 	}
