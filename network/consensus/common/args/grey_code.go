@@ -57,7 +57,7 @@ func Grey(v uint) uint {
 }
 
 func FromGrey(g uint) uint {
-	g = g ^ (g >> 32) // it is only needed when uint=uint64, so lets hope for the compile to remove it
+	g = g ^ (g >> 32) // it is only needed when uint=uint64, so lets hope for the compiler to remove it
 	g = g ^ (g >> 16)
 	g = g ^ (g >> 8)
 	g = g ^ (g >> 4)
@@ -68,7 +68,7 @@ func FromGrey(g uint) uint {
 
 func GreyInc(v uint) uint {
 	/*
-		This can also be calculated in a classical way with parity (count non-zero bits) of value, but this way is faster
+		This can also be calculated in a classical way with parity (count non-zero bits) of value, but it will be slower
 
 		Classical gray_inc(x):
 		  if parity of x is even:
@@ -81,15 +81,27 @@ func GreyInc(v uint) uint {
 	return Grey(v) ^ Grey(v+1)
 }
 
-// Grey code has a periodic reflect symmetry, so we can do a shortcut for the most cases
-//                                                    0  1  2  3  4  5  6  7
-//                            0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
-var grey4deltaBit = [16]uint8{0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4}
+// Grey code has a periodic reflect symmetry, so we can do a shortcut for the most cases.
+// Use of a bigger table is questionable, as the only varying value is at the end.
+var greyDeltaBit = [16]uint8{
+	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, needsCalc,
+
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 7,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 6,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5,
+	//0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4,	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, needsCalc,
+}
+
+const needsCalc = 8
 
 // returns a bit (offset) that will change in grey-code equivalent of v on incrementing it
 func GreyIncBit(v uint) uint8 {
-	r := grey4deltaBit[v&0xF]
-	if r < 4 { // quick path
+	r := greyDeltaBit[v&0xF]
+	if r < needsCalc { // quick path
 		return r
 	}
 	return uint8(bits.Len(GreyInc(v)) - 1)
