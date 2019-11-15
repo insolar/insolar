@@ -45,6 +45,7 @@ type Deposit struct {
 	Lockup                  int64                     `json:"lockupInPulses"`
 	Vesting                 int64                     `json:"vestingInPulses"`
 	VestingStep             int64                     `json:"vestingStepInPulses"`
+	IsConfirmed             bool                      `json:"isConfirmed"`
 }
 
 // New creates new deposit.
@@ -133,7 +134,7 @@ func (d *Deposit) Confirm(
 ) error {
 
 	migrationDaemonRef := fromMember.String()
-	if d.PulseDepositUnHold != 0 {
+	if d.IsConfirmed {
 		return fmt.Errorf("migration is done for this deposit %s", txHash)
 	}
 	if txHash != d.TxHash {
@@ -171,6 +172,7 @@ func (d *Deposit) Confirm(
 		if err != nil {
 			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
 		}
+		d.IsConfirmed = true
 		return nil
 	}
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
