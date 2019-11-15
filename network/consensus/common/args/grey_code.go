@@ -52,10 +52,12 @@ package args
 
 import "math/bits"
 
+// Converts a linear binary number to a binary-reflected grey code
 func Grey(v uint) uint {
 	return v ^ (v >> 1)
 }
 
+// Converts a binary-reflected grey code to a linear binary number
 func FromGrey(g uint) uint {
 	g = g ^ (g >> 32) // it is only needed when uint=uint64, so lets hope for the compiler to remove it
 	g = g ^ (g >> 16)
@@ -66,6 +68,8 @@ func FromGrey(g uint) uint {
 	return g
 }
 
+// Gives a grey-code increment for the given binary. Result always has only one non-zero bit.
+// The following is always true: Grey(v) ^ GreyInc(v) == Grey(v + 1)
 func GreyInc(v uint) uint {
 	// This can also be calculated in a classical way with parity (count non-zero bits) of value, but it will be slower
 	//
@@ -76,10 +80,8 @@ func GreyInc(v uint) uint {
 	//	 y := rightmost 1 bit in x
 	//	 return x ^ (y << 1)
 	//
-	//
-	//
 
-	// the fastest way is the shorter version of Grey(v) ^ Grey(v+1)
+	// The fastest way is the shorter version of Grey(v) ^ Grey(v+1)
 	return Grey(v ^ (v + 1))
 }
 
@@ -100,7 +102,8 @@ var greyDeltaBit = [16]uint8{
 
 const needsCalc = 8
 
-// returns a bit (offset) that will change in grey-code equivalent of v on incrementing it
+// Returns a bit (offset) that will change in grey-code equivalent of v on incrementing it
+// The following is always true: 1<<GreyIncBit(v) == GreyInc(v)
 func GreyIncBit(v uint) uint8 {
 	r := greyDeltaBit[v&0xF]
 	if r < needsCalc { // quick path

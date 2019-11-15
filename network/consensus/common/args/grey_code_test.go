@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package args
 
@@ -69,12 +69,14 @@ func TestGrey(t *testing.T) {
 }
 
 func TestGreyInc(t *testing.T) {
-	for i := uint(0); i <= math.MaxUint16; i++ {
-		require.Equal(t, 1, bits.OnesCount(GreyInc(i)))
+	for v := uint(0); v <= math.MaxUint16; v++ {
+		require.Equal(t, 1, bits.OnesCount(GreyInc(v)))
+		require.Equal(t, Grey(v+1), Grey(v)^GreyInc(v))
 	}
 
-	for i := uint(math.MaxUint32); i <= math.MaxUint32-math.MaxUint16<<1; i++ {
-		require.Equal(t, 1, bits.OnesCount(GreyInc(i)))
+	for v := uint(math.MaxUint32); v <= math.MaxUint32-math.MaxUint16<<1; v++ {
+		require.Equal(t, 1, bits.OnesCount(GreyInc(v)))
+		require.Equal(t, Grey(v+1), Grey(v)^GreyInc(v))
 	}
 }
 
