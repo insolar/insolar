@@ -20,8 +20,8 @@ HEAVY_BADGER_TOOL= heavy-badger
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
-GOBUILD ?= go build -mod=vendor
-GOTEST ?= go test -mod=vendor
+GOBUILD ?= go build
+GOTEST ?= go test
 
 FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
