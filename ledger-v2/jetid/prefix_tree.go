@@ -256,7 +256,7 @@ func (p *PrefixTree) _split(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 		p.maxDepth++
 		p.mask = (p.mask << 1) | 1
 		if doPropagate {
-			p.propagateAllocatedDepth(p.maxDepth - 1)
+			p.propagateAllocatedDepth()
 		}
 	}
 
@@ -323,7 +323,7 @@ func (p *PrefixTree) _merge(maskedPrefix uint16, prefixLen uint8, doPropagate bo
 		case prefixLen:
 			p.maxDepth--
 			p.mask >>= 1
-			// TODO clean up
+			p.cleanupReleasedDepth()
 		}
 		p.leafCounts[prefixLen] = 0
 	default:
@@ -374,29 +374,43 @@ func (p *PrefixTree) propagate(prefix uint16, baseDepth uint8) {
 	}
 }
 
-func (p *PrefixTree) propagateAllocatedDepth(prevMaxDepth uint8) {
+func (p *PrefixTree) propagateAllocatedDepth() {
 	switch {
-	case p.maxDepth < prevMaxDepth:
+	case p.maxDepth == 0:
 		panic("illegal state")
-	case p.maxDepth == prevMaxDepth:
-		return
-	case prevMaxDepth <= 1:
+	case p.maxDepth <= 2:
 		if p.lenNibles[0] != 0 {
 			panic("illegal state")
 		}
-		if p.maxDepth <= 1 {
-			return
+		if p.maxDepth == 2 {
+			p.lenNibles[1] = 0
 		}
-		for i := 1<<(p.maxDepth-1) - 1; i > 0; i-- {
-			p.lenNibles[i] = p.lenNibles[0]
+		return
+	}
+	half := 1 << (p.maxDepth - 2)
+	copy(p.lenNibles[half:], p.lenNibles[:half])
+}
+
+func (p *PrefixTree) cleanupReleasedDepth() {
+	switch p.maxDepth {
+	case 1:
+		if p.lenNibles[1]&0xEE != 0 {
+			panic("illegal state")
+		}
+		if p.lenNibles[0]&0xEE != 0 {
+			panic("illegal state")
+		}
+		return
+	case 0:
+		if p.lenNibles[0] != 0 {
+			panic("illegal state")
 		}
 		return
 	}
 
-	source := p.lenNibles[:1<<(prevMaxDepth-1)]
 	max := 1 << (p.maxDepth - 1)
-	for i := len(source); i < max; i += len(source) {
-		copy(p.lenNibles[i:], source)
+	for i := max<<1 - 1; i >= max; i-- {
+		p.lenNibles[i] = 0
 	}
 }
 

@@ -266,6 +266,92 @@ func TestPrefixTree_Propagate_Get_OneThenZero(t *testing.T) {
 	}
 }
 
+func TestPrefixTree_Comparable(t *testing.T) {
+
+	pt1 := PrefixTree{}
+	require.NotEqual(t, pt1, NewPrefixTree(false))
+	require.NotEqual(t, pt1, NewPrefixTree(true))
+
+	pt1.Init()
+	require.Equal(t, pt1, NewPrefixTree(false))
+	require.NotEqual(t, pt1, NewPrefixTree(true))
+
+	pt1.SetPropagate()
+	require.NotEqual(t, pt1, NewPrefixTree(false))
+	require.Equal(t, pt1, NewPrefixTree(true))
+}
+
+func TestPrefixTree_Comparable_AfterUpdates(t *testing.T) {
+	for i := 0; i <= 1; i++ {
+		propagate := i != 0
+		t.Run(fmt.Sprintf("tree=zero propagate=%v", propagate), func(t *testing.T) {
+			for i := uint8(1); i <= 15; i++ {
+				pt1 := NewPrefixTree(propagate)
+
+				splitZero(&pt1, 0, i)
+				for j := i + 1; j > 0; j-- {
+					pt1.Merge(0, j)
+
+					pt2 := NewPrefixTree(propagate)
+					if j >= 2 {
+						splitZero(&pt2, 0, j-2)
+					}
+					if pt1 != pt2 {
+						pt1.PrintTable()
+						pt2.PrintTable()
+						require.Failf(t, "not equal", "split=%d merge=%d", i, j)
+					}
+				}
+			}
+		})
+
+		t.Run(fmt.Sprintf("tree=one propagate=%v", propagate), func(t *testing.T) {
+			for i := uint8(1); i <= 15; i++ {
+				pt1 := NewPrefixTree(propagate)
+
+				splitOne(&pt1, 0, i)
+				for j := i + 1; j > 0; j-- {
+					pt1.Merge(1<<(j-1)-1, j)
+
+					pt2 := NewPrefixTree(propagate)
+					if j >= 2 {
+						splitOne(&pt2, 0, j-2)
+					}
+					if pt1 != pt2 {
+						pt1.PrintTable()
+						pt2.PrintTable()
+						require.Failf(t, "not equal", "split=%d merge=%d", i, j)
+					}
+				}
+			}
+		})
+
+		t.Run(fmt.Sprintf("tree=zero+one propagate=%v", propagate), func(t *testing.T) {
+			for i := uint8(1); i <= 15; i++ {
+				pt1 := NewPrefixTree(propagate)
+
+				splitZero(&pt1, 0, 15)
+
+				splitOne(&pt1, 1, i)
+				for j := i + 1; j > 1; j-- {
+					pt1.Merge(1<<(j-1)-1, j)
+
+					pt2 := NewPrefixTree(propagate)
+					splitZero(&pt2, 0, 15)
+					if j >= 3 {
+						splitOne(&pt2, 1, j-2)
+					}
+					if pt1 != pt2 {
+						pt1.PrintTable()
+						pt2.PrintTable()
+						require.Failf(t, "not equal", "split=%d merge=%d", i, j)
+					}
+				}
+			}
+		})
+	}
+}
+
 func copyTree(pt *PrefixTree, propagation bool) *PrefixTree {
 	b := pt.CompactSerializeToBytes()
 	pt2 := NewPrefixTree(propagation)
