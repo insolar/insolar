@@ -23,7 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/fortytw2/leaktest"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 

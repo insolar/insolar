@@ -9,7 +9,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -163,15 +163,15 @@ func (mmAtPosition *RecordPositionAccessorMock) AtPosition(pn insolar.PulseNumbe
 		mmAtPosition.inspectFuncAtPosition(pn, position)
 	}
 
-	params := &RecordPositionAccessorMockAtPositionParams{pn, position}
+	mm_params := &RecordPositionAccessorMockAtPositionParams{pn, position}
 
 	// Record call args
 	mmAtPosition.AtPositionMock.mutex.Lock()
-	mmAtPosition.AtPositionMock.callArgs = append(mmAtPosition.AtPositionMock.callArgs, params)
+	mmAtPosition.AtPositionMock.callArgs = append(mmAtPosition.AtPositionMock.callArgs, mm_params)
 	mmAtPosition.AtPositionMock.mutex.Unlock()
 
 	for _, e := range mmAtPosition.AtPositionMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.i1, e.results.err
 		}
@@ -179,17 +179,17 @@ func (mmAtPosition *RecordPositionAccessorMock) AtPosition(pn insolar.PulseNumbe
 
 	if mmAtPosition.AtPositionMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAtPosition.AtPositionMock.defaultExpectation.Counter, 1)
-		want := mmAtPosition.AtPositionMock.defaultExpectation.params
-		got := RecordPositionAccessorMockAtPositionParams{pn, position}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAtPosition.t.Errorf("RecordPositionAccessorMock.AtPosition got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAtPosition.AtPositionMock.defaultExpectation.params
+		mm_got := RecordPositionAccessorMockAtPositionParams{pn, position}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAtPosition.t.Errorf("RecordPositionAccessorMock.AtPosition got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmAtPosition.AtPositionMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAtPosition.AtPositionMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAtPosition.t.Fatal("No results are set for the RecordPositionAccessorMock.AtPosition")
 		}
-		return (*results).i1, (*results).err
+		return (*mm_results).i1, (*mm_results).err
 	}
 	if mmAtPosition.funcAtPosition != nil {
 		return mmAtPosition.funcAtPosition(pn, position)
@@ -379,15 +379,15 @@ func (mmLastKnownPosition *RecordPositionAccessorMock) LastKnownPosition(pn inso
 		mmLastKnownPosition.inspectFuncLastKnownPosition(pn)
 	}
 
-	params := &RecordPositionAccessorMockLastKnownPositionParams{pn}
+	mm_params := &RecordPositionAccessorMockLastKnownPositionParams{pn}
 
 	// Record call args
 	mmLastKnownPosition.LastKnownPositionMock.mutex.Lock()
-	mmLastKnownPosition.LastKnownPositionMock.callArgs = append(mmLastKnownPosition.LastKnownPositionMock.callArgs, params)
+	mmLastKnownPosition.LastKnownPositionMock.callArgs = append(mmLastKnownPosition.LastKnownPositionMock.callArgs, mm_params)
 	mmLastKnownPosition.LastKnownPositionMock.mutex.Unlock()
 
 	for _, e := range mmLastKnownPosition.LastKnownPositionMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.u1, e.results.err
 		}
@@ -395,17 +395,17 @@ func (mmLastKnownPosition *RecordPositionAccessorMock) LastKnownPosition(pn inso
 
 	if mmLastKnownPosition.LastKnownPositionMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLastKnownPosition.LastKnownPositionMock.defaultExpectation.Counter, 1)
-		want := mmLastKnownPosition.LastKnownPositionMock.defaultExpectation.params
-		got := RecordPositionAccessorMockLastKnownPositionParams{pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmLastKnownPosition.t.Errorf("RecordPositionAccessorMock.LastKnownPosition got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmLastKnownPosition.LastKnownPositionMock.defaultExpectation.params
+		mm_got := RecordPositionAccessorMockLastKnownPositionParams{pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmLastKnownPosition.t.Errorf("RecordPositionAccessorMock.LastKnownPosition got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmLastKnownPosition.LastKnownPositionMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLastKnownPosition.LastKnownPositionMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLastKnownPosition.t.Fatal("No results are set for the RecordPositionAccessorMock.LastKnownPosition")
 		}
-		return (*results).u1, (*results).err
+		return (*mm_results).u1, (*mm_results).err
 	}
 	if mmLastKnownPosition.funcLastKnownPosition != nil {
 		return mmLastKnownPosition.funcLastKnownPosition(pn)

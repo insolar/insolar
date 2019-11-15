@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -188,11 +188,11 @@ func (mmAddress *NetworkNodeMock) Address() (s1 string) {
 	if mmAddress.AddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAddress.AddressMock.defaultExpectation.Counter, 1)
 
-		results := mmAddress.AddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAddress.AddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAddress.t.Fatal("No results are set for the NetworkNodeMock.Address")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmAddress.funcAddress != nil {
 		return mmAddress.funcAddress()
@@ -331,11 +331,11 @@ func (mmGetGlobuleID *NetworkNodeMock) GetGlobuleID() (g1 mm_insolar.GlobuleID) 
 	if mmGetGlobuleID.GetGlobuleIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetGlobuleID.GetGlobuleIDMock.defaultExpectation.Counter, 1)
 
-		results := mmGetGlobuleID.GetGlobuleIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetGlobuleID.GetGlobuleIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetGlobuleID.t.Fatal("No results are set for the NetworkNodeMock.GetGlobuleID")
 		}
-		return (*results).g1
+		return (*mm_results).g1
 	}
 	if mmGetGlobuleID.funcGetGlobuleID != nil {
 		return mmGetGlobuleID.funcGetGlobuleID()
@@ -474,11 +474,11 @@ func (mmGetPower *NetworkNodeMock) GetPower() (p1 mm_insolar.Power) {
 	if mmGetPower.GetPowerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPower.GetPowerMock.defaultExpectation.Counter, 1)
 
-		results := mmGetPower.GetPowerMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPower.GetPowerMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPower.t.Fatal("No results are set for the NetworkNodeMock.GetPower")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmGetPower.funcGetPower != nil {
 		return mmGetPower.funcGetPower()
@@ -617,11 +617,11 @@ func (mmGetState *NetworkNodeMock) GetState() (n1 mm_insolar.NodeState) {
 	if mmGetState.GetStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetState.GetStateMock.defaultExpectation.Counter, 1)
 
-		results := mmGetState.GetStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetState.GetStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetState.t.Fatal("No results are set for the NetworkNodeMock.GetState")
 		}
-		return (*results).n1
+		return (*mm_results).n1
 	}
 	if mmGetState.funcGetState != nil {
 		return mmGetState.funcGetState()
@@ -760,11 +760,11 @@ func (mmID *NetworkNodeMock) ID() (r1 mm_insolar.Reference) {
 	if mmID.IDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmID.IDMock.defaultExpectation.Counter, 1)
 
-		results := mmID.IDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmID.IDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmID.t.Fatal("No results are set for the NetworkNodeMock.ID")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmID.funcID != nil {
 		return mmID.funcID()
@@ -903,11 +903,11 @@ func (mmLeavingETA *NetworkNodeMock) LeavingETA() (p1 mm_insolar.PulseNumber) {
 	if mmLeavingETA.LeavingETAMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmLeavingETA.LeavingETAMock.defaultExpectation.Counter, 1)
 
-		results := mmLeavingETA.LeavingETAMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmLeavingETA.LeavingETAMock.defaultExpectation.results
+		if mm_results == nil {
 			mmLeavingETA.t.Fatal("No results are set for the NetworkNodeMock.LeavingETA")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmLeavingETA.funcLeavingETA != nil {
 		return mmLeavingETA.funcLeavingETA()
@@ -1046,11 +1046,11 @@ func (mmPublicKey *NetworkNodeMock) PublicKey() (p1 crypto.PublicKey) {
 	if mmPublicKey.PublicKeyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPublicKey.PublicKeyMock.defaultExpectation.Counter, 1)
 
-		results := mmPublicKey.PublicKeyMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPublicKey.PublicKeyMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPublicKey.t.Fatal("No results are set for the NetworkNodeMock.PublicKey")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmPublicKey.funcPublicKey != nil {
 		return mmPublicKey.funcPublicKey()
@@ -1189,11 +1189,11 @@ func (mmRole *NetworkNodeMock) Role() (s1 mm_insolar.StaticRole) {
 	if mmRole.RoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRole.RoleMock.defaultExpectation.Counter, 1)
 
-		results := mmRole.RoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRole.RoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRole.t.Fatal("No results are set for the NetworkNodeMock.Role")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmRole.funcRole != nil {
 		return mmRole.funcRole()
@@ -1332,11 +1332,11 @@ func (mmShortID *NetworkNodeMock) ShortID() (s1 mm_insolar.ShortNodeID) {
 	if mmShortID.ShortIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmShortID.ShortIDMock.defaultExpectation.Counter, 1)
 
-		results := mmShortID.ShortIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmShortID.ShortIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmShortID.t.Fatal("No results are set for the NetworkNodeMock.ShortID")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmShortID.funcShortID != nil {
 		return mmShortID.funcShortID()
@@ -1475,11 +1475,11 @@ func (mmVersion *NetworkNodeMock) Version() (s1 string) {
 	if mmVersion.VersionMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmVersion.VersionMock.defaultExpectation.Counter, 1)
 
-		results := mmVersion.VersionMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmVersion.VersionMock.defaultExpectation.results
+		if mm_results == nil {
 			mmVersion.t.Fatal("No results are set for the NetworkNodeMock.Version")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmVersion.funcVersion != nil {
 		return mmVersion.funcVersion()

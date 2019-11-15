@@ -9,7 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 )
@@ -147,15 +147,15 @@ func (mmReply *SenderMock) Reply(ctx context.Context, origin payload.Meta, reply
 		mmReply.inspectFuncReply(ctx, origin, reply)
 	}
 
-	params := &SenderMockReplyParams{ctx, origin, reply}
+	mm_params := &SenderMockReplyParams{ctx, origin, reply}
 
 	// Record call args
 	mmReply.ReplyMock.mutex.Lock()
-	mmReply.ReplyMock.callArgs = append(mmReply.ReplyMock.callArgs, params)
+	mmReply.ReplyMock.callArgs = append(mmReply.ReplyMock.callArgs, mm_params)
 	mmReply.ReplyMock.mutex.Unlock()
 
 	for _, e := range mmReply.ReplyMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -163,10 +163,10 @@ func (mmReply *SenderMock) Reply(ctx context.Context, origin payload.Meta, reply
 
 	if mmReply.ReplyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmReply.ReplyMock.defaultExpectation.Counter, 1)
-		want := mmReply.ReplyMock.defaultExpectation.params
-		got := SenderMockReplyParams{ctx, origin, reply}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmReply.t.Errorf("SenderMock.Reply got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmReply.ReplyMock.defaultExpectation.params
+		mm_got := SenderMockReplyParams{ctx, origin, reply}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmReply.t.Errorf("SenderMock.Reply got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -364,15 +364,15 @@ func (mmSendRole *SenderMock) SendRole(ctx context.Context, msg *message.Message
 		mmSendRole.inspectFuncSendRole(ctx, msg, role, object)
 	}
 
-	params := &SenderMockSendRoleParams{ctx, msg, role, object}
+	mm_params := &SenderMockSendRoleParams{ctx, msg, role, object}
 
 	// Record call args
 	mmSendRole.SendRoleMock.mutex.Lock()
-	mmSendRole.SendRoleMock.callArgs = append(mmSendRole.SendRoleMock.callArgs, params)
+	mmSendRole.SendRoleMock.callArgs = append(mmSendRole.SendRoleMock.callArgs, mm_params)
 	mmSendRole.SendRoleMock.mutex.Unlock()
 
 	for _, e := range mmSendRole.SendRoleMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ch1, e.results.f1
 		}
@@ -380,17 +380,17 @@ func (mmSendRole *SenderMock) SendRole(ctx context.Context, msg *message.Message
 
 	if mmSendRole.SendRoleMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendRole.SendRoleMock.defaultExpectation.Counter, 1)
-		want := mmSendRole.SendRoleMock.defaultExpectation.params
-		got := SenderMockSendRoleParams{ctx, msg, role, object}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendRole.t.Errorf("SenderMock.SendRole got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendRole.SendRoleMock.defaultExpectation.params
+		mm_got := SenderMockSendRoleParams{ctx, msg, role, object}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendRole.t.Errorf("SenderMock.SendRole got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendRole.SendRoleMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendRole.SendRoleMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendRole.t.Fatal("No results are set for the SenderMock.SendRole")
 		}
-		return (*results).ch1, (*results).f1
+		return (*mm_results).ch1, (*mm_results).f1
 	}
 	if mmSendRole.funcSendRole != nil {
 		return mmSendRole.funcSendRole(ctx, msg, role, object)
@@ -582,15 +582,15 @@ func (mmSendTarget *SenderMock) SendTarget(ctx context.Context, msg *message.Mes
 		mmSendTarget.inspectFuncSendTarget(ctx, msg, target)
 	}
 
-	params := &SenderMockSendTargetParams{ctx, msg, target}
+	mm_params := &SenderMockSendTargetParams{ctx, msg, target}
 
 	// Record call args
 	mmSendTarget.SendTargetMock.mutex.Lock()
-	mmSendTarget.SendTargetMock.callArgs = append(mmSendTarget.SendTargetMock.callArgs, params)
+	mmSendTarget.SendTargetMock.callArgs = append(mmSendTarget.SendTargetMock.callArgs, mm_params)
 	mmSendTarget.SendTargetMock.mutex.Unlock()
 
 	for _, e := range mmSendTarget.SendTargetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.ch1, e.results.f1
 		}
@@ -598,17 +598,17 @@ func (mmSendTarget *SenderMock) SendTarget(ctx context.Context, msg *message.Mes
 
 	if mmSendTarget.SendTargetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendTarget.SendTargetMock.defaultExpectation.Counter, 1)
-		want := mmSendTarget.SendTargetMock.defaultExpectation.params
-		got := SenderMockSendTargetParams{ctx, msg, target}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendTarget.t.Errorf("SenderMock.SendTarget got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendTarget.SendTargetMock.defaultExpectation.params
+		mm_got := SenderMockSendTargetParams{ctx, msg, target}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendTarget.t.Errorf("SenderMock.SendTarget got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendTarget.SendTargetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendTarget.SendTargetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendTarget.t.Fatal("No results are set for the SenderMock.SendTarget")
 		}
-		return (*results).ch1, (*results).f1
+		return (*mm_results).ch1, (*mm_results).f1
 	}
 	if mmSendTarget.funcSendTarget != nil {
 		return mmSendTarget.funcSendTarget(ctx, msg, target)

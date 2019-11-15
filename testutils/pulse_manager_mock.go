@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	mm_insolar "github.com/insolar/insolar/insolar"
 )
 
@@ -152,15 +152,15 @@ func (mmSet *PulseManagerMock) Set(ctx context.Context, pulse mm_insolar.Pulse) 
 		mmSet.inspectFuncSet(ctx, pulse)
 	}
 
-	params := &PulseManagerMockSetParams{ctx, pulse}
+	mm_params := &PulseManagerMockSetParams{ctx, pulse}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -168,17 +168,17 @@ func (mmSet *PulseManagerMock) Set(ctx context.Context, pulse mm_insolar.Pulse) 
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := PulseManagerMockSetParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("PulseManagerMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := PulseManagerMockSetParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("PulseManagerMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSet.SetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSet.SetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSet.t.Fatal("No results are set for the PulseManagerMock.Set")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSet.funcSet != nil {
 		return mmSet.funcSet(ctx, pulse)

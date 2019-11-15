@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 )
@@ -171,15 +171,15 @@ func (mmBatchSet *RecordStorageMock) BatchSet(ctx context.Context, recs []record
 		mmBatchSet.inspectFuncBatchSet(ctx, recs)
 	}
 
-	params := &RecordStorageMockBatchSetParams{ctx, recs}
+	mm_params := &RecordStorageMockBatchSetParams{ctx, recs}
 
 	// Record call args
 	mmBatchSet.BatchSetMock.mutex.Lock()
-	mmBatchSet.BatchSetMock.callArgs = append(mmBatchSet.BatchSetMock.callArgs, params)
+	mmBatchSet.BatchSetMock.callArgs = append(mmBatchSet.BatchSetMock.callArgs, mm_params)
 	mmBatchSet.BatchSetMock.mutex.Unlock()
 
 	for _, e := range mmBatchSet.BatchSetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -187,17 +187,17 @@ func (mmBatchSet *RecordStorageMock) BatchSet(ctx context.Context, recs []record
 
 	if mmBatchSet.BatchSetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBatchSet.BatchSetMock.defaultExpectation.Counter, 1)
-		want := mmBatchSet.BatchSetMock.defaultExpectation.params
-		got := RecordStorageMockBatchSetParams{ctx, recs}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBatchSet.t.Errorf("RecordStorageMock.BatchSet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBatchSet.BatchSetMock.defaultExpectation.params
+		mm_got := RecordStorageMockBatchSetParams{ctx, recs}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBatchSet.t.Errorf("RecordStorageMock.BatchSet got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBatchSet.BatchSetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBatchSet.BatchSetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBatchSet.t.Fatal("No results are set for the RecordStorageMock.BatchSet")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmBatchSet.funcBatchSet != nil {
 		return mmBatchSet.funcBatchSet(ctx, recs)
@@ -388,15 +388,15 @@ func (mmForID *RecordStorageMock) ForID(ctx context.Context, id insolar.ID) (m1 
 		mmForID.inspectFuncForID(ctx, id)
 	}
 
-	params := &RecordStorageMockForIDParams{ctx, id}
+	mm_params := &RecordStorageMockForIDParams{ctx, id}
 
 	// Record call args
 	mmForID.ForIDMock.mutex.Lock()
-	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, params)
+	mmForID.ForIDMock.callArgs = append(mmForID.ForIDMock.callArgs, mm_params)
 	mmForID.ForIDMock.mutex.Unlock()
 
 	for _, e := range mmForID.ForIDMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.m1, e.results.err
 		}
@@ -404,17 +404,17 @@ func (mmForID *RecordStorageMock) ForID(ctx context.Context, id insolar.ID) (m1 
 
 	if mmForID.ForIDMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmForID.ForIDMock.defaultExpectation.Counter, 1)
-		want := mmForID.ForIDMock.defaultExpectation.params
-		got := RecordStorageMockForIDParams{ctx, id}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmForID.t.Errorf("RecordStorageMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmForID.ForIDMock.defaultExpectation.params
+		mm_got := RecordStorageMockForIDParams{ctx, id}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmForID.t.Errorf("RecordStorageMock.ForID got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmForID.ForIDMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmForID.ForIDMock.defaultExpectation.results
+		if mm_results == nil {
 			mmForID.t.Fatal("No results are set for the RecordStorageMock.ForID")
 		}
-		return (*results).m1, (*results).err
+		return (*mm_results).m1, (*mm_results).err
 	}
 	if mmForID.funcForID != nil {
 		return mmForID.funcForID(ctx, id)
@@ -604,15 +604,15 @@ func (mmSet *RecordStorageMock) Set(ctx context.Context, rec record.Material) (e
 		mmSet.inspectFuncSet(ctx, rec)
 	}
 
-	params := &RecordStorageMockSetParams{ctx, rec}
+	mm_params := &RecordStorageMockSetParams{ctx, rec}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -620,17 +620,17 @@ func (mmSet *RecordStorageMock) Set(ctx context.Context, rec record.Material) (e
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := RecordStorageMockSetParams{ctx, rec}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("RecordStorageMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := RecordStorageMockSetParams{ctx, rec}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("RecordStorageMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSet.SetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSet.SetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSet.t.Fatal("No results are set for the RecordStorageMock.Set")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSet.funcSet != nil {
 		return mmSet.funcSet(ctx, rec)

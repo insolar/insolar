@@ -6,7 +6,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -179,11 +179,11 @@ func (mmAffinityRef *RequestMock) AffinityRef() (rp1 *insolar.Reference) {
 	if mmAffinityRef.AffinityRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAffinityRef.AffinityRefMock.defaultExpectation.Counter, 1)
 
-		results := mmAffinityRef.AffinityRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmAffinityRef.AffinityRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmAffinityRef.t.Fatal("No results are set for the RequestMock.AffinityRef")
 		}
-		return (*results).rp1
+		return (*mm_results).rp1
 	}
 	if mmAffinityRef.funcAffinityRef != nil {
 		return mmAffinityRef.funcAffinityRef()
@@ -322,11 +322,11 @@ func (mmGetCallType *RequestMock) GetCallType() (c1 CallType) {
 	if mmGetCallType.GetCallTypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCallType.GetCallTypeMock.defaultExpectation.Counter, 1)
 
-		results := mmGetCallType.GetCallTypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCallType.GetCallTypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCallType.t.Fatal("No results are set for the RequestMock.GetCallType")
 		}
-		return (*results).c1
+		return (*mm_results).c1
 	}
 	if mmGetCallType.funcGetCallType != nil {
 		return mmGetCallType.funcGetCallType()
@@ -465,11 +465,11 @@ func (mmIsAPIRequest *RequestMock) IsAPIRequest() (b1 bool) {
 	if mmIsAPIRequest.IsAPIRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsAPIRequest.IsAPIRequestMock.defaultExpectation.Counter, 1)
 
-		results := mmIsAPIRequest.IsAPIRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsAPIRequest.IsAPIRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsAPIRequest.t.Fatal("No results are set for the RequestMock.IsAPIRequest")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsAPIRequest.funcIsAPIRequest != nil {
 		return mmIsAPIRequest.funcIsAPIRequest()
@@ -608,11 +608,11 @@ func (mmIsCreationRequest *RequestMock) IsCreationRequest() (b1 bool) {
 	if mmIsCreationRequest.IsCreationRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsCreationRequest.IsCreationRequestMock.defaultExpectation.Counter, 1)
 
-		results := mmIsCreationRequest.IsCreationRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsCreationRequest.IsCreationRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsCreationRequest.t.Fatal("No results are set for the RequestMock.IsCreationRequest")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsCreationRequest.funcIsCreationRequest != nil {
 		return mmIsCreationRequest.funcIsCreationRequest()
@@ -751,11 +751,11 @@ func (mmIsTemporaryUploadCode *RequestMock) IsTemporaryUploadCode() (b1 bool) {
 	if mmIsTemporaryUploadCode.IsTemporaryUploadCodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmIsTemporaryUploadCode.IsTemporaryUploadCodeMock.defaultExpectation.Counter, 1)
 
-		results := mmIsTemporaryUploadCode.IsTemporaryUploadCodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmIsTemporaryUploadCode.IsTemporaryUploadCodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmIsTemporaryUploadCode.t.Fatal("No results are set for the RequestMock.IsTemporaryUploadCode")
 		}
-		return (*results).b1
+		return (*mm_results).b1
 	}
 	if mmIsTemporaryUploadCode.funcIsTemporaryUploadCode != nil {
 		return mmIsTemporaryUploadCode.funcIsTemporaryUploadCode()
@@ -895,11 +895,11 @@ func (mmMarshal *RequestMock) Marshal() (dAtA []byte, err error) {
 	if mmMarshal.MarshalMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmMarshal.MarshalMock.defaultExpectation.Counter, 1)
 
-		results := mmMarshal.MarshalMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmMarshal.MarshalMock.defaultExpectation.results
+		if mm_results == nil {
 			mmMarshal.t.Fatal("No results are set for the RequestMock.Marshal")
 		}
-		return (*results).dAtA, (*results).err
+		return (*mm_results).dAtA, (*mm_results).err
 	}
 	if mmMarshal.funcMarshal != nil {
 		return mmMarshal.funcMarshal()
@@ -1038,11 +1038,11 @@ func (mmReasonAffinityRef *RequestMock) ReasonAffinityRef() (r1 insolar.Referenc
 	if mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation.Counter, 1)
 
-		results := mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmReasonAffinityRef.ReasonAffinityRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmReasonAffinityRef.t.Fatal("No results are set for the RequestMock.ReasonAffinityRef")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmReasonAffinityRef.funcReasonAffinityRef != nil {
 		return mmReasonAffinityRef.funcReasonAffinityRef()
@@ -1181,11 +1181,11 @@ func (mmReasonRef *RequestMock) ReasonRef() (r1 insolar.Reference) {
 	if mmReasonRef.ReasonRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmReasonRef.ReasonRefMock.defaultExpectation.Counter, 1)
 
-		results := mmReasonRef.ReasonRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmReasonRef.ReasonRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmReasonRef.t.Fatal("No results are set for the RequestMock.ReasonRef")
 		}
-		return (*results).r1
+		return (*mm_results).r1
 	}
 	if mmReasonRef.funcReasonRef != nil {
 		return mmReasonRef.funcReasonRef()
@@ -1324,11 +1324,11 @@ func (mmValidate *RequestMock) Validate() (err error) {
 	if mmValidate.ValidateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmValidate.ValidateMock.defaultExpectation.Counter, 1)
 
-		results := mmValidate.ValidateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmValidate.ValidateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmValidate.t.Fatal("No results are set for the RequestMock.Validate")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmValidate.funcValidate != nil {
 		return mmValidate.funcValidate()

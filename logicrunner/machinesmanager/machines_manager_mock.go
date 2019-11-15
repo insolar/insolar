@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -160,15 +160,15 @@ func (mmGetExecutor *MachinesManagerMock) GetExecutor(t insolar.MachineType) (m1
 		mmGetExecutor.inspectFuncGetExecutor(t)
 	}
 
-	params := &MachinesManagerMockGetExecutorParams{t}
+	mm_params := &MachinesManagerMockGetExecutorParams{t}
 
 	// Record call args
 	mmGetExecutor.GetExecutorMock.mutex.Lock()
-	mmGetExecutor.GetExecutorMock.callArgs = append(mmGetExecutor.GetExecutorMock.callArgs, params)
+	mmGetExecutor.GetExecutorMock.callArgs = append(mmGetExecutor.GetExecutorMock.callArgs, mm_params)
 	mmGetExecutor.GetExecutorMock.mutex.Unlock()
 
 	for _, e := range mmGetExecutor.GetExecutorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.m1, e.results.err
 		}
@@ -176,17 +176,17 @@ func (mmGetExecutor *MachinesManagerMock) GetExecutor(t insolar.MachineType) (m1
 
 	if mmGetExecutor.GetExecutorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetExecutor.GetExecutorMock.defaultExpectation.Counter, 1)
-		want := mmGetExecutor.GetExecutorMock.defaultExpectation.params
-		got := MachinesManagerMockGetExecutorParams{t}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetExecutor.t.Errorf("MachinesManagerMock.GetExecutor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetExecutor.GetExecutorMock.defaultExpectation.params
+		mm_got := MachinesManagerMockGetExecutorParams{t}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetExecutor.t.Errorf("MachinesManagerMock.GetExecutor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetExecutor.GetExecutorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetExecutor.GetExecutorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetExecutor.t.Fatal("No results are set for the MachinesManagerMock.GetExecutor")
 		}
-		return (*results).m1, (*results).err
+		return (*mm_results).m1, (*mm_results).err
 	}
 	if mmGetExecutor.funcGetExecutor != nil {
 		return mmGetExecutor.funcGetExecutor(t)
@@ -376,15 +376,15 @@ func (mmRegisterExecutor *MachinesManagerMock) RegisterExecutor(t insolar.Machin
 		mmRegisterExecutor.inspectFuncRegisterExecutor(t, e)
 	}
 
-	params := &MachinesManagerMockRegisterExecutorParams{t, e}
+	mm_params := &MachinesManagerMockRegisterExecutorParams{t, e}
 
 	// Record call args
 	mmRegisterExecutor.RegisterExecutorMock.mutex.Lock()
-	mmRegisterExecutor.RegisterExecutorMock.callArgs = append(mmRegisterExecutor.RegisterExecutorMock.callArgs, params)
+	mmRegisterExecutor.RegisterExecutorMock.callArgs = append(mmRegisterExecutor.RegisterExecutorMock.callArgs, mm_params)
 	mmRegisterExecutor.RegisterExecutorMock.mutex.Unlock()
 
 	for _, e := range mmRegisterExecutor.RegisterExecutorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -392,17 +392,17 @@ func (mmRegisterExecutor *MachinesManagerMock) RegisterExecutor(t insolar.Machin
 
 	if mmRegisterExecutor.RegisterExecutorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRegisterExecutor.RegisterExecutorMock.defaultExpectation.Counter, 1)
-		want := mmRegisterExecutor.RegisterExecutorMock.defaultExpectation.params
-		got := MachinesManagerMockRegisterExecutorParams{t, e}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRegisterExecutor.t.Errorf("MachinesManagerMock.RegisterExecutor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRegisterExecutor.RegisterExecutorMock.defaultExpectation.params
+		mm_got := MachinesManagerMockRegisterExecutorParams{t, e}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRegisterExecutor.t.Errorf("MachinesManagerMock.RegisterExecutor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmRegisterExecutor.RegisterExecutorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmRegisterExecutor.RegisterExecutorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmRegisterExecutor.t.Fatal("No results are set for the MachinesManagerMock.RegisterExecutor")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmRegisterExecutor.funcRegisterExecutor != nil {
 		return mmRegisterExecutor.funcRegisterExecutor(t, e)

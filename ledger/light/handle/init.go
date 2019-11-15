@@ -77,8 +77,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
-
+	logger := inslogger.FromContext(ctx)
 	logger.Debug("Start to handle new message")
 
 	switch payloadType {

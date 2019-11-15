@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	mm_network "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -209,15 +209,15 @@ func (mmBuildResponse *HostNetworkMock) BuildResponse(ctx context.Context, reque
 		mmBuildResponse.inspectFuncBuildResponse(ctx, request, responseData)
 	}
 
-	params := &HostNetworkMockBuildResponseParams{ctx, request, responseData}
+	mm_params := &HostNetworkMockBuildResponseParams{ctx, request, responseData}
 
 	// Record call args
 	mmBuildResponse.BuildResponseMock.mutex.Lock()
-	mmBuildResponse.BuildResponseMock.callArgs = append(mmBuildResponse.BuildResponseMock.callArgs, params)
+	mmBuildResponse.BuildResponseMock.callArgs = append(mmBuildResponse.BuildResponseMock.callArgs, mm_params)
 	mmBuildResponse.BuildResponseMock.mutex.Unlock()
 
 	for _, e := range mmBuildResponse.BuildResponseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1
 		}
@@ -225,17 +225,17 @@ func (mmBuildResponse *HostNetworkMock) BuildResponse(ctx context.Context, reque
 
 	if mmBuildResponse.BuildResponseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBuildResponse.BuildResponseMock.defaultExpectation.Counter, 1)
-		want := mmBuildResponse.BuildResponseMock.defaultExpectation.params
-		got := HostNetworkMockBuildResponseParams{ctx, request, responseData}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBuildResponse.t.Errorf("HostNetworkMock.BuildResponse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBuildResponse.BuildResponseMock.defaultExpectation.params
+		mm_got := HostNetworkMockBuildResponseParams{ctx, request, responseData}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBuildResponse.t.Errorf("HostNetworkMock.BuildResponse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBuildResponse.BuildResponseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBuildResponse.BuildResponseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBuildResponse.t.Fatal("No results are set for the HostNetworkMock.BuildResponse")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmBuildResponse.funcBuildResponse != nil {
 		return mmBuildResponse.funcBuildResponse(ctx, request, responseData)
@@ -391,11 +391,11 @@ func (mmPublicAddress *HostNetworkMock) PublicAddress() (s1 string) {
 	if mmPublicAddress.PublicAddressMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPublicAddress.PublicAddressMock.defaultExpectation.Counter, 1)
 
-		results := mmPublicAddress.PublicAddressMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPublicAddress.PublicAddressMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPublicAddress.t.Fatal("No results are set for the HostNetworkMock.PublicAddress")
 		}
-		return (*results).s1
+		return (*mm_results).s1
 	}
 	if mmPublicAddress.funcPublicAddress != nil {
 		return mmPublicAddress.funcPublicAddress()
@@ -542,15 +542,15 @@ func (mmRegisterRequestHandler *HostNetworkMock) RegisterRequestHandler(t types.
 		mmRegisterRequestHandler.inspectFuncRegisterRequestHandler(t, handler)
 	}
 
-	params := &HostNetworkMockRegisterRequestHandlerParams{t, handler}
+	mm_params := &HostNetworkMockRegisterRequestHandlerParams{t, handler}
 
 	// Record call args
 	mmRegisterRequestHandler.RegisterRequestHandlerMock.mutex.Lock()
-	mmRegisterRequestHandler.RegisterRequestHandlerMock.callArgs = append(mmRegisterRequestHandler.RegisterRequestHandlerMock.callArgs, params)
+	mmRegisterRequestHandler.RegisterRequestHandlerMock.callArgs = append(mmRegisterRequestHandler.RegisterRequestHandlerMock.callArgs, mm_params)
 	mmRegisterRequestHandler.RegisterRequestHandlerMock.mutex.Unlock()
 
 	for _, e := range mmRegisterRequestHandler.RegisterRequestHandlerMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -558,10 +558,10 @@ func (mmRegisterRequestHandler *HostNetworkMock) RegisterRequestHandler(t types.
 
 	if mmRegisterRequestHandler.RegisterRequestHandlerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmRegisterRequestHandler.RegisterRequestHandlerMock.defaultExpectation.Counter, 1)
-		want := mmRegisterRequestHandler.RegisterRequestHandlerMock.defaultExpectation.params
-		got := HostNetworkMockRegisterRequestHandlerParams{t, handler}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmRegisterRequestHandler.t.Errorf("HostNetworkMock.RegisterRequestHandler got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmRegisterRequestHandler.RegisterRequestHandlerMock.defaultExpectation.params
+		mm_got := HostNetworkMockRegisterRequestHandlerParams{t, handler}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmRegisterRequestHandler.t.Errorf("HostNetworkMock.RegisterRequestHandler got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -759,15 +759,15 @@ func (mmSendRequest *HostNetworkMock) SendRequest(ctx context.Context, t types.P
 		mmSendRequest.inspectFuncSendRequest(ctx, t, requestData, receiver)
 	}
 
-	params := &HostNetworkMockSendRequestParams{ctx, t, requestData, receiver}
+	mm_params := &HostNetworkMockSendRequestParams{ctx, t, requestData, receiver}
 
 	// Record call args
 	mmSendRequest.SendRequestMock.mutex.Lock()
-	mmSendRequest.SendRequestMock.callArgs = append(mmSendRequest.SendRequestMock.callArgs, params)
+	mmSendRequest.SendRequestMock.callArgs = append(mmSendRequest.SendRequestMock.callArgs, mm_params)
 	mmSendRequest.SendRequestMock.mutex.Unlock()
 
 	for _, e := range mmSendRequest.SendRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.f1, e.results.err
 		}
@@ -775,17 +775,17 @@ func (mmSendRequest *HostNetworkMock) SendRequest(ctx context.Context, t types.P
 
 	if mmSendRequest.SendRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendRequest.SendRequestMock.defaultExpectation.Counter, 1)
-		want := mmSendRequest.SendRequestMock.defaultExpectation.params
-		got := HostNetworkMockSendRequestParams{ctx, t, requestData, receiver}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendRequest.t.Errorf("HostNetworkMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendRequest.SendRequestMock.defaultExpectation.params
+		mm_got := HostNetworkMockSendRequestParams{ctx, t, requestData, receiver}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendRequest.t.Errorf("HostNetworkMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendRequest.SendRequestMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendRequest.SendRequestMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendRequest.t.Fatal("No results are set for the HostNetworkMock.SendRequest")
 		}
-		return (*results).f1, (*results).err
+		return (*mm_results).f1, (*mm_results).err
 	}
 	if mmSendRequest.funcSendRequest != nil {
 		return mmSendRequest.funcSendRequest(ctx, t, requestData, receiver)
@@ -978,15 +978,15 @@ func (mmSendRequestToHost *HostNetworkMock) SendRequestToHost(ctx context.Contex
 		mmSendRequestToHost.inspectFuncSendRequestToHost(ctx, t, requestData, receiver)
 	}
 
-	params := &HostNetworkMockSendRequestToHostParams{ctx, t, requestData, receiver}
+	mm_params := &HostNetworkMockSendRequestToHostParams{ctx, t, requestData, receiver}
 
 	// Record call args
 	mmSendRequestToHost.SendRequestToHostMock.mutex.Lock()
-	mmSendRequestToHost.SendRequestToHostMock.callArgs = append(mmSendRequestToHost.SendRequestToHostMock.callArgs, params)
+	mmSendRequestToHost.SendRequestToHostMock.callArgs = append(mmSendRequestToHost.SendRequestToHostMock.callArgs, mm_params)
 	mmSendRequestToHost.SendRequestToHostMock.mutex.Unlock()
 
 	for _, e := range mmSendRequestToHost.SendRequestToHostMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.f1, e.results.err
 		}
@@ -994,17 +994,17 @@ func (mmSendRequestToHost *HostNetworkMock) SendRequestToHost(ctx context.Contex
 
 	if mmSendRequestToHost.SendRequestToHostMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendRequestToHost.SendRequestToHostMock.defaultExpectation.Counter, 1)
-		want := mmSendRequestToHost.SendRequestToHostMock.defaultExpectation.params
-		got := HostNetworkMockSendRequestToHostParams{ctx, t, requestData, receiver}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSendRequestToHost.t.Errorf("HostNetworkMock.SendRequestToHost got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSendRequestToHost.SendRequestToHostMock.defaultExpectation.params
+		mm_got := HostNetworkMockSendRequestToHostParams{ctx, t, requestData, receiver}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSendRequestToHost.t.Errorf("HostNetworkMock.SendRequestToHost got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSendRequestToHost.SendRequestToHostMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSendRequestToHost.SendRequestToHostMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSendRequestToHost.t.Fatal("No results are set for the HostNetworkMock.SendRequestToHost")
 		}
-		return (*results).f1, (*results).err
+		return (*mm_results).f1, (*mm_results).err
 	}
 	if mmSendRequestToHost.funcSendRequestToHost != nil {
 		return mmSendRequestToHost.funcSendRequestToHost(ctx, t, requestData, receiver)
@@ -1193,15 +1193,15 @@ func (mmStart *HostNetworkMock) Start(ctx context.Context) (err error) {
 		mmStart.inspectFuncStart(ctx)
 	}
 
-	params := &HostNetworkMockStartParams{ctx}
+	mm_params := &HostNetworkMockStartParams{ctx}
 
 	// Record call args
 	mmStart.StartMock.mutex.Lock()
-	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, params)
+	mmStart.StartMock.callArgs = append(mmStart.StartMock.callArgs, mm_params)
 	mmStart.StartMock.mutex.Unlock()
 
 	for _, e := range mmStart.StartMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1209,17 +1209,17 @@ func (mmStart *HostNetworkMock) Start(ctx context.Context) (err error) {
 
 	if mmStart.StartMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStart.StartMock.defaultExpectation.Counter, 1)
-		want := mmStart.StartMock.defaultExpectation.params
-		got := HostNetworkMockStartParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStart.t.Errorf("HostNetworkMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStart.StartMock.defaultExpectation.params
+		mm_got := HostNetworkMockStartParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStart.t.Errorf("HostNetworkMock.Start got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStart.StartMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStart.StartMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStart.t.Fatal("No results are set for the HostNetworkMock.Start")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmStart.funcStart != nil {
 		return mmStart.funcStart(ctx)
@@ -1408,15 +1408,15 @@ func (mmStop *HostNetworkMock) Stop(ctx context.Context) (err error) {
 		mmStop.inspectFuncStop(ctx)
 	}
 
-	params := &HostNetworkMockStopParams{ctx}
+	mm_params := &HostNetworkMockStopParams{ctx}
 
 	// Record call args
 	mmStop.StopMock.mutex.Lock()
-	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, params)
+	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, mm_params)
 	mmStop.StopMock.mutex.Unlock()
 
 	for _, e := range mmStop.StopMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1424,17 +1424,17 @@ func (mmStop *HostNetworkMock) Stop(ctx context.Context) (err error) {
 
 	if mmStop.StopMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
-		want := mmStop.StopMock.defaultExpectation.params
-		got := HostNetworkMockStopParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmStop.t.Errorf("HostNetworkMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmStop.StopMock.defaultExpectation.params
+		mm_got := HostNetworkMockStopParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmStop.t.Errorf("HostNetworkMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmStop.StopMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmStop.StopMock.defaultExpectation.results
+		if mm_results == nil {
 			mmStop.t.Fatal("No results are set for the HostNetworkMock.Stop")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmStop.funcStop != nil {
 		return mmStop.funcStop(ctx)

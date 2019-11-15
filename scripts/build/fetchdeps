@@ -8,6 +8,7 @@
 # use bash 'strict mode'
 set -euo pipefail
 IFS=$'\n\t'
+export GO111MODULE=on
 
 # pass arguments
 if [[ "$#" -lt 1 ]]; then

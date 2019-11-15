@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -126,15 +126,15 @@ func (mmDeleteForPN *IndexCleanerMock) DeleteForPN(ctx context.Context, pn insol
 		mmDeleteForPN.inspectFuncDeleteForPN(ctx, pn)
 	}
 
-	params := &IndexCleanerMockDeleteForPNParams{ctx, pn}
+	mm_params := &IndexCleanerMockDeleteForPNParams{ctx, pn}
 
 	// Record call args
 	mmDeleteForPN.DeleteForPNMock.mutex.Lock()
-	mmDeleteForPN.DeleteForPNMock.callArgs = append(mmDeleteForPN.DeleteForPNMock.callArgs, params)
+	mmDeleteForPN.DeleteForPNMock.callArgs = append(mmDeleteForPN.DeleteForPNMock.callArgs, mm_params)
 	mmDeleteForPN.DeleteForPNMock.mutex.Unlock()
 
 	for _, e := range mmDeleteForPN.DeleteForPNMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -142,10 +142,10 @@ func (mmDeleteForPN *IndexCleanerMock) DeleteForPN(ctx context.Context, pn insol
 
 	if mmDeleteForPN.DeleteForPNMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDeleteForPN.DeleteForPNMock.defaultExpectation.Counter, 1)
-		want := mmDeleteForPN.DeleteForPNMock.defaultExpectation.params
-		got := IndexCleanerMockDeleteForPNParams{ctx, pn}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmDeleteForPN.t.Errorf("IndexCleanerMock.DeleteForPN got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmDeleteForPN.DeleteForPNMock.defaultExpectation.params
+		mm_got := IndexCleanerMockDeleteForPNParams{ctx, pn}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDeleteForPN.t.Errorf("IndexCleanerMock.DeleteForPN got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

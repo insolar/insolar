@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -156,15 +156,15 @@ func (mmFor *JetIndexAccessorMock) For(jetID insolar.JetID) (m1 map[insolar.ID]s
 		mmFor.inspectFuncFor(jetID)
 	}
 
-	params := &JetIndexAccessorMockForParams{jetID}
+	mm_params := &JetIndexAccessorMockForParams{jetID}
 
 	// Record call args
 	mmFor.ForMock.mutex.Lock()
-	mmFor.ForMock.callArgs = append(mmFor.ForMock.callArgs, params)
+	mmFor.ForMock.callArgs = append(mmFor.ForMock.callArgs, mm_params)
 	mmFor.ForMock.mutex.Unlock()
 
 	for _, e := range mmFor.ForMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.m1
 		}
@@ -172,17 +172,17 @@ func (mmFor *JetIndexAccessorMock) For(jetID insolar.JetID) (m1 map[insolar.ID]s
 
 	if mmFor.ForMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFor.ForMock.defaultExpectation.Counter, 1)
-		want := mmFor.ForMock.defaultExpectation.params
-		got := JetIndexAccessorMockForParams{jetID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFor.t.Errorf("JetIndexAccessorMock.For got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmFor.ForMock.defaultExpectation.params
+		mm_got := JetIndexAccessorMockForParams{jetID}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmFor.t.Errorf("JetIndexAccessorMock.For got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmFor.ForMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmFor.ForMock.defaultExpectation.results
+		if mm_results == nil {
 			mmFor.t.Fatal("No results are set for the JetIndexAccessorMock.For")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmFor.funcFor != nil {
 		return mmFor.funcFor(jetID)

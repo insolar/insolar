@@ -7,7 +7,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/pulse"
 )
 
@@ -191,15 +191,15 @@ func (mmCommitNextPulse *VersionedRegistriesMock) CommitNextPulse(pd pulse.Data,
 		mmCommitNextPulse.inspectFuncCommitNextPulse(pd, population)
 	}
 
-	params := &VersionedRegistriesMockCommitNextPulseParams{pd, population}
+	mm_params := &VersionedRegistriesMockCommitNextPulseParams{pd, population}
 
 	// Record call args
 	mmCommitNextPulse.CommitNextPulseMock.mutex.Lock()
-	mmCommitNextPulse.CommitNextPulseMock.callArgs = append(mmCommitNextPulse.CommitNextPulseMock.callArgs, params)
+	mmCommitNextPulse.CommitNextPulseMock.callArgs = append(mmCommitNextPulse.CommitNextPulseMock.callArgs, mm_params)
 	mmCommitNextPulse.CommitNextPulseMock.mutex.Unlock()
 
 	for _, e := range mmCommitNextPulse.CommitNextPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.v1
 		}
@@ -207,17 +207,17 @@ func (mmCommitNextPulse *VersionedRegistriesMock) CommitNextPulse(pd pulse.Data,
 
 	if mmCommitNextPulse.CommitNextPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCommitNextPulse.CommitNextPulseMock.defaultExpectation.Counter, 1)
-		want := mmCommitNextPulse.CommitNextPulseMock.defaultExpectation.params
-		got := VersionedRegistriesMockCommitNextPulseParams{pd, population}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmCommitNextPulse.t.Errorf("VersionedRegistriesMock.CommitNextPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmCommitNextPulse.CommitNextPulseMock.defaultExpectation.params
+		mm_got := VersionedRegistriesMockCommitNextPulseParams{pd, population}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmCommitNextPulse.t.Errorf("VersionedRegistriesMock.CommitNextPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmCommitNextPulse.CommitNextPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmCommitNextPulse.CommitNextPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmCommitNextPulse.t.Fatal("No results are set for the VersionedRegistriesMock.CommitNextPulse")
 		}
-		return (*results).v1
+		return (*mm_results).v1
 	}
 	if mmCommitNextPulse.funcCommitNextPulse != nil {
 		return mmCommitNextPulse.funcCommitNextPulse(pd, population)
@@ -373,11 +373,11 @@ func (mmGetMandateRegistry *VersionedRegistriesMock) GetMandateRegistry() (m1 Ma
 	if mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMandateRegistry.GetMandateRegistryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMandateRegistry.t.Fatal("No results are set for the VersionedRegistriesMock.GetMandateRegistry")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetMandateRegistry.funcGetMandateRegistry != nil {
 		return mmGetMandateRegistry.funcGetMandateRegistry()
@@ -516,11 +516,11 @@ func (mmGetMisbehaviorRegistry *VersionedRegistriesMock) GetMisbehaviorRegistry(
 	if mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.Counter, 1)
 
-		results := mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetMisbehaviorRegistry.GetMisbehaviorRegistryMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetMisbehaviorRegistry.t.Fatal("No results are set for the VersionedRegistriesMock.GetMisbehaviorRegistry")
 		}
-		return (*results).m1
+		return (*mm_results).m1
 	}
 	if mmGetMisbehaviorRegistry.funcGetMisbehaviorRegistry != nil {
 		return mmGetMisbehaviorRegistry.funcGetMisbehaviorRegistry()
@@ -659,11 +659,11 @@ func (mmGetNearestValidPulseData *VersionedRegistriesMock) GetNearestValidPulseD
 	if mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation.Counter, 1)
 
-		results := mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetNearestValidPulseData.GetNearestValidPulseDataMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetNearestValidPulseData.t.Fatal("No results are set for the VersionedRegistriesMock.GetNearestValidPulseData")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetNearestValidPulseData.funcGetNearestValidPulseData != nil {
 		return mmGetNearestValidPulseData.funcGetNearestValidPulseData()
@@ -802,11 +802,11 @@ func (mmGetOfflinePopulation *VersionedRegistriesMock) GetOfflinePopulation() (o
 	if mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.Counter, 1)
 
-		results := mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetOfflinePopulation.GetOfflinePopulationMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetOfflinePopulation.t.Fatal("No results are set for the VersionedRegistriesMock.GetOfflinePopulation")
 		}
-		return (*results).o1
+		return (*mm_results).o1
 	}
 	if mmGetOfflinePopulation.funcGetOfflinePopulation != nil {
 		return mmGetOfflinePopulation.funcGetOfflinePopulation()
@@ -945,11 +945,11 @@ func (mmGetVersionPulseData *VersionedRegistriesMock) GetVersionPulseData() (d1 
 	if mmGetVersionPulseData.GetVersionPulseDataMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetVersionPulseData.GetVersionPulseDataMock.defaultExpectation.Counter, 1)
 
-		results := mmGetVersionPulseData.GetVersionPulseDataMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetVersionPulseData.GetVersionPulseDataMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetVersionPulseData.t.Fatal("No results are set for the VersionedRegistriesMock.GetVersionPulseData")
 		}
-		return (*results).d1
+		return (*mm_results).d1
 	}
 	if mmGetVersionPulseData.funcGetVersionPulseData != nil {
 		return mmGetVersionPulseData.funcGetVersionPulseData()

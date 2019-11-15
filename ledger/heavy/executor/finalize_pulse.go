@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opencensus.io/stats"
 
@@ -39,23 +40,40 @@ type BadgerGCRunInfo struct {
 	runFrequency uint
 
 	callCounter uint
-	lock        sync.Mutex
+	tryLock     chan struct{}
 }
 
 func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
+	tryLock := make(chan struct{}, 1)
+	tryLock <- struct{}{}
 	return &BadgerGCRunInfo{
 		runner:       runner,
 		runFrequency: runFrequency,
+		tryLock:      tryLock,
 	}
 }
 
-func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.callCounter++
-	if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
-		b.runner.RunValueGC(ctx)
-	}
+func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan struct{}) {
+	done := make(chan struct{}, 1)
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+		select {
+		case v := <-b.tryLock:
+			b.callCounter++
+			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				startedAt := time.Now().Second()
+				b.runner.RunValueGC(ctx)
+				stats.Record(ctx, statBadgerValueGCTime.M(int64(time.Now().Second()-startedAt)))
+			}
+			b.tryLock <- v
+		default:
+			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
+		}
+	}()
+
+	return done
 }
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, newPulse insolar.PulseNumber) bool {
@@ -90,6 +108,8 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	}
 }
 
+var finalizationLock sync.Mutex
+
 func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx)
 	if !shouldStartFinalization(ctx, jetKeeper, pulses, newPulse) {
@@ -101,15 +121,21 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, newPulse)))))
 
 	logger.Debug("FinalizePulse starts")
+	startedAt := time.Now().Second()
 	bkpError := backuper.MakeBackup(ctx, newPulse)
 	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
 		logger.Fatal("Can't do backup: " + bkpError.Error())
 	}
+	stats.Record(ctx, statBackupTime.M(int64(time.Now().Second()-startedAt)))
 
 	if bkpError == ErrAlreadyDone {
 		logger.Info("Pulse already backuped: ", newPulse, bkpError)
 		return nil
 	}
+
+	finalizationLock.Lock()
+	defer finalizationLock.Unlock()
+	logger.Debug("FinalizePulse: after getting lock")
 
 	err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
 	if err != nil {
@@ -130,7 +156,8 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	// We run value GC here ( and only here ) implicitly since we want to
 	// exclude running GC during process of backup-replication
-	gcRunner.RunGCIfNeeded(ctx)
+	// Skip return value - we don't want to wait completion
+	_ = gcRunner.RunGCIfNeeded(ctx)
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {

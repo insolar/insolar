@@ -56,7 +56,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"

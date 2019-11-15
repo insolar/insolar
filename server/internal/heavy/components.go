@@ -30,11 +30,12 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -64,7 +65,7 @@ import (
 )
 
 type components struct {
-	cmp         component.Manager
+	cmp         *component.Manager
 	NodeRef     string
 	NodeRole    string
 	rollback    *executor.DBRollback
@@ -73,6 +74,34 @@ type components struct {
 	outRouter   *watermillMsg.Router
 
 	replicator executor.HeavyReplicator
+}
+
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+	earlyComponents := component.NewManager(nil)
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load KeyStore")
+	}
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve node public key")
+	}
+
+	certManager, err := certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create new CertificateManager")
+	}
+
+	return certManager, nil
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
@@ -97,7 +126,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 
 		publicKey, err := CryptoService.GetPublicKey()
@@ -113,7 +142,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	c := &components{}
-	c.cmp = component.Manager{}
+	c.cmp = component.NewManager(nil)
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
@@ -131,7 +160,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		subscriber = pubsub
 		publisher = pubsub
 		// Wrapped watermill publisher for introspection.
-		publisher = internal.PublisherWrapper(ctx, &c.cmp, cfg.Introspection, publisher)
+		publisher = internal.PublisherWrapper(ctx, c.cmp, cfg.Introspection, publisher)
 	}
 
 	// Network.
@@ -141,7 +170,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, c.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -161,15 +161,15 @@ func (mmBatchSet *RecordModifierMock) BatchSet(ctx context.Context, recs []recor
 		mmBatchSet.inspectFuncBatchSet(ctx, recs)
 	}
 
-	params := &RecordModifierMockBatchSetParams{ctx, recs}
+	mm_params := &RecordModifierMockBatchSetParams{ctx, recs}
 
 	// Record call args
 	mmBatchSet.BatchSetMock.mutex.Lock()
-	mmBatchSet.BatchSetMock.callArgs = append(mmBatchSet.BatchSetMock.callArgs, params)
+	mmBatchSet.BatchSetMock.callArgs = append(mmBatchSet.BatchSetMock.callArgs, mm_params)
 	mmBatchSet.BatchSetMock.mutex.Unlock()
 
 	for _, e := range mmBatchSet.BatchSetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -177,17 +177,17 @@ func (mmBatchSet *RecordModifierMock) BatchSet(ctx context.Context, recs []recor
 
 	if mmBatchSet.BatchSetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmBatchSet.BatchSetMock.defaultExpectation.Counter, 1)
-		want := mmBatchSet.BatchSetMock.defaultExpectation.params
-		got := RecordModifierMockBatchSetParams{ctx, recs}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmBatchSet.t.Errorf("RecordModifierMock.BatchSet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmBatchSet.BatchSetMock.defaultExpectation.params
+		mm_got := RecordModifierMockBatchSetParams{ctx, recs}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmBatchSet.t.Errorf("RecordModifierMock.BatchSet got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmBatchSet.BatchSetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmBatchSet.BatchSetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmBatchSet.t.Fatal("No results are set for the RecordModifierMock.BatchSet")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmBatchSet.funcBatchSet != nil {
 		return mmBatchSet.funcBatchSet(ctx, recs)
@@ -377,15 +377,15 @@ func (mmSet *RecordModifierMock) Set(ctx context.Context, rec record.Material) (
 		mmSet.inspectFuncSet(ctx, rec)
 	}
 
-	params := &RecordModifierMockSetParams{ctx, rec}
+	mm_params := &RecordModifierMockSetParams{ctx, rec}
 
 	// Record call args
 	mmSet.SetMock.mutex.Lock()
-	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, params)
+	mmSet.SetMock.callArgs = append(mmSet.SetMock.callArgs, mm_params)
 	mmSet.SetMock.mutex.Unlock()
 
 	for _, e := range mmSet.SetMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -393,17 +393,17 @@ func (mmSet *RecordModifierMock) Set(ctx context.Context, rec record.Material) (
 
 	if mmSet.SetMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSet.SetMock.defaultExpectation.Counter, 1)
-		want := mmSet.SetMock.defaultExpectation.params
-		got := RecordModifierMockSetParams{ctx, rec}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSet.t.Errorf("RecordModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSet.SetMock.defaultExpectation.params
+		mm_got := RecordModifierMockSetParams{ctx, rec}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSet.t.Errorf("RecordModifierMock.Set got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmSet.SetMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmSet.SetMock.defaultExpectation.results
+		if mm_results == nil {
 			mmSet.t.Fatal("No results are set for the RecordModifierMock.Set")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmSet.funcSet != nil {
 		return mmSet.funcSet(ctx, rec)

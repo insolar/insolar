@@ -70,7 +70,6 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	require.NotNil(t, done)
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
-	require.Equal(t, msg.Metadata, externalMsg.Metadata)
 	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 

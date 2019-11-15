@@ -76,3 +76,9 @@ or you can run benchmark with
 
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors
+
+        -R --retries
+                Number of request retries if ServiceUnavailable error received
+
+        -P --retry-period
+                Time to wait between retries (accepts go duration format: 0.5s, 500ms, 1m30s etc.)

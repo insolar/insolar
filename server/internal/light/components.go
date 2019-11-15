@@ -19,16 +19,15 @@ package light
 import (
 	"context"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
@@ -47,6 +46,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -55,10 +55,38 @@ import (
 )
 
 type components struct {
-	cmp               component.Manager
+	cmp               *component.Manager
 	NodeRef, NodeRole string
 	replicator        executor.LightReplicator
 	cleaner           executor.Cleaner
+}
+
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+	earlyComponents := component.NewManager(nil)
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load KeyStore")
+	}
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve node public key")
+	}
+
+	certManager, err := certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create new CertificateManager")
+	}
+
+	return certManager, nil
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -83,7 +111,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 
 		publicKey, err := CryptoService.GetPublicKey()
@@ -99,7 +127,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	comps := &components{}
-	comps.cmp = component.Manager{}
+	comps.cmp = component.NewManager(nil)
 	comps.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	comps.NodeRole = CertManager.GetCertificate().GetRole().String()
 
@@ -115,7 +143,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		subscriber = pubsub
 		publisher = pubsub
 		// Wrapped watermill publisher for introspection.
-		publisher = internal.PublisherWrapper(ctx, &comps.cmp, cfg.Introspection, publisher)
+		publisher = internal.PublisherWrapper(ctx, comps.cmp, cfg.Introspection, publisher)
 	}
 
 	// Network.
@@ -125,7 +153,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &comps.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, comps.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -237,7 +265,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		writeController := executor.NewWriteController()
 		hotWaitReleaser := executor.NewChannelWaiter()
 
-		c := component.Manager{}
+		c := component.NewManager(nil)
 		c.Inject(CryptoScheme)
 
 		jetFetcher := executor.NewFetcher(Nodes, Jets, Sender, Coordinator)

@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 )
@@ -188,15 +188,15 @@ func (mmAbandonedRequestsOnLedger *ExecutionBrokerIMock) AbandonedRequestsOnLedg
 		mmAbandonedRequestsOnLedger.inspectFuncAbandonedRequestsOnLedger(ctx)
 	}
 
-	params := &ExecutionBrokerIMockAbandonedRequestsOnLedgerParams{ctx}
+	mm_params := &ExecutionBrokerIMockAbandonedRequestsOnLedgerParams{ctx}
 
 	// Record call args
 	mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.mutex.Lock()
-	mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.callArgs = append(mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.callArgs, params)
+	mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.callArgs = append(mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.callArgs, mm_params)
 	mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.mutex.Unlock()
 
 	for _, e := range mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -204,10 +204,10 @@ func (mmAbandonedRequestsOnLedger *ExecutionBrokerIMock) AbandonedRequestsOnLedg
 
 	if mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.defaultExpectation.Counter, 1)
-		want := mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.defaultExpectation.params
-		got := ExecutionBrokerIMockAbandonedRequestsOnLedgerParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAbandonedRequestsOnLedger.t.Errorf("ExecutionBrokerIMock.AbandonedRequestsOnLedger got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmAbandonedRequestsOnLedger.AbandonedRequestsOnLedgerMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockAbandonedRequestsOnLedgerParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmAbandonedRequestsOnLedger.t.Errorf("ExecutionBrokerIMock.AbandonedRequestsOnLedger got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -375,15 +375,15 @@ func (mmHasMoreRequests *ExecutionBrokerIMock) HasMoreRequests(ctx context.Conte
 		mmHasMoreRequests.inspectFuncHasMoreRequests(ctx)
 	}
 
-	params := &ExecutionBrokerIMockHasMoreRequestsParams{ctx}
+	mm_params := &ExecutionBrokerIMockHasMoreRequestsParams{ctx}
 
 	// Record call args
 	mmHasMoreRequests.HasMoreRequestsMock.mutex.Lock()
-	mmHasMoreRequests.HasMoreRequestsMock.callArgs = append(mmHasMoreRequests.HasMoreRequestsMock.callArgs, params)
+	mmHasMoreRequests.HasMoreRequestsMock.callArgs = append(mmHasMoreRequests.HasMoreRequestsMock.callArgs, mm_params)
 	mmHasMoreRequests.HasMoreRequestsMock.mutex.Unlock()
 
 	for _, e := range mmHasMoreRequests.HasMoreRequestsMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -391,10 +391,10 @@ func (mmHasMoreRequests *ExecutionBrokerIMock) HasMoreRequests(ctx context.Conte
 
 	if mmHasMoreRequests.HasMoreRequestsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmHasMoreRequests.HasMoreRequestsMock.defaultExpectation.Counter, 1)
-		want := mmHasMoreRequests.HasMoreRequestsMock.defaultExpectation.params
-		got := ExecutionBrokerIMockHasMoreRequestsParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmHasMoreRequests.t.Errorf("ExecutionBrokerIMock.HasMoreRequests got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmHasMoreRequests.HasMoreRequestsMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockHasMoreRequestsParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmHasMoreRequests.t.Errorf("ExecutionBrokerIMock.HasMoreRequests got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -588,15 +588,15 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (pa1 []paylo
 		mmOnPulse.inspectFuncOnPulse(ctx)
 	}
 
-	params := &ExecutionBrokerIMockOnPulseParams{ctx}
+	mm_params := &ExecutionBrokerIMockOnPulseParams{ctx}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
-	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, params)
+	mmOnPulse.OnPulseMock.callArgs = append(mmOnPulse.OnPulseMock.callArgs, mm_params)
 	mmOnPulse.OnPulseMock.mutex.Unlock()
 
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.pa1
 		}
@@ -604,17 +604,17 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (pa1 []paylo
 
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
-		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := ExecutionBrokerIMockOnPulseParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmOnPulse.t.Errorf("ExecutionBrokerIMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmOnPulse.OnPulseMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockOnPulseParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmOnPulse.t.Errorf("ExecutionBrokerIMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmOnPulse.OnPulseMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmOnPulse.OnPulseMock.defaultExpectation.results
+		if mm_results == nil {
 			mmOnPulse.t.Fatal("No results are set for the ExecutionBrokerIMock.OnPulse")
 		}
-		return (*results).pa1
+		return (*mm_results).pa1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx)
@@ -770,11 +770,11 @@ func (mmPendingState *ExecutionBrokerIMock) PendingState() (p1 insolar.PendingSt
 	if mmPendingState.PendingStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPendingState.PendingStateMock.defaultExpectation.Counter, 1)
 
-		results := mmPendingState.PendingStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPendingState.PendingStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPendingState.t.Fatal("No results are set for the ExecutionBrokerIMock.PendingState")
 		}
-		return (*results).p1
+		return (*mm_results).p1
 	}
 	if mmPendingState.funcPendingState != nil {
 		return mmPendingState.funcPendingState()
@@ -921,15 +921,15 @@ func (mmPrevExecutorPendingResult *ExecutionBrokerIMock) PrevExecutorPendingResu
 		mmPrevExecutorPendingResult.inspectFuncPrevExecutorPendingResult(ctx, prevExecState)
 	}
 
-	params := &ExecutionBrokerIMockPrevExecutorPendingResultParams{ctx, prevExecState}
+	mm_params := &ExecutionBrokerIMockPrevExecutorPendingResultParams{ctx, prevExecState}
 
 	// Record call args
 	mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.mutex.Lock()
-	mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.callArgs = append(mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.callArgs, params)
+	mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.callArgs = append(mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.callArgs, mm_params)
 	mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.mutex.Unlock()
 
 	for _, e := range mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -937,10 +937,10 @@ func (mmPrevExecutorPendingResult *ExecutionBrokerIMock) PrevExecutorPendingResu
 
 	if mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.defaultExpectation.Counter, 1)
-		want := mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.defaultExpectation.params
-		got := ExecutionBrokerIMockPrevExecutorPendingResultParams{ctx, prevExecState}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPrevExecutorPendingResult.t.Errorf("ExecutionBrokerIMock.PrevExecutorPendingResult got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPrevExecutorPendingResult.PrevExecutorPendingResultMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockPrevExecutorPendingResultParams{ctx, prevExecState}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPrevExecutorPendingResult.t.Errorf("ExecutionBrokerIMock.PrevExecutorPendingResult got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return
@@ -1134,15 +1134,15 @@ func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentP
 		mmPrevExecutorSentPendingFinished.inspectFuncPrevExecutorSentPendingFinished(ctx)
 	}
 
-	params := &ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
+	mm_params := &ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
 
 	// Record call args
 	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.mutex.Lock()
-	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs = append(mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs, params)
+	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs = append(mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs, mm_params)
 	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.mutex.Unlock()
 
 	for _, e := range mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1150,17 +1150,17 @@ func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentP
 
 	if mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.Counter, 1)
-		want := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.params
-		got := ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPrevExecutorSentPendingFinished.t.Errorf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPrevExecutorSentPendingFinished.t.Errorf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPrevExecutorSentPendingFinished.t.Fatal("No results are set for the ExecutionBrokerIMock.PrevExecutorSentPendingFinished")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmPrevExecutorSentPendingFinished.funcPrevExecutorSentPendingFinished != nil {
 		return mmPrevExecutorSentPendingFinished.funcPrevExecutorSentPendingFinished(ctx)
@@ -1349,15 +1349,15 @@ func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecu
 		mmPrevExecutorStillExecuting.inspectFuncPrevExecutorStillExecuting(ctx)
 	}
 
-	params := &ExecutionBrokerIMockPrevExecutorStillExecutingParams{ctx}
+	mm_params := &ExecutionBrokerIMockPrevExecutorStillExecutingParams{ctx}
 
 	// Record call args
 	mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.mutex.Lock()
-	mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.callArgs = append(mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.callArgs, params)
+	mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.callArgs = append(mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.callArgs, mm_params)
 	mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.mutex.Unlock()
 
 	for _, e := range mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -1365,17 +1365,17 @@ func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecu
 
 	if mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.Counter, 1)
-		want := mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.params
-		got := ExecutionBrokerIMockPrevExecutorStillExecutingParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPrevExecutorStillExecuting.t.Errorf("ExecutionBrokerIMock.PrevExecutorStillExecuting got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockPrevExecutorStillExecutingParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPrevExecutorStillExecuting.t.Errorf("ExecutionBrokerIMock.PrevExecutorStillExecuting got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPrevExecutorStillExecuting.t.Fatal("No results are set for the ExecutionBrokerIMock.PrevExecutorStillExecuting")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmPrevExecutorStillExecuting.funcPrevExecutorStillExecuting != nil {
 		return mmPrevExecutorStillExecuting.funcPrevExecutorStillExecuting(ctx)
@@ -1538,15 +1538,15 @@ func (mmSetNotPending *ExecutionBrokerIMock) SetNotPending(ctx context.Context) 
 		mmSetNotPending.inspectFuncSetNotPending(ctx)
 	}
 
-	params := &ExecutionBrokerIMockSetNotPendingParams{ctx}
+	mm_params := &ExecutionBrokerIMockSetNotPendingParams{ctx}
 
 	// Record call args
 	mmSetNotPending.SetNotPendingMock.mutex.Lock()
-	mmSetNotPending.SetNotPendingMock.callArgs = append(mmSetNotPending.SetNotPendingMock.callArgs, params)
+	mmSetNotPending.SetNotPendingMock.callArgs = append(mmSetNotPending.SetNotPendingMock.callArgs, mm_params)
 	mmSetNotPending.SetNotPendingMock.mutex.Unlock()
 
 	for _, e := range mmSetNotPending.SetNotPendingMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
@@ -1554,10 +1554,10 @@ func (mmSetNotPending *ExecutionBrokerIMock) SetNotPending(ctx context.Context) 
 
 	if mmSetNotPending.SetNotPendingMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSetNotPending.SetNotPendingMock.defaultExpectation.Counter, 1)
-		want := mmSetNotPending.SetNotPendingMock.defaultExpectation.params
-		got := ExecutionBrokerIMockSetNotPendingParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetNotPending.t.Errorf("ExecutionBrokerIMock.SetNotPending got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmSetNotPending.SetNotPendingMock.defaultExpectation.params
+		mm_got := ExecutionBrokerIMockSetNotPendingParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmSetNotPending.t.Errorf("ExecutionBrokerIMock.SetNotPending got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
 		return

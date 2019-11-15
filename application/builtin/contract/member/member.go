@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/application/appfoundation"
-	"github.com/insolar/insolar/application/builtin/contract/member/signer"
 	"github.com/insolar/insolar/application/builtin/proxy/account"
 	"github.com/insolar/insolar/application/builtin/proxy/deposit"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
@@ -35,70 +34,41 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-// Member - basic member contract.
-type Member struct {
-	foundation.BaseContract
-	RootDomain       insolar.Reference
-	Name             string
-	PublicKey        string
-	MigrationAddress string
-	Wallet           insolar.Reference
-}
-
 const (
 	XNS = "XNS"
 	// 10 ^ 14
 	ACCOUNT_START_VALUE = "100000000000000"
 )
 
-// GetName gets name.
-// ins:immutable
-func (m Member) GetName() (string, error) {
-	return m.Name, nil
-}
-
-// GetWallet gets wallet.
-// ins:immutable
-func (m Member) GetWallet() (*insolar.Reference, error) {
-	return &m.Wallet, nil
-}
-
-// GetAccount gets account.
-// ins:immutable
-func (m Member) GetAccount(assetName string) (*insolar.Reference, error) {
-	w := wallet.GetObject(m.Wallet)
-	return w.GetAccount(assetName)
-}
-
-var INSATTR_GetPublicKey_API = true
-
-// GetPublicKey gets public key.
-// ins:immutable
-func (m Member) GetPublicKey() (string, error) {
-	return m.PublicKey, nil
+// Member - basic member contract.
+type Member struct {
+	foundation.BaseContract
+	PublicKey        string
+	MigrationAddress string
+	Wallet           insolar.Reference
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, migrationAddress string, walletRef insolar.Reference) (*Member, error) {
+func New(key string, migrationAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
-		RootDomain:       rootDomain,
-		Name:             name,
 		PublicKey:        key,
 		MigrationAddress: migrationAddress,
 		Wallet:           walletRef,
 	}, nil
 }
 
-func (m *Member) verifySig(request Request, rawRequest []byte, signature string, selfSigned bool) error {
-	key, err := m.GetPublicKey()
-	if err != nil {
-		return fmt.Errorf("[ verifySig ]: %s", err.Error())
-	}
-
-	return foundation.VerifySignature(rawRequest, signature, key, request.Params.PublicKey, selfSigned)
+// GetWallet gets wallet.
+// ins:immutable
+func (m *Member) GetWallet() (*insolar.Reference, error) {
+	return &m.Wallet, nil
 }
 
-var INSATTR_Call_API = true
+// GetAccount gets account.
+// ins:immutable
+func (m *Member) GetAccount(assetName string) (*insolar.Reference, error) {
+	w := wallet.GetObject(m.Wallet)
+	return w.GetAccount(assetName)
+}
 
 type Request struct {
 	JSONRPC string `json:"jsonrpc"`
@@ -117,6 +87,8 @@ type Params struct {
 	Test       string      `json:"test,omitempty"`
 }
 
+var INSATTR_Call_API = true
+
 // Call returns response on request. Method for authorized calls.
 // ins:immutable
 func (m *Member) Call(signedRequest []byte) (interface{}, error) {
@@ -125,7 +97,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var rawRequest []byte
 	selfSigned := false
 
-	err := signer.UnmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
+	err := unmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode: %s", err.Error())
 	}
@@ -145,14 +117,13 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		selfSigned = true
 	}
 
-	err = m.verifySig(request, rawRequest, signature, selfSigned)
+	err = foundation.VerifySignature(rawRequest, signature, m.PublicKey, request.Params.PublicKey, selfSigned)
 	if err != nil {
 		return nil, fmt.Errorf("error while verify signature: %s", err.Error())
 	}
 
+	// Requests signed with key not stored on ledger
 	switch request.Params.CallSite {
-	case "CreateHelloWorld":
-		return rootdomain.GetObject(m.RootDomain).CreateHelloWorld()
 	case "member.create":
 		return m.contractCreateMemberCall(request.Params.PublicKey)
 	case "member.migrationCreate":
@@ -169,6 +140,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return nil, fmt.Errorf("failed to cast call params: expected 'map[string]interface{}', got '%T'", request.Params.CallParams)
 	}
 
+	// migration.*
 	callSiteArgs := strings.Split(request.Params.CallSite, ".")
 	if len(callSiteArgs) == 2 && callSiteArgs[0] == "migration" {
 		migrationAdminContract := migrationadmin.GetObject(appfoundation.GetMigrationAdmin())
@@ -176,20 +148,27 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	}
 
 	switch request.Params.CallSite {
+	// contract.*
 	case "contract.registerNode":
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
+	// member.*
 	case "member.getBalance":
 		return m.getBalanceCall(params)
 	case "member.transfer":
 		return m.transferCall(params)
+	// deposit.*
 	case "deposit.migration":
 		return m.depositMigrationCall(params)
 	case "deposit.transfer":
 		return m.depositTransferCall(params)
 	}
 	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
+}
+
+func unmarshalParams(data []byte, to ...interface{}) error {
+	return insolar.Deserialize(data, to)
 }
 
 func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, error) {
@@ -300,7 +279,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("failed to get destination wallet: %s", err.Error())
 	}
 
-	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference, fromMember, *request)
+	return wallet.GetObject(m.Wallet).Transfer(asset, amount, recipientReference, fromMember, *request)
 }
 
 func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}, error) {
@@ -350,11 +329,7 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (interface{
 
 // Platform methods.
 func (m *Member) registerNode(public string, role string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(m.RootDomain)
-	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get node domain ref: %s", err.Error())
-	}
+	nodeDomainRef := appfoundation.GetNodeDomain()
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	cert, err := nd.RegisterNode(public, role)
@@ -366,13 +341,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 }
 
 func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(m.RootDomain)
-	nodeDomainRef, err := rootDomain.GetNodeDomainRef()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get nodeDmainRef: %s", err.Error())
-	}
-
-	nd := nodedomain.GetObject(nodeDomainRef)
+	nd := nodedomain.GetObject(appfoundation.GetNodeDomain())
 	nodeRef, err := nd.GetNodeRefByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("network node was not found by public key: %s", err.Error())
@@ -418,11 +387,11 @@ func (m *Member) contractCreateMemberCall(key string) (*CreateResponse, error) {
 	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
 
-func (m *Member) contractCreateMember(key string, migrationnAddress string) (*member.Member, error) {
+func (m *Member) contractCreateMember(key string, migrationAddress string) (*member.Member, error) {
 
-	rootDomain := rootdomain.GetObject(m.RootDomain)
+	rootDomain := rootdomain.GetObject(appfoundation.GetRootDomain())
 
-	created, err := m.createMember("", key, migrationnAddress)
+	created, err := m.createMember(key, migrationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
@@ -434,25 +403,25 @@ func (m *Member) contractCreateMember(key string, migrationnAddress string) (*me
 	return created, nil
 }
 
-func (m *Member) createMember(name string, key string, migrationAddress string) (*member.Member, error) {
+func (m *Member) createMember(key string, migrationAddress string) (*member.Member, error) {
 	if key == "" {
 		return nil, fmt.Errorf("key is not valid")
 	}
 
 	aHolder := account.New(ACCOUNT_START_VALUE)
-	accountRef, err := aHolder.AsChild(m.RootDomain)
+	accountRef, err := aHolder.AsChild(appfoundation.GetRootDomain())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account for member: %s", err.Error())
 	}
 
 	wHolder := wallet.New(accountRef.Reference)
-	walletRef, err := wHolder.AsChild(m.RootDomain)
+	walletRef, err := wHolder.AsChild(appfoundation.GetRootDomain())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wallet for member: %s", err.Error())
 	}
 
-	memberHolder := member.New(m.RootDomain, name, key, migrationAddress, walletRef.Reference)
-	created, err := memberHolder.AsChild(m.RootDomain)
+	memberHolder := member.New(key, migrationAddress, walletRef.Reference)
+	created, err := memberHolder.AsChild(appfoundation.GetRootDomain())
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}
@@ -471,7 +440,7 @@ type GetResponse struct {
 }
 
 func (m *Member) memberGet(publicKey string) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(m.RootDomain)
+	rootDomain := rootdomain.GetObject(appfoundation.GetRootDomain())
 	ref, err := rootDomain.GetMemberByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reference by public key: %s", err.Error())

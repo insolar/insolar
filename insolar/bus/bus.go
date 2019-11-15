@@ -457,9 +457,9 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 	}
 }
 
-// wrapMeta wraps origin.Payload data with service fields
+// wrapMeta wraps msg.Payload data with service fields
 // and set it as byte slice back to msg.Payload.
-// Note: this method has side effect - origin-argument mutating
+// Note: this method has side effect - msg-argument mutating
 func (b *Bus) wrapMeta(
 	ctx context.Context,
 	msg *message.Message,
@@ -469,7 +469,7 @@ func (b *Bus) wrapMeta(
 ) (payload.Meta, *message.Message, error) {
 	msg = msg.Copy()
 
-	meta := payload.Meta{
+	payloadMeta := payload.Meta{
 		Polymorph:  uint32(payload.TypeMeta),
 		Payload:    msg.Payload,
 		Receiver:   receiver,
@@ -479,13 +479,14 @@ func (b *Bus) wrapMeta(
 		ID:         []byte(msg.UUID),
 	}
 
-	buf, err := meta.Marshal()
+	buf, err := payloadMeta.Marshal()
 	if err != nil {
 		return payload.Meta{}, nil, errors.Wrap(err, "wrapMeta. failed to wrap message")
 	}
 	msg.Payload = buf
+	msg.Metadata.Set(meta.Receiver, receiver.String())
 
-	return meta, msg, nil
+	return payloadMeta, msg, nil
 }
 
 // messagePayloadTypeName returns message type.

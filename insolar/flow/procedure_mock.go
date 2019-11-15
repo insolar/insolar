@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 )
 
 // ProcedureMock implements Procedure
@@ -150,15 +150,15 @@ func (mmProceed *ProcedureMock) Proceed(ctx context.Context) (err error) {
 		mmProceed.inspectFuncProceed(ctx)
 	}
 
-	params := &ProcedureMockProceedParams{ctx}
+	mm_params := &ProcedureMockProceedParams{ctx}
 
 	// Record call args
 	mmProceed.ProceedMock.mutex.Lock()
-	mmProceed.ProceedMock.callArgs = append(mmProceed.ProceedMock.callArgs, params)
+	mmProceed.ProceedMock.callArgs = append(mmProceed.ProceedMock.callArgs, mm_params)
 	mmProceed.ProceedMock.mutex.Unlock()
 
 	for _, e := range mmProceed.ProceedMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.err
 		}
@@ -166,17 +166,17 @@ func (mmProceed *ProcedureMock) Proceed(ctx context.Context) (err error) {
 
 	if mmProceed.ProceedMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmProceed.ProceedMock.defaultExpectation.Counter, 1)
-		want := mmProceed.ProceedMock.defaultExpectation.params
-		got := ProcedureMockProceedParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmProceed.t.Errorf("ProcedureMock.Proceed got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmProceed.ProceedMock.defaultExpectation.params
+		mm_got := ProcedureMockProceedParams{ctx}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmProceed.t.Errorf("ProcedureMock.Proceed got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmProceed.ProceedMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmProceed.ProceedMock.defaultExpectation.results
+		if mm_results == nil {
 			mmProceed.t.Fatal("No results are set for the ProcedureMock.Proceed")
 		}
-		return (*results).err
+		return (*mm_results).err
 	}
 	if mmProceed.funcProceed != nil {
 		return mmProceed.funcProceed(ctx)

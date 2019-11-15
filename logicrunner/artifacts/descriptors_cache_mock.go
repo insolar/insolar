@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -181,15 +181,15 @@ func (mmByObjectDescriptor *DescriptorsCacheMock) ByObjectDescriptor(ctx context
 		mmByObjectDescriptor.inspectFuncByObjectDescriptor(ctx, obj)
 	}
 
-	params := &DescriptorsCacheMockByObjectDescriptorParams{ctx, obj}
+	mm_params := &DescriptorsCacheMockByObjectDescriptorParams{ctx, obj}
 
 	// Record call args
 	mmByObjectDescriptor.ByObjectDescriptorMock.mutex.Lock()
-	mmByObjectDescriptor.ByObjectDescriptorMock.callArgs = append(mmByObjectDescriptor.ByObjectDescriptorMock.callArgs, params)
+	mmByObjectDescriptor.ByObjectDescriptorMock.callArgs = append(mmByObjectDescriptor.ByObjectDescriptorMock.callArgs, mm_params)
 	mmByObjectDescriptor.ByObjectDescriptorMock.mutex.Unlock()
 
 	for _, e := range mmByObjectDescriptor.ByObjectDescriptorMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.c2, e.results.err
 		}
@@ -197,17 +197,17 @@ func (mmByObjectDescriptor *DescriptorsCacheMock) ByObjectDescriptor(ctx context
 
 	if mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation.Counter, 1)
-		want := mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation.params
-		got := DescriptorsCacheMockByObjectDescriptorParams{ctx, obj}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmByObjectDescriptor.t.Errorf("DescriptorsCacheMock.ByObjectDescriptor got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation.params
+		mm_got := DescriptorsCacheMockByObjectDescriptorParams{ctx, obj}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmByObjectDescriptor.t.Errorf("DescriptorsCacheMock.ByObjectDescriptor got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmByObjectDescriptor.ByObjectDescriptorMock.defaultExpectation.results
+		if mm_results == nil {
 			mmByObjectDescriptor.t.Fatal("No results are set for the DescriptorsCacheMock.ByObjectDescriptor")
 		}
-		return (*results).p1, (*results).c2, (*results).err
+		return (*mm_results).p1, (*mm_results).c2, (*mm_results).err
 	}
 	if mmByObjectDescriptor.funcByObjectDescriptor != nil {
 		return mmByObjectDescriptor.funcByObjectDescriptor(ctx, obj)
@@ -399,15 +399,15 @@ func (mmByPrototypeRef *DescriptorsCacheMock) ByPrototypeRef(ctx context.Context
 		mmByPrototypeRef.inspectFuncByPrototypeRef(ctx, protoRef)
 	}
 
-	params := &DescriptorsCacheMockByPrototypeRefParams{ctx, protoRef}
+	mm_params := &DescriptorsCacheMockByPrototypeRefParams{ctx, protoRef}
 
 	// Record call args
 	mmByPrototypeRef.ByPrototypeRefMock.mutex.Lock()
-	mmByPrototypeRef.ByPrototypeRefMock.callArgs = append(mmByPrototypeRef.ByPrototypeRefMock.callArgs, params)
+	mmByPrototypeRef.ByPrototypeRefMock.callArgs = append(mmByPrototypeRef.ByPrototypeRefMock.callArgs, mm_params)
 	mmByPrototypeRef.ByPrototypeRefMock.mutex.Unlock()
 
 	for _, e := range mmByPrototypeRef.ByPrototypeRefMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.c2, e.results.err
 		}
@@ -415,17 +415,17 @@ func (mmByPrototypeRef *DescriptorsCacheMock) ByPrototypeRef(ctx context.Context
 
 	if mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation.Counter, 1)
-		want := mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation.params
-		got := DescriptorsCacheMockByPrototypeRefParams{ctx, protoRef}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmByPrototypeRef.t.Errorf("DescriptorsCacheMock.ByPrototypeRef got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation.params
+		mm_got := DescriptorsCacheMockByPrototypeRefParams{ctx, protoRef}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmByPrototypeRef.t.Errorf("DescriptorsCacheMock.ByPrototypeRef got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmByPrototypeRef.ByPrototypeRefMock.defaultExpectation.results
+		if mm_results == nil {
 			mmByPrototypeRef.t.Fatal("No results are set for the DescriptorsCacheMock.ByPrototypeRef")
 		}
-		return (*results).p1, (*results).c2, (*results).err
+		return (*mm_results).p1, (*mm_results).c2, (*mm_results).err
 	}
 	if mmByPrototypeRef.funcByPrototypeRef != nil {
 		return mmByPrototypeRef.funcByPrototypeRef(ctx, protoRef)
@@ -616,15 +616,15 @@ func (mmGetCode *DescriptorsCacheMock) GetCode(ctx context.Context, ref insolar.
 		mmGetCode.inspectFuncGetCode(ctx, ref)
 	}
 
-	params := &DescriptorsCacheMockGetCodeParams{ctx, ref}
+	mm_params := &DescriptorsCacheMockGetCodeParams{ctx, ref}
 
 	// Record call args
 	mmGetCode.GetCodeMock.mutex.Lock()
-	mmGetCode.GetCodeMock.callArgs = append(mmGetCode.GetCodeMock.callArgs, params)
+	mmGetCode.GetCodeMock.callArgs = append(mmGetCode.GetCodeMock.callArgs, mm_params)
 	mmGetCode.GetCodeMock.mutex.Unlock()
 
 	for _, e := range mmGetCode.GetCodeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.c2, e.results.err
 		}
@@ -632,17 +632,17 @@ func (mmGetCode *DescriptorsCacheMock) GetCode(ctx context.Context, ref insolar.
 
 	if mmGetCode.GetCodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetCode.GetCodeMock.defaultExpectation.Counter, 1)
-		want := mmGetCode.GetCodeMock.defaultExpectation.params
-		got := DescriptorsCacheMockGetCodeParams{ctx, ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetCode.t.Errorf("DescriptorsCacheMock.GetCode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetCode.GetCodeMock.defaultExpectation.params
+		mm_got := DescriptorsCacheMockGetCodeParams{ctx, ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetCode.t.Errorf("DescriptorsCacheMock.GetCode got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetCode.GetCodeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetCode.GetCodeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetCode.t.Fatal("No results are set for the DescriptorsCacheMock.GetCode")
 		}
-		return (*results).c2, (*results).err
+		return (*mm_results).c2, (*mm_results).err
 	}
 	if mmGetCode.funcGetCode != nil {
 		return mmGetCode.funcGetCode(ctx, ref)
@@ -833,15 +833,15 @@ func (mmGetPrototype *DescriptorsCacheMock) GetPrototype(ctx context.Context, re
 		mmGetPrototype.inspectFuncGetPrototype(ctx, ref)
 	}
 
-	params := &DescriptorsCacheMockGetPrototypeParams{ctx, ref}
+	mm_params := &DescriptorsCacheMockGetPrototypeParams{ctx, ref}
 
 	// Record call args
 	mmGetPrototype.GetPrototypeMock.mutex.Lock()
-	mmGetPrototype.GetPrototypeMock.callArgs = append(mmGetPrototype.GetPrototypeMock.callArgs, params)
+	mmGetPrototype.GetPrototypeMock.callArgs = append(mmGetPrototype.GetPrototypeMock.callArgs, mm_params)
 	mmGetPrototype.GetPrototypeMock.mutex.Unlock()
 
 	for _, e := range mmGetPrototype.GetPrototypeMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.p1, e.results.err
 		}
@@ -849,17 +849,17 @@ func (mmGetPrototype *DescriptorsCacheMock) GetPrototype(ctx context.Context, re
 
 	if mmGetPrototype.GetPrototypeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPrototype.GetPrototypeMock.defaultExpectation.Counter, 1)
-		want := mmGetPrototype.GetPrototypeMock.defaultExpectation.params
-		got := DescriptorsCacheMockGetPrototypeParams{ctx, ref}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetPrototype.t.Errorf("DescriptorsCacheMock.GetPrototype got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmGetPrototype.GetPrototypeMock.defaultExpectation.params
+		mm_got := DescriptorsCacheMockGetPrototypeParams{ctx, ref}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGetPrototype.t.Errorf("DescriptorsCacheMock.GetPrototype got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmGetPrototype.GetPrototypeMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmGetPrototype.GetPrototypeMock.defaultExpectation.results
+		if mm_results == nil {
 			mmGetPrototype.t.Fatal("No results are set for the DescriptorsCacheMock.GetPrototype")
 		}
-		return (*results).p1, (*results).err
+		return (*mm_results).p1, (*mm_results).err
 	}
 	if mmGetPrototype.funcGetPrototype != nil {
 		return mmGetPrototype.funcGetPrototype(ctx, ref)

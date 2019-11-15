@@ -44,12 +44,6 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 		"member.getBalance":          true,
 		"contract.registerNode":      true,
 		"contract.getNodeRef":        true,
-		"CreateHelloWorld":           true,
-		"Greet":                      true,
-		"Count":                      true,
-		"CreateChild":                true,
-		"ReturnObj":                  true,
-		"PulseNumber":                true,
 	}
 	return &AdminContractService{runner: runner, allowedMethods: methods}
 }
@@ -58,8 +52,11 @@ func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, 
 	ctx, instr := instrumenter.NewMethodInstrument("AdminContractService.call")
 	defer instr.End()
 
-	logger := inslogger.FromContext(ctx)
-	logger.Infof("[ AdminContractService.call ] Incoming request: %s", req.RequestURI)
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"callSite": args.CallSite,
+		"uri":      req.RequestURI,
+		"service":  "AdminContractService",
+	}).Infof("Incoming request")
 
 	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }

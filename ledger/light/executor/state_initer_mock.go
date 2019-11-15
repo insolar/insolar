@@ -8,7 +8,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
-	"github.com/gojuno/minimock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -154,15 +154,15 @@ func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse i
 		mmPrepareState.inspectFuncPrepareState(ctx, pulse)
 	}
 
-	params := &StateIniterMockPrepareStateParams{ctx, pulse}
+	mm_params := &StateIniterMockPrepareStateParams{ctx, pulse}
 
 	// Record call args
 	mmPrepareState.PrepareStateMock.mutex.Lock()
-	mmPrepareState.PrepareStateMock.callArgs = append(mmPrepareState.PrepareStateMock.callArgs, params)
+	mmPrepareState.PrepareStateMock.callArgs = append(mmPrepareState.PrepareStateMock.callArgs, mm_params)
 	mmPrepareState.PrepareStateMock.mutex.Unlock()
 
 	for _, e := range mmPrepareState.PrepareStateMock.expectations {
-		if minimock.Equal(e.params, params) {
+		if minimock.Equal(e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.justJoined, e.results.jets, e.results.err
 		}
@@ -170,17 +170,17 @@ func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse i
 
 	if mmPrepareState.PrepareStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmPrepareState.PrepareStateMock.defaultExpectation.Counter, 1)
-		want := mmPrepareState.PrepareStateMock.defaultExpectation.params
-		got := StateIniterMockPrepareStateParams{ctx, pulse}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPrepareState.t.Errorf("StateIniterMock.PrepareState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		mm_want := mmPrepareState.PrepareStateMock.defaultExpectation.params
+		mm_got := StateIniterMockPrepareStateParams{ctx, pulse}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmPrepareState.t.Errorf("StateIniterMock.PrepareState got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
 		}
 
-		results := mmPrepareState.PrepareStateMock.defaultExpectation.results
-		if results == nil {
+		mm_results := mmPrepareState.PrepareStateMock.defaultExpectation.results
+		if mm_results == nil {
 			mmPrepareState.t.Fatal("No results are set for the StateIniterMock.PrepareState")
 		}
-		return (*results).justJoined, (*results).jets, (*results).err
+		return (*mm_results).justJoined, (*mm_results).jets, (*mm_results).err
 	}
 	if mmPrepareState.funcPrepareState != nil {
 		return mmPrepareState.funcPrepareState(ctx, pulse)
