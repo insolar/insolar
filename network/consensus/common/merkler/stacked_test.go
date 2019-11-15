@@ -52,6 +52,7 @@ package merkler
 
 import (
 	"math"
+	"math/bits"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ import (
 )
 
 func TestStackedCalculator_Unbalanced(t *testing.T) {
-	md := NewStackedCalculator(&xorPairDigester{}, cryptkit.Digest{})
+	md := NewStackedCalculator(xorPairDigester{}, cryptkit.Digest{})
 
 	for bit := uint64(1); bit != 0; bit <<= 1 {
 		md.AddNext(newBits64(bit))
@@ -85,6 +86,43 @@ func TestStackedCalculator_Unbalanced(t *testing.T) {
 	require.Equal(t, uint64(0), md.FinishSequence().FoldToUint64())
 }
 
+func TestStackedCalculator_Balanced(t *testing.T) {
+	const unbalanced = uint64(1 << 56)
+	expectedUnbalanced := [32]byte{1, 1, 1, 0, 2, 1, 1, 0, 3, 2, 2, 1, 2, 1, 1, 0, 4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0}
+
+	md := NewStackedCalculator(xorCountPairDigester{}, cryptkit.NewDigest(newBits64(unbalanced), "uint64"))
+
+	require.Equal(t, unbalanced, md.ForkSequence().FinishSequence().FoldToUint64())
+
+	for bit := uint64(1); bit <= 1<<31; bit <<= 1 {
+		md.AddNext(newBits64(bit))
+		v := md.ForkSequence().FinishSequence().FoldToUint64()
+
+		require.Equal(t, uint64(expectedUnbalanced[bits.Len64(bit)-1]), v>>56)
+		require.Equal(t, bit<<1-1, v&math.MaxUint32)
+	}
+	require.Equal(t, 32, md.Count())
+	require.Equal(t, uint64(math.MaxUint32), md.ForkSequence().FinishSequence().FoldToUint64())
+
+	md2 := md.ForkSequence()
+	for bit := uint64(1) << 31; bit != 0; bit >>= 1 {
+		md2.AddNext(newBits64(bit))
+		v := md2.ForkSequence().FinishSequence().FoldToUint64()
+		//fmt.Println(v>>56)
+		require.Equal(t, bit-1, v&math.MaxUint32)
+	}
+	require.Equal(t, uint64(0), md2.FinishSequence().FoldToUint64())
+
+	for bit := uint64(1); bit <= 1<<31; bit <<= 1 {
+		md.AddNext(newBits64(bit))
+		v := md.ForkSequence().FinishSequence().FoldToUint64()
+		//fmt.Println(v>>56)
+		require.Equal(t, ^uint32(bit<<1-1), uint32(v))
+	}
+	require.Equal(t, 64, md.Count())
+	require.Equal(t, uint64(0), md.FinishSequence().FoldToUint64())
+}
+
 func newBits64(v uint64) *longbits.Bits64 {
 	v64 := longbits.NewBits64(v)
 	return &v64
@@ -92,14 +130,35 @@ func newBits64(v uint64) *longbits.Bits64 {
 
 type xorPairDigester struct{}
 
-func (p *xorPairDigester) GetDigestSize() int {
+func (p xorPairDigester) GetDigestSize() int {
 	return 8
 }
 
-func (p *xorPairDigester) DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) cryptkit.Digest {
+func (p xorPairDigester) DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) cryptkit.Digest {
 	return cryptkit.NewDigest(newBits64(digest0.FoldToUint64()^digest1.FoldToUint64()), "uint64")
 }
 
-func (p *xorPairDigester) GetDigestMethod() cryptkit.DigestMethod {
+func (p xorPairDigester) GetDigestMethod() cryptkit.DigestMethod {
+	return "xor64"
+}
+
+type xorCountPairDigester struct{}
+
+func (p xorCountPairDigester) GetDigestSize() int {
+	return 8
+}
+
+func (p xorCountPairDigester) DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) cryptkit.Digest {
+	const topByteMask = ^uint64(math.MaxUint64 >> 8)
+
+	v0 := digest0.FoldToUint64()
+	v1 := digest1.FoldToUint64()
+	xored := (v0 ^ v1) &^ topByteMask
+	//	counted := uint64(0)
+	counted := v0&topByteMask + v1&topByteMask
+	return cryptkit.NewDigest(newBits64(counted|xored), "uint64")
+}
+
+func (p xorCountPairDigester) GetDigestMethod() cryptkit.DigestMethod {
 	return "xor64"
 }
