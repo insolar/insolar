@@ -26,7 +26,6 @@ out
 .vscode
 
 # Go dep
-vendor
 .vendor-new
 *.lock
 
