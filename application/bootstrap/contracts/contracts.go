@@ -199,6 +199,7 @@ func GetDepositGenesisContractState(
 			Lockup:             lockup,
 			Vesting:            vesting,
 			VestingStep:        vestingStep,
+			IsConfirmed:        true,
 		}),
 	}
 }
