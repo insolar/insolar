@@ -229,7 +229,7 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	}
 
 	readerForSignature := bytes.NewReader(ctx.packetBuffer.Bytes())
-	digest := ctx.digester.GetDigestOf(readerForSignature)
+	digest := ctx.digester.DigestData(readerForSignature)
 	signedDigest := digest.SignWith(ctx.signer)
 	signature := signedDigest.GetSignatureHolder()
 	ctx.setter.setSignature(signature)

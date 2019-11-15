@@ -289,6 +289,14 @@ type emuTransportCryptography struct {
 	defaultDigest cryptkit.DigestHolder
 }
 
+func (r *emuTransportCryptography) CreatePairDigester() cryptkit.PairDigester {
+	panic("not implemented")
+}
+
+func (r *emuTransportCryptography) CreateDataDigester() cryptkit.DataDigester {
+	panic("not implemented")
+}
+
 func (r *emuTransportCryptography) CreateSequenceDigester() cryptkit.SequenceDigester {
 	return &seqDigester{}
 }
@@ -299,10 +307,6 @@ func (r *emuTransportCryptography) CreateGlobulaStateDigester() transport.StateD
 
 func (r *emuTransportCryptography) CreatePublicKeyStore(skh cryptkit.SignatureKeyHolder) cryptkit.PublicKeyStore {
 	return nil
-}
-
-func (r *emuTransportCryptography) CreatePacketDigester() cryptkit.DataDigester {
-	panic("not implemented")
 }
 
 func (r *emuTransportCryptography) CreateAnnouncementDigester() cryptkit.SequenceDigester {
@@ -357,6 +361,10 @@ type seqDigester struct {
 	// TODO do test or a proper digest calc
 	rnd      *rand.Rand
 	lastSeed int64
+}
+
+func (s *seqDigester) GetDigestSize() int {
+	return 8
 }
 
 func (s *seqDigester) AddNext(digest longbits.FoldableReader) {

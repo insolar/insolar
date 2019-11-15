@@ -125,7 +125,7 @@ func NewPulsePacketParser(pulse pulse.Data) *PulsePacketParser {
 	}
 
 	return &PulsePacketParser{
-		FixedReader: longbits.NewFixedReader(data),
+		FixedReader: longbits.NewMutableFixedSize(data),
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),
 		pulse:       pulse,
 	}

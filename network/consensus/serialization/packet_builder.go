@@ -116,7 +116,7 @@ func (pb *PacketBuilder) preparePacket(sender *transport.NodeAnnouncementProfile
 func (pb *PacketBuilder) preparePacketSender(packet *Packet) *PreparedPacketSender {
 	return &PreparedPacketSender{
 		packet:   packet,
-		digester: pb.crypto.GetDigestFactory().CreatePacketDigester(),
+		digester: pb.crypto.GetDigestFactory().CreateDataDigester(),
 		signer:   pb.crypto.CreateNodeSigner(pb.localConfig.GetSecretKeyStore()),
 	}
 }

@@ -193,13 +193,17 @@ type ConsensusDigestFactory struct {
 	scheme insolar.PlatformCryptographyScheme
 }
 
+func (cdf *ConsensusDigestFactory) CreatePairDigester() cryptkit.PairDigester {
+	panic("implement me") // TODO implement CreatePairDigester
+}
+
 func NewConsensusDigestFactory(scheme insolar.PlatformCryptographyScheme) *ConsensusDigestFactory {
 	return &ConsensusDigestFactory{
 		scheme: scheme,
 	}
 }
 
-func (cdf *ConsensusDigestFactory) CreatePacketDigester() cryptkit.DataDigester {
+func (cdf *ConsensusDigestFactory) CreateDataDigester() cryptkit.DataDigester {
 	return NewSha3512Digester(cdf.scheme)
 }
 
