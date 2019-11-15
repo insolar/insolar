@@ -96,7 +96,8 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 
 .PHONY: ensure
 ensure: ## install all dependencies
-	go mod vendor
+	echo 'All dependencies are already in ./vendor! Run `go mod vendor` manually if needed'
+	# go mod vendor
 
 
 .PHONY: build
