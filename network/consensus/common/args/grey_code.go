@@ -67,18 +67,20 @@ func FromGrey(g uint) uint {
 }
 
 func GreyInc(v uint) uint {
-	/*
-		This can also be calculated in a classical way with parity (count non-zero bits) of value, but it will be slower
+	// This can also be calculated in a classical way with parity (count non-zero bits) of value, but it will be slower
+	//
+	// Classical gray_inc(x):
+	//   if parity of x is even:
+	//	 return x ^ 1
+	//   if parity of x is odd:
+	//	 y := rightmost 1 bit in x
+	//	 return x ^ (y << 1)
+	//
+	//
+	//
 
-		Classical gray_inc(x):
-		  if parity of x is even:
-		    return x ^ 1
-		  if parity of x is odd:
-		    y := rightmost 1 bit in x
-		    return x ^ (y << 1)
-
-	*/
-	return Grey(v) ^ Grey(v+1)
+	// the fastest way is the shorter version of Grey(v) ^ Grey(v+1)
+	return Grey(v ^ (v + 1))
 }
 
 // Grey code has a periodic reflect symmetry, so we can do a shortcut for the most cases.
