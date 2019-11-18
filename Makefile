@@ -107,7 +107,8 @@ ensure: ## do nothing (keep it until all direct calls of `make ensure` was remov
 
 .PHONY: vendor
 vendor: ## save all dependencies to vendor
-	 go mod vendor
+	rm -rf vendor
+	go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
