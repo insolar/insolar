@@ -36,9 +36,9 @@ To test Insolar locally, install it and deploy as described below.
 
 4. Install dependencies and build binaries:
 
-    ```
-    make
-    ```
+   ```
+   make
+   ```
 
 ## Deploy locally
 
@@ -56,14 +56,14 @@ To test Insolar locally, install it and deploy as described below.
    * Requester:
 
      ```
-     bin/apirequester -k=.artifacts/launchnet/configs/ -u=http://127.0.0.1:19101/api
+     bin/apirequester -k=.artifacts/launchnet/configs/ -p=http://127.0.0.1:19101/api/rpc
      ```
 
      The requester runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
 
      Options:
      * `-k`: Path to the root user's key pair. All requests for a new user creation must be signed by the root one.
-     * `-u`: Node's API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
+     * `-p`: Node's public API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
 
    * Benchmark:
 
