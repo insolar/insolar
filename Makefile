@@ -34,10 +34,15 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
-BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
-BUILD_HASH ?= $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --tags)
+
+# skip git parsing commands if no git
+ifneq ("$(wildcard ./.git)", "")
+	BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+	BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
+	BUILD_HASH ?= $(shell git rev-parse --short HEAD)
+	BUILD_VERSION ?= $(shell git describe --tags)
+endif
+
 DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
