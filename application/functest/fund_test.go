@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
@@ -154,7 +153,7 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", application.DefaultDistributionAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 
@@ -172,7 +171,7 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", application.DefaultDistributionAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 
@@ -190,7 +189,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", application.DefaultDistributionAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 
