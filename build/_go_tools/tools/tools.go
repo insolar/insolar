@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-package tools
+// +build tools
+
+package main
 
 import (
 	_ "github.com/gogo/protobuf/protoc-gen-gogoslick"

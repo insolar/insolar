@@ -84,7 +84,7 @@ clean: ## run all cleanup tasks
 
 .PHONY: install-build-tools
 install-build-tools: ## install go binary tools required for builds
-	GOFLAGS= ./build/_go_tools/install.sh
+	./build/_go_tools/install.sh
 
 .PHONY: install-deps
 install-deps: install-build-tools ## install dep and codegen tools
