@@ -85,10 +85,10 @@ install-build-tools: ## install tools for codegen
 	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
-install-deps: ensure install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
