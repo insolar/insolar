@@ -82,10 +82,10 @@ install-build-tools: ## install go binary tools required for builds
 	GOFLAGS= ./build/_go_tools/install.sh
 
 .PHONY: install-deps
-install-deps: ensure install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
@@ -95,11 +95,14 @@ generate: ## run go generate
 test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen task)
 	ci/scripts/git_diff_without_comments.sh
 
-.PHONY: ensure
-ensure: ## install all dependencies
-	echo 'All dependencies are already in ./vendor! Run `go mod vendor` manually if needed'
-	# go mod vendor
 
+.PHONY: ensure
+ensure: ## do nothing (keep it until all direct calls of `make ensure` was removed in legacy scripts)
+	echo 'All dependencies are already in ./vendor! Run `make vendor` manually if needed'
+
+.PHONY: vendor
+vendor: ## save all dependencies to vendor
+	 go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
