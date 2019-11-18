@@ -99,10 +99,13 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 	ci/scripts/git_diff_without_comments.sh
 
 .PHONY: ensure
-ensure: ## install all dependencies
-	echo 'All dependencies are already in ./vendor! Run `go mod vendor` manually if needed'
-	# go mod vendor
+ensure: ## does nothing (keep it until all direct calls of `make ensure` have will be removed)
+	echo 'All dependencies are already in ./vendor! Run `make vendor` manually if needed'
 
+.PHONY: vendor
+vendor: ## update vendor dependencies
+	rm -rf vendor
+	go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
