@@ -21,9 +21,7 @@ github.com/cheggaaa/pb/v3/termutil
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dgraph-io/badger v1.6.0-rc1.0.20191024172150-efb9d9d15d7f
-github.com/dgraph-io/badger/badger
 github.com/dgraph-io/badger
-github.com/dgraph-io/badger/badger/cmd
 github.com/dgraph-io/badger/options
 github.com/dgraph-io/badger/pb
 github.com/dgraph-io/badger/skl
@@ -40,51 +38,25 @@ github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/gogo/protobuf v1.2.1
-github.com/gogo/protobuf/protoc-gen-gogoslick
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-github.com/gogo/protobuf/vanity
-github.com/gogo/protobuf/vanity/command
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
-github.com/gogo/protobuf/plugin/compare
-github.com/gogo/protobuf/plugin/defaultcheck
-github.com/gogo/protobuf/plugin/description
-github.com/gogo/protobuf/plugin/embedcheck
-github.com/gogo/protobuf/plugin/enumstringer
-github.com/gogo/protobuf/plugin/equal
-github.com/gogo/protobuf/plugin/face
-github.com/gogo/protobuf/plugin/gostring
-github.com/gogo/protobuf/plugin/marshalto
-github.com/gogo/protobuf/plugin/oneofcheck
-github.com/gogo/protobuf/plugin/populate
-github.com/gogo/protobuf/plugin/size
-github.com/gogo/protobuf/plugin/stringer
-github.com/gogo/protobuf/plugin/testgen
-github.com/gogo/protobuf/plugin/union
-github.com/gogo/protobuf/plugin/unmarshal
-github.com/gogo/protobuf/protoc-gen-gogo/generator
-github.com/gogo/protobuf/protoc-gen-gogo/grpc
-github.com/gogo/protobuf/protoc-gen-gogo/plugin
-github.com/gogo/protobuf/protoc-gen-gogo/generator/internal/remap
 # github.com/gojuno/minimock/v3 v3.0.5
-github.com/gojuno/minimock/v3/cmd/minimock
 github.com/gojuno/minimock/v3
 # github.com/golang/protobuf v1.3.2
-github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/proto
-github.com/golang/protobuf/protoc-gen-go/generator
-github.com/golang/protobuf/protoc-gen-go/grpc
 github.com/golang/protobuf/jsonpb
+github.com/golang/protobuf/protoc-gen-go/generator
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
 github.com/golang/protobuf/protoc-gen-go/plugin
-github.com/golang/protobuf/ptypes/struct
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
 # github.com/google/gops v0.3.6
@@ -114,10 +86,6 @@ github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/hcl/strconv
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/hexdigest/gowrap v1.1.7
-github.com/hexdigest/gowrap/generator
-github.com/hexdigest/gowrap/pkg
-github.com/hexdigest/gowrap/printer
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
@@ -282,19 +250,6 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
-# golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
-golang.org/x/tools/cmd/stringer
-golang.org/x/tools/go/packages
-golang.org/x/tools/imports
-golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/semver
-golang.org/x/tools/internal/imports
-golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/internal/fastwalk
-golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/internal/module
 # gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 gonum.org/v1/gonum/stat
 gonum.org/v1/gonum/floats
