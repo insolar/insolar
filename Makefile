@@ -219,7 +219,7 @@ ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  FUNCTEST_COUNT=3 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
 
 .PHONY: ci_test_integrtest
