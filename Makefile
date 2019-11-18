@@ -1,6 +1,6 @@
 export GO111MODULE ?= on
 export GOSUMDB ?= sum.golang.org
-export GOFLAGS ?= -mod=vendor -mod=readonly
+export GOFLAGS ?= -mod=vendor
 
 BIN_DIR ?= bin
 ARTIFACTS_DIR ?= .artifacts
@@ -107,7 +107,7 @@ ensure: ## do nothing (keep it until all direct calls of `make ensure` was remov
 
 .PHONY: vendor
 vendor: ## save all dependencies to vendor
-	 GOFLAGS= go mod vendor
+	 go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
