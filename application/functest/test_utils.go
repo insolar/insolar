@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 
 	"github.com/insolar/insolar/application/api"
@@ -694,11 +695,11 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
 		return errors.New("balance should be zero, current value: " + balance.String())
 	}
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	if deposit["amount"] != application.DefaultDistributionAmount {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", application.DefaultDistributionAmount, deposit["amount"]))
 	}
-	if deposit["balance"] != "10000000000000000000" {
-		return errors.New("deposit balance should be `10000000000000000000`, current value: " + deposit["balance"].(string))
+	if deposit["balance"] != application.DefaultDistributionAmount {
+		return errors.New(fmt.Sprintf("deposit balance should be %s, current value: %s", application.DefaultDistributionAmount, deposit["balance"]))
 	}
 	return nil
 }
@@ -715,8 +716,8 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 	}
 	_, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	if deposit["amount"] != application.DefaultDistributionAmount {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", application.DefaultDistributionAmount, deposit["amount"]))
 	}
 	return nil
 }
