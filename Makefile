@@ -208,24 +208,24 @@ ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
 
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(FUNCTEST_COUNT)
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
