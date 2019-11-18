@@ -24,7 +24,7 @@ MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 GOBUILD ?= go build -mod=vendor
 GOTEST ?= go test -mod=vendor
 
-FUNCTEST_COUNT ?= 1
+FUNCTEST_COUNT ?= 3
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?= -timeout 1200s
@@ -224,7 +224,7 @@ ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 FUNCTEST_COUNT=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(FUNCTEST_COUNT)
 
 .PHONY: regen-proxies
