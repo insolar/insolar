@@ -78,8 +78,8 @@ clean: ## run all cleanup tasks
 	./scripts/insolard/launchnet.sh -l
 
 .PHONY: install-build-tools
-install-build-tools: ## install tools for codegen
-	./scripts/build/ls-tools.go | xargs -tI % go install -v %
+install-build-tools: ## install go binary tools required for builds
+	GOFLAGS= ./build/_go_tools/install.sh
 
 .PHONY: install-deps
 install-deps: ensure install-build-tools ## install dep and codegen tools

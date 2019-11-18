@@ -18,7 +18,6 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
-	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
@@ -57,7 +56,6 @@ require (
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
-	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0
