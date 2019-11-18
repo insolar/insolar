@@ -5,7 +5,7 @@ go 1.12
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
-	github.com/ThreeDotsLabs/watermill v1.0.0
+	github.com/ThreeDotsLabs/watermill v1.0.2
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
@@ -18,7 +18,6 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
-	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f

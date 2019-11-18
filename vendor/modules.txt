@@ -2,7 +2,7 @@
 contrib.go.opencensus.io/exporter/prometheus
 # github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96
 github.com/AndreasBriese/bbloom
-# github.com/ThreeDotsLabs/watermill v1.0.0
+# github.com/ThreeDotsLabs/watermill v1.0.2
 github.com/ThreeDotsLabs/watermill/message
 github.com/ThreeDotsLabs/watermill
 github.com/ThreeDotsLabs/watermill/message/router/middleware
@@ -150,6 +150,8 @@ github.com/insolar/x-crypto/rand/internal/unix
 github.com/jbenet/go-base58
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 github.com/kardianos/osext
+# github.com/lithammer/shortuuid/v3 v3.0.4
+github.com/lithammer/shortuuid/v3
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.1.4
@@ -192,8 +194,6 @@ github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/renstrom/shortuuid v3.0.0+incompatible
-github.com/renstrom/shortuuid
 # github.com/rs/zerolog v1.15.0
 github.com/rs/zerolog
 github.com/rs/zerolog/internal/cbor

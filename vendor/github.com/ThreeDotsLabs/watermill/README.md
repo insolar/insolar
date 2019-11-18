@@ -39,6 +39,7 @@ Pick what you like the best or see in order:
 * Real-world examples
     * [Receiving webhooks](_examples/real-world-examples/receiving-webhooks)
     * [Sending webhooks](_examples/real-world-examples/sending-webhooks)
+    * [Synchronizing Databases](_examples/real-world-examples/synchronizing-databases)
     * [Persistent Event Log](_examples/real-world-examples/persistent-event-log)
     * [Transactional Events](_examples/real-world-examples/transactional-events)
 * Complete projects
@@ -94,7 +95,7 @@ Supported Pub/Subs:
 - SQL Pub/Sub [(`github.com/ThreeDotsLabs/watermill-sql`)](https://github.com/ThreeDotsLabs/watermill-sql/)
 
 
-All Pub/Subs implementation documentation can be found in the [documentation](https://watermill.io/docs/pub-sub-implementations/).
+All Pub/Subs implementation documentation can be found in the [documentation](https://watermill.io/pubsubs/).
 
 ## Contributing
 
@@ -122,13 +123,14 @@ Here's the short version for message size of 16 bytes.
 
 | Pub/Sub              | Publish (messages / s) | Subscribe (messages / s) |
 | -------------------- | ---------------------- | ------------------------ |
-| Kafka (one node)     | 63506                  | 110811                   |
-| Kafka (5 nodes)      | 70252                  | 117529                   |
-| NATS                 | 76208                  | 38169                    |
-| SQL (MySQL)          | 6989                   | 143                      |
-| Google Cloud Pub/Sub | 7416                   | 39591                    |
-| AMQP                 | 2408                   | 10608                    |
-| GoChannel            | 272938                 | 101371                   |
+| Kafka (one node)     | 63,506                 | 110,811                  |
+| Kafka (5 nodes)      | 70,252                 | 117,529                  |
+| NATS                 | 76,208                 | 38,169                   |
+| SQL (MySQL)          | 7,299                  | 154                      |
+| SQL (PostgreSQL)     | 4,142                  | 98                       |
+| Google Cloud Pub/Sub | 7,416                  | 39,591                   |
+| AMQP                 | 2,408                  | 10,608                   |
+| GoChannel            | 272,938                | 101,371                  |
 
 ## Support
 
