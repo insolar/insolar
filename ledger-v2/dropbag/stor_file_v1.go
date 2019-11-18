@@ -182,7 +182,7 @@ func (p *StorageFileV1) Read(sr StorageReader) error {
 
 		if entryBytes, err := p.readCustomPayload(sr, headEntry, headStart, headLength); err != nil {
 			return err
-		} else if err := p.Builder.HeadPayload(entryBytes, headStart, int64(headLength)); err != nil {
+		} else if err := p.Builder.AddPreamble(entryBytes, headStart, int64(headLength)); err != nil {
 			return err
 		}
 	}
@@ -201,7 +201,7 @@ func (p *StorageFileV1) Read(sr StorageReader) error {
 	} else if tailBytes, tailStart, err := p.readTail(sr, tailLength); err != nil {
 		return err
 	} else {
-		return p.Builder.HeadPayload(tailBytes, tailStart, int64(tailLength))
+		return p.Builder.AddPreamble(tailBytes, tailStart, int64(tailLength))
 	}
 }
 
@@ -243,7 +243,7 @@ func (p *StorageFileV1) readAllEntries(sr StorageReader, remainingLength uint64)
 
 			if customPayload, err := p.readCustomPayload(sr, entryNo, entryStart, entryLength); err != nil {
 				return 0, err
-			} else if err := p.Builder.EntryPayload(int(entryNo), customPayload, entryStart, int64(entryLength)); err != nil {
+			} else if err := p.Builder.AddEntry(int(entryNo), customPayload, entryStart, int64(entryLength)); err != nil {
 				return 0, err
 			}
 		}

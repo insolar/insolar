@@ -26,9 +26,9 @@ type PayloadFactory interface {
 }
 
 type PayloadBuilder interface {
-	HeadPayload(bytes []byte, storageStart int64, storageLen int64) error
-	TailPayload(bytes []byte, storageStart int64, storageLen int64) error
-	EntryPayload(entryNo int, bytes []byte, storageStart int64, storageLen int64) error
+	AddPreamble(bytes []byte, storageStart int64, storageLen int64) error
+	AddConclude(bytes []byte, storageStart int64, storageLen int64) error
+	AddEntry(entryNo int, bytes []byte, storageStart int64, storageLen int64) error
 	Finished() error
 	Failed(error) error
 }
