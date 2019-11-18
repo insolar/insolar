@@ -56,8 +56,11 @@ func IsNil(v interface{}) bool {
 	if v == nil {
 		return true
 	}
-	rv := reflect.ValueOf(v)
-	return rv.Kind() == reflect.Ptr && rv.IsNil()
+	switch rv := reflect.ValueOf(v); rv.Kind() {
+	case reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+		return rv.IsNil()
+	}
+	return false
 }
 
 type ShuffleFunc func(n int, swap func(i, j int))
