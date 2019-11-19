@@ -22,7 +22,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -184,16 +183,6 @@ func TestBackuper(t *testing.T) {
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
-}
-
-func loadLastBackupedVersion(t *testing.T, fileName string) uint64 {
-	raw, err := ioutil.ReadFile(fileName)
-	require.NoError(t, err)
-	var backupInfo executor.LastBackupInfo
-	err = json.Unmarshal(raw, &backupInfo)
-	require.NoError(t, err)
-
-	return backupInfo.LastBackupedVersion
 }
 
 var binaryPath string
