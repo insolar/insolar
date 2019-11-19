@@ -34,10 +34,13 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
-BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
-BUILD_HASH ?= $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --tags)
+# skip git parsing commands if no git
+ifneq ("$(wildcard ./.git)", "")
+	BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+	BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
+	BUILD_HASH ?= $(shell git rev-parse --short HEAD)
+	BUILD_VERSION ?= $(shell git describe --tags)
+endif
 DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
@@ -82,10 +85,10 @@ install-build-tools: ## install tools for codegen
 	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
-install-deps: ensure install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
@@ -96,10 +99,13 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 	ci/scripts/git_diff_without_comments.sh
 
 .PHONY: ensure
-ensure: ## install all dependencies
-	echo 'All dependencies are already in ./vendor! Run `go mod vendor` manually if needed'
-	# go mod vendor
+ensure: ## does nothing (keep it until all direct calls of `make ensure` have will be removed)
+	echo 'All dependencies are already in ./vendor! Run `make vendor` manually if needed'
 
+.PHONY: vendor
+vendor: ## update vendor dependencies
+	rm -rf vendor
+	go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
