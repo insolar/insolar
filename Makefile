@@ -241,7 +241,7 @@ ci_test_func:  ## run functest 3 times
 		$(MAKE) ci-test-func-base
 
 .PHONY: ci-test-func-long
-ci-test-func-long: ## run functest with race
+ci-test-func-long: ## run functest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
 	FUNCTEST_COUNT=10 \
 		$(MAKE) ci-test-func-base
@@ -258,13 +258,13 @@ ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(TEST_COUNT)
 
 .PHONY: ci-test-integrtest-long
-ci-test-integrtest-long: ## run networktest with race
+ci-test-integrtest-long: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
     TEST_COUNT=20 \
     	$(MAKE) ci_test_integrtest
 
 .PHONY: ci-test-integrtest-nightly
-ci-test-integrtest-nightly: ## run networktest with race
+ci-test-integrtest-nightly: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
     TEST_COUNT=20 \
     	$(MAKE) ci_test_integrtest
