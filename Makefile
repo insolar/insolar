@@ -208,18 +208,18 @@ test_with_coverage_fast: ## ???
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
 
-.PHONY: ci_test_with_coverage
-ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
+.PHONY: ci-test-with-coverage
+ci-test-with-coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
-.PHONY: ci_test_unit
-ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
+.PHONY: ci-test-unit
+ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
 
-.PHONY: ci_test_slow
-ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
+.PHONY: ci-test-slow
+ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count=$(TEST_COUNT)
 
@@ -227,13 +227,13 @@ ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 ci-test-slow-long: ## run slow tests with race and count
 	CI_TEST_ARGS=" -race " \
 	TEST_COUNT=50 \
-		$(MAKE) ci_test_slow
+		$(MAKE) ci-test-slow
 
 .PHONY: ci-test-slow-nightly
 ci-test-slow-nightly: ## run slow tests with race and count
 	CI_TEST_ARGS=" -race " \
 	TEST_COUNT=80 \
-		$(MAKE) ci_test_slow
+		$(MAKE) ci-test-slow
 
 .PHONY: ci-test-func-base
 ci-test-func-base: ## run functest, redirects json output to file (CI)
@@ -242,39 +242,43 @@ ci-test-func-base: ## run functest, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
 
-.PHONY: ci_test_func
-ci_test_func:  ## run functest 3 times
+.PHONY: ci-test-func
+ci-test-func:  ## run functest 3 times
 	FUNCTEST_COUNT=3 \
 		$(MAKE) ci-test-func-base
 
 .PHONY: ci-test-func-long
 ci-test-func-long: ## run functest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 300m " \
 	FUNCTEST_COUNT=10 \
 		$(MAKE) ci-test-func-base
 
 .PHONY: ci-test-func-nightly
 ci-test-func-nightly: ## run functest with large count and race
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 1200m " \
 	FUNCTEST_COUNT=200 \
 		$(MAKE) ci-test-func-base
 
-.PHONY: ci_test_integrtest
-ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
+.PHONY: ci-test-integrtest
+ci-test-integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(TEST_COUNT)
 
 .PHONY: ci-test-integrtest-long
 ci-test-integrtest-long: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
-    	$(MAKE) ci_test_integrtest
+    	$(MAKE) ci-test-integrtest
 
 .PHONY: ci-test-integrtest-nightly
 ci-test-integrtest-nightly: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
-    	$(MAKE) ci_test_integrtest
+    	$(MAKE) ci-test-integrtest
 
 
 .PHONY: regen-proxies
