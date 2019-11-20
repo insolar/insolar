@@ -269,6 +269,7 @@ ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI
 .PHONY: ci-test-integrtest-long
 ci-test-integrtest-long: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
     	$(MAKE) ci_test_integrtest
 
