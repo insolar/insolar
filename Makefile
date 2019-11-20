@@ -24,6 +24,7 @@ MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 GOBUILD ?= go build
 GOTEST ?= go test
 
+TEST_COUNT ?= 1
 FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
@@ -34,10 +35,13 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
-BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
-BUILD_HASH ?= $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --tags)
+# skip git parsing commands if no git
+ifneq ("$(wildcard ./.git)", "")
+	BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+	BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
+	BUILD_HASH ?= $(shell git rev-parse --short HEAD)
+	BUILD_VERSION ?= $(shell git describe --tags)
+endif
 DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
@@ -82,10 +86,10 @@ install-build-tools: ## install tools for codegen
 	./scripts/build/ls-tools.go | xargs -tI % go install -v %
 
 .PHONY: install-deps
-install-deps: ensure install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
-pre-build: ensure install-deps generate regen-builtin ## install dependencies, (re)generates all code
+pre-build: install-deps generate regen-builtin ## install dependencies, (re)generates all code
 
 .PHONY: generate
 generate: ## run go generate
@@ -96,10 +100,13 @@ test_git_no_changes: ## checks if no git changes in project dir (for CI Codegen 
 	ci/scripts/git_diff_without_comments.sh
 
 .PHONY: ensure
-ensure: ## install all dependencies
-	echo 'All dependencies are already in ./vendor! Run `go mod vendor` manually if needed'
-	# go mod vendor
+ensure: ## does nothing (keep it until all direct calls of `make ensure` have will be removed)
+	echo 'All dependencies are already in ./vendor! Run `make vendor` manually if needed'
 
+.PHONY: vendor
+vendor: ## update vendor dependencies
+	rm -rf vendor
+	go mod vendor
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
@@ -201,32 +208,78 @@ test_with_coverage_fast: ## ???
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
 
-.PHONY: ci_test_with_coverage
-ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
+.PHONY: ci-test-with-coverage
+ci-test-with-coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
-.PHONY: ci_test_unit
-ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
+.PHONY: ci-test-unit
+ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10 | tee ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
 
-.PHONY: ci_test_slow
-ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
+.PHONY: ci-test-slow
+ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count 1 | tee -a ci_test_unit.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count=$(TEST_COUNT)
 
-.PHONY: ci_test_func
-ci_test_func: ## run functest 3 times, redirects json output to file (CI)
+.PHONY: ci-test-slow-long
+ci-test-slow-long: ## run slow tests with race and count
+	CI_TEST_ARGS=" -race " \
+	TEST_COUNT=50 \
+		$(MAKE) ci-test-slow
+
+.PHONY: ci-test-slow-nightly
+ci-test-slow-nightly: ## run slow tests with race and count
+	CI_TEST_ARGS=" -race " \
+	TEST_COUNT=80 \
+		$(MAKE) ci-test-slow
+
+.PHONY: ci-test-func-base
+ci-test-func-base: ## run functest, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count 3 -failfast | tee ci_test_func.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
 
-.PHONY: ci_test_integrtest
-ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
+.PHONY: ci-test-func
+ci-test-func:  ## run functest 3 times
+	FUNCTEST_COUNT=3 \
+		$(MAKE) ci-test-func-base
+
+.PHONY: ci-test-func-long
+ci-test-func-long: ## run functest with race and a little count
+	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 300m " \
+	FUNCTEST_COUNT=10 \
+		$(MAKE) ci-test-func-base
+
+.PHONY: ci-test-func-nightly
+ci-test-func-nightly: ## run functest with large count and race
+	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 1200m " \
+	FUNCTEST_COUNT=200 \
+		$(MAKE) ci-test-func-base
+
+.PHONY: ci-test-integrtest
+ci-test-integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=1 | tee ci_test_integrtest.json
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(TEST_COUNT)
+
+.PHONY: ci-test-integrtest-long
+ci-test-integrtest-long: ## run networktest with race and a little count
+	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
+    TEST_COUNT=20 \
+    	$(MAKE) ci-test-integrtest
+
+.PHONY: ci-test-integrtest-nightly
+ci-test-integrtest-nightly: ## run networktest with race and a little count
+	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
+    TEST_COUNT=20 \
+    	$(MAKE) ci-test-integrtest
+
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
