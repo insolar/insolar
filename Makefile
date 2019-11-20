@@ -242,8 +242,8 @@ ci-test-func-base: ## run functest, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
 
-.PHONY: ci_test_func
-ci_test_func:  ## run functest 3 times
+.PHONY: ci-test-func
+ci-test-func:  ## run functest 3 times
 	FUNCTEST_COUNT=3 \
 		$(MAKE) ci-test-func-base
 
