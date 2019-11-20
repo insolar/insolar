@@ -20,35 +20,37 @@ import (
 	"math/bits"
 )
 
-type BitBuilderDirection byte
+type BitBuilderOrder byte
 
 const (
-	FirstLow  BitBuilderDirection = 0
-	FirstHigh BitBuilderDirection = 1
+	// Least significant bit is first - first AppendBit() appends the least significant bit
+	LSB BitBuilderOrder = 0
+	// Most significant bit is first - first AppendBit() appends the most significant bit
+	MSB BitBuilderOrder = 1
 
-	initFirstLow  = 0x01
-	initFirstHigh = 0x80
+	initLSB = 0x01
+	initMSB = 0x80
 )
 
-func NewBitBuilder(direction BitBuilderDirection, expectedLen int) BitBuilder {
+func NewBitBuilder(direction BitBuilderOrder, expectedLen int) BitBuilder {
 	if expectedLen > 0 {
 		return AppendBitBuilder(make([]byte, 0, expectedLen), direction)
 	}
 	return AppendBitBuilder(nil, direction)
 }
 
-func AppendBitBuilder(appendTo []byte, direction BitBuilderDirection) BitBuilder {
+func AppendBitBuilder(appendTo []byte, direction BitBuilderOrder) BitBuilder {
 	switch direction {
-	case FirstLow:
-		return BitBuilder{accInit: initFirstLow, accBit: initFirstLow, bytes: appendTo}
-	case FirstHigh:
-		return BitBuilder{accInit: initFirstHigh, accBit: initFirstHigh, bytes: appendTo}
+	case LSB:
+		return BitBuilder{accInit: initLSB, accBit: initLSB, bytes: appendTo}
+	case MSB:
+		return BitBuilder{accInit: initMSB, accBit: initMSB, bytes: appendTo}
 	default:
 		panic("illegal value")
 	}
 }
 
-// supports to be created as BitBuilder{} - it equals NewBitBuilder(FirstLow, 0)
+// supports to be created as BitBuilder{} - it equals NewBitBuilder(LSB, 0)
 type BitBuilder struct {
 	bytes       []byte
 	accumulator byte
@@ -69,8 +71,8 @@ func (p *BitBuilder) ensure() {
 		if len(p.bytes) != 0 {
 			panic("illegal state")
 		}
-		p.accInit = initFirstLow
-		p.accBit = initFirstLow
+		p.accInit = initLSB
+		p.accBit = initLSB
 	} else if p.accBit == 0 {
 		panic("illegal state")
 	}
@@ -119,9 +121,9 @@ func (p *BitBuilder) align() (rightShift bool, ofs uint8) {
 
 func (p *BitBuilder) _rightShift() bool {
 	switch {
-	case p.accInit == initFirstLow:
+	case p.accInit == initLSB:
 		return false
-	case p.accInit == initFirstHigh:
+	case p.accInit == initMSB:
 		return true
 	default:
 		panic("illegal state")

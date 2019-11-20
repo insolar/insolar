@@ -42,7 +42,7 @@ func TestBitBuilder_FirstLow_BitOrder(t *testing.T) {
 }
 
 func TestBitBuilder_FirstHigh_BitOrder(t *testing.T) {
-	bb := NewBitBuilder(FirstHigh, 0)
+	bb := NewBitBuilder(MSB, 0)
 	bb.AppendBit(0)
 	bb.AppendBit(1)
 	bb.AppendBit(1)
@@ -112,7 +112,7 @@ func TestBitBuilder_FirstLow(t *testing.T) {
 }
 
 func TestBitBuilder_FirstHigh(t *testing.T) {
-	bb := NewBitBuilder(FirstHigh, 0)
+	bb := NewBitBuilder(MSB, 0)
 	bb.AppendBit(0)
 	bb.AppendBit(0)
 	bb.AppendBit(1)
@@ -172,7 +172,7 @@ func TestBitBuilder_FirstLow_SubByte(t *testing.T) {
 }
 
 func TestBitBuilder_FirstHigh_SubByte(t *testing.T) {
-	bb := NewBitBuilder(FirstHigh, 0)
+	bb := NewBitBuilder(MSB, 0)
 	for i := byte(0); i < 8; i++ {
 		bb.AppendSubByte(i, 3)
 	}

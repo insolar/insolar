@@ -17,6 +17,8 @@
 package longbits
 
 import (
+	"bytes"
+	"io"
 	"math/bits"
 	"testing"
 
@@ -39,70 +41,128 @@ func reverseBits(bytes []byte) []byte {
 
 func Test_BitReader_ReadByte(t *testing.T) {
 	bytes := copyBits(testSample)
-	br := NewBitArrayReader(FirstLow, bytes)
+	br := NewBitArrayReader(LSB, bytes)
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
-		require.Equal(t, b, br.ReadByte())
+		vb, err := br.ReadByte()
+		require.NoError(t, err)
+		require.Equal(t, b, vb)
 	}
 	require.True(t, br.IsArrayDepleted())
 
-	br = NewBitArrayReader(FirstHigh, reverseBits(bytes))
+	br = NewBitArrayReader(MSB, reverseBits(bytes))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
-		require.Equal(t, b, br.ReadByte())
+		vb, err := br.ReadByte()
+		require.NoError(t, err)
+		require.Equal(t, b, vb)
 	}
 	require.True(t, br.IsArrayDepleted())
 }
 
 func Test_BitStrReader_ReadByte(t *testing.T) {
 	bytes := copyBits(testSample)
-	br := NewBitStrReader(FirstLow, NewByteString(bytes))
+	br := NewBitStrReader(LSB, NewByteString(bytes))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
-		require.Equal(t, b, br.ReadByte())
+		vb, err := br.ReadByte()
+		require.NoError(t, err)
+		require.Equal(t, b, vb)
 	}
 	require.True(t, br.IsArrayDepleted())
 
-	br = NewBitStrReader(FirstHigh, NewByteString(reverseBits(bytes)))
+	br = NewBitStrReader(MSB, NewByteString(reverseBits(bytes)))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
-		require.Equal(t, b, br.ReadByte())
+		vb, err := br.ReadByte()
+		require.NoError(t, err)
+		require.Equal(t, b, vb)
 	}
 	require.True(t, br.IsArrayDepleted())
 }
 
-type testReader interface {
+type testReader struct {
+	internal interface {
+		ReadBit() (int, error)
+		ReadByte() (byte, error)
+		ReadSubByte(bitLen uint8) (byte, error)
+	}
+}
+
+func (v testReader) ReadBit() int {
+	if r, err := v.internal.ReadBit(); err != nil {
+		panic(err)
+	} else {
+		return r
+	}
+}
+
+func (v testReader) ReadByte() byte {
+	if r, err := v.internal.ReadByte(); err != nil {
+		panic(err)
+	} else {
+		return r
+	}
+}
+
+func (v testReader) ReadSubByte(bitLen uint8) byte {
+	if r, err := v.internal.ReadSubByte(bitLen); err != nil {
+		panic(err)
+	} else {
+		return r
+	}
+}
+
+type arrayReader interface {
 	AlignOffset() uint8
-	ReadBit() int
-	ReadByte() byte
-	ReadSubByte(bitLen uint8) byte
 	IsArrayDepleted() bool
 }
 
+func (v testReader) IsArray() bool {
+	_, ok := v.internal.(arrayReader)
+	return ok
+}
+
+func (v testReader) testAlignOffset(t *testing.T, ofs uint8) {
+	if ar, ok := v.internal.(arrayReader); ok {
+		require.Equal(t, ofs, ar.AlignOffset())
+	}
+}
+
+func (v testReader) testArrayDepleted(t *testing.T, isDepleted bool) {
+	if ar, ok := v.internal.(arrayReader); ok {
+		if isDepleted {
+			require.True(t, ar.IsArrayDepleted())
+		} else {
+			require.False(t, ar.IsArrayDepleted())
+		}
+	}
+}
+
 func testBitReaderRead(t *testing.T, br testReader) {
-	require.Equal(t, uint8(0), br.AlignOffset())
+	br.testAlignOffset(t, 0)
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(1), br.AlignOffset())
+	br.testAlignOffset(t, 1)
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(2), br.AlignOffset())
+	br.testAlignOffset(t, 2)
 	require.Equal(t, 1, br.ReadBit())
-	require.Equal(t, uint8(3), br.AlignOffset())
+	br.testAlignOffset(t, 3)
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(4), br.AlignOffset())
+	br.testAlignOffset(t, 4)
 	require.Equal(t, 1, br.ReadBit())
-	require.Equal(t, uint8(5), br.AlignOffset())
+	br.testAlignOffset(t, 5)
 
 	require.Equal(t, byte(0xFF), br.ReadByte())
-	require.Equal(t, uint8(5), br.AlignOffset())
+	br.testAlignOffset(t, 5)
 	require.Equal(t, byte(0xAB), br.ReadByte())
-	require.Equal(t, uint8(5), br.AlignOffset())
+	br.testAlignOffset(t, 5)
 
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(6), br.AlignOffset())
+	br.testAlignOffset(t, 6)
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(7), br.AlignOffset())
+	br.testAlignOffset(t, 7)
 	require.Equal(t, 0, br.ReadBit())
-	require.Equal(t, uint8(0), br.AlignOffset())
+	br.testAlignOffset(t, 0)
 
 	require.Equal(t, byte(0x01), br.ReadByte())
 	require.Equal(t, byte(0x02), br.ReadByte())
@@ -111,24 +171,25 @@ func testBitReaderRead(t *testing.T, br testReader) {
 	require.Equal(t, byte(0xFF), br.ReadByte())
 	require.Equal(t, byte(0xFF), br.ReadByte())
 
-	require.True(t, br.IsArrayDepleted())
-	require.Equal(t, uint8(0), br.AlignOffset())
+	br.testArrayDepleted(t, true)
+	br.testAlignOffset(t, 0)
 }
 
 func testBitReaderReadSubByte(t *testing.T, br testReader) {
 	require.Equal(t, byte(0), br.ReadSubByte(0))
-	require.Equal(t, uint8(0), br.AlignOffset())
+	br.testAlignOffset(t, 0)
 
 	require.Equal(t, byte(0), br.ReadSubByte(1))
-	require.Equal(t, uint8(1), br.AlignOffset())
+	br.testAlignOffset(t, 1)
 
 	require.Equal(t, byte(2), br.ReadSubByte(2))
-	require.Equal(t, uint8(3), br.AlignOffset())
+	br.testAlignOffset(t, 3)
+
 	require.Equal(t, byte(0x7E), br.ReadSubByte(7))
-	require.Equal(t, uint8(2), br.AlignOffset())
+	br.testAlignOffset(t, 2)
 
 	require.Equal(t, byte(0x1F), br.ReadSubByte(6))
-	require.Equal(t, uint8(0), br.AlignOffset())
+	br.testAlignOffset(t, 0)
 
 	require.Equal(t, byte(0x15), br.ReadSubByte(7))
 
@@ -139,16 +200,22 @@ func testBitReaderReadSubByte(t *testing.T, br testReader) {
 	require.Equal(t, byte(0x7F), br.ReadSubByte(7))
 	require.Equal(t, byte(0x3F), br.ReadSubByte(6))
 
-	require.Equal(t, uint8(0), br.AlignOffset())
-	require.True(t, br.IsArrayDepleted())
+	br.testAlignOffset(t, 0)
+	br.testArrayDepleted(t, true)
+}
+
+func newByteReader(b []byte) io.ByteReader {
+	return bytes.NewReader(b)
 }
 
 func Test_BitReader_FirstLow_Read(t *testing.T) {
 	bytes := copyBits(testSample)
-	testBitReaderRead(t, NewBitArrayReader(FirstLow, bytes))
-	testBitReaderRead(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
-	testBitReaderReadSubByte(t, NewBitArrayReader(FirstLow, bytes))
-	testBitReaderReadSubByte(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
+	testBitReaderRead(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
+	testBitReaderRead(t, testReader{NewBitArrayReader(LSB, bytes)})
+	testBitReaderRead(t, testReader{NewBitStrReader(LSB, NewByteString(bytes))})
+	testBitReaderReadSubByte(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
+	testBitReaderReadSubByte(t, testReader{NewBitArrayReader(LSB, bytes)})
+	testBitReaderReadSubByte(t, testReader{NewBitStrReader(LSB, NewByteString(bytes))})
 }
 
 func testBitReaderReadSubByteCycle(t *testing.T, br testReader) {
@@ -157,14 +224,16 @@ func testBitReaderReadSubByteCycle(t *testing.T, br testReader) {
 	}
 }
 
-func Test_BitReader_FirstHigh_Read(t *testing.T) {
+func Test_BitReader_FirstHigh_SubByte(t *testing.T) {
 	bytes := reverseBits([]byte{0x88, 0xC6, 0xFA})
-	testBitReaderReadSubByteCycle(t, NewBitArrayReader(FirstHigh, bytes))
-	testBitReaderReadSubByteCycle(t, NewBitStrReader(FirstHigh, NewByteString(bytes)))
+	testBitReaderReadSubByteCycle(t, testReader{NewBitIoReader(MSB, newByteReader(bytes))})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitArrayReader(MSB, bytes)})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(MSB, NewByteString(bytes))})
 }
 
 func Test_BitReader_FirstLow_SubByte(t *testing.T) {
 	bytes := []byte{0x88, 0xC6, 0xFA}
-	testBitReaderReadSubByteCycle(t, NewBitArrayReader(FirstLow, bytes))
-	testBitReaderReadSubByteCycle(t, NewBitStrReader(FirstLow, NewByteString(bytes)))
+	testBitReaderReadSubByteCycle(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitArrayReader(LSB, bytes)})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(LSB, NewByteString(bytes))})
 }
