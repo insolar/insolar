@@ -276,6 +276,7 @@ ci-test-integrtest-long: ## run networktest with race and a little count
 .PHONY: ci-test-integrtest-nightly
 ci-test-integrtest-nightly: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
     	$(MAKE) ci_test_integrtest
 
