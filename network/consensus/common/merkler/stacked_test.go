@@ -51,6 +51,7 @@
 package merkler
 
 import (
+	"fmt"
 	"math"
 	"math/bits"
 	"testing"
@@ -61,7 +62,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-func TestStackedCalculator_Unbalanced(t *testing.T) {
+func TestStackedCalculator_Unbalanced_AllEntries(t *testing.T) {
 	md := NewStackedCalculator(xorPairDigester{}, cryptkit.Digest{})
 
 	for bit := uint64(1); bit != 0; bit <<= 1 {
@@ -86,9 +87,54 @@ func TestStackedCalculator_Unbalanced(t *testing.T) {
 	require.Equal(t, uint64(0), md.FinishSequence().FoldToUint64())
 }
 
-func TestStackedCalculator_Balanced(t *testing.T) {
+func TestStackedCalculator_EntryPos(t *testing.T) {
+	// this table is a number of right-to-left transitions
+	expectedPos := [0x3b]byte{
+		//  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+		0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
+		1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+		1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+		2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, // overflow
+	}
+
+	for balanced := 0; balanced <= 1; balanced++ {
+		t.Run(fmt.Sprintf("balanced=%v", balanced != 0), func(t *testing.T) {
+			for markBit := uint64(1); markBit < uint64(1)<<uint8(len(expectedPos)); /* to avoid overflow in this test */ markBit <<= 1 {
+				var md StackedCalculator
+				if balanced != 0 {
+					md = NewStackedCalculator(xorShiftPairDigester{}, cryptkit.NewDigest(newBits64(0), "uint64"))
+				} else {
+					md = NewStackedCalculator(xorShiftPairDigester{}, cryptkit.Digest{})
+				}
+
+				for bit := uint64(1); bit != markBit; bit <<= 1 {
+					md.AddNext(newBits64(0))
+				}
+				md.AddNext(newBits64(markBit))
+
+				markBitPos := bits.Len64(markBit) - 1
+				expected := byte(markBitPos) + expectedPos[markBitPos]
+
+				v := md.ForkSequence().FinishSequence().FoldToUint64()
+				require.Equal(t, 1, bits.OnesCount64(v), "0x%x", markBitPos)
+				require.Equal(t, expected, byte(bits.Len64(v)-1), "0x%x", markBitPos)
+
+				for bit := uint64(markBit) << 1; bit != 0; bit <<= 1 {
+					md.AddNext(newBits64(0))
+					v := md.ForkSequence().FinishSequence().FoldToUint64()
+					require.Equal(t, expected, byte(bits.Len64(v)-1), "0x%x", markBitPos)
+				}
+				require.Equal(t, 64, md.Count())
+			}
+		})
+	}
+}
+
+func TestStackedCalculator_Balanced_AllEntries(t *testing.T) {
 	const unbalanced = uint64(1 << 56)
-	expectedUnbalanced := [32]byte{1, 1, 1, 0, 2, 1, 1, 0, 3, 2, 2, 1, 2, 1, 1, 0, 4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0}
+	expectedUnbalanced := [32]byte{
+		1, 1, 1, 0, 2, 1, 1, 0, 3, 2, 2, 1, 2, 1, 1, 0,
+		4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0}
 
 	md := NewStackedCalculator(xorCountPairDigester{}, cryptkit.NewDigest(newBits64(unbalanced), "uint64"))
 
@@ -142,10 +188,8 @@ func (p xorPairDigester) GetDigestMethod() cryptkit.DigestMethod {
 	return "xor64"
 }
 
-type xorCountPairDigester struct{}
-
-func (p xorCountPairDigester) GetDigestSize() int {
-	return 8
+type xorCountPairDigester struct {
+	xorPairDigester
 }
 
 func (p xorCountPairDigester) DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) cryptkit.Digest {
@@ -159,6 +203,12 @@ func (p xorCountPairDigester) DigestPair(digest0 longbits.FoldableReader, digest
 	return cryptkit.NewDigest(newBits64(counted|xored), "uint64")
 }
 
-func (p xorCountPairDigester) GetDigestMethod() cryptkit.DigestMethod {
-	return "xor64"
+type xorShiftPairDigester struct {
+	xorPairDigester
+}
+
+func (p xorShiftPairDigester) DigestPair(digest0 longbits.FoldableReader, digest1 longbits.FoldableReader) cryptkit.Digest {
+	v0 := digest0.FoldToUint64()
+	v1 := digest1.FoldToUint64()
+	return cryptkit.NewDigest(newBits64(v0^(v1<<1)), "uint64")
 }
