@@ -19,6 +19,7 @@ package certificate
 import (
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -146,6 +147,7 @@ func (cert *Certificate) SerializeNetworkPart() []byte {
 	sort.Strings(nodes)
 	out += strings.Join(nodes, "")
 
+	fmt.Println("SerializeNetworkPart out - ", out)
 	return []byte(out)
 }
 
