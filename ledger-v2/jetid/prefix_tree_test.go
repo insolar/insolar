@@ -106,17 +106,52 @@ func TestPrefixTree_Serialize(t *testing.T) {
 	splitOne(&pt, 1, 15)
 
 	buf := bytes.Buffer{}
-	require.NoError(t, pt.CompactSerialize(&buf))
+	require.NoError(t, PrefixTreeSerializer{}.Serialize(&pt, &buf))
 	bufCopy := buf.Bytes() // will be ok as we don't write into it further
 
+	require.Equal(t, uint8(RawSerializeV1), bufCopy[0])
 	//fmt.Printf("Compact: %5d bytes\n", len(bufCopy))
 	//fmt.Println(hex.Dump(bufCopy))
 
 	pt2 := PrefixTree{}
-	require.NoError(t, pt2.CompactDeserialize(&buf))
+	require.NoError(t, PrefixTreeDeserializer{}.DeserializeTo(&pt2, &buf))
 
 	buf2 := bytes.Buffer{}
-	require.NoError(t, pt.CompactSerialize(&buf2))
+	require.NoError(t, PrefixTreeSerializer{}.Serialize(&pt, &buf2))
+	if !bytes.Equal(bufCopy, buf2.Bytes()) {
+		pt2.PrintTable()
+	}
+	require.Equal(t, bufCopy, buf2.Bytes())
+	require.Equal(t, pt, pt2)
+}
+
+func TestPrefixTree_LZWSerialize(t *testing.T) {
+
+	pt := PrefixTree{}
+	pt.Init() // to make it properly comparable
+
+	splitZero(&pt, 0, 15)
+	splitOne(&pt, 1, 15)
+
+	// enforces LZW to be always applied
+	lzwSerializer := PrefixTreeSerializer{
+		UseLZW:       true,
+		LzwThreshold: 1,
+		LzwTolerance: 255,
+	}
+
+	buf := bytes.Buffer{}
+	require.NoError(t, lzwSerializer.Serialize(&pt, &buf))
+
+	bufCopy := buf.Bytes() // will be ok as we don't write into it further
+
+	require.Equal(t, uint8(LZWSerializeV1), bufCopy[0])
+
+	pt2 := PrefixTree{}
+	require.NoError(t, PrefixTreeDeserializer{}.DeserializeTo(&pt2, &buf))
+
+	buf2 := bytes.Buffer{}
+	require.NoError(t, lzwSerializer.Serialize(&pt, &buf2))
 	if !bytes.Equal(bufCopy, buf2.Bytes()) {
 		pt2.PrintTable()
 	}
@@ -353,9 +388,10 @@ func TestPrefixTree_Comparable_AfterUpdates(t *testing.T) {
 }
 
 func copyTree(pt *PrefixTree, propagation bool) *PrefixTree {
-	b := pt.CompactSerializeToBytes()
+
+	b := PrefixTreeSerializer{}.SerializeToRawBytes(pt)
 	pt2 := NewPrefixTree(propagation)
-	if e := pt2.CompactDeserialize(bytes.NewBuffer(b)); e != nil {
+	if e := (PrefixTreeDeserializer{}.DeserializeTo(&pt2, bytes.NewBuffer(b))); e != nil {
 		panic(e)
 	}
 	return &pt2
