@@ -469,8 +469,48 @@ func (zf zerologTemplate) GetTemplateConfig() logadapter.Config {
 	return *zf.template.config
 }
 
-func (zf zerologTemplate) GetTemplateLogger() insolar.Logger {
-	return zf.template
+func (zf zerologTemplate) CopyTemplateLogger(inheritable logadapter.InheritableConfig, params logadapter.LoggerCopyParams) insolar.Logger {
+	zr := zf.template
+
+	switch {
+	case zr.config.Inheritable == inheritable:
+		//
+	case zr.config.Inheritable.CanReuseLoggerFor(inheritable):
+		config := *zf.template.config
+		config.Inheritable = inheritable
+		zr = &zerologAdapter{logger: zf.template.logger, config: &config}
+	default:
+		return nil
+	}
+
+	newLevel := ToZerologLevel(params.Level)
+
+	switch {
+	case zr.logger.GetLevel() != newLevel:
+	case len(params.Fields) > 0:
+	case len(params.DynFields) > 0:
+	default:
+		return zr
+	}
+
+	if zr == zf.template {
+		cp := *zr
+		zr = &cp
+	}
+	if zr.logger.GetLevel() != newLevel {
+		zr.logger = zr.logger.Level(newLevel)
+	}
+	if len(params.DynFields) > 0 {
+		zr.logger = zr.logger.Hook(newDynFieldsHook(params.DynFields))
+	}
+	if len(params.Fields) > 0 {
+		lc := zr.logger.With()
+		for k, v := range params.Fields {
+			lc = lc.Interface(k, v)
+		}
+		zr.logger = lc.Logger()
+	}
+	return zr
 }
 
 func (zf zerologTemplate) CreateNewLogger(params logadapter.LoggerParams) (insolar.Logger, error) {
