@@ -64,6 +64,11 @@ const DefaultOutputParallelLimit = 5
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
+	// Logs a message for tracing (level can vary)
+	Trace(...interface{})
+	// Logs a message for tracing (level can vary)
+	Tracef(string, ...interface{})
+
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
 	// Debugf formatted logs a message at level Debug.
@@ -101,16 +106,22 @@ type Logger interface {
 
 	// Is() returns true when a message of the given level will get to output. Considers the global log filter.
 	Is(level LogLevel) bool
-
-	// WithFields return copy of Logger with the given fields added. Fields are not deduplicated.
-	WithFields(map[string]interface{}) Logger
-	// WithField return copy of Logger with the given field added. Fields are not deduplicated.
-	WithField(string, interface{}) Logger
+	// Returns true when Trace() will output
+	IsTracing() bool
 
 	// Provides a builder based on configuration of this logger.
 	Copy() LoggerBuilder
+
 	// Provides a copy of this logger with a filter set to lvl.
+	// Deprecated: Don't use, or use builder.
 	Level(lvl LogLevel) Logger
+
+	// WithFields return copy of Logger with the given fields added. Fields are not deduplicated.
+	// Deprecated: Use struct-logging or set fields with builder.
+	WithFields(map[string]interface{}) Logger
+	// WithField return copy of Logger with the given field added. Fields are not deduplicated.
+	// Deprecated: Use struct-logging or set fields with builder.
+	WithField(string, interface{}) Logger
 
 	// DO NOT USE directly. Provides access to an embeddable methods of this logger.
 	Embeddable() EmbeddedLogger
@@ -130,10 +141,13 @@ type LoggerBuilder interface {
 	// Set buffer size and applicability of the buffer. Will be IGNORED when a reused output is already buffered.
 	WithBuffer(bufferSize int, bufferForAll bool) LoggerBuilder
 
-	// WithLevel sets log level. Cancels WithDynamicLevel()
+	// WithLevel sets log level.
 	WithLevel(level LogLevel) LoggerBuilder
-	// WithDynamicLevel sets a dynamic log level. Nil value will panic. Resets WithLevel()
-	WithDynamicLevel(level LogLevelGetter) LoggerBuilder
+
+	//// Sets level for active Trace() operations. Parameter can only be Info, Warn or NoLevel (ignores any Trace).
+	//WithTracingLevel(LogLevel) LoggerBuilder
+	//// Enables remapping of Trace() to the level set by WithTracingLevel
+	//WithTracing(bool) LoggerBuilder
 
 	// Controls 'func' and 'caller' field computation. See also WithSkipFrameCount().
 	WithCaller(mode CallerFieldMode) LoggerBuilder
@@ -149,6 +163,8 @@ type LoggerBuilder interface {
 	WithFields(map[string]interface{}) LoggerBuilder
 	// WithField add a fields for to-be-built logger. Fields are deduplicated within a single builder only.
 	WithField(string, interface{}) LoggerBuilder
+	// Clears out all inherited fields
+	WithoutInheritedFields() LoggerBuilder
 
 	// Adds a dynamically-evaluated field. Fields are deduplicated within a single builder only. When func=nil or func()=nil then the field is omitted.
 	// NB! Dynamically-evaluated fields are not inherited by derived loggers.
@@ -171,6 +187,8 @@ type EmbeddedLogger interface {
 	EmbeddedEventf(level LogLevel, fmt string, args ...interface{})
 	// Does flushing of an underlying buffer. Implementation and factual output may vary.
 	EmbeddedFlush(msg string)
+	// Provides actual level for Trace()
+	EmbeddedTrace() LogLevel
 }
 
 type GlobalLogAdapterFactory interface {
@@ -218,10 +236,6 @@ type LoggerOutput interface {
 	LogLevelWriter
 	LowLatencyWrite(LogLevel, []byte) (int, error)
 	IsLowLatencySupported() bool
-}
-
-type LogLevelGetter interface {
-	GetLogLevel() LogLevel
 }
 
 type LogObjectWriter interface {

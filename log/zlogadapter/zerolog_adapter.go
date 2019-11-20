@@ -151,6 +151,7 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 	zc.Instruments = pCfg.Instruments
 	zc.MsgFormat = msgFmt
 	zc.Instruments.SkipFrameCountBaseline = uint8(sfb)
+	//zc.TraceLevel = insolar.InfoLevel
 
 	zb := logadapter.NewBuilder(zerologFactory{}, zc, pCfg.LogLevel)
 
@@ -210,9 +211,6 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	if event == nil {
 		return nil
 	}
-	if z.config.DynLevel != nil && z.config.DynLevel.GetLogLevel() > level {
-		return nil
-	}
 	z.config.Metrics.OnFilteredEvent(m.metrics, level)
 	return event
 }
@@ -242,12 +240,33 @@ func (z *zerologAdapter) EmbeddedFlush(msg string) {
 	_ = z.config.LoggerOutput.Flush()
 }
 
+func (z *zerologAdapter) EmbeddedTrace() insolar.LogLevel {
+	return insolar.DebugLevel
+}
+
 func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
 	z.EmbeddedEvent(level, args...)
 }
 
 func (z *zerologAdapter) Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
 	z.EmbeddedEventf(level, fmt, args...)
+}
+
+func (z *zerologAdapter) Trace(args ...interface{}) {
+	if lvl := z.EmbeddedTrace(); lvl != insolar.NoLevel {
+		z.EmbeddedEvent(lvl, args...)
+	}
+}
+
+func (z *zerologAdapter) Tracef(format string, args ...interface{}) {
+	if lvl := z.EmbeddedTrace(); lvl != insolar.NoLevel {
+		z.EmbeddedEventf(lvl, format, args...)
+	}
+}
+
+func (z *zerologAdapter) IsTracing() bool {
+	lvl := z.EmbeddedTrace()
+	return lvl > insolar.DebugLevel && z.Is(lvl)
 }
 
 func (z *zerologAdapter) Debug(args ...interface{}) {
@@ -354,49 +373,51 @@ func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
 	return output
 }
 
-func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel,
-	config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{}, template *zerologAdapter,
+func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, params logadapter.LoggerParams, template *zerologAdapter,
 ) (insolar.Logger, error) {
 
-	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
+	instruments := params.Config.Instruments
+	skipFrames := int(instruments.SkipFrameCountBaseline) + int(instruments.SkipFrameCount)
+	callerMode := instruments.CallerMode
+	inheritFields := params.Reqs&logadapter.RequiresParentFields != 0
 
-	if template != nil && (reqs&logadapter.RequiresParentFields != 0) {
-		// NB! We have to create a new logger and pass the context separately
-		// Otherwise, zerolog will also copy hooks - which we need to get rid of some.
-		inheritedContext := template.logger.With()
-		ls.UpdateContext(func(zerolog.Context) zerolog.Context {
-			return inheritedContext
-		})
-	}
+	// NB! We have to create a new logger and pass the context separately
+	// Otherwise, zerolog will also copy hooks - which we need to get rid of some.
+	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(params.Level))
 
-	if ok, name, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
-		// MUST be the first Hook
+	if ok, name, _ := getWriteDelayConfig(params.Config.Metrics, params.Config.BuildConfig); ok {
 		ls = ls.Hook(newWriteDelayPreHook(name, writeDelayPreferTrim))
 	}
-
-	lc := ls.With().Timestamp()
-
-	skipFrames := int(config.Instruments.SkipFrameCountBaseline) + int(config.Instruments.SkipFrameCount)
-	callerMode := config.Instruments.CallerMode
-
-	if callerMode == insolar.CallerField {
-		lc = lc.CallerWithSkipFrameCount(skipFrames)
+	if dynFields := params.DynFields; len(dynFields) > 0 {
+		ls = ls.Hook(newDynFieldsHook(dynFields))
 	}
-	ls = lc.Logger()
 	if callerMode == insolar.CallerFieldWithFuncName {
 		ls = ls.Hook(newCallerHook(2 + skipFrames))
 	}
-
-	if len(dynFields) > 0 {
-		ls = ls.Hook(newDynFieldsHook(dynFields))
+	lc := ls.With()
+	// only add hooks, DON'T set the context as it can be replaced below
+	lc = lc.Timestamp()
+	if callerMode == insolar.CallerField {
+		lc = lc.CallerWithSkipFrameCount(skipFrames)
 	}
 
-	if config.Instruments.MetricsMode == insolar.NoLogMetrics {
-		config.Metrics = nil
+	if inheritFields && template != nil {
+		ls = lc.Logger()            // save hooks
+		lc = template.logger.With() // get a copy of the inherited context
+	}
+	for k, v := range params.Fields {
+		lc = lc.Interface(k, v)
 	}
 
-	return &zerologAdapter{logger: ls, config: &config}, nil
+	ls.UpdateContext(func(zerolog.Context) zerolog.Context {
+		return lc
+	})
+
+	cfg := params.Config
+	if instruments.MetricsMode == insolar.NoLogMetrics {
+		cfg.Metrics = nil
+	}
+	return &zerologAdapter{logger: ls, config: &cfg}, nil
 }
 
 func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs logadapter.FactoryRequirementFlags) zerolog.LevelWriter {
@@ -406,11 +427,9 @@ func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs loga
 	return zerologAdapterOutput{config.LoggerOutput}
 }
 
-func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{},
-) (insolar.Logger, error) {
-	output := zf.createOutputWrapper(config, reqs)
-	return zf.createNewLogger(output, level, config, reqs, dynFields, nil)
+func (zf zerologFactory) CreateNewLogger(params logadapter.LoggerParams) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(params.Config, params.Reqs)
+	return zf.createNewLogger(output, params, nil)
 }
 
 func (zf zerologFactory) CanReuseMsgBuffer() bool {
@@ -454,11 +473,9 @@ func (zf zerologTemplate) GetTemplateLogger() insolar.Logger {
 	return zf.template
 }
 
-func (zf zerologTemplate) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{},
-) (insolar.Logger, error) {
-	output := zf.createOutputWrapper(config, reqs)
-	return zf.createNewLogger(output, level, config, reqs, dynFields, zf.template)
+func (zf zerologTemplate) CreateNewLogger(params logadapter.LoggerParams) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(params.Config, params.Reqs)
+	return zf.createNewLogger(output, params, zf.template)
 }
 
 /* ========================================= */
