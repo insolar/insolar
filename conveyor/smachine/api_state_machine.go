@@ -85,8 +85,8 @@ type StepLoggerData struct {
 	Flags       StepLoggerFlags
 	Error       error
 
-	// NB! This field can't be provided by SlotMachine and will be nil
-	// but it can be filled in by custom wrappers of StepLoggerFunc
+	// NB! This field can only be provided by SlotMachine at slot initialization.
+	// Later it can be filled in by custom wrappers of StepLoggerFunc
 	SM StateMachine
 }
 
