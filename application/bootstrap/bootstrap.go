@@ -319,6 +319,7 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 		}
 
 		certFile := path.Join(g.certificatesOutDir, node.certName)
+		fmt.Println("current cert - ", cert)
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create certificate: %v", certFile)
