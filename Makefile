@@ -227,13 +227,13 @@ ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 ci-test-slow-long: ## run slow tests with race and count
 	CI_TEST_ARGS=" -race " \
 	TEST_COUNT=50 \
-		$(MAKE) ci_test_slow
+		$(MAKE) ci-test-slow
 
 .PHONY: ci-test-slow-nightly
 ci-test-slow-nightly: ## run slow tests with race and count
 	CI_TEST_ARGS=" -race " \
 	TEST_COUNT=80 \
-		$(MAKE) ci_test_slow
+		$(MAKE) ci-test-slow
 
 .PHONY: ci-test-func-base
 ci-test-func-base: ## run functest, redirects json output to file (CI)
@@ -271,14 +271,14 @@ ci-test-integrtest-long: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
 	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
-    	$(MAKE) ci_test_integrtest
+    	$(MAKE) ci-test-integrtest
 
 .PHONY: ci-test-integrtest-nightly
 ci-test-integrtest-nightly: ## run networktest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
 	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
-    	$(MAKE) ci_test_integrtest
+    	$(MAKE) ci-test-integrtest
 
 
 .PHONY: regen-proxies
