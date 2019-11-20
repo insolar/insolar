@@ -42,6 +42,8 @@ type BasicContext interface {
 	ParentLink() SlotLink
 	// not nil
 	GetContext() context.Context
+
+	//Log() Logger
 }
 
 /*------------------  Contexts for in-order steps -----------------------*/
@@ -99,6 +101,9 @@ type ConstructionContext interface {
 	// SetDefaultStepLogger(nil, false) will panic, as StateMachine is no longer available for the default implementation.
 	// See StateMachineDeclaration.GetStepLogger() for additional details.
 	SetDefaultStepLogger(fn StepLoggerFunc, isOutput bool)
+
+	//SetTracing(bool)
+	//SetTracerId(string)
 }
 
 /* A context parent for all regular step contexts */
