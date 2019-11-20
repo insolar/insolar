@@ -250,6 +250,7 @@ ci_test_func:  ## run functest 3 times
 .PHONY: ci-test-func-long
 ci-test-func-long: ## run functest with race and a little count
 	CI_TEST_ARGS=" -p 10 -race " \
+	TEST_ARGS=" -timeout 300m " \
 	FUNCTEST_COUNT=10 \
 		$(MAKE) ci-test-func-base
 
