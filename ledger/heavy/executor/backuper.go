@@ -280,29 +280,35 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 }
 
 func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"last_finalized_pulse": lastFinalizedPulse,
+	})
+
+	logger.Info("MakeBackup: before acquiring the lock")
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	inslogger.FromContext(ctx).Infof("MakeBackup starts. pulse: ", lastFinalizedPulse)
+	logger.Info("MakeBackup: lock acquired!")
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
+		logger.Info("MakeBackup: backup already done")
 		return ErrAlreadyDone
 	}
 
 	if !b.config.Enabled {
-		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
+		logger.Info("MakeBackup: backup disabled")
 		b.lastBackupedPulse = lastFinalizedPulse
 		return ErrBackupDisabled
 	}
 
 	err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
+		logger.Infof("MakeBackup: doBackup() returned an error %v", err)
 		return errors.Wrap(err, "failed to doBackup")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
 
-	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
+	logger.Infof("Done!")
 	return nil
 }
 
