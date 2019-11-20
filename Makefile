@@ -208,8 +208,8 @@ test_with_coverage_fast: ## ???
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
 
-.PHONY: ci_test_with_coverage
-ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
+.PHONY: ci-test-with-coverage
+ci-test-with-coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
