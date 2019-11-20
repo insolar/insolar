@@ -261,8 +261,8 @@ ci-test-func-nightly: ## run functest with large count and race
 	FUNCTEST_COUNT=200 \
 		$(MAKE) ci-test-func-base
 
-.PHONY: ci_test_integrtest
-ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
+.PHONY: ci-test-integrtest
+ci-test-integrtest: ## run networktest 1 time, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(TEST_COUNT)
 
