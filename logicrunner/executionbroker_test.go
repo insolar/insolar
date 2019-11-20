@@ -371,7 +371,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 		numberOfMessages int
 		pending          insolar.PendingState
 		pendingConfirmed bool
-		ledgerHasMore    bool
+		ledgerHasMore    LedgerHasMore
 		end              bool
 	}{
 		{
@@ -389,6 +389,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			numberOfMessages: 1,
 			pending:          insolar.InPending,
 			pendingConfirmed: true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 		{
 			name: "not confirmed pending",
@@ -403,7 +404,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			numberOfMessages: 1,
 			pending:          insolar.InPending,
 			pendingConfirmed: true,
-			ledgerHasMore:    true,
+			ledgerHasMore:    LedgerHasMoreKnown,
 			end:              true,
 		},
 		{
@@ -411,7 +412,8 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
 				er := executionregistry.NewExecutionRegistryMock(t).
-					IsEmptyMock.Return(true).DoneMock.Return(true)
+					IsEmptyMock.Return(true).
+					DoneMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, pa)
 				broker.finishTranscript(ctx, randTranscript(ctx))
 				return broker
@@ -420,6 +422,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			pendingConfirmed: true,
 			numberOfMessages: 1,
 			end:              true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 		{
 			name: "did nothing",
@@ -434,6 +437,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			pendingConfirmed: true,
 			numberOfMessages: 0,
 			end:              true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 	}
 
@@ -590,10 +594,10 @@ func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
 		objectRef, nil, nil, nil, nil, nil, nil, pa,
 	)
 
-	b.ledgerHasMoreRequests = true
+	b.ledgerHasMoreRequests = LedgerHasMoreUnknown
 	b.noMoreRequestsOnLedger(ctx)
 
-	require.False(t, b.ledgerHasMoreRequests)
+	assert.Equal(t, b.ledgerHasMoreRequests, LedgerHasMoreKnown)
 }
 
 func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
