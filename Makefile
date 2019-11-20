@@ -218,8 +218,8 @@ ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output t
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
 
-.PHONY: ci_test_slow
-ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
+.PHONY: ci-test-slow
+ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count=$(TEST_COUNT)
 
