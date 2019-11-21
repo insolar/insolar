@@ -23,12 +23,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 // Make sure that panic() in a contract causes a system error and that this error
 // is returned by API.
 func TestPanic(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var panicContractCode = `
 package main
 
@@ -56,6 +58,7 @@ func (r *One) Panic() error {
 }
 
 func TestRecursiveCallError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -100,6 +103,7 @@ func (r *One) Recursive() (error) {
 }
 
 func TestPrototypeMismatch(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	testContract := `
 package main
 
@@ -173,6 +177,7 @@ func (c *First) GetName() (string, error) {
 }
 
 func TestContractWithEmbeddedConstructor(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 

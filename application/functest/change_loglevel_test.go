@@ -29,6 +29,7 @@ import (
 )
 
 func TestChangeLogLevelOk(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	url := launchnet.HostDebug + "/debug/loglevel?level=debug"
 	resp, err := http.Get(url)
 	require.NoError(t, err)
@@ -40,6 +41,7 @@ func TestChangeLogLevelOk(t *testing.T) {
 }
 
 func TestChangeLogLevelFail(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	url := launchnet.HostDebug + "/debug/loglevel?level=ololo"
 	resp, err := http.Get(url)
 	require.NoError(t, err)
