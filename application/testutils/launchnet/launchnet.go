@@ -182,7 +182,7 @@ func GetNodesCount() (int, error) {
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
 }
 
-func GetNumShards() int {
+func GetNumShards() (int, error) {
 	type bootstrapConf struct {
 		PKShardCount int `yaml:"ma_shard_count"`
 	}
@@ -191,19 +191,19 @@ func GetNumShards() int {
 
 	path, err := launchnetPath("bootstrap.yaml")
 	if err != nil {
-		return 0
+		return 0, err
 	}
 	buff, err := ioutil.ReadFile(path)
 	if err != nil {
-		return 0
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't read bootstrap config")
 	}
 
 	err = yaml.Unmarshal(buff, &conf)
 	if err != nil {
-		return 0
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't parse bootstrap config")
 	}
 
-	return conf.PKShardCount
+	return conf.PKShardCount, nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {
