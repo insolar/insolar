@@ -35,7 +35,7 @@ func TestGetFreeAddressCount(t *testing.T) {
 	}
 }
 
-const numShards = 1000
+var numShards = launchnet.GetNumShards()
 
 func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 
