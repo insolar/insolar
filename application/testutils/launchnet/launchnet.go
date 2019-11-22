@@ -32,6 +32,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"testing"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -49,8 +50,14 @@ const AdminPort = "19002"
 const PublicPort = "19102"
 const HostDebug = "http://localhost:8001"
 const TestAdminRPCUrl = "/admin-api/rpc"
-const TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
-const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
+
+var AdminHostPort = HOST + AdminPort
+var TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
+var TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
+var disableLaunchnet = false
+var testRPCUrlVar = "INSOLAR_FUNC_RPC_URL"
+var testRPCUrlPublicVar = "INSOLAR_FUNC_RPC_URL_PUBLIC"
+var keysPathVar = "INSOLAR_FUNC_KEYS_PATH"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
@@ -118,6 +125,12 @@ type User struct {
 }
 
 func launchnetPath(a ...string) (string, error) {
+	keysPath := os.Getenv(keysPathVar)
+	if keysPath != "" {
+		p := []string{keysPath}
+		p = append(p, a[len(a)-1])
+		return filepath.Join(p...), nil
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
@@ -167,6 +180,30 @@ func GetNodesCount() (int, error) {
 	}
 
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
+}
+
+func GetNumShards() (int, error) {
+	type bootstrapConf struct {
+		PKShardCount int `yaml:"ma_shard_count"`
+	}
+
+	var conf bootstrapConf
+
+	path, err := launchnetPath("bootstrap.yaml")
+	if err != nil {
+		return 0, err
+	}
+	buff, err := ioutil.ReadFile(path)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't read bootstrap config")
+	}
+
+	err = yaml.Unmarshal(buff, &conf)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't parse bootstrap config")
+	}
+
+	return conf.PKShardCount, nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {
@@ -473,13 +510,30 @@ func waitForLaunch() error {
 	}
 }
 
+func RunOnlyWithLaunchnet(t *testing.T) {
+	if disableLaunchnet {
+		t.Skip()
+	}
+}
+
 func setup() error {
-	err := startNet()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't startNet")
+	testRPCUrl := os.Getenv(testRPCUrlVar)
+	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
+
+	if testRPCUrl == "" || testRPCUrlPublic == "" {
+		err := startNet()
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] could't startNet")
+		}
+	} else {
+		TestRPCUrl = testRPCUrl
+		TestRPCUrlPublic = testRPCUrlPublic
+		url := strings.Split(TestRPCUrlPublic, "/")
+		AdminHostPort = strings.Join(url[0:len(url)-1], "/")
+		disableLaunchnet = true
 	}
 
-	err = loadAllMembersKeys()
+	err := loadAllMembersKeys()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't load keys: ")
 	}

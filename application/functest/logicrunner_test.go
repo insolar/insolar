@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,6 +31,7 @@ import (
 )
 
 func TestSingleContract(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractCode = `
 package main
 
@@ -86,6 +88,7 @@ func (c *One) Dec() (int, error) {
 }
 
 func TestContractCallingContract(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -261,6 +264,7 @@ func (r *Two) GetPayloadString() (string, error) {
 
 // Make sure a contract can make a saga call to another contract
 func TestSagaSimpleCall(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	balance := float64(100)
 	amount := float64(10)
 	var contractCode = `
@@ -348,6 +352,7 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 
 // Make sure a contract can make a saga call from a saga accept method
 func TestSagaCallFromSagaAcceptMethod(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	balance := float64(100)
 	amount := float64(10)
 	var contractCode = `
@@ -460,6 +465,7 @@ func (w *TestSagaCallFromAcceptMethodContract) RollbackStepTwo(amount int) error
 
 // Make sure a contract can make multiple saga calls in one method
 func TestSagaMultipleCalls(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	balance := float64(100)
 	amount := float64(10)
 	var contractCode = `
@@ -557,6 +563,7 @@ func (w *TestSagaMultipleCallsContract) Rollback(amount int) error {
 // Make sure a contract can make a saga call to another _type_ of contract
 // without a rollback method using a special flag.
 func TestSagaCallBetweenContractsWithoutRollback(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	balance := float64(100)
 	amount := float64(10)
 	var contractOneCode = `
@@ -661,6 +668,7 @@ func (w *SagaMagicFlagTwo) Accept(amount int) error {
 
 // Make sure a contract can make a saga call to itself
 func TestSagaSelfCall(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractCode = `
 package main
 
@@ -732,6 +740,7 @@ func (c *TestSagaSelfCallContract) Rollback(delta int) error {
 }
 
 func TestContextPassing(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -759,6 +768,7 @@ func (r *One) Hello() (string, error) {
 }
 
 func TestDeactivation(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -786,6 +796,7 @@ func (r *One) Kill() error {
 }
 
 func TestErrorInterface(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -863,6 +874,7 @@ func (r *Two) NoError() error {
 }
 
 func TestNilResult(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -921,6 +933,7 @@ func (r *Two) Hello() (*string, error) {
 // If a contract constructor returns `nil, nil` it's considered a logical error,
 // which is returned to the calling contract and/or API.
 func TestConstructorReturnNil(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -976,6 +989,7 @@ func New() (*Two, error) {
 // If a contract constructor fails it's considered a logical error,
 // which is returned to the calling contract and/or API.
 func TestConstructorReturnError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -1029,6 +1043,7 @@ func New() (*Two, error) {
 }
 
 func TestGetParent(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
  package main
 
@@ -1092,6 +1107,7 @@ func TestGinsiderMustDieAfterInsolardError(t *testing.T) {
 }
 
 func TestGetRemoteData(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -1144,6 +1160,7 @@ func New() (*Two, error) {
 }
 
 func TestImmutableAnnotation(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -1248,6 +1265,7 @@ func (r *Three) DoNothing() (error) {
 }
 
 func TestMultipleConstructorsCall(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractCode = `
 package main
 

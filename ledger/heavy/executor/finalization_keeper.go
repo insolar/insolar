@@ -47,7 +47,12 @@ func NewFinalizationKeeperDefault(jk JetKeeper, pc pulse.Calculator, limit int) 
 }
 
 func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar.PulseNumber) error {
-	logger := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"new_pulse": current,
+	})
+
+	logger.Infof("FinalizationKeeper.OnPulse about to call pulseCalculator.Backwards")
+
 	bottomLevel, err := f.pulseCalculator.Backwards(ctx, current, f.limit)
 	if err != nil {
 		if err == pulse.ErrNotFound {
@@ -57,16 +62,22 @@ func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar
 		return errors.Wrap(err, "Can't get old pulse")
 	}
 
+	logger.Infof("FinalizationKeeper.OnPulse returned from pulseCalculator.Backwards, about to call jetKeeper.TopSyncPulse")
+
 	lastConfirmedPulse := f.jetKeeper.TopSyncPulse()
+
+	logger.Infof("FinalizationKeeper.OnPulse returned from jetKeeper.TopSyncPulse. Last confirmed pulse: %d, current: %d, limit: %d, bottom level: %d",
+		lastConfirmedPulse, current, f.limit, bottomLevel.PulseNumber)
+
 	if current < lastConfirmedPulse {
 		return errors.New(fmt.Sprintf("Current pulse ( %d ) is less than last confirmed ( %d )", current, lastConfirmedPulse))
 	}
 
 	if lastConfirmedPulse <= bottomLevel.PulseNumber {
-		inslogger.FromContext(ctx).Panicf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse)
+		logger.Panicf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse)
 	}
 
-	logger.Debugf("FinalizationKeeper: everything is ok. Current pulse: %d, last confirmed: %d, limit: %d", current, lastConfirmedPulse, f.limit)
+	logger.Infof("FinalizationKeeper: everything is ok. Current pulse: %d, last confirmed: %d, limit: %d", current, lastConfirmedPulse, f.limit)
 
 	return nil
 }

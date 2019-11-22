@@ -21,10 +21,12 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCallUploadedContract(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	contractCode := `
 		package main
 		import "github.com/insolar/insolar/logicrunner/builtin/foundation"

@@ -63,26 +63,33 @@ func NewPulseManager(disp dispatcher.Dispatcher) *PulseManager {
 
 // Set set's new pulse.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
-	logger := inslogger.FromContext(ctx)
-	logger.WithFields(map[string]interface{}{
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-	}).Info("trying to set new pulse")
+	})
 
+	logger.Info("PulseManager.Set is about to acquire the lock")
+
+	// In Go the goroutine which first tries to acquire the lock will get it first
+	// (fairness property). See https://play.golang.org/p/Vkj7parznba
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
 
-	logger.Debug("behind set lock")
+	logger.Info("PulseManager.Set acquired the lock")
 
 	ctx, span := instracer.StartSpan(ctx, "PulseManager.Set")
 	span.SetTag("pulse.PulseNumber", int64(newPulse.PulseNumber))
 	defer span.Finish()
 
 	if m.dispatcher != nil {
+		logger.Info("PulseManager.Set calls dispatcher.ClosePulse")
 		m.dispatcher.ClosePulse(ctx, newPulse)
+		logger.Info("PulseManager.Set returned from dispatcher.ClosePulse")
 	}
 
 	// Dealing with node lists.
 	{
+		logger.Info("PulseManager.Set deals with node list")
+
 		fromNetwork := m.NodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
@@ -97,17 +104,17 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 			logger.Panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 
+		logger.Info("PulseManager.Set finished to deal with node list")
 	}
 
-	logger.Info("save pulse to storage")
+	logger.Info("PulseManager.Set calls PulseAppender.Append")
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		instracer.AddError(span, err)
 		logger.Error(err)
 		return errors.Wrap(err, "call of AddPulse failed")
 	}
-	logger.Info("pulse is saved to storage")
+	logger.Info("PulseManager.Set returned from PulseAppender.Append, about to call FinalizationKeeper.OnPulse")
 
-	logger.Debug("before calling to FinalizationKeeper.OnPulse")
 	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
 	if err != nil {
 		logger.Error(err)
@@ -115,13 +122,15 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
 	}
 
-	logger.Debug("before calling to StartPulse.SetStartPulse")
+	logger.Info("PulseManager.Set returned from FinalizationKeeper.OnPulse, about to call StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
-
+	logger.Info("PulseManager.Set returned from StartPulse.SetStartPulse")
 	if m.dispatcher != nil {
+		logger.Info("PulseManager.Set about to call dispatcher.BeginPulse")
 		m.dispatcher.BeginPulse(ctx, newPulse)
+		logger.Info("PulseManager.Set returned from dispatcher.BeginPulse")
 	}
 
-	logger.Info("new pulse is set")
+	logger.Info("PulseManager.Set - All OK!")
 	return nil
 }

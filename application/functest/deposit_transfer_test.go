@@ -76,7 +76,7 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "hold period didn't end")
+	require.Contains(t, data.Trace, "hold period didn't end", "check lockup_pulse_period param at bootstrap.yaml: it maybe too low")
 }
 
 func TestDepositTransferBiggerAmount(t *testing.T) {
