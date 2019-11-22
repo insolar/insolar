@@ -574,3 +574,10 @@ func (s *Slot) setTracing(b bool) {
 		s.slotFlags &^= slotIsTracing
 	}
 }
+
+func (s *Slot) getTracerId() TracerId {
+	if s.stepLogger == nil {
+		return ""
+	}
+	return s.stepLogger.GetTracerId()
+}

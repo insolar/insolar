@@ -188,14 +188,24 @@ func (p *slotContext) Errorf(msg string, a ...interface{}) StateUpdate {
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
-	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{fn: fn,
+		def: prepareSlotValue{
+			slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
+			isReplacement:   true,
+			tracerId:        p.s.getTracerId(),
+		}}
 	return tmpl.newVar(def)
 }
 
 func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) StateUpdate {
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
-	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{fn: fn,
+		def: prepareSlotValue{
+			slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
+			isReplacement:   true,
+			tracerId:        p.s.getTracerId(),
+		}}
 	mergeDefaultValues(&def.def, defValues)
 
 	return tmpl.newVar(def)
@@ -256,6 +266,9 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 	p.ensureAny2(updCtxExec, updCtxFail)
 	if fn == nil {
 		panic("illegal value")
+	}
+	if len(defValues.TracerId) == 0 {
+		defValues.TracerId = p.s.getTracerId()
 	}
 
 	m := p.s.machine
