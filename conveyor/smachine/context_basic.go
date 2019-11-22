@@ -185,15 +185,20 @@ func (p *slotContext) Errorf(msg string, a ...interface{}) StateUpdate {
 	return p.Error(fmt.Errorf(msg, a...))
 }
 
+func (p *slotContext) _prepareReplacementData() prepareSlotValue {
+	return prepareSlotValue{
+		slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
+		isReplacement:   true,
+		tracerId:        p.s.getTracerId(),
+	}
+}
+
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
 	def := prepareReplaceData{fn: fn,
-		def: prepareSlotValue{
-			slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
-			isReplacement:   true,
-			tracerId:        p.s.getTracerId(),
-		}}
+		def: p._prepareReplacementData(),
+	}
 	return tmpl.newVar(def)
 }
 
@@ -201,11 +206,8 @@ func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) S
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
 	def := prepareReplaceData{fn: fn,
-		def: prepareSlotValue{
-			slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
-			isReplacement:   true,
-			tracerId:        p.s.getTracerId(),
-		}}
+		def: p._prepareReplacementData(),
+	}
 	mergeDefaultValues(&def.def, defValues)
 
 	return tmpl.newVar(def)
@@ -214,7 +216,9 @@ func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) S
 func (p *slotContext) ReplaceWith(sm StateMachine) StateUpdate {
 	tmpl := p.template(stateUpdReplaceWith) // ensures state of this context
 
-	def := prepareReplaceData{sm: sm, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{sm: sm,
+		def: p._prepareReplacementData(),
+	}
 	return tmpl.newVar(def)
 }
 
