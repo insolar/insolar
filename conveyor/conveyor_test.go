@@ -44,10 +44,8 @@ func TestConveyor(t *testing.T) {
 			return sm
 		}
 	}
-	machineConfig.StepLoggerFactoryFn = func(ctx context.Context) smachine.StepLoggerFunc {
-		return func(data *smachine.StepLoggerData) {
-			stepLogger(ctx, data)
-		}
+	machineConfig.StepLoggerFactoryFn = func(ctx context.Context, sm smachine.StateMachine, tracer smachine.TracerId) smachine.StepLogger {
+		return conveyorStepLogger{ctx, sm, tracer}
 	}
 
 	conveyor := NewPulseConveyor(context.Background(), PulseConveyorConfig{
@@ -96,25 +94,4 @@ func TestConveyor(t *testing.T) {
 	fmt.Println("======================")
 	conveyor.StopNoWait()
 	time.Sleep(time.Hour)
-}
-
-func stepLogger(_ context.Context, data *smachine.StepLoggerData) {
-	if data.Flags&smachine.StepLoggerInternal != 0 {
-		fmt.Printf("%s[%3d]: %03d @ %03d: internal %s current=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.CycleNo,
-			data.StepNo.SlotID(), data.StepNo.StepNo(),
-			data.UpdateType, data.CurrentStep.Transition, data.SM, data.SM)
-		return
-	}
-
-	special := ""
-	if data.Flags&smachine.StepLoggerMigrate != 0 {
-		special = "migrate "
-	}
-	detached := ""
-	if data.Flags&smachine.StepLoggerDetached != 0 {
-		detached = "(detached)"
-	}
-	fmt.Printf("%s[%3d]: %03d @ %03d: %s%s%s current=%p next=%p payload=%T:%+v\n", data.StepNo.MachineId(), data.CycleNo,
-		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		special, data.UpdateType, detached, data.CurrentStep.Transition, data.NextStep.Transition, data.SM, data.SM)
 }

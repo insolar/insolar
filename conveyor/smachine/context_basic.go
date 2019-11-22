@@ -165,11 +165,6 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 	return p.s.defResult
 }
 
-func (p *slotContext) SetDefaultStepLogger(lf StepLoggerFunc, isOutput bool) {
-	p.ensureAtLeast(updCtxInit)
-	p.s.stepLogger = p.s.machine._getStepLogger(p.s.ctx, lf, isOutput, nil) // sm == nil disallows use of non-final nil handler
-}
-
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }
@@ -190,17 +185,29 @@ func (p *slotContext) Errorf(msg string, a ...interface{}) StateUpdate {
 	return p.Error(fmt.Errorf(msg, a...))
 }
 
+func (p *slotContext) _prepareReplacementData() prepareSlotValue {
+	return prepareSlotValue{
+		slotReplaceData: p.s.slotReplaceData.takeOutForReplace(),
+		isReplacement:   true,
+		tracerId:        p.s.getTracerId(),
+	}
+}
+
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
-	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{fn: fn,
+		def: p._prepareReplacementData(),
+	}
 	return tmpl.newVar(def)
 }
 
 func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) StateUpdate {
 	tmpl := p.template(stateUpdReplace) // ensures state of this context
 
-	def := prepareReplaceData{fn: fn, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{fn: fn,
+		def: p._prepareReplacementData(),
+	}
 	mergeDefaultValues(&def.def, defValues)
 
 	return tmpl.newVar(def)
@@ -209,7 +216,9 @@ func (p *slotContext) ReplaceExt(fn CreateFunc, defValues CreateDefaultValues) S
 func (p *slotContext) ReplaceWith(sm StateMachine) StateUpdate {
 	tmpl := p.template(stateUpdReplaceWith) // ensures state of this context
 
-	def := prepareReplaceData{sm: sm, def: prepareSlotValue{slotReplaceData: p.s.slotReplaceData.takeOutForReplace(), isReplacement: true}}
+	def := prepareReplaceData{sm: sm,
+		def: p._prepareReplacementData(),
+	}
 	return tmpl.newVar(def)
 }
 
@@ -262,6 +271,9 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 	if fn == nil {
 		panic("illegal value")
 	}
+	if len(defValues.TracerId) == 0 {
+		defValues.TracerId = p.s.getTracerId()
+	}
 
 	m := p.s.machine
 	link, ok := m.prepareNewSlotWithDefaults(p.s, fn, nil, defValues)
@@ -269,6 +281,21 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 		m.startNewSlotByDetachable(link.s, runInit, p.w)
 	}
 	return link
+}
+
+func (p *slotContext) Log() Logger {
+	p.ensureAtLeast(updCtxInit)
+	return slotLogger{p}
+}
+
+func (p *slotContext) SetLogTracing(b bool) {
+	p.ensureAtLeast(updCtxInit)
+	p.s.setTracing(b)
+}
+
+func (p *slotContext) UpdateDefaultStepLogger(updateFn StepLoggerUpdateFunc) {
+	p.ensureAtLeast(updCtxInit)
+	p.s.setStepLoggerAfterInit(updateFn)
 }
 
 func (p *slotContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {

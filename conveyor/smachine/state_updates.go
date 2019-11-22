@@ -151,12 +151,22 @@ func init() {
 				if loopCount >= stateUpdate.param0 {
 					return false
 				}
-				ns := stateUpdate.step.Transition
-				if ns != nil && !slot.declaration.IsConsecutive(slot.step.Transition, ns) {
-					return false
+				switch nextStep := stateUpdate.step.Transition; {
+				case nextStep == nil:
+					slot.setNextStep(stateUpdate.step, nil)
+					return false // the same step won't be short-looped
+
+				case slot.stepDecl != nil:
+					prevSeqId := slot.stepDecl.SeqId
+					nextDecl := slot.declaration.GetStepDeclaration(nextStep)
+					slot.setNextStep(stateUpdate.step, nextDecl)
+					return nextDecl != nil && prevSeqId < nextDecl.SeqId // only proper further steps can be short-looped
+
+				default:
+					isConsec, nextDecl := slot.declaration.IsConsecutive(slot.step.Transition, nextStep)
+					slot.setNextStep(stateUpdate.step, nextDecl)
+					return isConsec
 				}
-				slot.setNextStep(stateUpdate.step)
-				return true
 			},
 
 			apply: stateUpdateDefaultJump,
@@ -188,7 +198,7 @@ func init() {
 			prepare: stateUpdateDefaultNoArgPrepare,
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
-				slot.setNextStep(stateUpdate.step)
+				slot.setNextStep(stateUpdate.step, nil)
 				m.updateSlotQueue(slot, worker, deactivateSlot)
 				m.pollingSlots.Add(slot)
 				return true, nil
@@ -202,7 +212,7 @@ func init() {
 			prepare: stateUpdateDefaultNoArgPrepare,
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
-				slot.setNextStep(stateUpdate.step)
+				slot.setNextStep(stateUpdate.step, nil)
 				m.updateSlotQueue(slot, worker, deactivateSlot)
 				return true, nil
 			},
@@ -215,7 +225,7 @@ func init() {
 			prepare: stateUpdateDefaultNoArgPrepare,
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
-				slot.setNextStep(stateUpdate.step)
+				slot.setNextStep(stateUpdate.step, nil)
 
 				if stateUpdate.param0 == 0 {
 					m.updateSlotQueue(slot, worker, activateHotWaitSlot)
@@ -250,7 +260,7 @@ func init() {
 			//		prepare: stateUpdateDefaultNoArgPrepare,
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
-				slot.setNextStep(stateUpdate.step)
+				slot.setNextStep(stateUpdate.step, nil)
 				waitOn := stateUpdate.getLink()
 
 				if waitOn.s == slot {
@@ -305,7 +315,7 @@ func init() {
 			prepare: stateUpdateDefaultNoArgPrepare,
 			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 				m := slot.machine
-				slot.setNextStep(stateUpdate.step)
+				slot.setNextStep(stateUpdate.step, nil)
 
 				waitOn := stateUpdate.getLink()
 				if waitOn.s == slot || !waitOn.IsValid() {
@@ -375,7 +385,7 @@ func stateUpdateDefaultError(slot *Slot, stateUpdate StateUpdate, w FixedSlotWor
 
 func stateUpdateDefaultJump(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
 	m := slot.machine
-	slot.setNextStep(stateUpdate.step)
+	slot.setNextStep(stateUpdate.step, nil)
 	m.updateSlotQueue(slot, worker, activateSlot)
 	return true, nil
 }

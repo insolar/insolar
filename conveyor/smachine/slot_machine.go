@@ -51,9 +51,6 @@ func NewSlotMachine(config SlotMachineConfig,
 	if config.ScanCountLimit <= 0 || config.ScanCountLimit > maxLoopCount {
 		config.ScanCountLimit = maxLoopCount
 	}
-	if config.StepLoggerFactoryFn == nil {
-		config.StepLoggerFactoryFn = func(context.Context) StepLoggerFunc { return nil }
-	}
 
 	m := &SlotMachine{
 		config:         config,
@@ -841,8 +838,8 @@ func (m *SlotMachine) AddNested(_ AdapterId, parent SlotLink, cf CreateFunc) (Sl
 type prepareSlotValue struct {
 	slotReplaceData
 	overrides     map[string]interface{}
-	stepLogger    StepLoggerFunc
 	terminate     TerminationHandlerFunc
+	tracerId      TracerId
 	isReplacement bool
 }
 
@@ -852,9 +849,9 @@ func (m *SlotMachine) prepareNewSlotWithDefaults(creator *Slot, fn CreateFunc, s
 			parent: defValues.Parent,
 			ctx:    defValues.Context,
 		},
-		overrides:  defValues.OverriddenDependencies,
-		stepLogger: defValues.StepLogger,
-		terminate:  defValues.TerminationHandler,
+		overrides: defValues.OverriddenDependencies,
+		tracerId:  defValues.TracerId,
+		terminate: defValues.TerminationHandler,
 	})
 }
 
@@ -868,8 +865,8 @@ func mergeDefaultValues(target *prepareSlotValue, source CreateDefaultValues) {
 	if source.TerminationHandler != nil {
 		target.terminate = source.TerminationHandler
 	}
-	if source.StepLogger != nil {
-		target.stepLogger = source.StepLogger
+	if len(source.TracerId) > 0 {
+		target.tracerId = source.TracerId
 	}
 
 	switch {
@@ -914,7 +911,7 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 		slot.ctx = context.Background() // TODO provide SlotMachine context?
 	}
 
-	cc := constructionContext{s: slot, injects: defValues.overrides}
+	cc := constructionContext{s: slot, injects: defValues.overrides, tracerId: defValues.tracerId}
 	if defValues.isReplacement {
 		cc.inherit = InheritResolvedDependencies
 	}
@@ -934,20 +931,30 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 
 	link := slot.NewLink()
 
+	// get injects sorted out
 	var localInjects []interface{}
 	slot.inheritable, localInjects = m.prepareInjects(creator, link, sm, cc.inherit, defValues.isReplacement,
 		cc.injects, defValues.inheritable)
 
-	{
-		loggerFn, isFinal := decl.GetStepLogger(slot.ctx, sm)
-		slot.stepLogger = m._getStepLogger(slot.ctx, loggerFn, isFinal, sm)
+	// Step Logger
+	if stepLogger, ok := decl.GetStepLogger(slot.ctx, sm, cc.tracerId, m.config.StepLoggerFactoryFn); ok {
+		slot.stepLogger = stepLogger
+	} else if m.config.StepLoggerFactoryFn != nil {
+		slot.stepLogger = m.config.StepLoggerFactoryFn(slot.ctx, sm, cc.tracerId)
+	}
+	if slot.stepLogger == nil && len(cc.tracerId) > 0 {
+		slot.stepLogger = StepLoggerStub{cc.tracerId}
 	}
 
+	slot.setTracing(cc.isTracing)
+
+	// get Init step
 	initFn := slot.declaration.GetInitStateFor(sm)
 	if initFn == nil {
 		panic(fmt.Errorf("illegal state - initialization is missing: %v", sm))
 	}
 
+	// Setup Slot counters
 	if creator != nil {
 		slot.migrationCount = creator.migrationCount
 		slot.lastWorkScan = creator.lastWorkScan
@@ -957,44 +964,28 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 		slot.lastWorkScan = uint8(scanCount)
 	}
 
+	// shadow migrate for injected dependencies
 	slot.shadowMigrate = buildShadowMigrator(localInjects, slot.declaration.GetShadowMigrateFor(sm))
 
-	slot.step = SlotStep{Transition: func(ctx ExecutionContext) StateUpdate {
-		ec := ctx.(*executionContext)
-		if ec.s.shadowMigrate != nil {
-			ec.s.shadowMigrate(ec.s.migrationCount, 0)
-		}
-		ic := initializationContext{ec.clone(updCtxInactive)}
-		su := ic.executeInitialization(initFn)
-		su.marker = ec.getMarker()
-		return su
-	}}
+	// final touch
+	slot.step = SlotStep{Transition: initFn.defaultInit}
+	slot.stepDecl = &defaultInitDecl
 
 	slot = nil //protect from defer
 	return link, true
 }
 
-func (m *SlotMachine) _getStepLogger(ctx context.Context, loggerFn StepLoggerFunc, isOutput bool, sm StateMachine) StepLoggerFunc {
-	if isOutput {
-		return loggerFn
+var defaultInitDecl = StepDeclaration{stepDeclExt: stepDeclExt{Name: "<init>"}}
+
+func (v InitFunc) defaultInit(ctx ExecutionContext) StateUpdate {
+	ec := ctx.(*executionContext)
+	if ec.s.shadowMigrate != nil {
+		ec.s.shadowMigrate(ec.s.migrationCount, 0)
 	}
-	switch postLoggerFn := m.config.StepLoggerFactoryFn(ctx); {
-	case postLoggerFn == nil:
-		return loggerFn
-	case loggerFn == nil:
-		if sm == nil {
-			panic("illegal value")
-		}
-		return func(data *StepLoggerData) {
-			data.SM = sm
-			postLoggerFn(data)
-		}
-	default:
-		return func(data *StepLoggerData) {
-			loggerFn(data)
-			postLoggerFn(data)
-		}
-	}
+	ic := initializationContext{ec.clone(updCtxInactive)}
+	su := ic.executeInitialization(v)
+	su.marker = ec.getMarker()
+	return su
 }
 
 func (m *SlotMachine) prepareInjects(creator *Slot, link SlotLink, sm StateMachine, mode DependencyInheritanceMode, isReplacement bool,

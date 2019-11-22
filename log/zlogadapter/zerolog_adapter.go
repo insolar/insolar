@@ -57,7 +57,7 @@ func (v zerologMapping) IsEmpty() bool {
 }
 
 var zerologLevelMapping = []zerologMapping{
-	insolar.NoLevel:    {zl: zerolog.NoLevel, fn: (*zerolog.Logger).Debug},
+	insolar.NoLevel:    {zl: zerolog.NoLevel, fn: (*zerolog.Logger).Log},
 	insolar.DebugLevel: {zl: zerolog.DebugLevel, fn: (*zerolog.Logger).Debug},
 	insolar.InfoLevel:  {zl: zerolog.InfoLevel, fn: (*zerolog.Logger).Info},
 	insolar.WarnLevel:  {zl: zerolog.WarnLevel, fn: (*zerolog.Logger).Warn},
@@ -151,6 +151,7 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 	zc.Instruments = pCfg.Instruments
 	zc.MsgFormat = msgFmt
 	zc.Instruments.SkipFrameCountBaseline = uint8(sfb)
+	//zc.TraceLevel = insolar.InfoLevel
 
 	zb := logadapter.NewBuilder(zerologFactory{}, zc, pCfg.LogLevel)
 
@@ -180,11 +181,11 @@ func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
 var _ insolar.Logger = &zerologAdapter{}
 
 type zerologAdapter struct {
-	logger zerolog.Logger
-	config *logadapter.Config
+	logger    zerolog.Logger
+	dynFields logadapter.DynFieldMap
+	config    *logadapter.Config
 }
 
-// WithFields return copy of adapter with predefined fields.
 func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
 	zCtx := z.logger.With()
 	for key, value := range fields {
@@ -196,7 +197,6 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logge
 	return &zCopy
 }
 
-// WithField return copy of adapter with predefined single field.
 func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger {
 	zCopy := *z
 	zCopy.logger = z.logger.With().Interface(key, value).Logger()
@@ -208,9 +208,6 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	z.config.Metrics.OnNewEvent(m.metrics, level)
 	event := m.fn(&z.logger)
 	if event == nil {
-		return nil
-	}
-	if z.config.DynLevel != nil && z.config.DynLevel.GetLogLevel() > level {
 		return nil
 	}
 	z.config.Metrics.OnFilteredEvent(m.metrics, level)
@@ -240,6 +237,10 @@ func (z *zerologAdapter) EmbeddedFlush(msg string) {
 		z.newEvent(insolar.WarnLevel).Msg(msg)
 	}
 	_ = z.config.LoggerOutput.Flush()
+}
+
+func (z *zerologAdapter) EmbeddedTrace() insolar.LogLevel {
+	return insolar.DebugLevel
 }
 
 func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
@@ -326,6 +327,7 @@ var _ logadapter.Factory = &zerologFactory{}
 var _ insolar.GlobalLogAdapterFactory = &zerologFactory{}
 
 type zerologFactory struct {
+	writeDelayPreferTrim bool
 }
 
 func (zf zerologFactory) CreateGlobalLogAdapter() insolar.GlobalLogAdapter {
@@ -340,7 +342,7 @@ func (zf zerologFactory) PrepareBareOutput(output logadapter.BareOutput, metrics
 	}
 
 	if ok, name, reportFn := getWriteDelayConfig(metrics, config); ok {
-		outputWriter = newWriteDelayPostHook(outputWriter, name, writeDelayPreferTrim, reportFn)
+		outputWriter = newWriteDelayPostHook(outputWriter, name, zf.writeDelayPreferTrim, reportFn)
 	}
 
 	return outputWriter, nil
@@ -354,49 +356,145 @@ func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
 	return output
 }
 
-func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel,
-	config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{}, template *zerologAdapter,
+func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, params logadapter.NewLoggerParams, template *zerologAdapter,
 ) (insolar.Logger, error) {
 
-	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
+	instruments := params.Config.Instruments
+	skipFrames := int(instruments.SkipFrameCountBaseline) + int(instruments.SkipFrameCount)
+	callerMode := instruments.CallerMode
 
-	if template != nil && (reqs&logadapter.RequiresParentFields != 0) {
+	cfg := params.Config
+	if instruments.MetricsMode == insolar.NoLogMetrics {
+		cfg.Metrics = nil
+	}
+
+	la := zerologAdapter{
 		// NB! We have to create a new logger and pass the context separately
 		// Otherwise, zerolog will also copy hooks - which we need to get rid of some.
-		inheritedContext := template.logger.With()
-		ls.UpdateContext(func(zerolog.Context) zerolog.Context {
-			return inheritedContext
-		})
+		logger: zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(params.Level)),
+		config: &cfg,
 	}
 
-	if ok, name, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
-		// MUST be the first Hook
-		ls = ls.Hook(newWriteDelayPreHook(name, writeDelayPreferTrim))
+	if ok, name, _ := getWriteDelayConfig(params.Config.Metrics, params.Config.BuildConfig); ok {
+		la.logger = la.logger.Hook(newWriteDelayPreHook(name, zf.writeDelayPreferTrim))
 	}
 
-	lc := ls.With().Timestamp()
+	{ // replacement and inheritance for dynFields
+		switch newFields := params.DynFields; {
+		case template != nil && params.Reqs&logadapter.RequiresParentDynFields != 0 && len(template.dynFields) > 0:
+			prevFields := template.dynFields
 
-	skipFrames := int(config.Instruments.SkipFrameCountBaseline) + int(config.Instruments.SkipFrameCount)
-	callerMode := config.Instruments.CallerMode
+			if len(newFields) > 0 {
+				for k, v := range prevFields {
+					if _, ok := newFields[k]; !ok {
+						newFields[k] = v
+					}
+				}
+			} else {
+				newFields = prevFields
+			}
+			fallthrough
+		case len(newFields) > 0:
+			la.dynFields = newFields
+			la.logger = la.logger.Hook(newDynFieldsHook(newFields))
+		}
+	}
 
+	if callerMode == insolar.CallerFieldWithFuncName {
+		la.logger = la.logger.Hook(newCallerHook(2 + skipFrames))
+	}
+	lc := la.logger.With()
+
+	// only add hooks, DON'T set the context as it can be replaced below
+	lc = lc.Timestamp()
 	if callerMode == insolar.CallerField {
 		lc = lc.CallerWithSkipFrameCount(skipFrames)
 	}
-	ls = lc.Logger()
-	if callerMode == insolar.CallerFieldWithFuncName {
-		ls = ls.Hook(newCallerHook(2 + skipFrames))
+
+	if template != nil && params.Reqs&logadapter.RequiresParentCtxFields != 0 {
+		la.logger = lc.Logger()     // save hooks
+		lc = template.logger.With() // get a copy of the inherited context
+	}
+	for k, v := range params.Fields {
+		lc = lc.Interface(k, v)
 	}
 
-	if len(dynFields) > 0 {
-		ls = ls.Hook(newDynFieldsHook(dynFields))
+	la.logger.UpdateContext(func(zerolog.Context) zerolog.Context {
+		return lc
+	})
+
+	return &la, nil
+}
+
+func (zf zerologFactory) copyLogger(template *zerologAdapter, params logadapter.CopyLoggerParams) insolar.Logger {
+
+	if params.Reqs&logadapter.RequiresParentDynFields == 0 {
+		// have to reset hooks, but zerolog can't reset hooks
+		// so we have to create the logger from scratch
+		return nil
 	}
 
-	if config.Instruments.MetricsMode == insolar.NoLogMetrics {
-		config.Metrics = nil
+	hasUpdates := false
+	la := *template
+
+	if newFields := params.AppendDynFields; len(newFields) > 0 {
+		if prevFields := la.dynFields; len(prevFields) > 0 {
+			// NB! avoid modification of newFields when nil can be returned
+			for k := range newFields {
+				if _, ok := prevFields[k]; ok {
+					// key collision
+					// have to reset hooks, but zerolog can't reset hooks
+					// so we have to create the logger from scratch
+					return nil
+				}
+			}
+			for k, v := range prevFields {
+				newFields[k] = v
+			}
+		}
+		la.dynFields = newFields
+		la.logger = la.logger.Hook(newDynFieldsHook(newFields))
+		hasUpdates = true
 	}
 
-	return &zerologAdapter{logger: ls, config: &config}, nil
+	newLevel := ToZerologLevel(params.Level)
+	if template.logger.GetLevel() != newLevel {
+		la.logger = la.logger.Level(newLevel)
+		hasUpdates = true
+	}
+
+	{
+		hasCtxUpdates := false
+		var lc zerolog.Context
+
+		if params.Reqs&logadapter.RequiresParentCtxFields == 0 {
+			// have to reset logger context
+			lc = zerolog.New(nil).With()
+			hasCtxUpdates = true
+		}
+
+		if len(params.AppendFields) > 0 {
+			if !hasCtxUpdates {
+				lc = la.logger.With()
+			}
+			for k, v := range params.AppendFields {
+				lc = lc.Interface(k, v)
+			}
+			hasCtxUpdates = true
+		}
+
+		if hasCtxUpdates {
+			la.logger.UpdateContext(func(zerolog.Context) zerolog.Context {
+				return lc
+			})
+			hasUpdates = true
+		}
+	}
+
+	if !hasUpdates {
+		return template
+	}
+	return &la
 }
 
 func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs logadapter.FactoryRequirementFlags) zerolog.LevelWriter {
@@ -406,11 +504,9 @@ func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs loga
 	return zerologAdapterOutput{config.LoggerOutput}
 }
 
-func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{},
-) (insolar.Logger, error) {
-	output := zf.createOutputWrapper(config, reqs)
-	return zf.createNewLogger(output, level, config, reqs, dynFields, nil)
+func (zf zerologFactory) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(params.Config, params.Reqs)
+	return zf.createNewLogger(output, params, nil)
 }
 
 func (zf zerologFactory) CanReuseMsgBuffer() bool {
@@ -450,15 +546,13 @@ func (zf zerologTemplate) GetTemplateConfig() logadapter.Config {
 	return *zf.template.config
 }
 
-func (zf zerologTemplate) GetTemplateLogger() insolar.Logger {
-	return zf.template
+func (zf zerologTemplate) CopyTemplateLogger(params logadapter.CopyLoggerParams) insolar.Logger {
+	return zf.copyLogger(zf.template, params)
 }
 
-func (zf zerologTemplate) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, reqs logadapter.FactoryRequirementFlags,
-	dynFields map[string]func() interface{},
-) (insolar.Logger, error) {
-	output := zf.createOutputWrapper(config, reqs)
-	return zf.createNewLogger(output, level, config, reqs, dynFields, zf.template)
+func (zf zerologTemplate) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.Logger, error) {
+	output := zf.createOutputWrapper(params.Config, params.Reqs)
+	return zf.createNewLogger(output, params, zf.template)
 }
 
 /* ========================================= */
@@ -495,12 +589,12 @@ func (z zerologAdapterLLOutput) Write(b []byte) (int, error) {
 
 /* ========================================= */
 
-func newDynFieldsHook(dynFields map[string]func() interface{}) zerolog.Hook {
+func newDynFieldsHook(dynFields logadapter.DynFieldMap) zerolog.Hook {
 	return dynamicFieldsHook{dynFields}
 }
 
 type dynamicFieldsHook struct {
-	dynFields map[string]func() interface{}
+	dynFields logadapter.DynFieldMap
 }
 
 func (v dynamicFieldsHook) Run(e *zerolog.Event, level zerolog.Level, message string) {
