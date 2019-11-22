@@ -969,10 +969,13 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 
 	// final touch
 	slot.step = SlotStep{Transition: initFn.defaultInit}
+	slot.stepDecl = &defaultInitDecl
 
 	slot = nil //protect from defer
 	return link, true
 }
+
+var defaultInitDecl = StepDeclaration{stepDeclExt: stepDeclExt{Name: "<init>"}}
 
 func (v InitFunc) defaultInit(ctx ExecutionContext) StateUpdate {
 	ec := ctx.(*executionContext)

@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/conveyor/injector"
 )
@@ -49,9 +50,46 @@ type StateMachineDeclaration interface {
 	// See ShadowMigrator
 	GetShadowMigrateFor(StateMachine) ShadowMigrateFunc
 
+	// Returns a StepDeclaration for the given step. Return nil when implementation is not available.
+	GetStepDeclaration(StateFunc) *StepDeclaration
+
+	// This function is only invoked when GetStepDeclaration() is not available for the current step.
 	// WARNING! DO NOT EVER return "true" here without CLEAR understanding of internal mechanics.
 	// Returning "true" blindly will LIKELY lead to infinite loops.
-	IsConsecutive(cur, next StateFunc) bool
+	IsConsecutive(cur, next StateFunc) (bool, *StepDeclaration)
+}
+
+type stepDeclExt struct {
+	SeqId int
+	Name  string
+}
+
+type StepDeclaration struct {
+	SlotStep
+	stepDeclExt
+}
+
+func (v StepDeclaration) GetStepName() string {
+	switch {
+	case len(v.Name) > 0:
+		if v.SeqId != 0 {
+			return fmt.Sprintf("%s[%d]", v.Name, v.SeqId)
+		}
+		return fmt.Sprintf("%s", v.Name)
+
+	case v.SeqId != 0:
+		return fmt.Sprintf("#[%d]", v.SeqId)
+
+	case v.Transition == nil:
+		return "<nil>"
+
+	default:
+		return fmt.Sprintf("%p", v.Transition)
+	}
+}
+
+func (v StepDeclaration) IsNameless() bool {
+	return v.SeqId == 0 && len(v.Name) == 0
 }
 
 // See ShadowMigrator
@@ -75,8 +113,12 @@ type StateMachineDeclTemplate struct {
 //	panic("implement me")
 //}
 
-func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
-	return false
+func (s *StateMachineDeclTemplate) GetStepDeclaration(StateFunc) *StepDeclaration {
+	return nil
+}
+
+func (s *StateMachineDeclTemplate) IsConsecutive(StateFunc, StateFunc) (bool, *StepDeclaration) {
+	return false, nil
 }
 
 func (s *StateMachineDeclTemplate) GetShadowMigrateFor(StateMachine) ShadowMigrateFunc {

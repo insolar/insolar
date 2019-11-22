@@ -79,7 +79,8 @@ type slotData struct {
 	asyncCallCount uint16 // pending calls, overflow panics
 	migrationCount uint32 // can be wrapped by overflow
 
-	step SlotStep
+	step     SlotStep
+	stepDecl *StepDeclaration
 
 	dependency SlotDependency
 }
@@ -373,21 +374,37 @@ func (s *slotData) isLastScan(scanNo uint32) bool {
 	return s.lastWorkScan == uint8(scanNo)
 }
 
-func (s *Slot) setNextStep(step SlotStep) {
-	switch {
-	case step.Transition == nil:
+func (s *Slot) setNextStep(step SlotStep, stepDecl *StepDeclaration) {
+	if step.Transition == nil {
 		if step.Flags != 0 || step.Migration != nil {
 			panic("illegal value")
 		}
 		// leave as-is
 		return
+	}
+	if stepDecl == nil {
+		stepDecl = s.declaration.GetStepDeclaration(step.Transition)
+	}
 
-	case step.Flags&StepResetAllFlags == 0:
+	defFlags := s.defFlags
+	if stepDecl != nil {
+		defFlags |= stepDecl.Flags
+		if step.Migration == nil {
+			step.Migration = stepDecl.Migration
+		}
+		if step.Handler == nil {
+			step.Handler = stepDecl.Handler
+		}
+	}
+
+	if step.Flags&StepResetAllFlags == 0 {
 		step.Flags |= s.defFlags
-	default:
+	} else {
 		step.Flags &^= StepResetAllFlags
 	}
+
 	s.step = step
+	s.stepDecl = stepDecl
 	s.incStep()
 }
 
@@ -447,16 +464,20 @@ func (s *Slot) decAsyncCount() {
 	s.asyncCallCount--
 }
 
+func stepToDecl(step SlotStep, stepDecl *StepDeclaration) StepDeclaration {
+	if stepDecl == nil {
+		return StepDeclaration{SlotStep: step}
+	}
+	return StepDeclaration{SlotStep: step, stepDeclExt: stepDecl.stepDeclExt}
+}
+
 func (s *Slot) newStepLoggerData(eventType StepLoggerEvent, link StepLink) StepLoggerData {
 	return StepLoggerData{
 		CycleNo:     s.machine.getScanCount(),
 		StepNo:      link,
-		CurrentStep: s.step,
+		CurrentStep: stepToDecl(s.step, s.stepDecl),
 		Declaration: s.declaration,
 		EventType:   eventType,
-		//Error:       nil,
-		//SM:          nil,
-		//CustomEvent: nil,
 	}
 }
 
@@ -476,9 +497,18 @@ func (s *Slot) logInternal(link StepLink, updateType string, err error) {
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
+	s._logStepUpdate(StepLoggerUpdate, prevStepNo, stateUpdate, wasAsync)
+}
+
+func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
+	s._logStepUpdate(StepLoggerMigrate, prevStepNo, stateUpdate, false)
+}
+
+func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
 	if s.stepLogger == nil {
 		return
 	}
+
 	switch stepLogLevel := s.getStepLogLevel(); stepLogLevel {
 	case StepLogLevelDefault:
 		if stateUpdate.step.Transition != nil && stateUpdate.step.Flags&StepElevatedLog != 0 {
@@ -486,39 +516,27 @@ func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsyn
 		}
 		fallthrough
 	default:
-		if !s.stepLogger.CanLogEvent(StepLoggerUpdate, stepLogLevel) {
+		if !s.stepLogger.CanLogEvent(eventType, stepLogLevel) {
 			return
 		}
 	}
 
-	stepData := s.newStepLoggerData(StepLoggerUpdate, s.NewStepLink())
+	stepData := s.newStepLoggerData(eventType, s.NewStepLink())
+	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo}
 
-	updData := StepLoggerUpdateData{
-		NextStep: stateUpdate.step,
+	if nextStep := stateUpdate.step.Transition; nextStep != nil {
+		nextDecl := s.declaration.GetStepDeclaration(nextStep)
+		updData.NextStep = stepToDecl(stateUpdate.step, nextDecl)
+	} else {
+		updData.NextStep.SlotStep = stateUpdate.step
 	}
 
-	if prevStepNo <= 1 {
-		// nil all handlers as initialization transition can't be logged properly
-		stepData.CurrentStep = SlotStep{Flags: s.step.Flags | StepResetAllFlags}
-	}
 	updData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
 
 	if wasAsync {
 		updData.Flags |= StepLoggerDetached
 	}
 
-	s.stepLogger.LogUpdate(stepData, updData)
-}
-
-func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
-	if s.stepLogger == nil || !s.stepLogger.CanLogEvent(StepLoggerInternal, s.getStepLogLevel()) {
-		return
-	}
-	stepData := s.newStepLoggerData(StepLoggerMigrate, s.NewStepLink())
-	updData := StepLoggerUpdateData{
-		NextStep: stateUpdate.step,
-	}
-	updData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
 	s.stepLogger.LogUpdate(stepData, updData)
 }
 

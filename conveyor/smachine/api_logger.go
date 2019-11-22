@@ -41,7 +41,7 @@ const (
 type StepLoggerData struct {
 	CycleNo     uint32
 	StepNo      StepLink
-	CurrentStep SlotStep
+	CurrentStep StepDeclaration
 	Declaration StateMachineDeclaration
 	EventType   StepLoggerEvent
 	Error       error
@@ -49,7 +49,8 @@ type StepLoggerData struct {
 
 type StepLoggerUpdateData struct {
 	UpdateType string
-	NextStep   SlotStep
+	PrevStepNo uint32
+	NextStep   StepDeclaration
 	Flags      StepLoggerUpdateFlags
 }
 

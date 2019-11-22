@@ -19,6 +19,9 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"runtime"
+	"strings"
 
 	"github.com/insolar/insolar/conveyor/smachine"
 )
@@ -37,6 +40,25 @@ func (v conveyorStepLogger) GetTracerId() smachine.TracerId {
 	return v.tracer
 }
 
+func getStepName(step interface{}) string {
+	fullName := runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name()
+	if lastIndex := strings.LastIndex(fullName, "."); lastIndex >= 0 {
+		fullName = fullName[lastIndex+1:]
+	}
+	if lastIndex := strings.LastIndex(fullName, "-"); lastIndex >= 0 {
+		fullName = fullName[:lastIndex]
+	}
+
+	return fullName
+}
+
+func (v conveyorStepLogger) prepareStepName(sd *smachine.StepDeclaration) {
+	if !sd.IsNameless() {
+		return
+	}
+	sd.Name = getStepName(sd.Transition)
+}
+
 func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine.StepLoggerUpdateData) {
 	special := ""
 
@@ -48,23 +70,30 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 		panic("illegal value")
 	}
 
+	v.prepareStepName(&data.CurrentStep)
+	v.prepareStepName(&upd.NextStep)
+
 	detached := ""
 	if upd.Flags&smachine.StepLoggerDetached != 0 {
 		detached = "(detached)"
 	}
-	fmt.Printf("%s[%3d]: %03d @ %03d: %s%s%s current=%p next=%p payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+	fmt.Printf("%s[%3d]: %03d @ %03d: %s%s%s current=%v next=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		special, upd.UpdateType, detached, data.CurrentStep.Transition, upd.NextStep.Transition, v.sm, v.tracer)
+		special, upd.UpdateType, detached, data.CurrentStep.GetStepName(), upd.NextStep.GetStepName(), v.sm, v.tracer)
 }
 
 func (v conveyorStepLogger) LogInternal(data smachine.StepLoggerData, updateType string) {
-	fmt.Printf("%s[%3d]: %03d @ %03d: internal %s current=%p payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+	v.prepareStepName(&data.CurrentStep)
+
+	fmt.Printf("%s[%3d]: %03d @ %03d: internal %s current=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		updateType, data.CurrentStep.Transition, v.sm, v.tracer)
+		updateType, data.CurrentStep.GetStepName(), v.sm, v.tracer)
 }
 
 func (v conveyorStepLogger) LogEvent(data smachine.StepLoggerData, customEvent interface{}) {
 	special := ""
+
+	v.prepareStepName(&data.CurrentStep)
 
 	switch data.EventType {
 	case smachine.StepLoggerTrace:
@@ -78,14 +107,14 @@ func (v conveyorStepLogger) LogEvent(data smachine.StepLoggerData, customEvent i
 	case smachine.StepLoggerFatal:
 		special = "FTL"
 	default:
-		fmt.Printf("%s[%3d]: %03d @ %03d: unknown (%s) current=%p payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+		fmt.Printf("%s[%3d]: %03d @ %03d: unknown (%s) current=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
 			data.StepNo.SlotID(), data.StepNo.StepNo(),
-			customEvent, data.CurrentStep.Transition, v.sm, v.tracer)
+			customEvent, data.CurrentStep.GetStepName(), v.sm, v.tracer)
 		return
 	}
-	fmt.Printf("%s[%3d]: %03d @ %03d: custom %s current=%p event=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+	fmt.Printf("%s[%3d]: %03d @ %03d: custom %s current=%v event=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		special, data.CurrentStep.Transition, customEvent, v.sm, v.tracer)
+		special, data.CurrentStep.GetStepName(), customEvent, v.sm, v.tracer)
 
 	if data.EventType == smachine.StepLoggerFatal {
 		panic("os.Exit(1)")
