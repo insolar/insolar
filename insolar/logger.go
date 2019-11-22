@@ -54,7 +54,6 @@ type LogOutput uint8
 const (
 	StdErrOutput LogOutput = iota
 	SysLogOutput
-	//JournalDOutput
 )
 const DefaultLogOutput = StdErrOutput
 
@@ -116,7 +115,7 @@ type Logger interface {
 	// Deprecated: Use struct-logging or set fields with builder.
 	WithField(string, interface{}) Logger
 
-	// DO NOT USE directly. Provides access to an embeddable methods of this logger.
+	// DO NOT USE directly. Provides access to embeddable methods of this logger.
 	Embeddable() EmbeddedLogger
 }
 
@@ -236,14 +235,35 @@ type LoggerOutput interface {
 	IsLowLatencySupported() bool
 }
 
-type LogObjectWriter interface {
-	AddFieldMap(map[string]interface{})
-	AddField(key string, v interface{})
-	AddRawJSON(key string, b []byte)
+// Presence of this interface indicates that this object can be used as a log event
+type LogObject interface {
+	// should return nil to use default (external) marshaller
+	GetLogObjectMarshaller() LogObjectMarshaller
+}
+
+var _ LogObject = &LogObjectTemplate{}
+
+type LogObjectTemplate struct{}
+
+func (*LogObjectTemplate) GetLogObjectMarshaller() LogObjectMarshaller {
+	return nil
 }
 
 type LogObjectMarshaller interface {
-	MarshalLogObject(LogObjectWriter) string
+	MarshalTextLogObject(LogObjectWriter, LogObjectMetricCollector) string
+	MarshalBinaryLogObject(LogObjectWriter, LogObjectMetricCollector) string
+	MarshalMutedLogObject(LogObjectMetricCollector)
+}
+
+type LogObjectMetricCollector interface {
+	LogObjectMetricCollector()
+	//ReportMetricSample(metricType uint32, reporterFieldName string, value interface{})
+}
+
+type LogObjectWriter interface {
+	AddField(key string, v interface{})
+	AddStrField(key string, v string)
+	AddRawJSON(key string, b []byte)
 }
 
 type LogLevelWriter interface {
@@ -326,8 +346,6 @@ func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 		return StdErrOutput, nil
 	case SysLogOutput.String():
 		return SysLogOutput, nil
-		//case JournalDOutput.String():
-		//	return JournalDOutput, nil
 	}
 	return defValue, fmt.Errorf("unknown Output: '%s', replaced with '%s'", outputStr, defValue)
 }
@@ -338,8 +356,6 @@ func (l LogOutput) String() string {
 		return "stderr"
 	case SysLogOutput:
 		return "syslog"
-		//case JournalDOutput:
-		//	return "journald"
 	}
 	return string(l)
 }

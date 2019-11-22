@@ -82,3 +82,11 @@ func (p *MetricsHelper) OnWriteSkip(skippedCount int) {
 	}
 	stats.Record(context.Background(), statLogSkips.M(int64(skippedCount)))
 }
+
+func (p *MetricsHelper) GetMetricsCollector() insolar.LogObjectMetricCollector {
+	//if p == nil {
+	//	return nil
+	//}
+	//
+	return nil
+}
