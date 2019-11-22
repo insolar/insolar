@@ -164,12 +164,12 @@ type zerologMarshaller struct {
 	event *zerolog.Event
 }
 
-func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
-	m.event.Fields(fields)
-}
-
 func (m zerologMarshaller) AddField(key string, v interface{}) {
 	m.event.Interface(key, v)
+}
+
+func (m zerologMarshaller) AddStrField(key string, v string) {
+	m.event.Str(key, v)
 }
 
 func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
@@ -216,20 +216,31 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 
 func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
 	event := z.newEvent(level)
-	if event != nil { // avoid unnecessary call to fmt.Sprint
-		obj, msgStr := z.config.MsgFormat.TryLogObject(args...)
-		if obj != nil {
-			msgStr = obj.MarshalLogObject(zerologMarshaller{event})
+
+	if event == nil {
+		collector := z.config.Metrics.GetMetricsCollector()
+		if collector != nil {
+			if obj := z.config.MsgFormat.PrepareMutedLogObject(args...); obj != nil {
+				obj.MarshalMutedLogObject(collector)
+			}
 		}
-		event.Msg(msgStr)
+		return
 	}
+
+	obj, msgStr := z.config.MsgFormat.FmtLogObject(args...)
+	if obj != nil {
+		collector := z.config.Metrics.GetMetricsCollector()
+		msgStr = obj.MarshalTextLogObject(zerologMarshaller{event}, collector)
+	}
+	event.Msg(msgStr)
 }
 
 func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args ...interface{}) {
 	event := z.newEvent(level)
-	if event != nil { // avoid unnecessary call to fmt.Sprintf
-		event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
+	if event == nil {
+		return
 	}
+	event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
 }
 
 func (z *zerologAdapter) EmbeddedFlush(msg string) {
