@@ -127,6 +127,8 @@ type Logger interface {
 	Embeddable() EmbeddedLogger
 }
 
+type DynFieldFunc func() interface{}
+
 type LoggerBuilder interface {
 
 	// Returns the current output
@@ -163,12 +165,15 @@ type LoggerBuilder interface {
 	WithFields(map[string]interface{}) LoggerBuilder
 	// WithField add a fields for to-be-built logger. Fields are deduplicated within a single builder only.
 	WithField(string, interface{}) LoggerBuilder
-	// Clears out all inherited fields
+
+	// Clears out inherited fields (dynamic or not)
 	WithoutInheritedFields() LoggerBuilder
+	// Clears out inherited dynamic fields only
+	WithoutInheritedDynFields() LoggerBuilder
 
 	// Adds a dynamically-evaluated field. Fields are deduplicated within a single builder only. When func=nil or func()=nil then the field is omitted.
 	// NB! Dynamically-evaluated fields are not inherited by derived loggers.
-	WithDynamicField(string, func() interface{}) LoggerBuilder
+	WithDynamicField(string, DynFieldFunc) LoggerBuilder
 
 	// Creates a logger.
 	Build() (Logger, error)

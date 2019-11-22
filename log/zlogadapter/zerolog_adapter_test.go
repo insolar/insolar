@@ -151,18 +151,104 @@ func TestZeroLogAdapter_BuildFields(t *testing.T) {
 	require.NotNil(t, log)
 	require.True(t, log.Is(insolar.InfoLevel))
 
+	log, err = log.Copy().WithField("test0", "value0").Build()
+	require.NoError(t, err)
+
 	var buf bytes.Buffer
 	log, err = log.Copy().WithOutput(&buf).Build()
 	require.NoError(t, err)
 
 	log, err = log.Copy().WithField("test1", "value1").Build()
 	require.NoError(t, err)
-	require.True(t, log.Is(insolar.InfoLevel))
 
 	log.Error("test")
 
 	s := buf.String()
+	require.Contains(t, s, "value0")
 	require.Contains(t, s, "value1")
+	buf.Reset()
+
+	log, err = log.Copy().WithoutInheritedFields().WithField("test2", "value2").Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+	s = buf.String()
+	require.NotContains(t, s, "value0")
+	require.NotContains(t, s, "value1")
+	require.Contains(t, s, "value2")
+}
+
+func TestZeroLogAdapter_BuildDynFields(t *testing.T) {
+	pCfg := logadapter.ParsedLogConfig{
+		OutputType: insolar.DefaultLogOutput,
+		LogLevel:   insolar.InfoLevel,
+		Output: logadapter.OutputConfig{
+			Format: insolar.DefaultLogFormat,
+		},
+	}
+	msgFmt := logadapter.GetDefaultLogMsgFormatter()
+
+	log, err := NewZerologAdapter(pCfg, msgFmt)
+
+	require.NoError(t, err)
+	require.NotNil(t, log)
+	require.True(t, log.Is(insolar.InfoLevel))
+
+	log, err = log.Copy().
+		WithDynamicField("test0", func() interface{} { return "value0" }).
+		WithField("test00", "static0").
+		Build()
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	log, err = log.Copy().WithOutput(&buf).Build()
+	require.NoError(t, err)
+
+	log, err = log.Copy().WithDynamicField("test1", func() interface{} { return "value1" }).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+
+	s := buf.String()
+	require.Contains(t, s, "static0")
+	require.Contains(t, s, "value0")
+	require.Contains(t, s, "value1")
+
+	buf.Reset()
+	log, err = log.Copy().WithoutInheritedDynFields().WithDynamicField("test2", func() interface{} { return "value2" }).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+	s = buf.String()
+	require.Contains(t, s, "static0")
+	require.NotContains(t, s, "value0")
+	require.NotContains(t, s, "value1")
+	require.Contains(t, s, "value2")
+
+	buf.Reset()
+	log, err = log.Copy().WithoutInheritedFields().WithDynamicField("test3", func() interface{} { return "value3" }).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+	s = buf.String()
+	require.NotContains(t, s, "static0")
+	require.NotContains(t, s, "value0")
+	require.NotContains(t, s, "value1")
+	require.NotContains(t, s, "value2")
+	require.Contains(t, s, "value3")
+
+	buf.Reset()
+	log, err = log.Copy().WithoutInheritedFields().WithDynamicField("test3", func() interface{} { return "value-3" }).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+	s = buf.String()
+	require.NotContains(t, s, "static0")
+	require.NotContains(t, s, "value0")
+	require.NotContains(t, s, "value1")
+	require.NotContains(t, s, "value2")
+	require.NotContains(t, s, "value3")
+	require.Contains(t, s, "value-3")
 }
 
 func TestZeroLogAdapter_Fatal(t *testing.T) {

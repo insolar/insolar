@@ -37,18 +37,9 @@ type Config struct {
 
 	Metrics   *logmetrics.MetricsHelper
 	MsgFormat MsgFormatConfig
-
-	Inheritable InheritableConfig
 }
 
-type InheritableConfig struct {
-	TraceLevel insolar.LogLevel
-	IsTracing  bool
-}
-
-func (v InheritableConfig) CanReuseLoggerFor(config InheritableConfig) bool {
-	return true
-}
+type DynFieldMap map[string]insolar.DynFieldFunc
 
 type BareOutput struct {
 	Writer         io.Writer
@@ -100,31 +91,37 @@ type FactoryRequirementFlags uint8
 
 const (
 	RequiresLowLatency FactoryRequirementFlags = 1 << iota
-	RequiresParentFields
+	RequiresParentCtxFields
+	RequiresParentDynFields
 )
 
-type LoggerCopyParams struct {
-	Level     insolar.LogLevel
-	Fields    map[string]interface{}
-	DynFields map[string]func() interface{}
+type CopyLoggerParams struct {
+	Reqs            FactoryRequirementFlags
+	Level           insolar.LogLevel
+	AppendFields    map[string]interface{}
+	AppendDynFields DynFieldMap
 }
 
-type LoggerParams struct {
-	LoggerCopyParams
+type NewLoggerParams struct {
+	Reqs      FactoryRequirementFlags
+	Level     insolar.LogLevel
+	Fields    map[string]interface{}
+	DynFields DynFieldMap
+
 	Config Config
-	Reqs   FactoryRequirementFlags
 }
 
 type Factory interface {
 	PrepareBareOutput(output BareOutput, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
-	CreateNewLogger(params LoggerParams) (insolar.Logger, error)
+	CreateNewLogger(params NewLoggerParams) (insolar.Logger, error)
 	CanReuseMsgBuffer() bool
 }
 
 type Template interface {
 	Factory
 	GetTemplateConfig() Config
-	CopyTemplateLogger(InheritableConfig, LoggerCopyParams) insolar.Logger
+	// NB! Must ignore RequiresLowLatency flag
+	CopyTemplateLogger(CopyLoggerParams) insolar.Logger
 }
 
 func NewBuilderWithTemplate(template Template, level insolar.LogLevel) LoggerBuilder {
@@ -153,9 +150,11 @@ type LoggerBuilder struct {
 
 	level insolar.LogLevel
 
-	noFields  bool
+	noFields    bool
+	noDynFields bool
+
 	fields    map[string]interface{}
-	dynFields map[string]func() interface{}
+	dynFields DynFieldMap
 
 	Config
 }
@@ -252,6 +251,12 @@ func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuil
 
 func (z LoggerBuilder) WithoutInheritedFields() insolar.LoggerBuilder {
 	z.noFields = true
+	z.noDynFields = true
+	return z
+}
+
+func (z LoggerBuilder) WithoutInheritedDynFields() insolar.LoggerBuilder {
+	z.noDynFields = true
 	return z
 }
 
@@ -275,12 +280,12 @@ func (z LoggerBuilder) WithField(k string, v interface{}) insolar.LoggerBuilder 
 	return z
 }
 
-func (z LoggerBuilder) WithDynamicField(k string, fn func() interface{}) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithDynamicField(k string, fn insolar.DynFieldFunc) insolar.LoggerBuilder {
 	if fn == nil {
 		panic("illegal value")
 	}
 	if z.dynFields == nil {
-		z.dynFields = make(map[string]func() interface{})
+		z.dynFields = make(DynFieldMap)
 	}
 	delete(z.fields, k)
 	z.dynFields[k] = fn
@@ -301,6 +306,17 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 
 	if z.Config.Instruments.MetricsMode != insolar.NoLogMetrics {
 		metrics = logmetrics.NewMetricsHelper(z.Config.Instruments.Recorder)
+	}
+
+	reqs := RequiresParentCtxFields | RequiresParentDynFields
+	switch {
+	case z.noFields:
+		reqs &^= RequiresParentCtxFields | RequiresParentDynFields
+	case z.noDynFields:
+		reqs &^= RequiresParentDynFields
+	}
+	if needsLowLatency {
+		reqs |= RequiresLowLatency
 	}
 
 	var output insolar.LoggerOutput
@@ -329,14 +345,9 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 			switch { // shall not reuse the original logger if ...
 			case needsLowLatency && !origConfig.LoggerOutput.IsLowLatencySupported():
 				// ... LL support is missing
-			case z.noFields:
-				// we have to clean up
 			default:
-				if logger := template.CopyTemplateLogger(z.Inheritable, LoggerCopyParams{
-					Level:     z.level,
-					Fields:    z.fields,
-					DynFields: z.dynFields,
-				}); logger != nil {
+				params := CopyLoggerParams{reqs, z.level, z.fields, z.dynFields}
+				if logger := template.CopyTemplateLogger(params); logger != nil {
 					return logger, nil
 				}
 			}
@@ -367,16 +378,8 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 	z.Config.Metrics = metrics
 	z.Config.LoggerOutput = output
 
-	requirements := FactoryRequirementFlags(0)
-	if !z.noFields {
-		requirements |= RequiresParentFields
-	}
-	if needsLowLatency {
-		requirements |= RequiresLowLatency
-	}
-
-	return z.factory.CreateNewLogger(LoggerParams{LoggerCopyParams{
-		z.level, z.fields, z.dynFields}, z.Config, requirements})
+	params := NewLoggerParams{reqs, z.level, z.fields, z.dynFields, z.Config}
+	return z.factory.CreateNewLogger(params)
 }
 
 func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (insolar.LoggerOutput, error) {

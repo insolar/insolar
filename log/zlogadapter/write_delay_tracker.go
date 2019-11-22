@@ -39,7 +39,6 @@ const fieldHeaderFmt = `,"%s":"%*v`
 const tempHexFieldLength = 16 // HEX for Uint64
 const writeDelayResultFieldOverflowContent = "ovrflw"
 const writeDelayResultFieldMinWidth = len(writeDelayResultFieldOverflowContent)
-const writeDelayPreferTrim = false
 
 func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 	config logadapter.BuildConfig) (needsHook bool, fieldName string, reportFn logmetrics.DurationReportFunc) {
