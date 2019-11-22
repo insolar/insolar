@@ -64,11 +64,6 @@ const DefaultOutputParallelLimit = 5
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
-	// Logs a message for tracing (level can vary)
-	Trace(...interface{})
-	// Logs a message for tracing (level can vary)
-	Tracef(string, ...interface{})
-
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
 	// Debugf formatted logs a message at level Debug.
@@ -106,8 +101,6 @@ type Logger interface {
 
 	// Is() returns true when a message of the given level will get to output. Considers the global log filter.
 	Is(level LogLevel) bool
-	// Returns true when Trace() will output
-	IsTracing() bool
 
 	// Provides a builder based on configuration of this logger.
 	Copy() LoggerBuilder

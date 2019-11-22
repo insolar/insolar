@@ -57,7 +57,7 @@ func (v zerologMapping) IsEmpty() bool {
 }
 
 var zerologLevelMapping = []zerologMapping{
-	insolar.NoLevel:    {zl: zerolog.NoLevel, fn: (*zerolog.Logger).Debug},
+	insolar.NoLevel:    {zl: zerolog.NoLevel, fn: (*zerolog.Logger).Log},
 	insolar.DebugLevel: {zl: zerolog.DebugLevel, fn: (*zerolog.Logger).Debug},
 	insolar.InfoLevel:  {zl: zerolog.InfoLevel, fn: (*zerolog.Logger).Info},
 	insolar.WarnLevel:  {zl: zerolog.WarnLevel, fn: (*zerolog.Logger).Warn},
@@ -249,23 +249,6 @@ func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
 
 func (z *zerologAdapter) Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
 	z.EmbeddedEventf(level, fmt, args...)
-}
-
-func (z *zerologAdapter) Trace(args ...interface{}) {
-	if lvl := z.EmbeddedTrace(); lvl != insolar.NoLevel {
-		z.EmbeddedEvent(lvl, args...)
-	}
-}
-
-func (z *zerologAdapter) Tracef(format string, args ...interface{}) {
-	if lvl := z.EmbeddedTrace(); lvl != insolar.NoLevel {
-		z.EmbeddedEventf(lvl, format, args...)
-	}
-}
-
-func (z *zerologAdapter) IsTracing() bool {
-	lvl := z.EmbeddedTrace()
-	return lvl > insolar.DebugLevel && z.Is(lvl)
 }
 
 func (z *zerologAdapter) Debug(args ...interface{}) {
