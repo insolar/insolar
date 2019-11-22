@@ -40,8 +40,6 @@ import (
 )
 
 func TestVirtual_BasicOperations(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultVMConfig()
 
