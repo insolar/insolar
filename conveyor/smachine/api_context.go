@@ -42,8 +42,6 @@ type BasicContext interface {
 	ParentLink() SlotLink
 	// not nil
 	GetContext() context.Context
-
-	//Log() Logger
 }
 
 /*------------------  Contexts for in-order steps -----------------------*/
@@ -97,14 +95,14 @@ type ConstructionContext interface {
 	// Sets a default value to be passed to TerminationHandlerFunc when the slot stops.
 	SetDefaultTerminationResult(interface{})
 
-	// Overrides default step logger.
-	// SetDefaultStepLogger(nil, false) will panic, as StateMachine is no longer available for the default implementation.
-	// See StateMachineDeclaration.GetStepLogger() for additional details.
-	SetDefaultStepLogger(fn StepLoggerFunc, isOutput bool)
+	// Sets tracing mode for the slot. Actual impact depends on implementation of a logger.
+	SetLogTracing(bool)
 
-	//SetTracing(bool)
-	//SetTracerId(string)
+	// Sets tracer id for the slot. This can't be directly changed after construction. See UpdateDefaultStepLogger()
+	SetTracerId(TracerId)
 }
+
+type StepLoggerUpdateFunc func(StepLogger, StepLoggerFactoryFunc) StepLogger
 
 /* A context parent for all regular step contexts */
 type InOrderStepContext interface {
@@ -124,8 +122,12 @@ type InOrderStepContext interface {
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
 
-	// Overrides default step logger. See ConstructionContext.SetDefaultStepLogger()
-	SetDefaultStepLogger(fn StepLoggerFunc, isOutput bool)
+	// Returns slot logger
+	Log() Logger
+	// Sets tracing mode for the slot. Actual impact depends on implementation of a logger.
+	SetLogTracing(bool)
+	// Overrides default step logger. Current logger is provided as argument. Update func can return nil.
+	UpdateDefaultStepLogger(updateFn StepLoggerUpdateFunc)
 
 	// Go to the next step. Flags, migrate and error handlers are provided by SetDefaultXXX()
 	Jump(StateFunc) StateUpdate

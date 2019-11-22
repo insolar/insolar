@@ -47,7 +47,7 @@ type slotDeclarationData struct {
 	declaration StateMachineDeclaration
 
 	shadowMigrate   ShadowMigrateFunc
-	stepLogger      StepLoggerFunc
+	stepLogger      StepLogger
 	defMigrate      MigrateFunc
 	defErrorHandler ErrorHandlerFunc
 	defTerminate    TerminationHandlerFunc
@@ -91,6 +91,7 @@ const (
 	slotHasBargeIn
 	slotHasAliases
 	slotHadAsync
+	slotIsTracing
 )
 
 type SlotDependency interface {
@@ -446,51 +447,89 @@ func (s *Slot) decAsyncCount() {
 	s.asyncCallCount--
 }
 
+func (s *Slot) newStepLoggerData(eventType StepLoggerEvent, link StepLink) StepLoggerData {
+	return StepLoggerData{
+		CycleNo:     s.machine.getScanCount(),
+		StepNo:      link,
+		CurrentStep: s.step,
+		Declaration: s.declaration,
+		EventType:   eventType,
+		//Error:       nil,
+		//SM:          nil,
+		//CustomEvent: nil,
+	}
+}
+
 func (s *Slot) logInternal(link StepLink, updateType string, err error) {
 	if s.stepLogger == nil {
 		return
 	}
-	stepData := StepLoggerData{Flags: StepLoggerInternal, StepNo: link, CurrentStep: s.step, Error: err, UpdateType: updateType}
+	stepData := s.newStepLoggerData(StepLoggerInternal, link)
+	stepData.Error = err
+
 	func() {
 		defer func() {
-			_ = recover() // we can't fail here
+			_ = recover() // we can't fail logInternal() call
 		}()
-		s.stepLogger(&stepData)
+		s.stepLogger.LogInternal(stepData, updateType)
 	}()
-}
-
-func (s *Slot) _logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, flags StepLoggerFlags) {
-	stepData := StepLoggerData{
-		CycleNo:     s.machine.getScanCount(),
-		StepNo:      s.NewStepLink(),
-		Flags:       flags,
-		CurrentStep: s.step,
-		NextStep:    stateUpdate.step,
-	}
-
-	if prevStepNo <= 1 {
-		// nil all handlers as initialization transition can't be logged properly
-		stepData.CurrentStep = SlotStep{Flags: s.step.Flags | StepResetAllFlags}
-	}
-	stepData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
-	s.stepLogger(&stepData)
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
 	if s.stepLogger == nil {
 		return
 	}
+	stepData := s.newStepLoggerData(StepLoggerUpdate, s.NewStepLink())
+
+	updData := StepLoggerUpdateData{
+		NextStep: stateUpdate.step,
+	}
+
+	if prevStepNo <= 1 {
+		// nil all handlers as initialization transition can't be logged properly
+		stepData.CurrentStep = SlotStep{Flags: s.step.Flags | StepResetAllFlags}
+	}
+	updData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
 
 	if wasAsync {
-		s._logStepUpdate(prevStepNo, stateUpdate, StepLoggerDetached)
-	} else {
-		s._logStepUpdate(prevStepNo, stateUpdate, 0)
+		updData.Flags |= StepLoggerDetached
 	}
+
+	s.stepLogger.LogUpdate(stepData, updData)
 }
 
 func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
 	if s.stepLogger == nil {
 		return
 	}
-	s._logStepUpdate(prevStepNo, stateUpdate, StepLoggerMigrate)
+	stepData := s.newStepLoggerData(StepLoggerMigrate, s.NewStepLink())
+	updData := StepLoggerUpdateData{
+		NextStep: stateUpdate.step,
+	}
+	updData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
+	s.stepLogger.LogUpdate(stepData, updData)
+}
+
+func (s *Slot) setStepLoggerAfterInit(updateFn StepLoggerUpdateFunc) {
+	newStepLogger := updateFn(s.stepLogger, s.machine.config.StepLoggerFactoryFn)
+
+	if newStepLogger == nil && s.stepLogger != nil {
+		tracerId := s.stepLogger.GetTracerId()
+		if len(tracerId) > 0 {
+			newStepLogger = StepLoggerStub{tracerId}
+		}
+	}
+	s.stepLogger = newStepLogger
+}
+
+func (s *Slot) isTracing() bool {
+	return s.slotFlags&slotIsTracing != 0
+}
+
+func (s *Slot) setTracing(b bool) {
+	if b {
+		s.slotFlags |= slotIsTracing
+	} else {
+		s.slotFlags &^= slotIsTracing
+	}
 }

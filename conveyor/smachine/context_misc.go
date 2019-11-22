@@ -24,9 +24,11 @@ var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
 	contextTemplate
-	s       *Slot
-	injects map[string]interface{}
-	inherit DependencyInheritanceMode
+	s         *Slot
+	injects   map[string]interface{}
+	inherit   DependencyInheritanceMode
+	isTracing bool
+	tracerId  TracerId
 }
 
 func (p *constructionContext) SetDependencyInheritanceMode(mode DependencyInheritanceMode) {
@@ -80,9 +82,14 @@ func (p *constructionContext) SetDefaultTerminationResult(v interface{}) {
 	p.s.defResult = v
 }
 
-func (p *constructionContext) SetDefaultStepLogger(lf StepLoggerFunc, isOutput bool) {
+func (p *constructionContext) SetLogTracing(isTracing bool) {
 	p.ensure(updCtxConstruction)
-	p.s.stepLogger = p.s.machine._getStepLogger(p.s.ctx, lf, isOutput, nil) // sm == nil disallows use of non-final nil handler
+	p.isTracing = isTracing
+}
+
+func (p *constructionContext) SetTracerId(tracerId TracerId) {
+	p.ensure(updCtxConstruction)
+	p.tracerId = tracerId
 }
 
 func (p *constructionContext) executeCreate(nextCreate CreateFunc) StateMachine {

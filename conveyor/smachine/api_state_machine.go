@@ -34,12 +34,11 @@ type StateMachineDeclaration interface {
 	// Dependencies injected through DependencyInjector and implementing ShadowMigrator will be invoked during migration.
 	InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector)
 
-	// Provides per-SM logger.
-	// When isOutput=true, only the returned logger will be applied and with logger=nil there will be no output.
-	// When isOutput=false, the returned logger is applied to StepLoggerData, and then the default logger from SlotMachine is executed.
-	// When result is (nil, false) then StateMachine reference will be remembered to be added into every StepLoggerData.
+	// Provides per-SM logger. Zero implementation must return (nil, false).
 	// Is called once per SM after InjectDependencies().
-	GetStepLogger(context.Context, StateMachine) (lf StepLoggerFunc, isOutput bool)
+	// When result is (_, false) then StepLoggerFactory will be used.
+	// When result is (nil, true) then any logging will be disabled.
+	GetStepLogger(context.Context, StateMachine, TracerId, StepLoggerFactoryFunc) (StepLogger, bool)
 
 	// Returns an initialization function for the given SM.
 	// Is called once per SM after InjectDependencies().
@@ -66,33 +65,6 @@ type ShadowMigrator interface {
 	ShadowMigrate(migrationCount, migrationDelta uint32)
 }
 
-type StepLoggerFlags uint8
-
-const (
-	StepLoggerMigrate StepLoggerFlags = 1 << iota
-	StepLoggerDetached
-
-	// logger should not log these without necessity
-	StepLoggerInternal
-)
-
-type StepLoggerData struct {
-	CycleNo     uint32
-	StepNo      StepLink
-	CurrentStep SlotStep
-	NextStep    SlotStep
-	UpdateType  string
-	Flags       StepLoggerFlags
-	Error       error
-
-	// NB! This field can only be provided by SlotMachine at slot initialization.
-	// Later it can be filled in by custom wrappers of StepLoggerFunc
-	SM StateMachine
-}
-
-type StepLoggerFunc func(*StepLoggerData)
-type StepLoggerFactoryFunc func(context.Context) StepLoggerFunc
-
 // A template to include into SM to avoid hassle of creation of any methods but GetInitStateFor()
 type StateMachineDeclTemplate struct {
 }
@@ -114,7 +86,7 @@ func (s *StateMachineDeclTemplate) GetShadowMigrateFor(StateMachine) ShadowMigra
 func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *injector.DependencyInjector) {
 }
 
-func (s *StateMachineDeclTemplate) GetStepLogger(context.Context, StateMachine) (StepLoggerFunc, bool) {
+func (s *StateMachineDeclTemplate) GetStepLogger(context.Context, StateMachine, TracerId, StepLoggerFactoryFunc) (StepLogger, bool) {
 	return nil, false
 }
 
@@ -136,7 +108,7 @@ type CreateDefaultValues struct {
 	Parent                 SlotLink
 	OverriddenDependencies map[string]interface{}
 	TerminationHandler     TerminationHandlerFunc
-	StepLogger             StepLoggerFunc
+	TracerId               TracerId
 }
 
 func (p *CreateDefaultValues) PutOverride(id string, v interface{}) {

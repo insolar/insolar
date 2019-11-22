@@ -165,11 +165,6 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 	return p.s.defResult
 }
 
-func (p *slotContext) SetDefaultStepLogger(lf StepLoggerFunc, isOutput bool) {
-	p.ensureAtLeast(updCtxInit)
-	p.s.stepLogger = p.s.machine._getStepLogger(p.s.ctx, lf, isOutput, nil) // sm == nil disallows use of non-final nil handler
-}
-
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }
@@ -269,6 +264,21 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 		m.startNewSlotByDetachable(link.s, runInit, p.w)
 	}
 	return link
+}
+
+func (p *slotContext) Log() Logger {
+	p.ensureAtLeast(updCtxInit)
+	return slotLogger{p}
+}
+
+func (p *slotContext) SetLogTracing(b bool) {
+	p.ensureAtLeast(updCtxInit)
+	p.s.setTracing(b)
+}
+
+func (p *slotContext) UpdateDefaultStepLogger(updateFn StepLoggerUpdateFunc) {
+	p.ensureAtLeast(updCtxInit)
+	p.s.setStepLoggerAfterInit(updateFn)
 }
 
 func (p *slotContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
