@@ -29,7 +29,7 @@ type conveyorStepLogger struct {
 	tracer smachine.TracerId
 }
 
-func (conveyorStepLogger) CanLogEvent(eventType smachine.StepLoggerEvent, isTracing bool) bool {
+func (conveyorStepLogger) CanLogEvent(eventType smachine.StepLoggerEvent, stepLevel smachine.StepLogLevel) bool {
 	return true
 }
 

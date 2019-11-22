@@ -461,7 +461,7 @@ func (s *Slot) newStepLoggerData(eventType StepLoggerEvent, link StepLink) StepL
 }
 
 func (s *Slot) logInternal(link StepLink, updateType string, err error) {
-	if s.stepLogger == nil {
+	if s.stepLogger == nil || !s.stepLogger.CanLogEvent(StepLoggerInternal, s.getStepLogLevel()) {
 		return
 	}
 	stepData := s.newStepLoggerData(StepLoggerInternal, link)
@@ -479,6 +479,18 @@ func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsyn
 	if s.stepLogger == nil {
 		return
 	}
+	switch stepLogLevel := s.getStepLogLevel(); stepLogLevel {
+	case StepLogLevelDefault:
+		if stateUpdate.step.Transition != nil && stateUpdate.step.Flags&StepElevatedLog != 0 {
+			stepLogLevel = StepLogLevelElevated
+		}
+		fallthrough
+	default:
+		if !s.stepLogger.CanLogEvent(StepLoggerUpdate, stepLogLevel) {
+			return
+		}
+	}
+
 	stepData := s.newStepLoggerData(StepLoggerUpdate, s.NewStepLink())
 
 	updData := StepLoggerUpdateData{
@@ -499,7 +511,7 @@ func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsyn
 }
 
 func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
-	if s.stepLogger == nil {
+	if s.stepLogger == nil || !s.stepLogger.CanLogEvent(StepLoggerInternal, s.getStepLogLevel()) {
 		return
 	}
 	stepData := s.newStepLoggerData(StepLoggerMigrate, s.NewStepLink())
@@ -520,6 +532,17 @@ func (s *Slot) setStepLoggerAfterInit(updateFn StepLoggerUpdateFunc) {
 		}
 	}
 	s.stepLogger = newStepLogger
+}
+
+func (s *Slot) getStepLogLevel() StepLogLevel {
+	switch {
+	case s.slotFlags&slotIsTracing != 0:
+		return StepLogLevelTracing
+	case s.step.Flags&StepElevatedLog != 0:
+		return StepLogLevelElevated
+	default:
+		return StepLogLevelDefault
+	}
 }
 
 func (s *Slot) isTracing() bool {

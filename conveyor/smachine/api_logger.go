@@ -55,8 +55,16 @@ type StepLoggerUpdateData struct {
 
 type StepLoggerFactoryFunc func(context.Context, StateMachine, TracerId) StepLogger
 
+type StepLogLevel uint8
+
+const (
+	StepLogLevelDefault StepLogLevel = iota
+	StepLogLevelElevated
+	StepLogLevelTracing
+)
+
 type StepLogger interface {
-	CanLogEvent(eventType StepLoggerEvent, isTracing bool) bool
+	CanLogEvent(eventType StepLoggerEvent, stepLevel StepLogLevel) bool
 	//LogMetric()
 	LogUpdate(StepLoggerData, StepLoggerUpdateData)
 	LogInternal(data StepLoggerData, updateType string)
@@ -94,13 +102,13 @@ func (p slotLogger) GetTracerId() TracerId {
 
 func (p slotLogger) _logCustom(eventType StepLoggerEvent, msg interface{}, err error) {
 	if stepLogger := p.getStepLogger(); stepLogger != nil {
-		isTracing := p.c.s.isTracing()
-		if !stepLogger.CanLogEvent(eventType, isTracing) {
+		stepLevel := p.c.s.getStepLogLevel()
+		if !stepLogger.CanLogEvent(eventType, stepLevel) {
 			return
 		}
 		s := p.c.s
 
-		if isTracing && eventType == StepLoggerTrace {
+		if stepLevel == StepLogLevelTracing && eventType == StepLoggerTrace {
 			eventType = StepLoggerActiveTrace
 		}
 
@@ -130,7 +138,7 @@ type StepLoggerStub struct {
 	TracerId TracerId
 }
 
-func (StepLoggerStub) CanLogEvent(StepLoggerEvent, bool) bool {
+func (StepLoggerStub) CanLogEvent(StepLoggerEvent, StepLogLevel) bool {
 	return false
 }
 

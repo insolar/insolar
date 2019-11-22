@@ -29,6 +29,8 @@ const (
 	// A step with StepPriority flag will be executed before other steps in a cycle.
 	StepPriority
 
+	// A marker for logger to log this step without tracing
+	StepElevatedLog
 	//StepIgnoreAsyncWakeup
 	//StepForceAsyncWakeup
 	//StepIgnoreAsyncPanic
