@@ -1,0 +1,124 @@
+@startuml
+
+hide empty members
+
+namespace Caller {
+    DropRecord <-- RegistrationRecord
+    class DropRecord {
+        -RegistrarA_Signature0
+
+        ~RegistrationRecordHashA
+    }
+
+    class RegistrationRecord {
+        ..(by Registrar)..
+        +EntryTypeAndFlags
+        +EntryLocator
+        +PredecessorRef
+
+        -RegistrarA_Signature1\n[given back to Producer]
+        ..
+        -ProducerA_Signature
+        ~RecordBodyHashA
+    }
+
+    RegistrationRecord <-- RecordBody
+    class RecordBody {
+        +RecordTypeAndFlags
+        +ProducerA_NodeHash
+        +RegistrarA_NodeHash
+        +LifelineRef = Caller
+
+        +OtherRef = Callee
+        +ReasonRef
+
+        ~RecordPayloadHashA
+    }
+
+    RecordBody <-- RecordPayload
+    class RecordPayload {
+        +CallSite
+        +CallExtInfo
+    }
+}
+
+namespace Network {
+    class RequestHeader
+    RequestHeader <--- RequestPayload
+    class RequestHeader {
+        ..(from RegRecord)..
+        -ProducerA_Signature
+        -RegistrarA_Signature1
+        ..(from RecordBody)..
+        +RecordTypeAndFlags
+        +RegistrarA_NodeHash
+        +CallerRef
+        +CalleeRef
+        +ReasonRef
+        +CallSite
+
+        ~RecordPayloadHashA
+        ..
+        +DelegationToken [optional]
+        ..(calculated)..
+        +ProducerA_NodeHash
+        +RecordBodyHashA
+    }
+
+    Caller.RecordPayload . RequestPayload
+
+    class RequestPayload {
+        +CallSite
+        +CallExtInfo
+    }
+}
+
+namespace Callee {
+    DropRecord <-- RegistrationRecord
+    class DropRecord {
+        -RegistrarB_Signature
+
+        ~RegistrationRecordHashB
+    }
+
+    class RegistrationRecord {
+        ..(by Registrar)..
+        +EntryTypeAndFlags
+        +EntryLocator
+        +PredecessorRef
+
+        -RegistrarB_Signature1\n[given back to Producer]
+        ..
+        -ProducerB_Signature
+        ~RecordBodyHashB
+    }
+
+    RegistrationRecord <-- RecordBody
+    class RecordBody {
+        +RecordTypeAndFlags
+        +ProducerB_NodeHash
+        +RegistrarB_NodeHash
+        +LifelineRef = Callee
+
+        +OtherRef = Caller
+        +ReasonRef
+
+        ~RecordPayloadHashB
+    }
+
+    RecordBody <-- RecordPayload
+    class RecordPayload {
+        +ProducerA_NodeHash
+        +RegistrarA_NodeHash
+        -ProducerA_Signature
+        -RegistrarA_Signature1
+        ..
+        +CallExtInfo
+        ..
+        +DelegationToken [optional]
+    }
+
+    Network.RequestPayload . RecordPayload
+}
+
+@enduml
