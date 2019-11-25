@@ -27,6 +27,8 @@ type LogicRunner struct {
 	BuiltIn *BuiltIn
 	// GoPlugin - configuration of executor based on Go plugins
 	GoPlugin *GoPlugin
+	// PulseLRUSize - configuration of size of a pulse's cache
+	PulseLRUSize int
 }
 
 // BuiltIn configuration, no options at the moment
@@ -51,5 +53,6 @@ func NewLogicRunner() LogicRunner {
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerProtocol: "tcp",
 		},
+		PulseLRUSize: 10,
 	}
 }

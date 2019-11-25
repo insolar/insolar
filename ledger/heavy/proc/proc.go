@@ -26,4 +26,5 @@ type Dependencies struct {
 	SendIndex        func(*SendIndex)
 	SearchIndex      func(*SearchIndex)
 	SendInitialState func(*SendInitialState)
+	SendPulse        func(*SendPulse)
 }

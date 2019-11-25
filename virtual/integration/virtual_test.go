@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -170,6 +171,14 @@ func TestVirtual_BasicOperations(t *testing.T) {
 				return []payload.Payload{
 					&payload.ResultInfo{
 						ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
+					},
+				}
+			case *payload.GetPulse:
+				return []payload.Payload{
+					&payload.Pulse{
+						Pulse: pulse.PulseProto{
+							PulseNumber: 42,
+						},
 					},
 				}
 			}

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 	"github.com/pkg/errors"
@@ -44,10 +45,11 @@ type LogicExecutor interface {
 type logicExecutor struct {
 	MachinesManager  machinesmanager.MachinesManager `inject:""`
 	DescriptorsCache artifacts.DescriptorsCache      `inject:""`
+	PulseAccessor    pulse.Accessor
 }
 
-func NewLogicExecutor() LogicExecutor {
-	return &logicExecutor{}
+func NewLogicExecutor(pulseAccessor pulse.Accessor) LogicExecutor {
+	return &logicExecutor{PulseAccessor: pulseAccessor}
 }
 
 func (le *logicExecutor) Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
@@ -177,20 +179,21 @@ func (le *logicExecutor) genLogicCallContext(
 ) *insolar.LogicCallContext {
 	request := transcript.Request
 	reqRef := transcript.RequestRef
-	res := &insolar.LogicCallContext{
-		Mode: insolar.ExecuteCallMode,
 
-		Request: &reqRef,
-
-		Callee:    nil, // below
-		Prototype: protoDesc.HeadRef(),
-		Code:      codeDesc.Ref(),
-
-		Caller:          &request.Caller,
-		CallerPrototype: &request.CallerPrototype,
-
-		TraceID: inslogger.TraceID(ctx),
-	}
+	res := insolar.NewLogicCallContext(
+		insolar.ExecuteCallMode,
+		&reqRef,
+		nil,
+		nil,
+		protoDesc.HeadRef(),
+		codeDesc.Ref(),
+		&request.Caller,
+		&request.CallerPrototype,
+		inslogger.TraceID(ctx),
+		func(ctx context.Context, pn insolar.PulseNumber) (i insolar.Pulse, e error) {
+			return le.PulseAccessor.ForPulseNumber(ctx, pn)
+		},
+	)
 
 	if oDesc := transcript.ObjectDescriptor; oDesc != nil {
 		res.Parent = oDesc.Parent()

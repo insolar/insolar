@@ -248,7 +248,7 @@ func NewServer(
 		Jets,
 		Nodes,
 
-		logicexecutor.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(Pulses),
 		logicrunner.NewRequestsExecutor(),
 		mManager,
 		NodeNetwork,
