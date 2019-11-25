@@ -302,13 +302,7 @@ func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) (boo
 }
 
 func (d *Deposit) canTransfer(transferAmount *big.Int) error {
-	c := 0
-	for _, r := range d.MigrationDaemonConfirms {
-		if r != "" {
-			c++
-		}
-	}
-	if d.VestingType == appfoundation.DefaultVesting && c < numConfirmation {
+	if d.VestingType == appfoundation.DefaultVesting && !d.IsConfirmed {
 		return fmt.Errorf("number of confirms is less then 2")
 	}
 
