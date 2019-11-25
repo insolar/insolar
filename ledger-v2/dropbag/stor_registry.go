@@ -22,13 +22,15 @@ import (
 )
 
 type PayloadFactory interface {
-	CreatePayloadBuilder(format FileFormat, sr StorageReader) PayloadBuilder
+	CreatePayloadBuilder(format FileFormat, sr StorageSeqReader) PayloadBuilder
 }
 
 type PayloadBuilder interface {
-	AddPreamble(bytes []byte, storageStart int64, storageLen int64) error
-	AddConclude(bytes []byte, storageStart int64, storageLen int64) error
-	AddEntry(entryNo int, bytes []byte, storageStart int64, storageLen int64) error
+	AddPreamble(bytes []byte, storageOffset int64, localOffset int) error
+	AddConclude(bytes []byte, storageOffset int64, localOffset int) error
+	AddEntry(entryNo, entryFieldNo int, bytes []byte, storageStart int64, localOffset int) error
+	NeedsNextEntry() bool
+
 	Finished() error
 	Failed(error) error
 }
@@ -36,7 +38,7 @@ type PayloadBuilder interface {
 type FileFormat uint16
 type FormatOptions uint64
 
-func OpenStorage(sr StorageReader, config ReadConfig, payloadFactory PayloadFactory) (PayloadBuilder, error) {
+func OpenStorage(sr StorageSeqReader, config ReadConfig, payloadFactory PayloadFactory) (PayloadBuilder, error) {
 	f, opt, err := ReadFormatAndOptions(sr)
 	if err != nil {
 		return nil, err
@@ -48,7 +50,8 @@ func OpenStorage(sr StorageReader, config ReadConfig, payloadFactory PayloadFact
 	switch f {
 	case 1:
 		pb = payloadFactory.CreatePayloadBuilder(f, sr)
-		err = StorageFileV1{Config: config, Builder: pb}.Read(sr)
+		v1 := StorageFileV1{Config: config, Builder: pb}
+		err = v1.Read(sr)
 	default:
 		return nil, fmt.Errorf("unknown storage format: format%x", f)
 	}
@@ -62,7 +65,7 @@ func OpenStorage(sr StorageReader, config ReadConfig, payloadFactory PayloadFact
 	return pb, err
 }
 
-func ReadFormatAndOptions(sr StorageReader) (FileFormat, FormatOptions, error) {
+func ReadFormatAndOptions(sr StorageSeqReader) (FileFormat, FormatOptions, error) {
 	if v, err := formatField.DecodeFrom(sr); err != nil {
 		return 0, 0, err
 	} else {
@@ -71,7 +74,7 @@ func ReadFormatAndOptions(sr StorageReader) (FileFormat, FormatOptions, error) {
 }
 
 type ReadConfig struct {
-	NonLazyEntries bool
+	ReadAllEntries bool
 	AlwaysCopy     bool
 	StorageOptions FormatOptions
 }

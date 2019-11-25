@@ -16,6 +16,8 @@
 
 package dropbag
 
+import "io"
+
 type CompositeDropStorage interface {
 	// identified by a first pulse
 
@@ -94,4 +96,35 @@ type StorageFile interface {
 }
 
 type StorageFileReader interface {
+}
+
+type StorageFormatAdapter interface {
+	// checks individual entry CRC
+	// checks file on reopening
+	// facilitates read of lazy entries -> need to know format
+}
+
+type StorageURI string
+type StorageReadAdapter interface {
+	GetURI() StorageURI
+
+	OpenForSeqRead() StorageSeqReader
+	OpenForBlockRead() StorageBlockReader
+}
+
+type StorageSeqReader interface {
+	io.ByteReader
+	io.Reader
+	io.Closer
+	io.Seeker
+	CanSeek() bool
+	CanReadMapped() bool
+	Offset() int64
+	ReadMapped(n int64) ([]byte, error)
+}
+
+type StorageBlockReader interface {
+	io.ReaderAt
+	io.Closer
+	ReadAtMapped(n int64, off int64) ([]byte, error)
 }

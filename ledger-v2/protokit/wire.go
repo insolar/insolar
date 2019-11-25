@@ -54,6 +54,28 @@ func (v WireTag) FieldId() int {
 	return int(v >> lenWireType)
 }
 
+func (v WireTag) TagSize() int {
+	return SizeVarint(uint64(v))
+}
+
+func (v WireTag) FieldSize() (fixedSize bool, maxSize int) {
+	fixedSize, maxSize = v.Type().DataSize()
+	if maxSize != math.MaxInt32 {
+		maxSize += SizeVarint(uint64(v))
+	}
+	return fixedSize, maxSize
+}
+
+func (v WireTag) EnsureFixedFieldSize(sz int) WireTag {
+	switch fixedSize, maxSize := v.FieldSize(); {
+	case !fixedSize:
+		panic("illegal state - not fixed size")
+	case maxSize != sz:
+		panic("illegal value - size mismatched")
+	}
+	return v
+}
+
 func (v WireTag) _checkTag(expected WireTag) error {
 	if v == expected {
 		return nil
@@ -172,6 +194,21 @@ func (v WireType) Tag(fieldId int) WireTag {
 		panic("illegal value")
 	}
 	return WireTag(fieldId<<lenWireType | int(v))
+}
+
+func (v WireType) DataSize() (fixedSize bool, maxSize int) {
+	switch v {
+	case WireVarint:
+		return false, MaxVarintSize
+	case WireBytes:
+		return false, math.MaxInt32
+	case WireFixed64:
+		return true, 8
+	case WireFixed32:
+		return true, 4
+	default:
+		panic("illegal value")
+	}
 }
 
 func (v WireType) ExpectDecoded(x uint64, err error) (WireTag, error) {

@@ -19,22 +19,23 @@ package dropbag
 // This structure is intended for incremental/streamed write with some abilities to detect corruptions and to do self heal.
 // MUST: Strict order of field
 type StorageFileScheme struct {
-	FormatVersionAndOptions uint64 `protobuf:"fixed64,16,opt"` // != 0
+	FormatVersionAndOptions uint64 `protobuf:"fixed64,16,req"` // != 0
 
 	Head struct {
-		Magic        uint32 `protobuf:"fixed32,16,opt"` // != 0, a number updated each time when a file is regenerated
-		HeadMagic    string `protobuf:"string,17,opt"`  // = "insolar-head"
-		TailLen      uint32 `protobuf:"varint,18,opt"`  // must be defined at the creation of a file
-		EntryOptions uint32 `protobuf:"varint,19,opt"`
+		MagicAndCRC  uint64 `protobuf:"fixed64,16,req"` // != 0, a number updated each time when a file is regenerated
+		HeadMagicStr string `protobuf:"string,17,req"`  // = "insolar-head"
+
+		TailLen uint32 `protobuf:"varint,19,req"` // must be defined at creation of a file
 
 		HeadObj interface{}
 
-		SelfLen uint32 `protobuf:"fixed32,2047,opt"` // != 0, MUST be equal to byte len of this struct (we use fixed size here to make it easier to calculate)
+		SelfLen uint32 `protobuf:"fixed32,2047,req"` // != 0, MUST be equal to byte len of this struct (we use fixed size here to make it easier to calculate)
 	} `protobuf:"bytes,20,opt"` // required, and MUST be the second field in the file
 
-	Content struct {
-		Magic        uint32 `protobuf:"fixed32,16,opt"` // != 0, MUST match Head.Magic
-		EntryOptions uint32 `protobuf:"varint,19,opt"`
+	Entry struct {
+		MagicAndCRC uint64 `protobuf:"fixed64,16,req"` // != 0, MUST match Head.Magic+EntrySeqNo
+
+		//EntryOptions uint32 `protobuf:"varint,19,req"`
 
 		DataObj interface{}
 
@@ -44,12 +45,14 @@ type StorageFileScheme struct {
 	AlignPadding []byte `protobuf:"bytes,2046,opt"` // optional, and MUST be the 2nd from the end
 
 	Tail struct {
-		Magic     uint32 `protobuf:"fixed32,16,opt"` // != 0, MUST match Head.Magic
-		TailMagic string `protobuf:"string,17,opt"`  // = "insolar-tail"
+		MagicAndCRC  uint64 `protobuf:"fixed64,16,req"` // != 0, MUST match Head.Magic
+		TailMagicStr string `protobuf:"string,17,req"`  // = "insolar-tail"
+
+		EntryCountAndCRC uint64 `protobuf:"fixed64,19,req"` //
 
 		TailObj interface{}
 
 		Padding []byte `protobuf:"bytes,2046,opt"`   // as the size of Tail structure must be defined at the creation of a file, padding may be needed.
-		SelfLen uint32 `protobuf:"fixed32,2047,opt"` // != 0, MUST be equal to byte len of this struct (we use fixed size here to make it easier to calculate)
+		SelfLen uint32 `protobuf:"fixed32,2047,req"` // != 0, MUST be equal to byte len of this struct (we use fixed size here to make it easier to calculate)
 	} `protobuf:"bytes,2047,opt"` // required, and MUST be the last field in the file
 }

@@ -139,6 +139,7 @@ func decodeFixed32(r io.ByteReader) (v uint64, err error) {
 		return 0, err
 	}
 	v |= uint64(b) << 24
+	return v, nil
 }
 
 func MatchStringByteReader(s string, r io.ByteReader) (bool, error) {
