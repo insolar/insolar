@@ -439,14 +439,6 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := GetRequest{}
 		err := pl.Unmarshal(data)
 		return &pl, err
-	case TypeGetPulse:
-		pl := GetPulse{}
-		err := pl.Unmarshal(data)
-		return &pl, err
-	case TypePulse:
-		pl := Pulse{}
-		err := pl.Unmarshal(data)
-		return &pl, err
 	case TypeGetRequestInfo:
 		pl := GetRequestInfo{}
 		err := pl.Unmarshal(data)
@@ -545,6 +537,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeErrorResultExitsts:
 		pl := ErrorResultExists{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPulse:
+		pl := GetPulse{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePulse:
+		pl := Pulse{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

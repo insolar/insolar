@@ -99,39 +99,8 @@ type LogicCallContext struct {
 	Caller          *Reference // Contract that made the call
 	CallerPrototype *Reference // Prototype (base class) of the caller
 
-	TraceID      string // trace mark for Jaeger and friends
-	pulseFetcher func(ctx context.Context, pn PulseNumber) (Pulse, error)
-}
-
-func NewLogicCallContext(
-	mode CallMode,
-	request *Reference,
-	callee *Reference,
-	parent *Reference,
-	prototype *Reference,
-	code *Reference,
-	caller *Reference,
-	callerPrototype *Reference,
-	traceID string,
-	pulseFetcher func(ctx context.Context, pn PulseNumber) (Pulse, error),
-) *LogicCallContext {
-	return &LogicCallContext{
-		Mode:            mode,
-		Request:         request,
-		Callee:          callee,
-		Parent:          parent,
-		Prototype:       prototype,
-		Code:            code,
-		Caller:          caller,
-		CallerPrototype: callerPrototype,
-		TraceID:         traceID,
-		pulseFetcher:    pulseFetcher}
-
-}
-
-// Pulse returns a pulse for request. If there is no pulse in the cache, the network call to a light happens
-func (c *LogicCallContext) Pulse(ctx context.Context) (Pulse, error) {
-	return c.pulseFetcher(ctx, c.Request.GetLocal().Pulse())
+	TraceID string // trace mark for Jaeger and friends
+	Pulse   Pulse  // prefetched pulse for call context
 }
 
 // ContractConstructor is a typedef for wrapper contract header

@@ -96,7 +96,11 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	lc, err := le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	if err != nil {
+		return nil, errors.New("failed to generate logicalCallContext")
+	}
+	transcript.LogicContext = lc
 
 	newData, result, err := executor.CallMethod(
 		ctx, transcript.LogicContext, *codeDesc.Ref(), objDesc.Memory(), request.Method, request.Arguments,
@@ -154,7 +158,12 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	lc, err := le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	if err != nil {
+		return nil, errors.New("failed to generate logicalCallContext")
+	}
+
+	transcript.LogicContext = lc
 
 	newData, result, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
@@ -176,24 +185,30 @@ func (le *logicExecutor) genLogicCallContext(
 	transcript *common.Transcript,
 	protoDesc artifacts.PrototypeDescriptor,
 	codeDesc artifacts.CodeDescriptor,
-) *insolar.LogicCallContext {
+) (*insolar.LogicCallContext, error) {
 	request := transcript.Request
 	reqRef := transcript.RequestRef
 
-	res := insolar.NewLogicCallContext(
-		insolar.ExecuteCallMode,
-		&reqRef,
-		nil,
-		nil,
-		protoDesc.HeadRef(),
-		codeDesc.Ref(),
-		&request.Caller,
-		&request.CallerPrototype,
-		inslogger.TraceID(ctx),
-		func(ctx context.Context, pn insolar.PulseNumber) (i insolar.Pulse, e error) {
-			return le.PulseAccessor.ForPulseNumber(ctx, pn)
-		},
-	)
+	p, err := le.PulseAccessor.ForPulseNumber(ctx, reqRef.GetLocal().Pulse())
+	if err != nil {
+		return nil, err
+	}
+
+	res := &insolar.LogicCallContext{
+		Mode: insolar.ExecuteCallMode,
+
+		Request: &reqRef,
+
+		Callee:    nil, // below
+		Prototype: protoDesc.HeadRef(),
+		Code:      codeDesc.Ref(),
+
+		Caller:          &request.Caller,
+		CallerPrototype: &request.CallerPrototype,
+
+		TraceID: inslogger.TraceID(ctx),
+		Pulse:   p,
+	}
 
 	if oDesc := transcript.ObjectDescriptor; oDesc != nil {
 		res.Parent = oDesc.Parent()
@@ -203,5 +218,5 @@ func (le *logicExecutor) genLogicCallContext(
 		res.Callee = transcript.Request.Object
 	}
 
-	return res
+	return res, nil
 }

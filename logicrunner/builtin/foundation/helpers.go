@@ -18,7 +18,6 @@ package foundation
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"errors"
 	"math/rand"
@@ -47,11 +46,8 @@ func GetRequestReference() (*insolar.Reference, error) {
 
 // NewSource returns source initialized with entropy from pulse.
 func NewSource() (rand.Source, error) {
-	pulse, err := GetLogicalContext().Pulse(context.Background())
-	if err != nil {
-		return nil, errors.New("failed to get entropy")
-	}
-	randNum, err := binary.ReadVarint(bytes.NewReader(pulse.Entropy[:9]))
+	entr := GetLogicalContext().Pulse.Entropy[:9]
+	randNum, err := binary.ReadVarint(bytes.NewReader(entr))
 	if err != nil {
 		return nil, err
 	}
