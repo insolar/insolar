@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"crypto"
-	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -134,11 +133,11 @@ func NewRunner(cfg *configuration.APIRunner,
 	availabilityChecker insolar.AvailabilityChecker,
 ) (*Runner, error) {
 
-	if err := checkConfig(cfg); err != nil {
+	err := checkConfig(cfg)
+	if err != nil {
 		return nil, errors.Wrap(err, "[ NewAPIRunner ] Bad config")
 	}
 
-	addrStr := fmt.Sprint(cfg.Address)
 	rpcServer := rpc.NewServer()
 	ar := Runner{
 		CertificateManager:  certificateManager,
@@ -150,7 +149,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		JetCoordinator:      jetCoordinator,
 		NetworkStatus:       networkStatus,
 		AvailabilityChecker: availabilityChecker,
-		server:              &http.Server{Addr: addrStr},
+		server:              &http.Server{Addr: cfg.Address},
 		rpcServer:           rpcServer,
 		cfg:                 cfg,
 		keyCache:            make(map[string]crypto.PublicKey),
@@ -176,8 +175,18 @@ func NewRunner(cfg *configuration.APIRunner,
 	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
 
+	var (
+		server http.Handler = ar.rpcServer
+	)
+	if cfg.SwaggerPath != "" {
+		server, err = NewRequestValidator(cfg.SwaggerPath, ar.rpcServer)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to prepare api validator")
+		}
+	}
+
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
-	router.Handle(ar.cfg.RPC, ar.rpcServer)
+	router.Handle(ar.cfg.RPC, server)
 	ar.handler = router
 
 	return &ar, nil

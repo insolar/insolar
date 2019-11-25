@@ -87,7 +87,7 @@ func SetVerbose(verb bool) {
 // PlatformRequest represents params struct
 type PlatformRequest struct {
 	Request
-	PlatformParams interface{} `json:"params"`
+	PlatformParams interface{} `json:"params,omitempty"`
 	LogLevel       string      `json:"logLevel,omitempty"`
 }
 

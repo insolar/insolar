@@ -13,6 +13,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/getkin/kin-openapi v0.2.0
 	github.com/gogo/protobuf v1.2.1
 	github.com/gojuno/minimock v1.9.2 // indirect
 	github.com/gojuno/minimock/v3 v3.0.5
@@ -58,8 +59,10 @@ require (
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
 	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
-	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
+	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0
 	gopkg.in/yaml.v2 v2.2.2
 )
+
+replace github.com/insolar/insolar => ./

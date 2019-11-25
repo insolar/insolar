@@ -59,6 +59,6 @@ func TestWrongJson(t *testing.T) {
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 
-	require.Equal(t, "invalid character 's' looking for beginning of value", response.Error.Message)
+	require.Equal(t, "The JSON received is not a valid request payload.", response.Error.Message)
 	require.Nil(t, response.Result)
 }
