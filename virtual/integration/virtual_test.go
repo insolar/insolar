@@ -181,9 +181,9 @@ func TestVirtual_BasicOperations(t *testing.T) {
 						},
 					},
 				}
+			default:
+				panic(fmt.Sprintf("unexpected message to light %T", pl))
 			}
-
-			panic(fmt.Sprintf("unexpected message to light %T", pl))
 		}, machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(func(_ insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
 			return testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(func(ctx context.Context, callContext *insolar.LogicCallContext, code insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
 				return insolar.MustSerialize(expectedRes), insolar.MustSerialize(expectedRes), nil

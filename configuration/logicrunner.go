@@ -53,6 +53,6 @@ func NewLogicRunner() LogicRunner {
 			RunnerListen:   "127.0.0.1:7777",
 			RunnerProtocol: "tcp",
 		},
-		PulseLRUSize: 10,
+		PulseLRUSize: 100,
 	}
 }
