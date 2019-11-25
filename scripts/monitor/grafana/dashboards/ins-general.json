@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1570198153424,
+  "iteration": 1574674657813,
   "links": [],
   "panels": [
     {
@@ -37,8 +37,8 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 3,
-        "w": 4,
+        "h": 5,
+        "w": 2,
         "x": 0,
         "y": 0
       },
@@ -91,6 +91,91 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Pulse Number On Heavy",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorPostfix": false,
+      "colorPrefix": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(25, 115, 14, 0.5)",
+        "rgba(229, 84, 0, 0.5)",
+        "rgba(173, 3, 23, 0.5)"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 2,
+        "y": 0
+      },
+      "id": 46,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false,
+        "ymax": null,
+        "ymin": null
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\", installation=~\"$installation\"}) / 10",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "3,5",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Finalized pulse delta",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -375,13 +460,11 @@
     {
       "cacheTimeout": null,
       "colorBackground": true,
-      "colorPostfix": false,
-      "colorPrefix": false,
       "colorValue": false,
       "colors": [
-        "rgba(25, 115, 14, 0.5)",
-        "rgba(229, 84, 0, 0.5)",
-        "rgba(173, 3, 23, 0.5)"
+        "rgba(115, 191, 105, 0.5)",
+        "rgba(255, 152, 48, 0.5)",
+        "rgba(242, 73, 92, 0.5)"
       ],
       "format": "none",
       "gauge": {
@@ -393,11 +476,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 0,
+        "w": 2,
+        "x": 2,
         "y": 3
       },
-      "id": 46,
+      "id": 52,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -437,15 +520,15 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\", installation=~\"$installation\"}) / 10",
+          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"} - observer_last_fetched_pulse) / 10",
           "instant": true,
           "refId": "A"
         }
       ],
-      "thresholds": "3,5",
+      "thresholds": "5,10",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Finalized pulse delta",
+      "title": "Observer pulse delta",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -462,7 +545,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "fill": 10,
+      "fill": 8,
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
@@ -490,22 +573,38 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "/Requests/",
+          "stack": "A"
+        },
+        {
+          "alias": "/Responses/",
+          "stack": "B"
+        }
+      ],
       "spaceLength": 10,
       "stack": true,
       "steppedLine": false,
       "targets": [
         {
           "expr": "sum(rate(insolar_api_incoming{installation=~\"$installation\",instance=~\"$instance\"}[1m])) by (instance)",
-          "legendFormat": "{{instance}}",
+          "hide": false,
+          "legendFormat": "Requests: {{instance}}",
           "refId": "A"
+        },
+        {
+          "expr": "-1 * sum(rate(insolar_api_time_count{installation=~\"$installation\",instance=~\"$instance\"}[1m])) by (instance)",
+          "hide": false,
+          "legendFormat": "Responses: {{instance}}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "RPS",
+      "title": "Reqs, Rsps / sec",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -925,7 +1024,10 @@
       "seriesOverrides": [
         {
           "alias": "Call",
-          "stack": false
+          "color": "#73BF69",
+          "linewidth": 2,
+          "stack": false,
+          "zindex": -3
         }
       ],
       "spaceLength": 10,
@@ -1324,5 +1426,5 @@
   "timezone": "",
   "title": "INS-General",
   "uid": "LmD-fXFZZ",
-  "version": 2
+  "version": 3
 }
