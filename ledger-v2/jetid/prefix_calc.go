@@ -34,7 +34,7 @@ const SplitMedian = 7 // makes 0 vs 1 ratio like [0..6] vs [7..15]
 //		...
 //		bitPrefix, bitPrefixLen = prefixTree.GetPrefix(bitPrefix)
 //
-func NewPrefixCalc() PrefixCalc {
+func NewJetPrefixCalc() PrefixCalc {
 	return PrefixCalc{4, SplitMedian}
 }
 

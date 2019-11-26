@@ -16,44 +16,11 @@
 
 package dropbag
 
-import "io"
-
-type CompositeDropStorage interface {
-	// identified by a first pulse
-
-	// Pulses & PulseData
-	// Jets
-	// Cabinet -> StorageCabinet
-}
-
-//type JetPrefix uint32
-type ShortJetId uint32 // JetPrefix + 5bit length
-type FullJetId uint64  // ShortJetId + LastSplitPulse
-
-type DropStorageManager interface {
-	OpenForRead()
-}
+import (
+	"io"
+)
 
 type DropStorageBuilder interface {
-}
-
-type DropStorage interface {
-	// FullJetId
-	// PulseNumber
-
-	// indication of special properties of a drop: - active summary, archive summary, archived drop
-
-	// === one for all jets === hash ref to StorageCabinet?
-	// PulseData
-	// JetTree
-	// NodeList
-
-	// FindByKey - accross sections?
-	// DropSection
-}
-
-type DropSection interface {
-	// Record listing
 }
 
 type DropLifeline interface {
