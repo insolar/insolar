@@ -30,6 +30,13 @@ type CompositeDropStorage interface {
 type ShortJetId uint32 // JetPrefix + 5bit length
 type FullJetId uint64  // ShortJetId + LastSplitPulse
 
+type DropStorageManager interface {
+	OpenForRead()
+}
+
+type DropStorageBuilder interface {
+}
+
 type DropStorage interface {
 	// FullJetId
 	// PulseNumber

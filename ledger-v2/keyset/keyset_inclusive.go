@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package keyset
 
@@ -20,136 +20,192 @@ func Nothing() KeySet {
 	return inclusiveKeySet{}
 }
 
+var _ internalKeySet = &inclusiveKeySet{}
+
 type inclusiveKeySet struct {
-	keys      map[Key]struct{}
-	exclusive bool
+	keys basicKeySet
 }
 
-func (v inclusiveKeySet) EnumKeys(fn func(k Key, exclusive bool) bool) bool {
+func (v inclusiveKeySet) EnumRawKeys(fn func(k Key, exclusive bool) bool) bool {
 	for k := range v.keys {
-		if fn(k, v.exclusive) {
+		if fn(k, false) {
 			return true
 		}
 	}
 	return false
 }
 
-func (v inclusiveKeySet) KeyCount() int {
+func (v inclusiveKeySet) RawKeyCount() int {
 	return len(v.keys)
 }
 
-func (v inclusiveKeySet) IsEmpty() bool {
-	return !v.exclusive && len(v.keys) == 0
+func (v inclusiveKeySet) IsNothing() bool {
+	return len(v.keys) == 0
+}
+
+func (v inclusiveKeySet) IsEverything() bool {
+	return false
 }
 
 func (v inclusiveKeySet) IsExclusive() bool {
-	return v.exclusive
+	return false
 }
 
 func (v inclusiveKeySet) Contains(k Key) bool {
-	_, ok := v.keys[k]
-	return ok != v.exclusive
+	return v.keys.contains(k)
+}
+
+func (v inclusiveKeySet) ContainsAny(ks KeySet) bool {
+	switch {
+	case ks.IsExclusive():
+		if v.RawKeyCount() > ks.RawKeyCount() {
+			return true
+		}
+	case v.RawKeyCount() > ks.RawKeyCount():
+		return ks.EnumRawKeys(func(k Key, _ bool) bool {
+			return v.Contains(k)
+		})
+	}
+
+	return v.EnumRawKeys(func(k Key, _ bool) bool {
+		return ks.Contains(k)
+	})
 }
 
 func (v inclusiveKeySet) SupersetOf(ks KeySet) bool {
-	if ks.IsExclusive() {
-		return false
-	}
-	switch kn := ks.KeyCount(); {
-	case kn == 0:
-		return true
-	case v.KeyCount() < kn:
+	if ks.IsExclusive() || v.RawKeyCount() < ks.RawKeyCount() {
 		return false
 	}
 
-	return !ks.EnumKeys(func(k Key, _ bool) bool {
+	return !ks.EnumRawKeys(func(k Key, _ bool) bool {
 		return !v.Contains(k)
 	})
 }
 
 func (v inclusiveKeySet) SubsetOf(ks KeySet) bool {
-	if ks.IsExclusive() {
-		switch kn := ks.KeyCount(); {
-		case kn == 0:
-			return true
-		case v.KeyCount() > kn:
-			return !ks.EnumKeys(func(k Key, _ bool) bool {
+	if v.RawKeyCount() > ks.RawKeyCount() {
+		if ks.IsExclusive() {
+			return !ks.EnumRawKeys(func(k Key, _ bool) bool {
 				return v.Contains(k)
 			})
 		}
-	} else {
-		tn := v.KeyCount()
-		if tn == 0 {
-			return true
-		}
-		if tn < ks.KeyCount() {
-			return false
-		}
+		return false
 	}
 
-	return !v.EnumKeys(func(k Key, _ bool) bool {
+	return !v.EnumRawKeys(func(k Key, _ bool) bool {
 		return !ks.Contains(k)
 	})
 }
 
-func (v inclusiveKeySet) Union(KeySet) KeySet {
-	panic("implement me")
+func (v inclusiveKeySet) Equal(ks KeySet) bool {
+	if ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+		return false
+	}
+	for k := range v.keys {
+		if !ks.Contains(k) {
+			return false
+		}
+	}
+	return true
 }
 
-func (v inclusiveKeySet) Intersection(KeySet) KeySet {
-	panic("implement me")
+func (v inclusiveKeySet) EqualInverse(ks KeySet) bool {
+	if !ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+		return false
+	}
+	for k := range v.keys {
+		if ks.Contains(k) {
+			return false
+		}
+	}
+	return true
 }
 
-func (v inclusiveKeySet) Subtract(KeySet) KeySet {
-	panic("implement me")
+func (v inclusiveKeySet) Inverse() KeySet {
+	return exclusiveKeySet{v.keys}
 }
 
-func (v *inclusiveKeySet) RetainAll(ks KeySet) {
-	if v.IsEmpty() {
-		return
+func (v inclusiveKeySet) Union(ks KeySet) KeySet {
+	switch {
+	case ks.IsExclusive():
+		return ks.Union(v)
+	case v.RawKeyCount() == 0:
+		return ks
+	case ks.RawKeyCount() == 0:
+		return v
+	}
+	return inclusiveKeySet{keyUnion(v.keys, ks)}
+}
+
+func (v inclusiveKeySet) Intersection(ks KeySet) KeySet {
+	switch {
+	case v.RawKeyCount() == 0:
+		return v
+	case ks.IsExclusive():
+		return inclusiveKeySet{keySubtract(v.keys, ks)}
+	case ks.RawKeyCount() == 0:
+		return ks
+	}
+	return inclusiveKeySet{keyIntersect(v.keys, ks)}
+}
+
+func (v inclusiveKeySet) Subtract(ks KeySet) KeySet {
+	switch {
+	case v.RawKeyCount() == 0:
+		return v
+	case ks.IsExclusive():
+		return inclusiveKeySet{keyIntersect(v.keys, ks)}
+	case ks.RawKeyCount() == 0:
+		return v
+	}
+	return inclusiveKeySet{keySubtract(v.keys, ks)}
+}
+
+func (v *inclusiveKeySet) retainAll(ks KeySet) internalKeySet {
+	if v.keys.isEmpty() {
+		return nil
 	}
 
-	switch kn := ks.KeyCount(); {
+	switch kn := ks.RawKeyCount(); {
 	case kn == 0:
 		if !ks.IsExclusive() {
 			v.keys = nil
 		}
-		return
-	case ks.IsExclusive():
-
-	}
-
-	for k := range v.keys {
-		if !ks.Contains(k) {
+		return nil
+	case ks.IsExclusive() && kn < v.RawKeyCount():
+		ks.EnumRawKeys(func(k Key, exclusive bool) bool {
 			delete(v.keys, k)
+			return v.keys.isEmpty()
+		})
+	default:
+		for k := range v.keys {
+			if !ks.Contains(k) {
+				delete(v.keys, k)
+			}
 		}
 	}
+	if len(v.keys) == 0 {
+		v.keys = nil
+	}
+	return nil
 }
 
-func (v *inclusiveKeySet) RemoveAll(ks KeySet) {
-	if v.IsEmpty() {
-		return
+func (v *inclusiveKeySet) removeAll(ks KeySet) internalKeySet {
+	if v.keys.isEmpty() {
+		return nil
 	}
 
-	if ks.IsExclusive() {
-		switch kn := ks.KeyCount(); {
-		case kn == 0:
-			v.keys = nil
-			return
-		case v.KeyCount() > kn:
-			var newMap map[Key]struct{}
-			ks.EnumKeys(func(k Key, _ bool) bool {
-				if v.Contains(k) {
-					if newMap == nil {
-						newMap = make(map[Key]struct{}, kn) // there will be no more than kn
-					}
-					newMap[k] = struct{}{}
-				}
-				return false
-			})
-			v.keys = newMap
-			return
-		}
+	if ks.IsExclusive() && v.RawKeyCount() > ks.RawKeyCount() {
+		var newMap basicKeySet
+		ks.EnumRawKeys(func(k Key, _ bool) bool {
+			if v.Contains(k) {
+				// there will be no more than ks.RawKeyCount()
+				newMap.add(k)
+			}
+			return false
+		})
+		v.keys = newMap
+		return nil
 	}
 
 	for k := range v.keys {
@@ -157,16 +213,37 @@ func (v *inclusiveKeySet) RemoveAll(ks KeySet) {
 			delete(v.keys, k)
 		}
 	}
+	return nil
 }
 
-// Unable to convert inclusiveKeySet to exclusiveKeySet
-func (v *inclusiveKeySet) AddAll(ks KeySet) {
+func (v *inclusiveKeySet) addAll(ks KeySet) internalKeySet {
 	if ks.IsExclusive() {
-		panic("illegal value")
+		// NB! it changes a type of the set to exclusive
+		r := exclusiveKeySet{}
+		ks.EnumRawKeys(func(k Key, _ bool) bool {
+			if !v.Contains(k) {
+				r.keys.add(k)
+			}
+			return false
+		})
+		return &r
 	}
 
-	ks.EnumKeys(func(k Key, _ bool) bool {
-		v.keys[k] = struct{}{}
+	ks.EnumRawKeys(func(k Key, _ bool) bool {
+		v.keys.add(k)
 		return false
 	})
+	return nil
+}
+
+func (v *inclusiveKeySet) remove(k Key) {
+	v.keys.remove(k)
+}
+
+func (v *inclusiveKeySet) add(k Key) {
+	v.keys.add(k)
+}
+
+func (v *inclusiveKeySet) copy(n int) basicKeySet {
+	return v.keys.copy(n)
 }
