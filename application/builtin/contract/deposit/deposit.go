@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/deposit"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
@@ -51,6 +53,10 @@ type Deposit struct {
 
 // New creates new deposit.
 func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
+
+	if vesting%vestingStep != 0 {
+		return nil, errors.New("vesting is not multiple of vestingStep")
+	}
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 
