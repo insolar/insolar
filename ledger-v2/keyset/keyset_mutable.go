@@ -36,6 +36,10 @@ func NewMutableKeySet() MutableKeySet {
 	return MutableKeySet{&inclusiveKeySet{}}
 }
 
+func NewExclusiveMutableKeySet() MutableKeySet {
+	return MutableKeySet{&exclusiveKeySet{}}
+}
+
 var _ KeySet = &MutableKeySet{}
 
 type MutableKeySet struct {

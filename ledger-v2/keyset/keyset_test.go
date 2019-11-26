@@ -149,7 +149,7 @@ func testKeySetBoolOp(t *testing.T, testFn func(KeySet, KeySet) bool, checkFn fu
 }
 
 func testMutableKeySetOp(t *testing.T, testFn func(*MutableKeySet, KeySet), checkFn func(i, j uint) uint) {
-	for ni := uint(16); ni < 32; ni++ {
+	for ni := uint(0); ni < 32; ni++ {
 		for nj := uint(16); nj < 32; nj++ {
 			i := ni & 0xF
 			ksi := bitsToMutableKeySet(i)
@@ -176,6 +176,9 @@ func testMutableKeySetOp(t *testing.T, testFn func(*MutableKeySet, KeySet), chec
 }
 
 func bitsToKeySet(v uint) KeySet {
+	if v == 1 {
+		return SoloKeySet(longbits.NewByteString([]byte{'0'}))
+	}
 	return bitsToMutableKeySet(v).Freeze()
 }
 

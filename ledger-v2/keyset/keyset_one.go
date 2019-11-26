@@ -77,6 +77,15 @@ func (v oneKeySet) Union(ks KeySet) KeySet {
 	switch {
 	case ks.Contains(v.key):
 		return ks
+	case ks.IsExclusive():
+		switch ks.RawKeyCount() {
+		case 0:
+			panic("illegal state")
+		case 1:
+			return Everything()
+		}
+		return ks.Union(v)
+
 	case ks.RawKeyCount() == 0:
 		return v
 	}
