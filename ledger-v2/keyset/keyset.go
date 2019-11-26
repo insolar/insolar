@@ -32,10 +32,11 @@ type KeySet interface {
 	SupersetOf(KeySet) bool
 	SubsetOf(KeySet) bool
 	Equal(KeySet) bool
+	EqualInverse(KeySet) bool
 
 	Inverse() KeySet
 	Union(KeySet) KeySet
-	Intersection(KeySet) KeySet
+	Intersect(KeySet) KeySet
 	Subtract(KeySet) KeySet
 
 	RawKeyCount() int

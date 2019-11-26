@@ -83,7 +83,7 @@ func (v oneKeySet) Union(ks KeySet) KeySet {
 	return inclusiveKeySet{keyUnion(basicKeySet{v.key: {}}, ks)}
 }
 
-func (v oneKeySet) Intersection(ks KeySet) KeySet {
+func (v oneKeySet) Intersect(ks KeySet) KeySet {
 	switch {
 	case ks.Contains(v.key):
 		return v

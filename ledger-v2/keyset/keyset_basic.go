@@ -109,9 +109,10 @@ func keyIntersect(v basicKeySet, ks KeySet) basicKeySet {
 		return r
 	}
 
+	exclusive := ks.IsExclusive()
 	r := make(basicKeySet, len(v))
 	for k := range v {
-		if ks.Contains(k) {
+		if ks.Contains(k) != exclusive {
 			r[k] = struct{}{}
 		}
 	}
@@ -129,8 +130,9 @@ func keySubtract(v basicKeySet, ks KeySet) basicKeySet {
 		return r
 	default:
 		r := make(basicKeySet, len(v))
+		exclusive := ks.IsExclusive()
 		for k := range v {
-			if !ks.Contains(k) {
+			if ks.Contains(k) == exclusive {
 				r[k] = struct{}{}
 			}
 		}

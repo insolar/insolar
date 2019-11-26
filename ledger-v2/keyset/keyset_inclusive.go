@@ -137,7 +137,7 @@ func (v inclusiveKeySet) Union(ks KeySet) KeySet {
 	return inclusiveKeySet{keyUnion(v.keys, ks)}
 }
 
-func (v inclusiveKeySet) Intersection(ks KeySet) KeySet {
+func (v inclusiveKeySet) Intersect(ks KeySet) KeySet {
 	switch {
 	case v.RawKeyCount() == 0:
 		return v

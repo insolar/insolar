@@ -128,10 +128,10 @@ func (v exclusiveKeySet) Union(ks KeySet) KeySet {
 	return exclusiveKeySet{keyIntersect(v.keys, ks)}
 }
 
-func (v exclusiveKeySet) Intersection(ks KeySet) KeySet {
+func (v exclusiveKeySet) Intersect(ks KeySet) KeySet {
 	switch {
 	case !ks.IsExclusive():
-		return ks.Intersection(v)
+		return ks.Intersect(v)
 	case v.RawKeyCount() == 0:
 		return ks
 	case ks.RawKeyCount() == 0:
@@ -178,7 +178,7 @@ func (v *exclusiveKeySet) removeAll(ks KeySet) internalKeySet {
 		r := inclusiveKeySet{}
 
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
-			if !v.Contains(k) {
+			if v.Contains(k) {
 				r.keys.add(k)
 			}
 			return false

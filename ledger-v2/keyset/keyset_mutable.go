@@ -32,6 +32,10 @@ type internalKeySet interface {
 	add(k Key)
 }
 
+func NewMutableKeySet() MutableKeySet {
+	return MutableKeySet{&inclusiveKeySet{}}
+}
+
 var _ KeySet = &MutableKeySet{}
 
 type MutableKeySet struct {
