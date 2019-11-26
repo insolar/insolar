@@ -210,7 +210,7 @@ func keySetToBits(ks KeySet) uint {
 		r |= i
 		return false
 	})
-	if ks.IsExclusive() {
+	if ks.IsOpenSet() {
 		r = ^r
 	}
 	return r

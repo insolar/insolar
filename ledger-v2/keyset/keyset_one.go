@@ -1,5 +1,6 @@
 package keyset
 
+// creates a key set with a single key
 func SoloKeySet(k Key) KeySet {
 	return oneKeySet{k}
 }
@@ -24,7 +25,7 @@ func (v oneKeySet) IsEverything() bool {
 	return false
 }
 
-func (v oneKeySet) IsExclusive() bool {
+func (v oneKeySet) IsOpenSet() bool {
 	return false
 }
 
@@ -37,7 +38,7 @@ func (v oneKeySet) ContainsAny(ks KeySet) bool {
 }
 
 func (v oneKeySet) SupersetOf(ks KeySet) bool {
-	if ks.IsExclusive() {
+	if ks.IsOpenSet() {
 		return false
 	}
 
@@ -56,14 +57,14 @@ func (v oneKeySet) SubsetOf(ks KeySet) bool {
 }
 
 func (v oneKeySet) Equal(ks KeySet) bool {
-	if ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+	if ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
 	return ks.Contains(v.key)
 }
 
 func (v oneKeySet) EqualInverse(ks KeySet) bool {
-	if !ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+	if !ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
 	return !ks.Contains(v.key)
@@ -77,7 +78,7 @@ func (v oneKeySet) Union(ks KeySet) KeySet {
 	switch {
 	case ks.Contains(v.key):
 		return ks
-	case ks.IsExclusive():
+	case ks.IsOpenSet():
 		switch ks.RawKeyCount() {
 		case 0:
 			panic("illegal state")

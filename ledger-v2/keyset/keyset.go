@@ -21,28 +21,42 @@ import "github.com/insolar/insolar/longbits"
 type Key = longbits.ByteString
 
 type KeySet interface {
+	// returns true when this set is empty
 	IsNothing() bool
+	// returns true when this set matches everything
 	IsEverything() bool
-
-	IsExclusive() bool
+	// returns true when the set is open / unbound and only contains exclusions
+	IsOpenSet() bool
+	// returns true when the given key is within the set
 	Contains(Key) bool
-
+	// returns true when any key of the given set is within this set
 	ContainsAny(KeySet) bool
 
+	// returns true when this set contains all keys from the given one
 	SupersetOf(KeySet) bool
+	// returns true when all keys of this set are contained in the given one
 	SubsetOf(KeySet) bool
+	// returns true when both sets have same set of keys
 	Equal(KeySet) bool
+	// a faster equivalent of Equal(ks.Inverse())
 	EqualInverse(KeySet) bool
 
+	// returns a set that has all keys but this set
 	Inverse() KeySet
+	// returns a set of keys present in at least one sets
 	Union(KeySet) KeySet
+	// returns a set of keys present in both sets
 	Intersect(KeySet) KeySet
+	// returns a set of keys present in this set and not present in the given set
 	Subtract(KeySet) KeySet
 
-	RawKeyCount() int
+	// lists keys (when IsOpenSet() == true, then lists all excluded keys)
 	EnumRawKeys(func(k Key, exclusive bool) bool) bool
+	// number of keys (when IsOpenSet() == true, then number of excluded keys)
+	RawKeyCount() int
 }
 
+// reuses the given map
 func Wrap(keys map[longbits.ByteString]struct{}) MutableKeySet {
 	return MutableKeySet{&inclusiveKeySet{keys}}
 }

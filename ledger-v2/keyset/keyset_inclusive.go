@@ -47,7 +47,7 @@ func (v inclusiveKeySet) IsEverything() bool {
 	return false
 }
 
-func (v inclusiveKeySet) IsExclusive() bool {
+func (v inclusiveKeySet) IsOpenSet() bool {
 	return false
 }
 
@@ -57,7 +57,7 @@ func (v inclusiveKeySet) Contains(k Key) bool {
 
 func (v inclusiveKeySet) ContainsAny(ks KeySet) bool {
 	switch {
-	case ks.IsExclusive():
+	case ks.IsOpenSet():
 		if v.RawKeyCount() > ks.RawKeyCount() {
 			return true
 		}
@@ -73,7 +73,7 @@ func (v inclusiveKeySet) ContainsAny(ks KeySet) bool {
 }
 
 func (v inclusiveKeySet) SupersetOf(ks KeySet) bool {
-	if ks.IsExclusive() || v.RawKeyCount() < ks.RawKeyCount() {
+	if ks.IsOpenSet() || v.RawKeyCount() < ks.RawKeyCount() {
 		return false
 	}
 
@@ -84,7 +84,7 @@ func (v inclusiveKeySet) SupersetOf(ks KeySet) bool {
 
 func (v inclusiveKeySet) SubsetOf(ks KeySet) bool {
 	if v.RawKeyCount() > ks.RawKeyCount() {
-		if ks.IsExclusive() {
+		if ks.IsOpenSet() {
 			return !ks.EnumRawKeys(func(k Key, _ bool) bool {
 				return v.Contains(k)
 			})
@@ -98,7 +98,7 @@ func (v inclusiveKeySet) SubsetOf(ks KeySet) bool {
 }
 
 func (v inclusiveKeySet) Equal(ks KeySet) bool {
-	if ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+	if ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
 	for k := range v.keys {
@@ -110,7 +110,7 @@ func (v inclusiveKeySet) Equal(ks KeySet) bool {
 }
 
 func (v inclusiveKeySet) EqualInverse(ks KeySet) bool {
-	if !ks.IsExclusive() || v.RawKeyCount() != ks.RawKeyCount() {
+	if !ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
 	for k := range v.keys {
@@ -127,7 +127,7 @@ func (v inclusiveKeySet) Inverse() KeySet {
 
 func (v inclusiveKeySet) Union(ks KeySet) KeySet {
 	switch {
-	case ks.IsExclusive():
+	case ks.IsOpenSet():
 		return ks.Union(v)
 	case v.RawKeyCount() == 0:
 		return ks
@@ -141,7 +141,7 @@ func (v inclusiveKeySet) Intersect(ks KeySet) KeySet {
 	switch {
 	case v.RawKeyCount() == 0:
 		return v
-	case ks.IsExclusive():
+	case ks.IsOpenSet():
 		return inclusiveKeySet{keySubtract(v.keys, ks)}
 	case ks.RawKeyCount() == 0:
 		return ks
@@ -153,7 +153,7 @@ func (v inclusiveKeySet) Subtract(ks KeySet) KeySet {
 	switch {
 	case v.RawKeyCount() == 0:
 		return v
-	case ks.IsExclusive():
+	case ks.IsOpenSet():
 		return inclusiveKeySet{keyIntersect(v.keys, ks)}
 	case ks.RawKeyCount() == 0:
 		return v
@@ -168,11 +168,11 @@ func (v *inclusiveKeySet) retainAll(ks KeySet) internalKeySet {
 
 	switch kn := ks.RawKeyCount(); {
 	case kn == 0:
-		if !ks.IsExclusive() {
+		if !ks.IsOpenSet() {
 			v.keys = nil
 		}
 		return nil
-	case ks.IsExclusive() && kn < v.RawKeyCount():
+	case ks.IsOpenSet() && kn < v.RawKeyCount():
 		ks.EnumRawKeys(func(k Key, exclusive bool) bool {
 			delete(v.keys, k)
 			return v.keys.isEmpty()
@@ -195,7 +195,7 @@ func (v *inclusiveKeySet) removeAll(ks KeySet) internalKeySet {
 		return nil
 	}
 
-	if ks.IsExclusive() && v.RawKeyCount() > ks.RawKeyCount() {
+	if ks.IsOpenSet() && v.RawKeyCount() > ks.RawKeyCount() {
 		var newMap basicKeySet
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
 			if v.Contains(k) {
@@ -217,7 +217,7 @@ func (v *inclusiveKeySet) removeAll(ks KeySet) internalKeySet {
 }
 
 func (v *inclusiveKeySet) addAll(ks KeySet) internalKeySet {
-	if ks.IsExclusive() {
+	if ks.IsOpenSet() {
 		// NB! it changes a type of the set to exclusive
 		r := exclusiveKeySet{}
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
