@@ -307,41 +307,58 @@ func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) (boo
 	return false, nil
 }
 
-func (d *Deposit) canTransfer(transferAmount *big.Int) error {
+func (d *Deposit) availableAmount() (*big.Int, error) {
 	if d.VestingType == appfoundation.DefaultVesting && !d.IsConfirmed {
-		return errors.New("number of confirms is less then 2")
+		return nil, errors.New("number of confirms is less then 2")
 	}
 
 	currentPulse, err := foundation.GetPulseNumber()
 	if err != nil {
-		return errors.Wrap(err, "failed to get pulse number")
+		return nil, errors.Wrap(err, "failed to get pulse number")
 	}
-	if d.PulseDepositUnHold > currentPulse {
-		return errors.New("hold period didn't end")
+	if currentPulse < d.PulseDepositUnHold {
+		return nil, errors.New("hold period didn't end")
 	}
 
-	spentPeriodInPulses := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
-		return errors.New("can't parse derposit amount")
+		return nil, errors.New("can't parse derposit amount")
 	}
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
-		return errors.New("can't parse derposit balance")
+		return nil, errors.New("can't parse derposit balance")
 	}
 
-	// How much can we transfer for this time
-	availableForNow := new(big.Int).Div(
-		new(big.Int).Mul(amount, spentPeriodInPulses),
-		big.NewInt(d.Vesting/d.VestingStep),
-	)
+	// Allow to transfer whole balance if vesting period has already finished
+	if currentPulse > d.PulseDepositUnHold+insolar.PulseNumber(d.Vesting) {
+		return balance, nil
+	}
 
-	if new(big.Int).Sub(amount, availableForNow).Cmp(
-		new(big.Int).Sub(balance, transferAmount),
-	) == 1 {
+	// Total number of vesting steps in vesting period
+	totalSteps := big.NewInt(d.Vesting / d.VestingStep)
+	// Vesting steps already passed by now
+	passedSteps := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
+	// Amount that has been vested by now
+	vestedByNow := new(big.Int).Div(
+		new(big.Int).Mul(amount, passedSteps),
+		totalSteps,
+	)
+	// Amount that is still locked on deposit
+	onHold := new(big.Int).Sub(amount, vestedByNow)
+	// Amount that is now available for withdrawal
+	availableNow := new(big.Int).Sub(balance, onHold)
+
+	return availableNow, nil
+}
+
+func (d *Deposit) canTransfer(transferAmount *big.Int) error {
+	availableAmount, err := d.availableAmount()
+	if err != nil {
+		return err
+	}
+	if transferAmount.Cmp(availableAmount) == 1 {
 		return errors.New("not enough unholded balance for transfer")
 	}
-
 	return nil
 }
 
@@ -364,11 +381,11 @@ func (d *Deposit) Transfer(
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
-		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
+		return nil, errors.Wrap(err, "not enough balance for transfer")
 	}
 	err = d.canTransfer(amount)
 	if err != nil {
-		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+		return nil, errors.Wrap(err, "can't start transfer")
 	}
 	d.Balance = newBalance.String()
 
