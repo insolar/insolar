@@ -153,7 +153,7 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 
@@ -171,7 +171,7 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", "10000000000000000000")
+		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
 	}
 }
 

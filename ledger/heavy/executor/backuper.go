@@ -18,9 +18,7 @@ package executor
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,8 +49,6 @@ var (
 
 // BackupInfo contains meta information about current incremental backup
 type BackupInfo struct {
-	// SHA256 is hash of backup file
-	SHA256 string
 	// Pulse is number of backuped pulse
 	Pulse insolar.PulseNumber
 	// LastBackupedVersion is last backaped badger's version\timestamp
@@ -109,26 +105,6 @@ func checkConfig(config configuration.Ledger) error {
 	}
 
 	return nil
-}
-
-// LastBackupInfo contains info about last successful backup
-type LastBackupInfo struct {
-	LastBackupedVersion uint64
-}
-
-// loadLastBackupedVersion reads LastBackupedVersion from given file
-func loadLastBackupedVersion(fileName string) (uint64, error) {
-	raw, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to read "+fileName)
-	}
-	var backupInfo LastBackupInfo
-	err = json.Unmarshal(raw, &backupInfo)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to unmarshal "+fileName)
-	}
-
-	return backupInfo.LastBackupedVersion, nil
 }
 
 type DBInitializedKey byte
@@ -228,6 +204,7 @@ func (lw *logWrapper) Write(p []byte) (n int, err error) {
 
 func invokeBackupPostProcessCommand(ctx context.Context, command []string, currentBkpDirPath string) error {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("invokeBackupPostProcessCommand starts")
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "INSOLAR_CURRENT_BACKUP_DIR="+currentBkpDirPath)
@@ -303,27 +280,35 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 }
 
 func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"last_finalized_pulse": lastFinalizedPulse,
+	})
+
+	logger.Info("MakeBackup: before acquiring the lock")
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	logger.Info("MakeBackup: lock acquired!")
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
+		logger.Info("MakeBackup: backup already done")
 		return ErrAlreadyDone
 	}
 
 	if !b.config.Enabled {
-		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
+		logger.Info("MakeBackup: backup disabled")
 		b.lastBackupedPulse = lastFinalizedPulse
 		return ErrBackupDisabled
 	}
 
 	err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
+		logger.Infof("MakeBackup: doBackup() returned an error %v", err)
 		return errors.Wrap(err, "failed to doBackup")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
 
-	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
+	logger.Infof("Done!")
 	return nil
 }
 

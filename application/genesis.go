@@ -67,7 +67,7 @@ const (
 	GenesisAmountApplicationIncentivesMembers = 30
 	GenesisAmountFoundationMembers            = 30
 
-	DefaultDistributionAmount = "10000000000000000000"
+	DefaultDistributionAmount = "1000000000000000000"
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {

@@ -246,6 +246,7 @@ func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, re
 		err := s.db.View(func(txn *badger.Txn) error {
 			opts := badger.DefaultIteratorOptions
 			opts.Reverse = reverse
+			opts.PrefetchSize = steps + 1
 			it := txn.NewIterator(opts)
 			defer it.Close()
 
@@ -295,6 +296,8 @@ func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, re
 func head(txn *badger.Txn) (insolar.PulseNumber, error) {
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = true
+	// we need only one last key
+	opts.PrefetchSize = 1
 	it := txn.NewIterator(opts)
 	defer it.Close()
 

@@ -10,7 +10,7 @@ contracts:
   outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "0"
 fee: "1000000000"
-md_balance: "50000000000000000000"
+md_balance: "5000000000000000000"
 lockup_pulse_period: 20
 pk_shard_count: 10000
 ma_shard_count: 1000

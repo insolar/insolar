@@ -53,6 +53,8 @@ const (
 	countThreeActiveDaemon
 )
 
+const TestDepositAmount string = "1000000000000000000"
+
 type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
@@ -694,11 +696,11 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
 		return errors.New("balance should be zero, current value: " + balance.String())
 	}
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	if deposit["amount"] != TestDepositAmount {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", TestDepositAmount, deposit["amount"]))
 	}
-	if deposit["balance"] != "10000000000000000000" {
-		return errors.New("deposit balance should be `10000000000000000000`, current value: " + deposit["balance"].(string))
+	if deposit["balance"] != TestDepositAmount {
+		return errors.New(fmt.Sprintf("deposit balance should be %s, current value: %s", TestDepositAmount, deposit["balance"]))
 	}
 	return nil
 }
@@ -715,8 +717,8 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 	}
 	_, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	if deposit["amount"] != TestDepositAmount {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", TestDepositAmount, deposit["amount"]))
 	}
 	return nil
 }
