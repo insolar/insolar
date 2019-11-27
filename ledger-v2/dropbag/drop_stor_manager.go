@@ -21,6 +21,7 @@ import (
 	"github.com/insolar/insolar/ledger-v2/keyset"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/pulse"
+	"io"
 )
 
 type DropStorageManager interface {
@@ -28,13 +29,20 @@ type DropStorageManager interface {
 	OpenStorage(jetId jetid.ShortJetId, pn pulse.Number) (DropStorage, error)
 	OpenPulseStorage(pn pulse.Number) (CompositeDropPerPulseData, error)
 
-	// storages are lazy-closed, but can be marked for closing
+	// each storage is lazy-closed, but can be explicitly marked for closing
 	UnusedStorage(CompositeDropStorage)
 
 	// returns nil when the required storage is not open
 	GetOpenedStorage(jetId jetid.ShortJetId, pn pulse.Number) DropStorage
 
 	BuildStorage(pr pulse.Range) CompositeDropStorageBuilder
+}
+
+type CloseRetainer interface {
+	// guarantees that this object will not be closed until the returned Closer.Close() is called
+	// multiple retainers are allowed, all of them must be closed to release the object
+	// can return nil when retention guarantee is not possible (object is already closed)
+	Retain() io.Closer
 }
 
 type CompositeDropStorageBuilder interface {
@@ -49,10 +57,12 @@ type CompositeDropPerPulseData interface {
 }
 
 type CompositeDropStorage interface {
+	CloseRetainer
+
 	CoveringRange() pulse.Range // latest PulseData + earliest pulse number - will not include intermediate PulseData
 	PulseData() CompositeDropPerPulseData
 
-	// identified by the latest pulse
+	// identified by the latest pulse in a range of the drop
 	GetDropStorage(jetId jetid.ShortJetId, pn pulse.Number) DropStorage
 
 	// Jets
@@ -88,6 +98,8 @@ type DropJetTree interface {
 }
 
 type DropStorage interface {
+	CloseRetainer
+
 	Composite() CompositeDropStorage
 
 	JetId() jetid.FullJetId
@@ -96,29 +108,102 @@ type DropStorage interface {
 
 	DropType() DropType
 
-	// a simple lookup method, looks through all primary directories
-	FindByKey(keyset.Key)
+	// a synthetic directory based on a few sections, marked as primary
+	MainDirectory() DropSectionDirectory
 
 	FindSection(DropSectionId) DropSection
 	FindDirectory(DropSectionId) DropSectionDirectory
-	// === one for all jets === hash ref to StorageCabinet?
-	// PulseData
-
-	// FindByKey - across sections?
-	// DropSection
 }
 
 type DropSectionId uint8
 
-const ()
+const (
+	// a special section that can't be used directly
+	DropControlSection DropSectionId = iota
+
+	// main persistent section
+	MainDropSection
+
+	// limited persistence section
+	DustDropSection
+)
+
+const MinCustomDropSection DropSectionId = 16
 
 type DropSectionDirectory interface {
 	DropSectionId() DropSectionId
-	DropSection() DropSection
-	FindByKey(keyset.Key)
+	//IsPrimary()
+
+	LookupKey(keyset.Key) (DropEntry, bool)
+	LookupKeySet(keyset.KeySet) LookupPager
+}
+
+type LookupMiss uint8
+
+const (
+	LookupUnknown LookupMiss = iota
+	LookupNotFound
+)
+
+type LookupPageFunc func(estTotal, curTotal uint, found []DropEntry, misses [] /* LookupMiss */ []keyset.Key, skipped uint) bool
+
+type LookupPager interface {
+	RequestedKeySet() keyset.KeySet
+
+	LoadKeys(maxPageSize uint, fn LookupPageFunc) error
+	PeekKeys(maxPageSize uint, fn LookupPageFunc)
+}
+
+type DropEntry interface {
+	Key() keyset.Key
+
+	// actual directory this entry is listed in
+	DirectorySectionId() DropSectionId
+	// a sequential order for all entries being of a drop
+	// for regular entry starts from 256 and goes up
+	SequenceId() uint32
+
+	// section of entry's content
+	ContentSectionId() DropSectionId
+	//	ContentStorageLocator() // StorageLocator
+
+	PeekEntry(ObjectExtractor) bool
+	GetEntryUnbound(ObjectExtractor) (value interface{}, hasValue bool)
 }
 
 type DropSection interface {
 	DropSectionId() DropSectionId
-	// Record listing
+	DirectorySectionId() DropSectionId
+
+	// CryptographyProvider() SectionCryptographyProvider
+	// CryptographyPolicy() SectionCryptographyPolicy
+	// RetentionPolicy() SectionRetentionPolicy
+
+	LoadEntry(DropEntry, ObjectExtractor) error
+	LoadEntries([]DropEntry, ObjectExtractor) error
+}
+
+type ExtractorId string
+
+// This interface is a combination of data extractor and consumer.
+// It extracts (converts) from raw data into a target type, then process it.
+type ObjectExtractor interface {
+	// extractors with the same id will share cached values etc
+	ExtractorId() ExtractorId
+
+	// Invoked when an entry has no cached value for this extractor id.
+	// Extracts required data from the raw bytes and consumes it (process further).
+	// The extracted result must be returned for caching.
+	// Return:
+	// 	(cacheValue) the extracted value
+	// 	(boundValue) true when cacheValue depends on (raw), as it can be memory mapped and needs cleanup
+	//  (estSize) approximate memory size of the extracted value, for cache eviction procedure.
+	Extract(key keyset.Key, raw []byte) (cacheValue interface{}, boundValue bool, estSize uint)
+
+	// Invoked when an entry has cached value for this extractor id.
+	Reuse(key keyset.Key, cacheValue interface{}, boundValue bool)
+
+	// Invoked by GetUnboundObject() when a cached value is bound.
+	// This function must return an unbound copy of the (cacheValue).
+	Unbind(cacheValue interface{}) interface{}
 }

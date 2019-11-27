@@ -32,15 +32,32 @@ func (v ShortJetId) Prefix() JetPrefix {
 	return JetPrefix(v & ((^ShortJetId(0)) >> bitsShortJetIdLen))
 }
 
-func (v ShortJetId) PrefixLength() uint8 {
-	return uint8(v >> (32 - bitsShortJetIdLen))
+func (v ShortJetId) PrefixLength() (uint8, bool) {
+	if n := uint8(v >> (32 - bitsShortJetIdLen)); n > 0 {
+		return n - 1, true
+	}
+	return 0, false
+}
+
+func (v ShortJetId) HasLength() bool {
+	_, ok := v.PrefixLength()
+	return ok
 }
 
 func (v ShortJetId) String() string {
-	return fmt.Sprintf("0x%02X[%d]", v.Prefix(), v.PrefixLength())
+	if n, ok := v.PrefixLength(); ok {
+		return fmt.Sprintf("0x%02X[%d]", v.Prefix(), n)
+	} else {
+		return fmt.Sprintf("0x%02X[]", v.Prefix())
+	}
 }
 
 type FullJetId uint64 // ShortJetId + LastSplitPulse
+
+func (v FullJetId) IsValid() bool {
+	_, ok := ShortJetId(v).PrefixLength()
+	return ok && pulse.IsValidAsPulseNumber(int(v>>32))
+}
 
 func (v FullJetId) ShortId() ShortJetId {
 	return ShortJetId(v)
