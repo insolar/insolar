@@ -1,6 +1,6 @@
 package keyset
 
-// creates a key set with a single key
+// creates an immutable set with a single key
 func SoloKeySet(k Key) KeySet {
 	return oneKeySet{k}
 }

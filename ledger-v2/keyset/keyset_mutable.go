@@ -16,21 +16,26 @@
 
 package keyset
 
+// Creates a new empty mutable set
 func NewMutable() MutableKeySet {
 	return MutableKeySet{newInternalMutable(false, emptyBasicKeySet)}
 }
 
+// Creates a new mutable open set - initial state will match any keys
 func NewOpenMutable() MutableKeySet {
 	return MutableKeySet{newInternalMutable(true, emptyBasicKeySet)}
 }
 
+// Creates a mutable overlay over an immutable list. The overlay will track all additions and removals.
+// The provided KeyList must be immutable or behavior of the overlay will be incorrect.
 func WrapAsMutable(keys KeyList) MutableKeySet {
 	return MutableKeySet{newMutableOverlay(keys)}
 }
 
 var _ KeySet = &MutableKeySet{}
 
-// WARNING! Any KeySet returned by MutableKeySet can change, unless MutableKeySet is frozen.
+// WARNING! Any KeySet(s) returned by MutableKeySet can change, unless MutableKeySet is frozen.
+// Can't be casted to a KeyList as can be changed to be an open set.
 type MutableKeySet struct {
 	mutableKeySet
 }

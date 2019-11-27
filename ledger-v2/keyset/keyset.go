@@ -20,15 +20,22 @@ import "github.com/insolar/insolar/longbits"
 
 type Key = longbits.ByteString
 
+// A basic set of keys, that can be wrapped but other logic.
 type KeyList interface {
 	// returns true when the given key is within the set
 	Contains(Key) bool
 	// lists keys
 	EnumKeys(func(k Key) bool) bool
-	// number of keys
+	// number of unique keys
 	Count() int
 }
 
+// An advanced set of keys, that also represent an open set (tracks exclusions, not inclusions)
+//
+// NB! An immutable inclusive/closed set MUST be able to cast to KeyList & InclusiveKeySet.
+// An open or a mutable KeySet MUST NOT be able to cast to KeyList & InclusiveKeySet.
+// This behavior is supported by this package.
+//
 type KeySet interface {
 	// returns true when this set is empty
 	IsNothing() bool
@@ -59,10 +66,20 @@ type KeySet interface {
 	// returns a set of keys present in this set and not present in the given set
 	Subtract(KeySet) KeySet
 
+	// WARNING! Do not use
 	// lists keys (when IsOpenSet() == true, then lists all excluded keys)
 	EnumRawKeys(func(k Key, exclusive bool) bool) bool
+	// WARNING! Do not use. This must NOT be treated as a size of a set.
 	// number of keys (when IsOpenSet() == true, then number of excluded keys)
 	RawKeyCount() int
+}
+
+type InclusiveKeySet interface {
+	KeySet
+	// lists keys
+	EnumKeys(func(k Key) bool) bool
+	// number of unique keys
+	Count() int
 }
 
 func New(keys []Key) KeySet {
