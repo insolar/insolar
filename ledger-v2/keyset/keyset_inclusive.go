@@ -17,30 +17,23 @@
 package keyset
 
 func Nothing() KeySet {
-	return inclusiveKeySet{}
+	return inclusiveKeySet{emptyBasicKeySet}
 }
 
-var _ internalKeySet = &inclusiveKeySet{}
-
 type inclusiveKeySet struct {
-	keys basicKeySet
+	keys internalKeySet
 }
 
 func (v inclusiveKeySet) EnumRawKeys(fn func(k Key, exclusive bool) bool) bool {
-	for k := range v.keys {
-		if fn(k, false) {
-			return true
-		}
-	}
-	return false
+	return v.keys.enumRawKeys(false, fn)
 }
 
 func (v inclusiveKeySet) RawKeyCount() int {
-	return len(v.keys)
+	return v.keys.Count()
 }
 
 func (v inclusiveKeySet) IsNothing() bool {
-	return len(v.keys) == 0
+	return v.keys.Count() == 0
 }
 
 func (v inclusiveKeySet) IsEverything() bool {
@@ -52,7 +45,7 @@ func (v inclusiveKeySet) IsOpenSet() bool {
 }
 
 func (v inclusiveKeySet) Contains(k Key) bool {
-	return v.keys.contains(k)
+	return v.keys.Contains(k)
 }
 
 func (v inclusiveKeySet) ContainsAny(ks KeySet) bool {
@@ -67,7 +60,7 @@ func (v inclusiveKeySet) ContainsAny(ks KeySet) bool {
 		})
 	}
 
-	return v.EnumRawKeys(func(k Key, _ bool) bool {
+	return v.keys.EnumKeys(func(k Key) bool {
 		return ks.Contains(k)
 	})
 }
@@ -92,7 +85,7 @@ func (v inclusiveKeySet) SubsetOf(ks KeySet) bool {
 		return false
 	}
 
-	return !v.EnumRawKeys(func(k Key, _ bool) bool {
+	return !v.keys.EnumKeys(func(k Key) bool {
 		return !ks.Contains(k)
 	})
 }
@@ -101,24 +94,18 @@ func (v inclusiveKeySet) Equal(ks KeySet) bool {
 	if ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
-	for k := range v.keys {
-		if !ks.Contains(k) {
-			return false
-		}
-	}
-	return true
+	return !v.keys.EnumKeys(func(k Key) bool {
+		return !ks.Contains(k)
+	})
 }
 
 func (v inclusiveKeySet) EqualInverse(ks KeySet) bool {
 	if !ks.IsOpenSet() || v.RawKeyCount() != ks.RawKeyCount() {
 		return false
 	}
-	for k := range v.keys {
-		if ks.Contains(k) {
-			return false
-		}
-	}
-	return true
+	return !v.keys.EnumKeys(func(k Key) bool {
+		return ks.Contains(k)
+	})
 }
 
 func (v inclusiveKeySet) Inverse() KeySet {
@@ -161,89 +148,146 @@ func (v inclusiveKeySet) Subtract(ks KeySet) KeySet {
 	return inclusiveKeySet{keySubtract(v.keys, ks)}
 }
 
-func (v *inclusiveKeySet) retainAll(ks KeySet) internalKeySet {
-	if v.keys.isEmpty() {
+var _ mutableKeySet = &inclusiveMutable{}
+
+type inclusiveMutable struct {
+	inclusiveKeySet
+}
+
+func (v *inclusiveMutable) retainAll(ks KeySet) mutableKeySet {
+	keys := v.keys.(basicKeySet)
+
+	if keys.isEmpty() {
 		return nil
 	}
 
 	switch kn := ks.RawKeyCount(); {
 	case kn == 0:
 		if !ks.IsOpenSet() {
-			v.keys = nil
+			v.keys = emptyBasicKeySet
 		}
 		return nil
-	case ks.IsOpenSet() && kn < v.RawKeyCount():
+	case ks.IsOpenSet() && kn < keys.Count():
 		ks.EnumRawKeys(func(k Key, exclusive bool) bool {
-			delete(v.keys, k)
-			return v.keys.isEmpty()
+			keys.remove(k)
+			return keys.isEmpty()
 		})
 	default:
-		for k := range v.keys {
+		for k := range keys {
 			if !ks.Contains(k) {
-				delete(v.keys, k)
+				keys.remove(k)
 			}
 		}
 	}
-	if len(v.keys) == 0 {
-		v.keys = nil
+
+	if len(keys) == 0 {
+		v.keys = emptyBasicKeySet
 	}
 	return nil
 }
 
-func (v *inclusiveKeySet) removeAll(ks KeySet) internalKeySet {
-	if v.keys.isEmpty() {
+func (v *inclusiveMutable) removeAll(ks KeySet) mutableKeySet {
+	keys := v.keys.(basicKeySet)
+
+	if keys.isEmpty() {
 		return nil
 	}
 
-	if ks.IsOpenSet() && v.RawKeyCount() > ks.RawKeyCount() {
-		var newMap basicKeySet
+	if ks.IsOpenSet() && keys.Count() > ks.RawKeyCount() {
+		var newKeys basicKeySet
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
-			if v.Contains(k) {
-				// there will be no more than ks.RawKeyCount()
-				newMap.add(k)
+			if keys.Contains(k) {
+				if newKeys == nil {
+					// there will be no more than ks.RawKeyCount() ...
+					newKeys = newBasicKeySet(0)
+				}
+				newKeys.add(k)
 			}
 			return false
 		})
-		v.keys = newMap
+		v.keys = newKeys
 		return nil
 	}
 
-	for k := range v.keys {
+	for k := range keys {
 		if ks.Contains(k) {
-			delete(v.keys, k)
+			keys.remove(k)
 		}
+	}
+
+	if len(keys) == 0 {
+		v.keys = emptyBasicKeySet
 	}
 	return nil
 }
 
-func (v *inclusiveKeySet) addAll(ks KeySet) internalKeySet {
+func (v *inclusiveMutable) addAll(ks KeySet) mutableKeySet {
 	if ks.IsOpenSet() {
+		keys := v.keys.(basicKeySet)
+
 		// NB! it changes a type of the set to exclusive
-		r := exclusiveKeySet{}
+		var newKeys basicKeySet
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
-			if !v.Contains(k) {
-				r.keys.add(k)
+			if !keys.Contains(k) {
+				if newKeys == nil {
+					newKeys = newBasicKeySet(ks.RawKeyCount())
+				}
+				newKeys.add(k)
 			}
 			return false
 		})
-		return &r
+		return &exclusiveMutable{exclusiveKeySet{newKeys}}
 	}
 
+	kn := ks.RawKeyCount()
+	if kn == 0 {
+		return nil
+	}
+
+	keys := v.ensureSet(kn)
 	ks.EnumRawKeys(func(k Key, _ bool) bool {
-		v.keys.add(k)
+		keys.add(k)
 		return false
 	})
 	return nil
 }
 
-func (v *inclusiveKeySet) remove(k Key) {
-	v.keys.remove(k)
+func (v *inclusiveMutable) remove(k Key) {
+	keys := v.keys.(basicKeySet)
+	keys.remove(k)
 }
 
-func (v *inclusiveKeySet) add(k Key) {
-	v.keys.add(k)
+func (v *inclusiveMutable) removeKeys(ks []Key) {
+	keys := v.keys.(basicKeySet)
+	for _, k := range ks {
+		keys.remove(k)
+	}
 }
 
-func (v *inclusiveKeySet) copy(n int) basicKeySet {
+func (v *inclusiveMutable) add(k Key) {
+	keys := v.ensureSet(0)
+	keys.add(k)
+}
+
+func (v *inclusiveMutable) addKeys(ks []Key) {
+	if len(ks) == 0 {
+		return
+	}
+	keys := v.ensureSet(len(ks))
+	for _, k := range ks {
+		keys.add(k)
+	}
+}
+
+func (v *inclusiveMutable) copy(n int) basicKeySet {
 	return v.keys.copy(n)
+}
+
+func (v *inclusiveMutable) ensureSet(n int) basicKeySet {
+	keys := v.keys.(basicKeySet)
+	if keys == nil {
+		keys = newBasicKeySet(n)
+		v.keys = keys
+	}
+	return keys
 }

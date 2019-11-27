@@ -16,78 +16,65 @@
 
 package keyset
 
-type basicKeySet map[Key]struct{}
-
-func (v *basicKeySet) isEmpty() bool {
-	return len(*v) == 0
+func newBasicKeySet(n int) basicKeySet {
+	switch {
+	case n < 0:
+		panic("illegal value")
+	case n > 4:
+		return make(basicKeySet, n)
+	default:
+		return make(basicKeySet)
+	}
 }
 
-func (v *basicKeySet) contains(k Key) bool {
-	_, ok := (*v)[k]
+var emptyBasicKeySet = (basicKeySet)(nil)
+
+type basicKeySet map[Key]struct{}
+
+func (v basicKeySet) EnumKeys(fn func(k Key) bool) bool {
+	for k := range v {
+		if fn(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func (v basicKeySet) enumRawKeys(exclusive bool, fn func(k Key, exclusive bool) bool) bool {
+	for k := range v {
+		if fn(k, exclusive) {
+			return true
+		}
+	}
+	return false
+}
+
+func (v basicKeySet) Count() int {
+	return len(v)
+}
+
+func (v basicKeySet) RawKeyCount() int {
+	return len(v)
+}
+
+func (v basicKeySet) isEmpty() bool {
+	return len(v) == 0
+}
+
+func (v basicKeySet) Contains(k Key) bool {
+	_, ok := v[k]
 	return ok
 }
 
-func (v *basicKeySet) retainAll(ks basicKeySet) {
-	if ks.isEmpty() {
-		*v = nil
-		return
-	}
-
-	for k := range *v {
-		if !ks.contains(k) {
-			delete(*v, k)
-			if v.isEmpty() {
-				return
-			}
-		}
-	}
+func (v basicKeySet) remove(k Key) {
+	delete(v, k)
 }
 
-func (v *basicKeySet) removeAll(ks basicKeySet) {
-	for k := range ks {
-		if v.isEmpty() {
-			return
-		}
-		delete(*v, k)
-	}
+func (v basicKeySet) add(k Key) {
+	v[k] = struct{}{}
 }
 
-func (v *basicKeySet) addAll(ks basicKeySet) {
-	if *v == nil {
-		*v = make(map[Key]struct{})
-	}
-
-	for k := range ks {
-		(*v)[k] = struct{}{}
-	}
-}
-
-func (v *basicKeySet) remove(k Key) {
-	delete(*v, k)
-}
-
-func (v *basicKeySet) add(k Key) {
-	if *v == nil {
-		*v = make(map[Key]struct{})
-	}
-	(*v)[k] = struct{}{}
-}
-
-func (v *basicKeySet) copy(n int) basicKeySet {
-	if nn := len(*v); n < nn {
-		n = nn
-	}
-	if n == 0 {
-		return nil
-	}
-	r := make(basicKeySet, n)
-	for k := range *v {
-		r[k] = struct{}{}
-	}
-	return r
-}
-
-func keyUnion(v basicKeySet, ks KeySet) basicKeySet {
+func keyUnion(v internalKeySet, ks KeySet) basicKeySet {
 	r := v.copy(ks.RawKeyCount())
 	ks.EnumRawKeys(func(k Key, _ bool) bool {
 		r.add(k)
@@ -96,12 +83,13 @@ func keyUnion(v basicKeySet, ks KeySet) basicKeySet {
 	return r
 }
 
-func keyIntersect(v basicKeySet, ks KeySet) basicKeySet {
+func keyIntersect(v internalKeySet, ks KeySet) basicKeySet {
 	kn := ks.RawKeyCount()
-	if kn < len(v) {
+	vn := v.Count()
+	if kn < vn {
 		r := make(basicKeySet, kn)
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
-			if v.contains(k) {
+			if v.Contains(k) {
 				r[k] = struct{}{}
 			}
 			return false
@@ -110,18 +98,20 @@ func keyIntersect(v basicKeySet, ks KeySet) basicKeySet {
 	}
 
 	exclusive := ks.IsOpenSet()
-	r := make(basicKeySet, len(v))
-	for k := range v {
+	r := newBasicKeySet(vn)
+	v.EnumKeys(func(k Key) bool {
 		if ks.Contains(k) != exclusive {
 			r[k] = struct{}{}
 		}
-	}
+		return false
+	})
 	return r
 }
 
-func keySubtract(v basicKeySet, ks KeySet) basicKeySet {
+func keySubtract(v internalKeySet, ks KeySet) basicKeySet {
+	vn := v.Count()
 	switch kn := ks.RawKeyCount(); {
-	case kn < len(v)>>1:
+	case kn < vn>>1:
 		r := v.copy(0)
 		ks.EnumRawKeys(func(k Key, _ bool) bool {
 			r.remove(k)
@@ -129,13 +119,14 @@ func keySubtract(v basicKeySet, ks KeySet) basicKeySet {
 		})
 		return r
 	default:
-		r := make(basicKeySet, len(v))
+		r := newBasicKeySet(vn)
 		exclusive := ks.IsOpenSet()
-		for k := range v {
+		v.EnumKeys(func(k Key) bool {
 			if ks.Contains(k) == exclusive {
 				r[k] = struct{}{}
 			}
-		}
+			return false
+		})
 		return r
 	}
 }

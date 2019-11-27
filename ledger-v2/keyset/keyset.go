@@ -20,19 +20,28 @@ import "github.com/insolar/insolar/longbits"
 
 type Key = longbits.ByteString
 
+type KeyList interface {
+	// returns true when the given key is within the set
+	Contains(Key) bool
+	// lists keys
+	EnumKeys(func(k Key) bool) bool
+	// number of keys
+	Count() int
+}
+
 type KeySet interface {
 	// returns true when this set is empty
 	IsNothing() bool
 	// returns true when this set matches everything
 	IsEverything() bool
-	// returns true when the set is open / unbound and only contains exclusions
+	// returns true when the set is open / unbound and only Contains exclusions
 	IsOpenSet() bool
 	// returns true when the given key is within the set
 	Contains(Key) bool
 	// returns true when any key of the given set is within this set
 	ContainsAny(KeySet) bool
 
-	// returns true when this set contains all keys from the given one
+	// returns true when this set Contains all keys from the given one
 	SupersetOf(KeySet) bool
 	// returns true when all keys of this set are contained in the given one
 	SubsetOf(KeySet) bool
@@ -56,11 +65,6 @@ type KeySet interface {
 	RawKeyCount() int
 }
 
-// reuses the given map
-func Wrap(keys map[longbits.ByteString]struct{}) MutableKeySet {
-	return MutableKeySet{&inclusiveKeySet{keys}}
-}
-
 func New(keys []Key) KeySet {
 	n := len(keys)
 	switch n {
@@ -70,23 +74,58 @@ func New(keys []Key) KeySet {
 		return SoloKeySet(keys[0])
 	}
 
-	r := inclusiveKeySet{make(basicKeySet, n)}
+	ks := make(basicKeySet, n)
 	for _, k := range keys {
-		r.keys.add(k)
+		ks.add(k)
 	}
-	return &r
+	return inclusiveKeySet{ks}
 }
 
-func Copy(keys map[longbits.ByteString]struct{}) KeySet {
-	n := len(keys)
+func Wrap(keys KeyList) KeySet {
+	if keys == nil {
+		panic("illegal state")
+	}
+	return inclusiveKeySet{listSet{keys}}
+}
+
+func CopyList(keys KeyList) KeySet {
+	n := keys.Count()
 	switch n {
 	case 0:
 		return Nothing()
 	}
+	return inclusiveKeySet{listSet{keys}.copy(0)}
+}
 
-	r := inclusiveKeySet{make(basicKeySet, n)}
-	for k := range keys {
-		r.keys.add(k)
+func CopySet(keys KeySet) KeySet {
+	if iks, ok := keys.(internalKeySet); ok {
+		return newKeySet(keys.IsOpenSet(), iks.copy(0))
 	}
-	return &r
+
+	switch n := keys.RawKeyCount(); {
+	case n > 0:
+		ks := make(basicKeySet, n)
+		keys.EnumRawKeys(func(k Key, _ bool) bool {
+			ks.add(k)
+			return false
+		})
+		return newKeySet(keys.IsOpenSet(), ks)
+	case n != 0:
+		panic("illegal state")
+	case keys.IsOpenSet():
+		return Everything()
+	default:
+		return Nothing()
+	}
+}
+
+func newKeySet(exclusive bool, ks internalKeySet) KeySet {
+	switch {
+	case ks == nil:
+		panic("illegal value")
+	case exclusive:
+		return exclusiveKeySet{ks}
+	default:
+		return inclusiveKeySet{ks}
+	}
 }

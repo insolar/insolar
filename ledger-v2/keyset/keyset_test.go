@@ -183,7 +183,7 @@ func bitsToKeySet(v uint) KeySet {
 }
 
 func bitsToMutableKeySet(v uint) *MutableKeySet {
-	r := NewMutableKeySet()
+	r := NewMutable()
 	index := 0
 	for v != 0 {
 		shift := bits.TrailingZeros(v) + 1

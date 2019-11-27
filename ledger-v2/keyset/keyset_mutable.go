@@ -16,43 +16,39 @@
 
 package keyset
 
-func NewMutableKeySet() MutableKeySet {
-	return MutableKeySet{&inclusiveKeySet{}}
+func NewMutable() MutableKeySet {
+	return MutableKeySet{newInternalMutable(false, emptyBasicKeySet)}
 }
 
-func NewExclusiveMutableKeySet() MutableKeySet {
-	return MutableKeySet{&exclusiveKeySet{}}
+func NewOpenMutable() MutableKeySet {
+	return MutableKeySet{newInternalMutable(true, emptyBasicKeySet)}
 }
+
+//// reuses the given map
+//func WrapAsMutable(keys KeyList) MutableKeySet {
+//	return MutableKeySet{newInternalMutable(false, basicKeySet(keys))}
+//}
 
 var _ KeySet = &MutableKeySet{}
 
 // WARNING! Any KeySet returned by MutableKeySet can change, unless MutableKeySet is frozen.
 type MutableKeySet struct {
-	internalKeySet
+	mutableKeySet
 }
 
-// read-only access only
-type internalFrozenKeySet interface {
-	KeySet
-	copy(n int) basicKeySet
-}
-
-// mutable access
-type internalKeySet interface {
-	internalFrozenKeySet
-	retainAll(ks KeySet) internalKeySet
-	removeAll(ks KeySet) internalKeySet
-	addAll(ks KeySet) internalKeySet
-	remove(k Key)
-	add(k Key)
-}
-
-func (v *MutableKeySet) copyAs(exclusive bool) internalKeySet {
-	keys := v.internalKeySet.copy(0)
-	if exclusive {
-		return &exclusiveKeySet{keys}
+func newInternalMutable(exclusive bool, ks internalKeySet) mutableKeySet {
+	switch {
+	case ks == nil:
+		panic("illegal value")
+	case exclusive:
+		return &exclusiveMutable{exclusiveKeySet{ks}}
+	default:
+		return &inclusiveMutable{inclusiveKeySet{ks}}
 	}
-	return &inclusiveKeySet{keys}
+}
+
+func (v *MutableKeySet) copyAs(exclusive bool) mutableKeySet {
+	return newInternalMutable(exclusive, v.mutableKeySet.copy(0))
 }
 
 // creates a copy of this set
@@ -67,71 +63,82 @@ func (v *MutableKeySet) InverseCopy() *MutableKeySet {
 
 // makes this set immutable - modification methods will panic
 func (v *MutableKeySet) Freeze() KeySet {
-	if fks, ok := v.internalKeySet.(frozenKeySet); ok {
-		return fks.internalFrozenKeySet
+	if fks, ok := v.mutableKeySet.(frozenKeySet); ok {
+		return fks.copyKeySet
 	}
-	ks := v.internalKeySet
-	v.internalKeySet = frozenKeySet{ks}
+	ks := v.mutableKeySet
+	if ks == nil {
+		panic("illegal state")
+	}
+	v.mutableKeySet = frozenKeySet{ks}
 	return ks
 }
 
 // this set was made immutable - modification methods will panic
 func (v *MutableKeySet) IsFrozen() bool {
-	_, ok := v.internalKeySet.(frozenKeySet)
+	_, ok := v.mutableKeySet.(frozenKeySet)
 	return ok
 }
 
 // only keys present in both sets will remain in this set
 func (v *MutableKeySet) RetainAll(ks KeySet) {
-	if iks := v.internalKeySet.retainAll(ks); iks != nil {
-		v.internalKeySet = iks
+	if iks := v.mutableKeySet.retainAll(ks); iks != nil {
+		v.mutableKeySet = iks
 	}
 }
 
 // only keys not present in the given set will remain in this set
 func (v *MutableKeySet) RemoveAll(ks KeySet) {
-	if iks := v.internalKeySet.removeAll(ks); iks != nil {
-		v.internalKeySet = iks
+	if iks := v.mutableKeySet.removeAll(ks); iks != nil {
+		v.mutableKeySet = iks
 	}
 }
 
 // adds to this set all keys from the given one. Repeated keys are ignored.
 func (v *MutableKeySet) AddAll(ks KeySet) {
-	if iks := v.internalKeySet.addAll(ks); iks != nil {
-		v.internalKeySet = iks
+	if iks := v.mutableKeySet.addAll(ks); iks != nil {
+		v.mutableKeySet = iks
 	}
 }
 
 // removes a key from this set. Does nothing when a key is missing.
 func (v *MutableKeySet) Remove(k Key) {
-	v.internalKeySet.remove(k)
+	v.mutableKeySet.remove(k)
 }
 
 // add a key to this set. Repeated keys are ignored.
 func (v *MutableKeySet) Add(k Key) {
-	v.internalKeySet.add(k)
+	v.mutableKeySet.add(k)
 }
 
 // adds to this set all keys from the given list. Repeated keys are ignored.
 func (v *MutableKeySet) AddKeys(keys []Key) {
 	for _, k := range keys {
-		v.internalKeySet.add(k)
+		v.mutableKeySet.add(k)
 	}
 }
 
 type frozenKeySet struct {
-	internalFrozenKeySet
+	copyKeySet
 }
 
-func (frozenKeySet) retainAll(ks KeySet) internalKeySet {
+func (frozenKeySet) removeKeys(k []Key) {
 	panic("illegal state")
 }
 
-func (frozenKeySet) removeAll(ks KeySet) internalKeySet {
+func (frozenKeySet) addKeys(k []Key) {
 	panic("illegal state")
 }
 
-func (frozenKeySet) addAll(ks KeySet) internalKeySet {
+func (frozenKeySet) retainAll(ks KeySet) mutableKeySet {
+	panic("illegal state")
+}
+
+func (frozenKeySet) removeAll(ks KeySet) mutableKeySet {
+	panic("illegal state")
+}
+
+func (frozenKeySet) addAll(ks KeySet) mutableKeySet {
 	panic("illegal state")
 }
 
