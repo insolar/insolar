@@ -348,6 +348,11 @@ func (d *Deposit) availableAmount() (*big.Int, error) {
 	// Amount that is now available for withdrawal
 	availableNow := new(big.Int).Sub(balance, onHold)
 
+	// availableNow can become negative when balance is 0 and vesting has already started
+	if availableNow.Cmp(big.NewInt(0)) == -1 {
+		return big.NewInt(0), nil
+	}
+
 	return availableNow, nil
 }
 
