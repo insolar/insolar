@@ -24,10 +24,9 @@ func NewOpenMutable() MutableKeySet {
 	return MutableKeySet{newInternalMutable(true, emptyBasicKeySet)}
 }
 
-//// reuses the given map
-//func WrapAsMutable(keys KeyList) MutableKeySet {
-//	return MutableKeySet{newInternalMutable(false, basicKeySet(keys))}
-//}
+func WrapAsMutable(keys KeyList) MutableKeySet {
+	return MutableKeySet{newMutableOverlay(keys)}
+}
 
 var _ KeySet = &MutableKeySet{}
 
@@ -106,6 +105,11 @@ func (v *MutableKeySet) Remove(k Key) {
 	v.mutableKeySet.remove(k)
 }
 
+// removes keys from this set. Does nothing when a key is missing.
+func (v *MutableKeySet) RemoveKeys(keys []Key) {
+	v.mutableKeySet.removeKeys(keys)
+}
+
 // add a key to this set. Repeated keys are ignored.
 func (v *MutableKeySet) Add(k Key) {
 	v.mutableKeySet.add(k)
@@ -113,9 +117,7 @@ func (v *MutableKeySet) Add(k Key) {
 
 // adds to this set all keys from the given list. Repeated keys are ignored.
 func (v *MutableKeySet) AddKeys(keys []Key) {
-	for _, k := range keys {
-		v.mutableKeySet.add(k)
-	}
+	v.mutableKeySet.addKeys(keys)
 }
 
 type frozenKeySet struct {

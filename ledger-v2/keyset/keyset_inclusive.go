@@ -20,8 +20,18 @@ func Nothing() KeySet {
 	return inclusiveKeySet{emptyBasicKeySet}
 }
 
+var _ KeyList = inclusiveKeySet{}
+
 type inclusiveKeySet struct {
 	keys internalKeySet
+}
+
+func (v inclusiveKeySet) EnumKeys(fn func(k Key) bool) bool {
+	return v.keys.EnumKeys(fn)
+}
+
+func (v inclusiveKeySet) Count() int {
+	return v.keys.Count()
 }
 
 func (v inclusiveKeySet) EnumRawKeys(fn func(k Key, exclusive bool) bool) bool {

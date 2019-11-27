@@ -5,8 +5,18 @@ func SoloKeySet(k Key) KeySet {
 	return oneKeySet{k}
 }
 
+var _ KeyList = oneKeySet{}
+
 type oneKeySet struct {
 	key Key
+}
+
+func (v oneKeySet) EnumKeys(fn func(k Key) bool) bool {
+	return fn(v.key)
+}
+
+func (v oneKeySet) Count() int {
+	return 1
 }
 
 func (v oneKeySet) EnumRawKeys(fn func(k Key, exclusive bool) bool) bool {
