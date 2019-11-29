@@ -226,6 +226,7 @@ ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 .PHONY: ci-test-slow-long
 ci-test-slow-long: ## run slow tests with race and count
 	CI_TEST_ARGS=" -race " \
+	TEST_ARGS=" -timeout 240m " \
 	TEST_COUNT=50 \
 		$(MAKE) ci-test-slow
 
