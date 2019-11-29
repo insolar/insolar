@@ -99,7 +99,8 @@ type LogicCallContext struct {
 	Caller          *Reference // Contract that made the call
 	CallerPrototype *Reference // Prototype (base class) of the caller
 
-	TraceID string // trace mark for Jaegar and friends
+	TraceID string // trace mark for Jaeger and friends
+	Pulse   Pulse  // prefetched pulse for call context
 }
 
 // ContractConstructor is a typedef for wrapper contract header

@@ -135,6 +135,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, NewError(s.message).Present)
 	case payload.TypeHotObjects:
 		err = f.Handle(ctx, NewHotObjects(s.dep, meta).Present)
+	case payload.TypeGetPulse:
+		err = f.Handle(ctx, NewGetPulse(s.dep, meta).Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -295,7 +297,8 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeGetRequest,
 		payload.TypePassState,
 		payload.TypeGetRequestInfo,
-		payload.TypeGetFilament:
+		payload.TypeGetFilament,
+		payload.TypeGetPulse:
 		return s.Present(ctx, f)
 	}
 

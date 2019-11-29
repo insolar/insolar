@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
 	"github.com/pkg/errors"
@@ -44,10 +45,11 @@ type LogicExecutor interface {
 type logicExecutor struct {
 	MachinesManager  machinesmanager.MachinesManager `inject:""`
 	DescriptorsCache artifacts.DescriptorsCache      `inject:""`
+	PulseAccessor    pulse.Accessor
 }
 
-func NewLogicExecutor() LogicExecutor {
-	return &logicExecutor{}
+func NewLogicExecutor(pulseAccessor pulse.Accessor) LogicExecutor {
+	return &logicExecutor{PulseAccessor: pulseAccessor}
 }
 
 func (le *logicExecutor) Execute(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
@@ -94,7 +96,11 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	lc, err := le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	if err != nil {
+		return nil, errors.New("failed to generate logicalCallContext")
+	}
+	transcript.LogicContext = lc
 
 	newData, result, err := executor.CallMethod(
 		ctx, transcript.LogicContext, *codeDesc.Ref(), objDesc.Memory(), request.Method, request.Arguments,
@@ -152,7 +158,12 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.Wrap(err, "couldn't get executor")
 	}
 
-	transcript.LogicContext = le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	lc, err := le.genLogicCallContext(ctx, transcript, protoDesc, codeDesc)
+	if err != nil {
+		return nil, errors.New("failed to generate logicalCallContext")
+	}
+
+	transcript.LogicContext = lc
 
 	newData, result, err := executor.CallConstructor(ctx, transcript.LogicContext, *codeDesc.Ref(), request.Method, request.Arguments)
 	if err != nil {
@@ -174,9 +185,15 @@ func (le *logicExecutor) genLogicCallContext(
 	transcript *common.Transcript,
 	protoDesc artifacts.PrototypeDescriptor,
 	codeDesc artifacts.CodeDescriptor,
-) *insolar.LogicCallContext {
+) (*insolar.LogicCallContext, error) {
 	request := transcript.Request
 	reqRef := transcript.RequestRef
+
+	p, err := le.PulseAccessor.ForPulseNumber(ctx, reqRef.GetLocal().Pulse())
+	if err != nil {
+		return nil, err
+	}
+
 	res := &insolar.LogicCallContext{
 		Mode: insolar.ExecuteCallMode,
 
@@ -190,6 +207,7 @@ func (le *logicExecutor) genLogicCallContext(
 		CallerPrototype: &request.CallerPrototype,
 
 		TraceID: inslogger.TraceID(ctx),
+		Pulse:   p,
 	}
 
 	if oDesc := transcript.ObjectDescriptor; oDesc != nil {
@@ -200,5 +218,5 @@ func (le *logicExecutor) genLogicCallContext(
 		res.Callee = transcript.Request.Object
 	}
 
-	return res
+	return res, nil
 }

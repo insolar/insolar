@@ -232,6 +232,7 @@ func NewServer(
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
+	artifactsClient := artifacts.NewClient(ClientBus)
 	cm.Inject(CryptoScheme,
 		KeyStore,
 		CryptoService,
@@ -242,13 +243,13 @@ func NewServer(
 		ClientBus,
 		IncomingPubSub,
 		contractRequester,
-		artifacts.NewClient(ClientBus),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		Pulses,
 		Jets,
 		Nodes,
 
-		logicexecutor.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(artifacts.NewPulseAccessorLRU(Pulses, artifactsClient, 100)),
 		logicrunner.NewRequestsExecutor(),
 		mManager,
 		NodeNetwork,

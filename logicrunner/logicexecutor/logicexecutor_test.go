@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock/v3"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -38,7 +39,7 @@ import (
 )
 
 func TestLogicExecutor_New(t *testing.T) {
-	le := NewLogicExecutor()
+	le := NewLogicExecutor(nil)
 	require.NotNil(t, le)
 }
 
@@ -77,6 +78,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -95,7 +97,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				RawObjectReference: objRef,
@@ -117,6 +124,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -135,7 +143,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				SideEffectType:     artifacts.RequestSideEffectNone,
@@ -155,6 +168,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						Prototype: &protoRef,
 						Immutable: true,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -173,7 +187,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				SideEffectType:     artifacts.RequestSideEffectNone,
@@ -194,6 +213,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						Prototype: &protoRef,
 					},
 					Deactivate: true, // this a bit hacky
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -212,7 +232,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				SideEffectType:     artifacts.RequestSideEffectDeactivate,
@@ -229,6 +254,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: insolar.NewEmptyReference(),
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc)
 				dc := artifacts.NewDescriptorsCacheMock(mc).
@@ -238,7 +264,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						artifacts.NewCodeDescriptorMock(mc),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: false,
 			res: &requestresult.RequestResult{
@@ -261,6 +292,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc)
 				dc := artifacts.NewDescriptorsCacheMock(mc).
@@ -268,7 +300,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Return(
 						nil, nil, errors.New("some"),
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -280,6 +317,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -295,7 +333,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -310,6 +353,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -328,7 +372,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -343,6 +392,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -361,7 +411,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -376,6 +431,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Request: &record.IncomingRequest{
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -394,7 +450,12 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -445,6 +506,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    callerRef,
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -463,7 +525,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				SideEffectType:     artifacts.RequestSideEffectActivate,
@@ -485,6 +552,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    callerRef,
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -503,7 +571,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			res: &requestresult.RequestResult{
 				RawResult:          []byte{3, 2, 1},
@@ -521,6 +594,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    callerRef,
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -541,7 +615,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -556,6 +635,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    callerRef,
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -576,7 +656,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -591,6 +676,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    gen.Reference(),
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc).
 					GetExecutorMock.
@@ -603,7 +689,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -617,6 +708,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    gen.Reference(),
 						Prototype: &protoRef,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc)
 				dc := artifacts.NewDescriptorsCacheMock(mc).
@@ -624,7 +716,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 					Return(
 						nil, nil, errors.New("some"),
 					)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},
@@ -638,10 +735,16 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						Caller:    gen.Reference(),
 						Prototype: nil,
 					},
+					RequestRef: *insolar.NewReference(*insolar.NewID(insolar.PulseNumber(123), nil)),
 				}
 				mm := machinesmanager.NewMachinesManagerMock(mc)
 				dc := artifacts.NewDescriptorsCacheMock(mc)
-				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
+				pam := pulse.NewAccessorMock(t)
+				pn := tr.RequestRef.GetLocal().GetPulseNumber()
+				pam.ForPulseNumberMock.Inspect(func(ctx context.Context, p1 insolar.PulseNumber) {
+					require.Equal(t, pn, p1)
+				}).Return(insolar.Pulse{PulseNumber: pn}, nil)
+				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc, PulseAccessor: pam}, tr
 			},
 			error: true,
 		},

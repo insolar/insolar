@@ -129,6 +129,12 @@ func New(cfg configuration.Ledger, gcRunner *executor.BadgerGCRunInfo) *Handler 
 				h.Sender,
 			)
 		},
+		SendPulse: func(p *proc.SendPulse) {
+			p.Dep(
+				h.PulseAccessor,
+				h.Sender,
+			)
+		},
 	}
 	h.dep = &dep
 	return h
@@ -222,6 +228,10 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	case payload.TypeGetLightInitialState:
 		p := proc.NewSendInitialState(meta)
 		h.dep.SendInitialState(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetPulse:
+		p := proc.NewSendPulse(meta)
+		h.dep.SendPulse(p)
 		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
