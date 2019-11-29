@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"sync"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -38,6 +39,7 @@ type MetricsRegistry interface {
 }
 
 type metricsRegistry struct {
+	lock                      sync.Mutex
 	oldestAbandonedRequestAge int64
 }
 
@@ -46,12 +48,18 @@ func NewMetricsRegistry() MetricsRegistry {
 }
 
 func (mr *metricsRegistry) SetOldestAbandonedRequestAge(age int) {
+	mr.lock.Lock()
+	defer mr.lock.Unlock()
+
 	if mr.oldestAbandonedRequestAge < int64(age) {
 		mr.oldestAbandonedRequestAge = int64(age)
 	}
 }
 
 func (mr *metricsRegistry) UpdateMetrics(ctx context.Context) {
+	mr.lock.Lock()
+	defer mr.lock.Unlock()
+
 	stats.Record(ctx, statAbandonedRequestAge.M(mr.oldestAbandonedRequestAge))
 	mr.oldestAbandonedRequestAge = 0
 }
