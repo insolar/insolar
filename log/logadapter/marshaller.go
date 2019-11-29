@@ -105,12 +105,7 @@ type defaultLogObjectMarshaller struct {
 	v reflect.Value
 }
 
-func (v defaultLogObjectMarshaller) MarshalTextLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
-	return v.t.printFields(v.v, output, collector)
-}
-
-func (v defaultLogObjectMarshaller) MarshalBinaryLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
-	// TODO should use methods that ignore "fmt"/"raw" tags
+func (v defaultLogObjectMarshaller) MarshalLogObject(output insolar.LogObjectWriter, collector insolar.LogObjectMetricCollector) string {
 	return v.t.printFields(v.v, output, collector)
 }
 
@@ -252,34 +247,36 @@ func outputOfField(tagType fmtTagType, fmtStr string) (fn fieldOutputFunc, optio
 	switch tagType {
 	case fmtTagFormatValueOpt:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
-			s := fmt.Sprintf(fmtStr, v)
-			writer.AddStrField(fieldName, s)
+			writer.AddIntfField(fieldName, v, insolar.LogFieldFormat{HasFmt: true, Fmt: fmtStr})
 		}, true, true
 	case fmtTagFormatValue:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
-			s := fmt.Sprintf(fmtStr, v)
-			writer.AddStrField(fieldName, s)
+			writer.AddIntfField(fieldName, v, insolar.LogFieldFormat{HasFmt: true, Fmt: fmtStr})
 		}, false, true
 	case fmtTagFormatRawOpt:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
-			writer.AddRawJSON(fieldName, []byte(s))
+			writer.AddRawJSONField(fieldName, []byte(s))
 		}, true, true
 	case fmtTagFormatRaw:
 		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
 			s := fmt.Sprintf(fmtStr, v)
-			writer.AddRawJSON(fieldName, []byte(s))
+			writer.AddRawJSONField(fieldName, []byte(s))
 		}, false, true
 	case fmtTagSkip:
 		return nil, false, false
 	case fmtTagText:
 		return func(writer insolar.LogObjectWriter, fieldName string, _ interface{}) {
-			writer.AddStrField(fieldName, fmtStr)
+			writer.AddStrField(fieldName, fmtStr, insolar.LogFieldFormat{})
 		}, false, false
 	case fmtTagOptional:
-		return insolar.LogObjectWriter.AddField, true, true
+		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
+			writer.AddIntfField(fieldName, v, insolar.LogFieldFormat{})
+		}, true, true
 	default:
-		return insolar.LogObjectWriter.AddField, false, true
+		return func(writer insolar.LogObjectWriter, fieldName string, v interface{}) {
+			writer.AddIntfField(fieldName, v, insolar.LogFieldFormat{})
+		}, false, true
 	}
 }
 
@@ -287,16 +284,28 @@ type stringCapturer struct {
 	v string
 }
 
-func (p *stringCapturer) AddStrField(_ string, v string) {
+func (p *stringCapturer) AddIntField(key string, v int64, _ insolar.LogFieldFormat) {
+	p.v = fmt.Sprintf("%v", v)
+}
+
+func (p *stringCapturer) AddUintField(key string, v uint64, _ insolar.LogFieldFormat) {
+	p.v = fmt.Sprintf("%v", v)
+}
+
+func (p *stringCapturer) AddFloatField(key string, v float64, _ insolar.LogFieldFormat) {
+	p.v = fmt.Sprintf("%v", v)
+}
+
+func (p *stringCapturer) AddStrField(key string, v string, _ insolar.LogFieldFormat) {
 	p.v = v
 }
 
-func (p *stringCapturer) AddRawJSON(key string, b []byte) {
-	p.v = string(b)
+func (p *stringCapturer) AddIntfField(k string, v interface{}, _ insolar.LogFieldFormat) {
+	p.v = fmt.Sprintf("%s", v)
 }
 
-func (p *stringCapturer) AddField(key string, v interface{}) {
-	p.v = fmt.Sprintf("%s", v)
+func (p *stringCapturer) AddRawJSONField(key string, b []byte) {
+	p.v = string(b)
 }
 
 func messageOfField(fd fieldDesc, fieldGetter func(reflect.Value) reflect.Value) func(obj reflect.Value, collector insolar.LogObjectMetricCollector) string {

@@ -55,54 +55,71 @@ func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
 	return marshallerFactory
 }
 
-func (v MsgFormatConfig) FmtLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
-	if len(a) == 1 {
-		switch vv := a[0].(type) {
-		case insolar.LogObject:
-			m := vv.GetLogObjectMarshaller()
-			if m != nil {
-				return m, ""
-			}
-			vr := reflect.ValueOf(vv)
-			if vr.Kind() == reflect.Ptr {
-				vr = vr.Elem()
-			}
-			return v.MFactory.CreateLogObjectMarshaller(vr), ""
-		case insolar.LogObjectMarshaller:
-			return vv, ""
-		case string: // the most obvious case
-			return nil, vv
-		case *string: // handled separately to avoid unnecessary reflect
-			if vv == nil {
+func (v MsgFormatConfig) fmtLogStruct(a interface{}) (insolar.LogObjectMarshaller, *string) {
+	switch vv := a.(type) {
+	case insolar.LogObject:
+		m := vv.GetLogObjectMarshaller()
+		if m != nil {
+			return m, nil
+		}
+		vr := reflect.ValueOf(vv)
+		if vr.Kind() == reflect.Ptr {
+			vr = vr.Elem()
+		}
+		return v.MFactory.CreateLogObjectMarshaller(vr), nil
+	case insolar.LogObjectMarshaller:
+		return vv, nil
+	case string: // the most obvious case
+		return nil, &vv
+	case *string: // handled separately to avoid unnecessary reflect
+		return nil, vv
+	case nil:
+		return nil, nil
+	default:
+		if s, ok := defaultStrValuePrepare(vv); ok {
+			return nil, &s
+		}
+
+		vr := reflect.ValueOf(vv)
+		switch vr.Kind() {
+		case reflect.Ptr:
+			if vr.IsNil() {
 				break
 			}
-			return nil, *vv
-		case nil:
-			break
-		default:
-			if s, ok := defaultStrValuePrepare(vv); ok {
-				return nil, s
+			vr = vr.Elem()
+			if vr.Kind() != reflect.Struct {
+				break
 			}
-
-			vr := reflect.ValueOf(vv)
-			switch vr.Kind() {
-			case reflect.Ptr:
-				if vr.IsNil() {
-					break
-				}
-				vr = vr.Elem()
-				if vr.Kind() != reflect.Struct {
-					break
-				}
-				fallthrough
-			case reflect.Struct:
-				if len(vr.Type().Name()) == 0 { // only unnamed objects are handled by default
-					return v.MFactory.CreateLogObjectMarshaller(vr), ""
-				}
+			fallthrough
+		case reflect.Struct:
+			if len(vr.Type().Name()) == 0 { // only unnamed objects are handled by default
+				return v.MFactory.CreateLogObjectMarshaller(vr), nil
 			}
 		}
 	}
-	return nil, v.Sformat(a...)
+	return nil, nil
+}
+
+func (v MsgFormatConfig) FmtLogStruct(a interface{}) (insolar.LogObjectMarshaller, string) {
+	if m, s := v.fmtLogStruct(a); m != nil {
+		return m, ""
+	} else if s != nil {
+		return m, *s
+	}
+	return nil, v.Sformat(a)
+}
+
+func (v MsgFormatConfig) FmtLogStructOrObject(a interface{}) (insolar.LogObjectMarshaller, string) {
+	if m, s := v.fmtLogStruct(a); m != nil {
+		return m, ""
+	} else if s != nil {
+		return m, *s
+	}
+	return nil, v.Sformat(a)
+}
+
+func (v MsgFormatConfig) FmtLogObject(a ...interface{}) string {
+	return v.Sformat(a...)
 }
 
 func (v MsgFormatConfig) PrepareMutedLogObject(a ...interface{}) insolar.LogObjectMarshaller {

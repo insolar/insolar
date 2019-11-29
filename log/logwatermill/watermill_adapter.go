@@ -18,12 +18,9 @@ package logwatermill
 
 import (
 	"github.com/ThreeDotsLabs/watermill"
+
 	"github.com/insolar/insolar/insolar"
 )
-
-type WatermillLogAdapter struct {
-	log insolar.Logger
-}
 
 func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
 	return &WatermillLogAdapter{
@@ -31,21 +28,24 @@ func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
 	}
 }
 
-func (w *WatermillLogAdapter) addFields(fields watermill.LogFields) insolar.Logger {
-	return w.log.WithFields(fields)
+type WatermillLogAdapter struct {
+	log insolar.Logger
 }
 
-func (w *WatermillLogAdapter) event(fields watermill.LogFields, level insolar.LogLevel, args ...interface{}) {
-	w.addFields(fields).Embeddable().EmbeddedEvent(level, args...)
+func (w *WatermillLogAdapter) event(fields watermill.LogFields, level insolar.LogLevel, msg string) {
+	// don't use w.Debug() etc, value of the "file=..." field would be incorrect
+	if fn := w.log.Embeddable().NewEventStruct(level); fn != nil {
+		fn(insolar.LogObjectFields{Msg: msg, Fields: fields})
+	}
 }
 
 func (w *WatermillLogAdapter) With(fields watermill.LogFields) watermill.LoggerAdapter {
-	l := w.addFields(fields)
+	l := w.log.WithFields(fields)
 	return &WatermillLogAdapter{log: l}
 }
 
 func (w *WatermillLogAdapter) Error(msg string, err error, fields watermill.LogFields) {
-	w.event(fields, insolar.ErrorLevel, msg, " | Error: "+err.Error())
+	w.event(fields, insolar.ErrorLevel, msg+" | Error: "+err.Error())
 }
 
 func (w *WatermillLogAdapter) Info(msg string, fields watermill.LogFields) {
@@ -57,7 +57,5 @@ func (w *WatermillLogAdapter) Debug(msg string, fields watermill.LogFields) {
 }
 
 func (w *WatermillLogAdapter) Trace(msg string, fields watermill.LogFields) {
-	// don't use w.Debug(), value of the "file=..." field would be incorrect
-	// in the output
 	w.event(fields, insolar.DebugLevel, msg)
 }

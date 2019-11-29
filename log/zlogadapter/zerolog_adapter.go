@@ -18,6 +18,7 @@ package zlogadapter
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -164,21 +165,54 @@ type zerologMarshaller struct {
 	event *zerolog.Event
 }
 
-func (m zerologMarshaller) AddField(key string, v interface{}) {
-	m.event.Interface(key, v)
+func (m zerologMarshaller) AddIntField(key string, v int64, fFmt insolar.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Int64(key, v)
+	}
 }
 
-func (m zerologMarshaller) AddStrField(key string, v string) {
-	m.event.Str(key, v)
+func (m zerologMarshaller) AddUintField(key string, v uint64, fFmt insolar.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Uint64(key, v)
+	}
 }
 
-func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
+func (m zerologMarshaller) AddFloatField(key string, v float64, fFmt insolar.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Float64(key, v)
+	}
+}
+
+func (m zerologMarshaller) AddStrField(key string, v string, fFmt insolar.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Str(key, v)
+	}
+}
+
+func (m zerologMarshaller) AddIntfField(key string, v interface{}, fFmt insolar.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Interface(key, v)
+	}
+}
+
+func (m zerologMarshaller) AddRawJSONField(key string, b []byte) {
 	m.event.RawJSON(key, b)
 }
 
 /* ============================ */
 
-var _ insolar.Logger = &zerologAdapter{}
+var _ insolar.EmbeddedLogger = &zerologAdapter{}
+var _ insolar.EmbeddedLoggerAssistant = &zerologAdapter{}
 
 type zerologAdapter struct {
 	logger    zerolog.Logger
@@ -194,13 +228,13 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logge
 
 	zCopy := *z
 	zCopy.logger = zCtx.Logger()
-	return &zCopy
+	return insolar.WrapEmbeddedLogger(&zCopy)
 }
 
 func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger {
 	zCopy := *z
 	zCopy.logger = z.logger.With().Interface(key, value).Logger()
-	return &zCopy
+	return insolar.WrapEmbeddedLogger(&zCopy)
 }
 
 func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
@@ -214,33 +248,58 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	return event
 }
 
-func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
-	event := z.newEvent(level)
-
-	if event == nil {
-		collector := z.config.Metrics.GetMetricsCollector()
-		if collector != nil {
-			if obj := z.config.MsgFormat.PrepareMutedLogObject(args...); obj != nil {
-				obj.MarshalMutedLogObject(collector)
+func (z *zerologAdapter) NewEventStruct(level insolar.LogLevel) func(interface{}) {
+	switch event := z.newEvent(level); {
+	case event == nil:
+		//collector := z.config.Metrics.GetMetricsCollector()
+		//if collector != nil {
+		//	if obj := z.config.MsgFormat.PrepareMutedLogObject(arg); obj != nil {
+		//		obj.MarshalMutedLogObject(collector)
+		//	}
+		//}
+		return nil
+	default:
+		return func(arg interface{}) {
+			obj, msgStr := z.config.MsgFormat.FmtLogStruct(arg)
+			if obj != nil {
+				collector := z.config.Metrics.GetMetricsCollector()
+				msgStr = obj.MarshalLogObject(zerologMarshaller{event}, collector)
 			}
+			event.Msg(msgStr)
 		}
-		return
 	}
-
-	obj, msgStr := z.config.MsgFormat.FmtLogObject(args...)
-	if obj != nil {
-		collector := z.config.Metrics.GetMetricsCollector()
-		msgStr = obj.MarshalTextLogObject(zerologMarshaller{event}, collector)
-	}
-	event.Msg(msgStr)
 }
 
-func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args ...interface{}) {
+func (z *zerologAdapter) NewEvent(level insolar.LogLevel) func(args []interface{}) {
+	switch event := z.newEvent(level); {
+	case event == nil:
+		return nil
+	default:
+		return func(args []interface{}) {
+			if len(args) != 1 {
+				msgStr := z.config.MsgFormat.FmtLogObject(args...)
+				event.Msg(msgStr)
+				return
+			}
+
+			obj, msgStr := z.config.MsgFormat.FmtLogStructOrObject(args[0])
+			if obj != nil {
+				collector := z.config.Metrics.GetMetricsCollector()
+				msgStr = obj.MarshalLogObject(zerologMarshaller{event}, collector)
+			}
+			event.Msg(msgStr)
+		}
+	}
+}
+
+func (z *zerologAdapter) NewEventFmt(level insolar.LogLevel) func(fmt string, args []interface{}) {
 	event := z.newEvent(level)
 	if event == nil {
-		return
+		return nil
 	}
-	event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
+	return func(fmt string, args []interface{}) {
+		event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
+	}
 }
 
 func (z *zerologAdapter) EmbeddedFlush(msg string) {
@@ -250,82 +309,12 @@ func (z *zerologAdapter) EmbeddedFlush(msg string) {
 	_ = z.config.LoggerOutput.Flush()
 }
 
-func (z *zerologAdapter) EmbeddedTrace() insolar.LogLevel {
-	return insolar.DebugLevel
-}
-
-func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
-	z.EmbeddedEvent(level, args...)
-}
-
-func (z *zerologAdapter) Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
-	z.EmbeddedEventf(level, fmt, args...)
-}
-
-func (z *zerologAdapter) Debug(args ...interface{}) {
-	z.EmbeddedEvent(insolar.DebugLevel, args...)
-}
-
-func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.DebugLevel, format, args...)
-}
-
-func (z *zerologAdapter) Info(args ...interface{}) {
-	z.EmbeddedEvent(insolar.InfoLevel, args...)
-}
-
-func (z *zerologAdapter) Infof(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.InfoLevel, format, args...)
-}
-
-func (z *zerologAdapter) Warn(args ...interface{}) {
-	z.EmbeddedEvent(insolar.WarnLevel, args...)
-}
-
-func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.WarnLevel, format, args...)
-}
-
-func (z *zerologAdapter) Error(args ...interface{}) {
-	z.EmbeddedEvent(insolar.ErrorLevel, args...)
-}
-
-func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.ErrorLevel, format, args...)
-}
-
-func (z *zerologAdapter) Fatal(args ...interface{}) {
-	z.EmbeddedEvent(insolar.FatalLevel, args...)
-}
-
-func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.FatalLevel, format, args...)
-}
-
-func (z *zerologAdapter) Panic(args ...interface{}) {
-	z.EmbeddedEvent(insolar.PanicLevel, args...)
-}
-
-func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
-	z.EmbeddedEventf(insolar.PanicLevel, format, args...)
-}
-
 func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 	return z.newEvent(level) != nil
 }
 
 func (z *zerologAdapter) Copy() insolar.LoggerBuilder {
 	return logadapter.NewBuilderWithTemplate(zerologTemplate{template: z}, FromZerologLevel(z.logger.GetLevel()))
-}
-
-func (z *zerologAdapter) Level(lvl insolar.LogLevel) insolar.Logger {
-	zCopy := *z
-	zCopy.logger = z.logger.Level(ToZerologLevel(lvl))
-	return &zCopy
-}
-
-func (z *zerologAdapter) Embeddable() insolar.EmbeddedLogger {
-	return z
 }
 
 func (z *zerologAdapter) GetLoggerOutput() insolar.LoggerOutput {
@@ -368,7 +357,7 @@ func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
 }
 
 func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, params logadapter.NewLoggerParams, template *zerologAdapter,
-) (insolar.Logger, error) {
+) (insolar.EmbeddedLogger, error) {
 
 	instruments := params.Config.Instruments
 	skipFrames := int(instruments.SkipFrameCountBaseline) + int(instruments.SkipFrameCount)
@@ -437,7 +426,7 @@ func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, params loga
 	return &la, nil
 }
 
-func (zf zerologFactory) copyLogger(template *zerologAdapter, params logadapter.CopyLoggerParams) insolar.Logger {
+func (zf zerologFactory) copyLogger(template *zerologAdapter, params logadapter.CopyLoggerParams) insolar.EmbeddedLogger {
 
 	if params.Reqs&logadapter.RequiresParentDynFields == 0 {
 		// have to reset hooks, but zerolog can't reset hooks
@@ -515,7 +504,7 @@ func (zf zerologFactory) createOutputWrapper(config logadapter.Config, reqs loga
 	return zerologAdapterOutput{config.LoggerOutput}
 }
 
-func (zf zerologFactory) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.Logger, error) {
+func (zf zerologFactory) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.EmbeddedLogger, error) {
 	output := zf.createOutputWrapper(params.Config, params.Reqs)
 	return zf.createNewLogger(output, params, nil)
 }
@@ -557,11 +546,11 @@ func (zf zerologTemplate) GetTemplateConfig() logadapter.Config {
 	return *zf.template.config
 }
 
-func (zf zerologTemplate) CopyTemplateLogger(params logadapter.CopyLoggerParams) insolar.Logger {
+func (zf zerologTemplate) CopyTemplateLogger(params logadapter.CopyLoggerParams) insolar.EmbeddedLogger {
 	return zf.copyLogger(zf.template, params)
 }
 
-func (zf zerologTemplate) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.Logger, error) {
+func (zf zerologTemplate) CreateNewLogger(params logadapter.NewLoggerParams) (insolar.EmbeddedLogger, error) {
 	output := zf.createOutputWrapper(params.Config, params.Reqs)
 	return zf.createNewLogger(output, params, zf.template)
 }

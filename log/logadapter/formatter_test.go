@@ -237,12 +237,15 @@ func TestTryLogObject_Optionals(t *testing.T) {
 }
 
 func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
-	m, s := v.FmtLogObject(a...)
+	if len(a) != 1 {
+		return v.FmtLogObject(a...)
+	}
+	m, s := v.FmtLogStructOrObject(a[0])
 	if m == nil {
 		return s
 	}
 	o := output{}
-	msg := m.MarshalTextLogObject(&o, nil)
+	msg := m.MarshalLogObject(&o, nil)
 	o.buf.WriteString("msg:")
 	o.buf.WriteString(msg)
 	return o.buf.String()
@@ -254,18 +257,33 @@ type output struct {
 	buf strings.Builder
 }
 
-func (p *output) AddStrField(key string, v string) {
-	p.AddField(key, v)
+func (p *output) AddIntField(key string, v int64, fmt insolar.LogFieldFormat) {
+	p.AddIntfField(key, v, fmt)
 }
 
-func (p *output) AddField(k string, v interface{}) {
-	if v == nil {
+func (p *output) AddUintField(key string, v uint64, fmt insolar.LogFieldFormat) {
+	p.AddIntfField(key, v, fmt)
+}
+
+func (p *output) AddFloatField(key string, v float64, fmt insolar.LogFieldFormat) {
+	p.AddIntfField(key, v, fmt)
+}
+
+func (p *output) AddStrField(key string, v string, fmt insolar.LogFieldFormat) {
+	p.AddIntfField(key, v, fmt)
+}
+
+func (p *output) AddIntfField(k string, v interface{}, fmtStr insolar.LogFieldFormat) {
+	switch {
+	case v == nil:
 		p.buf.WriteString(fmt.Sprintf("%s:nil,", k))
-	} else {
+	case fmtStr.HasFmt:
+		p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, fmt.Sprintf(fmtStr.Fmt, v), "string"))
+	default:
 		p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, v, reflect.TypeOf(v).Name()))
 	}
 }
 
-func (p *output) AddRawJSON(k string, b []byte) {
+func (p *output) AddRawJSONField(k string, b []byte) {
 	p.buf.WriteString(fmt.Sprintf("%s:%s,", k, b))
 }

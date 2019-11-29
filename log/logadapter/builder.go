@@ -113,7 +113,7 @@ type NewLoggerParams struct {
 
 type Factory interface {
 	PrepareBareOutput(output BareOutput, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
-	CreateNewLogger(params NewLoggerParams) (insolar.Logger, error)
+	CreateNewLogger(params NewLoggerParams) (insolar.EmbeddedLogger, error)
 	CanReuseMsgBuffer() bool
 }
 
@@ -121,7 +121,7 @@ type Template interface {
 	Factory
 	GetTemplateConfig() Config
 	// NB! Must ignore RequiresLowLatency flag
-	CopyTemplateLogger(CopyLoggerParams) insolar.Logger
+	CopyTemplateLogger(CopyLoggerParams) insolar.EmbeddedLogger
 }
 
 func NewBuilderWithTemplate(template Template, level insolar.LogLevel) LoggerBuilder {
@@ -301,6 +301,14 @@ func (z LoggerBuilder) BuildLowLatency() (insolar.Logger, error) {
 }
 
 func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
+	if el, err := z.buildEmbedded(needsLowLatency); err != nil {
+		return nil, err
+	} else {
+		return insolar.WrapEmbeddedLogger(el), nil
+	}
+}
+
+func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (insolar.EmbeddedLogger, error) {
 
 	var metrics *logmetrics.MetricsHelper
 
