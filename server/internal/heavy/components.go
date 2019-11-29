@@ -193,6 +193,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		DB, err = store.NewBadgerDB(
 			badger.DefaultOptions(fullDataDirectoryPath),
 			store.ValueLogDiscardRatio(cfg.Ledger.Storage.BadgerValueLogGCDiscardRatio),
+			store.OpenAndCloseBadgerOnStart(true),
 		)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))

@@ -1,5 +1,4 @@
 metrics:
   zpagesenabled: false
-# Uncomment this section to disable consensus
-service:
-  consensusenabled: false
+ledger:
+  lightchainlimit: 15

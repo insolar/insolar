@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -31,6 +32,7 @@ import (
 )
 
 func TestPressureOnSystem(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractCode = `
 package main
 
@@ -140,6 +142,7 @@ func (c *One) Dec() (int, error) {
 }
 
 func TestCoinPassing(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractCode = `
 package main
 

@@ -23,9 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// Expiration represents time of expiration
-type Expiration = int64
-
 // DefaultTTL is default time period for deleting expired seeds
 const DefaultTTL = 5 * time.Second
 
@@ -33,8 +30,8 @@ const DefaultTTL = 5 * time.Second
 const DefaultCleanPeriod = 5 * time.Second
 
 type storedSeed struct {
-	expiration Expiration
-	pulse      insolar.PulseNumber
+	ts    time.Time
+	pulse insolar.PulseNumber
 }
 
 // SeedManager manages working with seed pool
@@ -84,29 +81,27 @@ func (sm *SeedManager) Stop() {
 
 // Add adds seed to pool
 func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
-	expTime := time.Now().Add(sm.ttl).UnixNano()
-
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
 	sm.seedPool[seed] = storedSeed{
-		expiration: expTime,
-		pulse:      pulse,
+		ts:    time.Now(),
+		pulse: pulse,
 	}
 
 }
 
-func (sm *SeedManager) isExpired(expTime Expiration) bool {
-	return expTime < time.Now().UnixNano()
+func (sm *SeedManager) isExpired(ts time.Time) bool {
+	return time.Now().Sub(ts) > sm.ttl
 }
 
-// Exists checks whether seed in the pool
+// Pop deletes and returns seed from the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 	stored, ok := sm.seedPool[seed]
 
-	if ok && !sm.isExpired(stored.expiration) {
+	if ok && !sm.isExpired(stored.ts) {
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}
@@ -119,7 +114,7 @@ func (sm *SeedManager) deleteExpired() {
 	defer sm.mutex.Unlock()
 
 	for seed, stored := range sm.seedPool {
-		if sm.isExpired(stored.expiration) {
+		if sm.isExpired(stored.ts) {
 			delete(sm.seedPool, seed)
 		}
 	}

@@ -54,6 +54,8 @@ import (
 	"bytes"
 	"context"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+
 	"io"
 	"sync"
 	"sync/atomic"
@@ -98,14 +100,23 @@ func (ph *packetHandler) handlePacket(ctx context.Context, packetParser transpor
 		Addr: endpoints.Name(sender),
 	})
 
-	if err != nil {
-		switch err.(type) {
-		case warning.Warning:
-			logger.Warn("Failed to process packet: ", err)
-		default:
-			logger.Error("Failed to process packet: ", err)
-		}
+	if err == nil {
+		return
 	}
+
+	switch err.(type) {
+	case warning.Warning:
+		break
+	default:
+		// Temporary hide pulse number mismatch error https://insolar.atlassian.net/browse/INS-3943
+		if mismatch, _ := errors.IsMismatchPulseError(err); mismatch {
+			break
+		}
+
+		logger.Error("Failed to process packet: ", err)
+	}
+
+	logger.Warn("Failed to process packet: ", err)
 }
 
 type DatagramHandler struct {

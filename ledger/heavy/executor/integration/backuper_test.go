@@ -59,14 +59,15 @@ func (t *testKey) Scope() store.Scope {
 	return store.ScopeJetDrop
 }
 
-func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDBDir string) configuration.Ledger {
+func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDBDir string) (configuration.Ledger, string) {
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		require.NoError(t, err)
 	}
 
-	tmpDir := "/tmp/BKP/"
+	tmpDir, err := ioutil.TempDir("", "bdb-backup-test-integr-")
+	require.NoError(t, err)
 
 	cfg := configuration.Backup{
 		ConfirmFile:          "BACKUPED",
@@ -90,13 +91,11 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDB
 		Storage: configuration.Storage{
 			DataDirectory: badgerDir,
 		},
-	}
+	}, tmpDir
 }
 
-func clearData(t *testing.T, cfg configuration.Ledger) {
-	err := os.RemoveAll(cfg.Backup.TargetDirectory)
-	require.NoError(t, err)
-	err = os.RemoveAll(cfg.Backup.TmpDirectory)
+func clearData(t *testing.T, tmpDir string) {
+	err := os.RemoveAll(tmpDir)
 	require.NoError(t, err)
 }
 
@@ -110,8 +109,8 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -265,8 +264,8 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -325,8 +324,8 @@ func TestBackup_FullCycle(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -395,8 +394,8 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(backupTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, backupTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, backupTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
