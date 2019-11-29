@@ -41,7 +41,7 @@ type DropStorageManager interface {
 type CloseRetainer interface {
 	// guarantees that this object will not be closed until the returned Closer.Close() is called
 	// multiple retainers are allowed, all of them must be closed to release the object
-	// can return nil when retention guarantee is not possible (object is already closed)
+	// can return nil when retention guarantee is not possible (object is closed already)
 	Retain() io.Closer
 }
 
@@ -52,7 +52,7 @@ type CompositeDropStorageBuilder interface {
 type CompositeDropPerPulseData interface {
 	CoveringRange() pulse.Range // latest PulseData + earliest pulse number - will not include intermediate PulseData
 	PulseDataCount() int
-	GetPerPulseData(int) DropPerPulseData
+	GetPerPulseData(index int) DropPerPulseData
 	FindPerPulseData(pulse.Number) DropPerPulseData
 }
 
@@ -60,7 +60,7 @@ type CompositeDropStorage interface {
 	CloseRetainer
 
 	CoveringRange() pulse.Range // latest PulseData + earliest pulse number - will not include intermediate PulseData
-	PulseData() CompositeDropPerPulseData
+	PerPulseData() CompositeDropPerPulseData
 
 	// identified by the latest pulse in a range of the drop
 	GetDropStorage(jetId jetid.ShortJetId, pn pulse.Number) DropStorage
@@ -77,7 +77,6 @@ const (
 	_ DropType = iota
 	RegularDropType
 	SummaryDropType
-	ArchivedSummaryDropType
 	ArchivedDropType
 )
 
@@ -104,7 +103,7 @@ type DropStorage interface {
 
 	JetId() jetid.FullJetId
 	PulseNumber() pulse.Number // the rightmost/latest pulse number of this drop
-	PulseData() DropPerPulseData
+	PerPulseData() DropPerPulseData
 
 	DropType() DropType
 
