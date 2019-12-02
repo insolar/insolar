@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/longbits"
+	"github.com/insolar/insolar/pulse"
 )
 
 type globalAliasKey struct {
@@ -44,8 +45,8 @@ func isValidPublishKey(key interface{}) bool {
 		return true
 	case longbits.ByteString, longbits.Bits64, longbits.Bits128, longbits.Bits224, longbits.Bits256, longbits.Bits512:
 		return true
-	case interface{}:
-		return false
+	case pulse.Number, SlotID:
+		return true
 	default:
 		// have to go for reflection
 		switch tt := reflect.TypeOf(key).Kind(); {
