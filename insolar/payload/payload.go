@@ -49,6 +49,8 @@ const (
 	TypeGetFilament
 	TypeGetRequest
 	TypeRequest
+	TypeGetPulse
+	TypePulse
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
@@ -253,6 +255,12 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *Request:
 		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
+	case *GetPulse:
+		pl.Polymorph = uint32(TypeGetPulse)
+		return pl.Marshal()
+	case *Pulse:
+		pl.Polymorph = uint32(TypePulse)
 		return pl.Marshal()
 	case *Deactivate:
 		pl.Polymorph = uint32(TypeDeactivate)
@@ -529,6 +537,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeErrorResultExitsts:
 		pl := ErrorResultExists{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPulse:
+		pl := GetPulse{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePulse:
+		pl := Pulse{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

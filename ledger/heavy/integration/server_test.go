@@ -93,6 +93,9 @@ type Server struct {
 	JetKeeper    executor.JetKeeper
 	replicator   executor.HeavyReplicator
 	dbRollback   *executor.DBRollback
+
+	serverPubSub *gochannel.GoChannel
+	clientPubSub *gochannel.GoChannel
 }
 
 // After using it you have to remove directory configuration.Storage.DataDirectory by yourself
@@ -381,6 +384,8 @@ func NewServer(
 		JetKeeper:    JetKeeper,
 		replicator:   replicator,
 		dbRollback:   DBRollback,
+		serverPubSub: ServerPubSub,
+		clientPubSub: ClientPubSub,
 	}
 	return s, nil
 }
@@ -423,6 +428,14 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 }
 
 func (s *Server) Stop() {
+	err := s.clientPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
+	err = s.serverPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
 }
 
 type nodeMock struct {

@@ -17,7 +17,10 @@
 package foundation
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
+	"math/rand"
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,18 +44,28 @@ func GetRequestReference() (*insolar.Reference, error) {
 	return ctx.Request, nil
 }
 
-// GetObject create proxy by address
+// NewSource returns source initialized with entropy from pulse.
+func NewSource() (rand.Source, error) {
+	entr := GetLogicalContext().Pulse.Entropy[:9]
+	randNum, err := binary.ReadVarint(bytes.NewReader(entr))
+	if err != nil {
+		return nil, err
+	}
+	return rand.NewSource(randNum), nil
+}
+
+// GetObject creates proxy by address
 // unimplemented
 func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
 }
 
-// TrimPublicKey trim public key
+// TrimPublicKey trims public key
 func TrimPublicKey(publicKey string) string {
 	return TrimAddress(between(publicKey, "KEY-----", "-----END"))
 }
 
-// TrimPublicKey trim address
+// TrimAddress trims address
 func TrimAddress(address string) string {
 	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(address), "\n"), ""))
 }

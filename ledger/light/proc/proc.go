@@ -39,6 +39,7 @@ type Dependencies struct {
 	SetResult      func(*SetResult)
 	GetPendings    func(*GetPendings)
 	GetJet         func(*GetJet)
+	GetPulse       func(*GetPulse)
 	HotObjects     func(*HotObjects)
 	PassState      func(*PassState)
 	CalculateID    func(*CalculateID)
@@ -173,6 +174,12 @@ func NewDependencies(
 				sender,
 			)
 		},
+		GetPulse: func(p *GetPulse) {
+			p.Dep(
+				jetCoordinator,
+				sender,
+			)
+		},
 		HotObjects: func(p *HotObjects) {
 			p.Dep(
 				dropModifier,
@@ -231,6 +238,7 @@ func NewDependenciesMock() *Dependencies {
 		SetResult:      func(*SetResult) {},
 		GetPendings:    func(*GetPendings) {},
 		GetJet:         func(*GetJet) {},
+		GetPulse:       func(*GetPulse) {},
 		HotObjects:     func(*HotObjects) {},
 		PassState:      func(*PassState) {},
 		CalculateID:    func(*CalculateID) {},

@@ -63,6 +63,9 @@ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/me
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.1 h1:/s5zKNz0uPFCZ5hddgPdo2TK2TVrUNMn0OOX8/aZMTE=
 github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=
+github.com/gojuno/generator v0.0.0-20180725114326-487ec858da35/go.mod h1:4IWfQdtkCP4cdnSO6aQTW1nS7jK6xGuhbZveVkPPFRg=
+github.com/gojuno/minimock v1.9.2 h1:u3FcUNlG8pEagnwRBSvO3KhV3Fk74NhYCUE//6bhT2g=
+github.com/gojuno/minimock v1.9.2/go.mod h1:iOiCj/XdRZn6P5/TzsbuF4SR+wPrvHs+nxZoFXuykfk=
 github.com/gojuno/minimock/v3 v3.0.4/go.mod h1:HqeqnwV8mAABn3pO5hqF+RE7gjA0jsN8cbbSogoGrzI=
 github.com/gojuno/minimock/v3 v3.0.5 h1:B6yHNXK7dhfmI7lUWVKdvSaATRfNkuJsKNo1FANDdV4=
 github.com/gojuno/minimock/v3 v3.0.5/go.mod h1:HqeqnwV8mAABn3pO5hqF+RE7gjA0jsN8cbbSogoGrzI=
@@ -137,6 +140,7 @@ github.com/lithammer/shortuuid/v3 v3.0.4/go.mod h1:RviRjexKqIzx/7r1peoAITm6m7gni
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
+github.com/marwan-at-work/vgop v0.0.0-20180824202541-054e5a7d7b48/go.mod h1:8stA9zbQyHdOhHaI1wWiChHxkAslblT3AzKm4y17CRU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.4 h1:snbPLB8fVfU9iwbbo30TPtbLRzwWu6aJS6Xh4eaaviA=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
@@ -306,6 +310,7 @@ golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxb
 golang.org/x/tools v0.0.0-20180221164845-07fd8470d635/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20180525024113-a5b4c53f6e8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+golang.org/x/tools v0.0.0-20181105230042-78dc5bac0cac/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190114222345-bf090417da8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190206041539-40960b6deb8e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3HoIrodX9oNMXvdceNzlUR8zjMvY=

@@ -70,7 +70,7 @@ func TestSeedManager_ExpiredSeed(t *testing.T) {
 	sm := NewSpecified(expTime, DefaultCleanPeriod)
 	seed := getSeed(t)
 	sm.Add(seed, 0)
-	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
+	sm.seedPool[seed] = storedSeed{time.Now().Add(-expTime).Add(-1 * time.Second), 0}
 	_, exists := sm.Pop(seed)
 	require.False(t, exists)
 	sm.Stop()
@@ -81,7 +81,7 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 	sm := NewSpecified(expTime, 1*time.Minute)
 	seed := getSeed(t)
 	sm.Add(seed, 0)
-	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
+	sm.seedPool[seed] = storedSeed{time.Now().Add(-expTime).Add(-1 * time.Second), 0}
 	_, exists := sm.Pop(seed)
 	require.False(t, exists)
 	sm.Stop()

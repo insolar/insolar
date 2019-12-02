@@ -25,10 +25,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -58,6 +60,9 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		}
 
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+
+		cfg.LogicRunner = configuration.NewLogicRunner()
+		cfg.LogicRunner.RPCListen = ":0"
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 			lifeTime := &record.Lifeline{
@@ -172,9 +177,17 @@ func TestVirtual_BasicOperations(t *testing.T) {
 						ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
 					},
 				}
+			case *payload.GetPulse:
+				return []payload.Payload{
+					&payload.Pulse{
+						Pulse: pulse.PulseProto{
+							PulseNumber: 42,
+						},
+					},
+				}
+			default:
+				panic(fmt.Sprintf("unexpected message to light %T", pl))
 			}
-
-			panic(fmt.Sprintf("unexpected message to light %T", pl))
 		}, machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(func(_ insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
 			return testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(func(ctx context.Context, callContext *insolar.LogicCallContext, code insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
 				return insolar.MustSerialize(expectedRes), insolar.MustSerialize(expectedRes), nil

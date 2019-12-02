@@ -132,7 +132,10 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
+
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
+	artifactsClient := artifacts.NewClient(b)
+	cachedPulses := artifacts.NewPulseAccessorLRU(pulses, artifactsClient, cfg.LogicRunner.PulseLRUSize)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
@@ -145,7 +148,6 @@ func initComponents(
 	)
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	artifactsClient := artifacts.NewClient(b)
 	availabilityChecker := api.NewNetworkChecker(cfg.AvailabilityChecker)
 
 	API, err := api.NewRunner(
@@ -190,7 +192,7 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(cachedPulses),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		APIWrapper,
