@@ -17,12 +17,13 @@
 package protokit
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
 )
 
-const MaxVarintSize = 10
+const MaxVarintSize = binary.MaxVarintLen64
 const MaxFieldId = math.MaxUint32 >> 3
 
 type WireTag uint32
@@ -55,22 +56,35 @@ func (v WireTag) FieldId() int {
 }
 
 func (v WireTag) TagSize() int {
-	return SizeVarint(uint64(v))
+	return SizeVarint32(uint32(v))
 }
 
-func (v WireTag) FieldSize() (fixedSize bool, maxSize int) {
-	fixedSize, maxSize = v.Type().DataSize()
-	if maxSize != math.MaxInt32 {
-		maxSize += SizeVarint(uint64(v))
+func (v WireTag) MaxFieldSize() (bool, int) {
+	switch minSize, maxSize := v.Type().DataSize(); {
+	case minSize == maxSize:
+		return true, maxSize + v.TagSize()
+	case maxSize < math.MaxInt32:
+		maxSize += v.TagSize()
+		fallthrough
+	default:
+		return false, maxSize
 	}
-	return fixedSize, maxSize
+}
+
+func (v WireTag) FieldSize(u uint64) uint64 {
+	return v.Type().FieldSize(v.TagSize(), u)
+}
+
+func (v WireTag) FixedFieldSize() int {
+	if fixedSize, maxSize := v.MaxFieldSize(); !fixedSize {
+		panic("illegal state - not fixed size")
+	} else {
+		return maxSize
+	}
 }
 
 func (v WireTag) EnsureFixedFieldSize(sz int) WireTag {
-	switch fixedSize, maxSize := v.FieldSize(); {
-	case !fixedSize:
-		panic("illegal state - not fixed size")
-	case maxSize != sz:
+	if v.FixedFieldSize() != sz {
 		panic("illegal value - size mismatched")
 	}
 	return v
@@ -80,14 +94,14 @@ func (v WireTag) _checkTag(expected WireTag) error {
 	if v == expected {
 		return nil
 	}
-	return fmt.Errorf("tag mismatch: actual=%v, expected=%v", v, expected)
+	return fmt.Errorf("tag mismatch: actual=%v, expected=%v", expected, v)
 }
 
 func (v WireTag) CheckType(t WireType) error {
 	switch {
 	case !t.IsValid():
 		panic("illegal value")
-	case t == v.Type():
+	case t != v.Type():
 		return fmt.Errorf("type mismatch: actual=%v, expectedType=%v", v, t)
 	}
 	return nil
@@ -129,7 +143,7 @@ func (v WireTag) ExpectDecoded(x uint64, err error) error {
 	if wt, err := SafeWireTag(x); err != nil {
 		return err
 	} else {
-		return wt.CheckTag(v)
+		return v.CheckTag(wt)
 	}
 }
 
@@ -154,6 +168,25 @@ func (v WireTag) DecodeFrom(r io.ByteReader) (uint64, error) {
 			return 0, err
 		}
 		return DecodeFixed32(r)
+	default:
+		panic("illegal value")
+	}
+}
+
+func (v WireTag) EncodeTo(w io.ByteWriter, u uint64) error {
+	if err := EncodeVarint(w, uint64(v)); err != nil {
+		return err
+	}
+	switch v.Type() {
+	case WireVarint, WireBytes:
+		return EncodeVarint(w, u)
+	case WireFixed64:
+		return EncodeFixed64(w, u)
+	case WireFixed32:
+		if u > math.MaxUint32 {
+			panic("illegal value")
+		}
+		return EncodeFixed32(w, uint32(u))
 	default:
 		panic("illegal value")
 	}
@@ -196,16 +229,31 @@ func (v WireType) Tag(fieldId int) WireTag {
 	return WireTag(fieldId<<lenWireType | int(v))
 }
 
-func (v WireType) DataSize() (fixedSize bool, maxSize int) {
+func (v WireType) DataSize() (minSize, maxSize int) {
 	switch v {
 	case WireVarint:
-		return false, MaxVarintSize
+		return 1, MaxVarintSize
 	case WireBytes:
-		return false, math.MaxInt32
+		return 1, math.MaxInt32
 	case WireFixed64:
-		return true, 8
+		return 8, 8
 	case WireFixed32:
-		return true, 4
+		return 4, 4
+	default:
+		panic("illegal value")
+	}
+}
+
+func (v WireType) FieldSize(tagSize int, u uint64) uint64 {
+	switch v {
+	case WireVarint:
+		return uint64(tagSize + SizeVarint64(u))
+	case WireBytes:
+		return uint64(tagSize+SizeVarint64(u)) + u
+	case WireFixed64:
+		return uint64(tagSize) + 8
+	case WireFixed32:
+		return uint64(tagSize) + 4
 	default:
 		panic("illegal value")
 	}

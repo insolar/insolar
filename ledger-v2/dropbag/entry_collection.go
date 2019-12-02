@@ -159,7 +159,7 @@ func (p *LazyEntryCollection) LoadEntries(posList []EntryPosition, loadFn func(E
 		if !le.NotFound() {
 			continue
 		}
-		le.StructEntry = loadFn(pos)
+		// TODO le.StructEntry = loadFn(pos)
 	}
 
 	if p.totalCount == p.loadedCount {

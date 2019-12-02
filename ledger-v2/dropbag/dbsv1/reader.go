@@ -14,12 +14,12 @@
 //    limitations under the License.
 //
 
-package dropbag
+package dbsv1
 
 import (
 	"bytes"
 	"fmt"
-	"hash"
+	"github.com/insolar/insolar/ledger-v2/dropbag/dbcommon"
 	"hash/crc32"
 	"io"
 	"math"
@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	v1optionEntryWithoutSelfLen FormatOptions = 1 << iota
+	ChapterWithoutSelfCheckOption dbcommon.FormatOptions = 1 << iota
 
 	maskV1Options = (1 << iota) - 1
 )
@@ -37,62 +37,77 @@ const magicCRCFieldLength = storageTagSize + 8
 
 var magicCrcField = protokit.WireFixed64.Tag(16).EnsureFixedFieldSize(magicCRCFieldLength)
 
-const selfLenFieldLength = storageTagSize + 4
+const selfChkFieldLength = storageTagSize + 8
 
-var selfLenField = protokit.WireFixed32.Tag(2047).EnsureFixedFieldSize(selfLenFieldLength)
+var selfChkField = protokit.WireFixed64.Tag(2047).EnsureFixedFieldSize(selfChkFieldLength)
 
 const (
-	storageTagSize = 2
-	minVarintSize  = storageTagSize + 1
+	bitsSelfCheckLength  = 8 * 3 // 3 bytes
+	selfCheckLengthMask  = 1<<bitsSelfCheckLength - 1
+	maxSelfCheckLength   = selfCheckLengthMask
+	maxSelfCheckEntryPos = math.MaxUint64 >> bitsSelfCheckLength
+
+	storageTagSize     = 2
+	minVarintFieldSize = storageTagSize + 1
 
 	magicStrHead  = "insolar-head"
 	minHeadLength = magicCRCFieldLength + // StorageFileScheme.Head.MagicAndCRC
-		minVarintSize + len(magicStrHead) + // StorageFileScheme.Head.HeadMagicStr
-		minVarintSize + // StorageFileScheme.Head.TailLen
-		selfLenFieldLength // StorageFileScheme.Head.SelfLen
+		minVarintFieldSize + len(magicStrHead) + // StorageFileScheme.Head.HeadMagicStr
+		minVarintFieldSize + // StorageFileScheme.Head.TailLen
+		selfChkFieldLength // StorageFileScheme.Head.SelfChk
 
-	maxHeadLength = minHeadLength + 1<<17
+	maxHeadLength        = minHeadLength + 1<<17             // MUST be less than maxSelfCheckLength
+	MaxHeadPayloadLength = maxHeadLength - minHeadLength - 3 // SizeVarint32(maxTailLength) - 1
 
 	magicStrTail  = "insolar-tail"
 	minTailLength = magicCRCFieldLength + // StorageFileScheme.Tail.MagicAndCRC
-		minVarintSize + len(magicStrTail) + // StorageFileScheme.Tail.TailMagicStr
+		minVarintFieldSize + len(magicStrTail) + // StorageFileScheme.Tail.TailMagicStr
 		totalCountAndCrcFieldLength + // StorageFileScheme.Tail.EntryCountAndCRC
-		selfLenFieldLength // StorageFileScheme.Tail.SelfLen
+		minVarintFieldSize + // StorageFileScheme.Tail.Padding
+		selfChkFieldLength // StorageFileScheme.Tail.SelfChk
 
-	maxTailLength = minTailLength + 1<<24
+	maxTailLength        = maxSelfCheckLength
+	MaxTailPayloadLength = maxTailLength - minTailLength
 
-	minEntryLength = magicCRCFieldLength // StorageFileScheme.Content.MagicAndCRC
+	minChapterLength = minVarintFieldSize + // StorageFileScheme.Entry.EntryOptions
+		magicCRCFieldLength // StorageFileScheme.Entry.MagicAndCRC
 
-	maxEntryLength = minEntryLength + selfLenFieldLength + 1<<24
+	maxChapterLength        = maxSelfCheckLength
+	MaxChapterPayloadLength = maxChapterLength - minChapterLength - (protokit.MaxVarintSize - 1) // for EntryOptions
 
-	TailOffsetAlignment  = 4096
-	maxPaddingBeforeTail = TailOffsetAlignment - 1 - minTailLength
+	maxTailOffsetAlignment = 1 << 17 // must be less than MaxInt32
+	minTailOffsetAlignment = 1 << 6
+
+	minPaddingBeforeTail = minVarintFieldSize
+	maxPaddingBeforeTail = maxTailOffsetAlignment
 )
 
 const (
-	formatFieldId = 16
-	headFieldId   = 20
+	headFieldId = 20
 
-	minEntryFieldId = 21
-	maxEntryFieldId = 2045
+	minChapterFieldId = 21
+	maxChapterFieldId = 2045
 
 	paddingFieldId = 2046
 	tailFieldId    = 2047
 )
 
+//maxChapterFieldId
+
 var (
-	formatField      = protokit.WireFixed64.Tag(formatFieldId)
 	headField        = protokit.WireBytes.Tag(headFieldId)
+	paddingField     = protokit.WireBytes.Tag(paddingFieldId)
 	tailField        = protokit.WireBytes.Tag(tailFieldId)
 	magicStringField = protokit.WireBytes.Tag(17) // head and tail only
-
 )
 
 const totalCountAndCrcFieldLength = storageTagSize + 8
 
-var totalCountAndCrcField = protokit.WireFixed64.Tag(19).EnsureFixedFieldSize(totalCountAndCrcFieldLength) // tail only
+var totalCountAndCrcField = protokit.WireFixed64.Tag(18).EnsureFixedFieldSize(totalCountAndCrcFieldLength) // tail only
 
+var tailInnerPadding = protokit.WireVarint.Tag(19)     // tail only
 var declaredTailLenField = protokit.WireVarint.Tag(19) // head only
+var chapterOptionsField = protokit.WireVarint.Tag(19)  // entry only
 
 type entryNo int
 
@@ -113,18 +128,49 @@ func (v entryNo) String() string {
 }
 
 type StorageFileV1 struct {
-	Config    ReadConfig
-	Builder   PayloadBuilder
-	MagicZero uint32
-	CrcTable  *crc32.Table
+	StorageOptions dbcommon.FormatOptions
+	MagicZero      uint32
+	TailAlign      uint32
+	CrcTable       *crc32.Table
 }
 
-func (p *StorageFileV1) Read(sr StorageSeqReader) error {
+func (p *StorageFileV1) CheckOptions() error {
+	if p.StorageOptions&^maskV1Options != 0 {
+		return fmt.Errorf("unsupported storage options: format=1 options=%x", p.StorageOptions)
+	}
+	switch {
+	case p.TailAlign == 0:
+	case p.TailAlign > maxTailOffsetAlignment || p.TailAlign < minTailOffsetAlignment:
+		return fmt.Errorf("unsupported tail alignment: format=1 align=%x", p.TailAlign)
+	}
+	return nil
+}
+
+func (p *StorageFileV1) prepare() error {
+	if err := p.CheckOptions(); err != nil {
+		return err
+	}
+	if p.CrcTable == nil {
+		p.CrcTable = crc32.MakeTable(crc32.Castagnoli)
+	}
+	if p.TailAlign == 0 {
+		p.TailAlign = 1
+	}
+	return nil
+}
+
+type StorageFileV1Reader struct {
+	StorageFileV1
+	Config  dbcommon.ReadConfig
+	Builder dbcommon.PayloadBuilder
+}
+
+func (p *StorageFileV1Reader) Read(sr dbcommon.StorageSeqReader) error {
 	if p.Builder == nil {
 		panic("illegal state")
 	}
-	if p.Config.StorageOptions&^maskV1Options != 0 {
-		return fmt.Errorf("unsupported storage options: format=1 options=%x", p.Config.StorageOptions)
+	if err := p.prepare(); err != nil {
+		return err
 	}
 
 	var expectedTailLength uint64
@@ -132,14 +178,14 @@ func (p *StorageFileV1) Read(sr StorageSeqReader) error {
 
 	if headLength, err := headField.DecodeFrom(sr); err != nil {
 		return err
-	} else if err := p.readStorageEntry(sr, headEntry, headLength, minHeadLength, maxHeadLength, true,
+	} else if err := p.readStorageEntry(sr, headEntry, headLength, minHeadLength-selfChkFieldLength, maxHeadLength, true,
 		func(ofs int64, b []byte, magicSeq, crc uint32) error {
 			if magicSeq == 0 {
 				return fmt.Errorf("illegal content, invalid magic: entry=%v actual=%x", headEntry, magicSeq)
 			}
-			AddCrc32(totalCrc, crc)
+			addCrc32(totalCrc, crc)
 			p.MagicZero = magicSeq
-			etl, err := p.readPreamble(b, ofs)
+			etl, err := p.readPrelude(b, ofs)
 			expectedTailLength = etl
 			return err
 		},
@@ -148,14 +194,16 @@ func (p *StorageFileV1) Read(sr StorageSeqReader) error {
 	}
 
 	canSeek := sr.CanSeek()
-	hasSelfLen := p.Config.StorageOptions&v1optionEntryWithoutSelfLen != 0
+	hasSelfLen := p.StorageOptions&ChapterWithoutSelfCheckOption != 0
 	tailLength := uint64(0)
 	entryCount := uint64(0)
 	partialCount := true
+	lastFieldStart := int64(0)
 
 outer:
 	for entryNo := headEntry + 1; ; entryNo++ {
 
+		lastFieldStart = sr.Offset()
 		wt, entryLength, err := protokit.WireBytes.DecodeFrom(sr)
 		if err != nil {
 			return err
@@ -163,7 +211,7 @@ outer:
 
 		entryId := wt.FieldId()
 		switch {
-		case entryId >= minEntryFieldId && entryId <= maxEntryFieldId:
+		case entryId >= minChapterFieldId && entryId <= maxChapterFieldId:
 			//
 		case entryId == tailFieldId:
 			tailLength = entryLength
@@ -173,6 +221,8 @@ outer:
 			if err = p.skipPadding(sr, entryLength, maxPaddingBeforeTail); err != nil {
 				return err
 			}
+
+			lastFieldStart = sr.Offset()
 			if tailLength, err = tailField.DecodeFrom(sr); err != nil {
 				return err
 			}
@@ -182,20 +232,28 @@ outer:
 			return fmt.Errorf("illegal entry content: entry=%v entryId=%d", entryNo, entryId)
 		}
 
-		if canSeek && !p.Builder.NeedsNextEntry() && !p.Config.ReadAllEntries {
-			if _, err := sr.Seek(-int64(expectedTailLength), io.SeekEnd); err != nil {
+		if canSeek && !p.Builder.NeedsNextChapter() && !p.Config.ReadAllEntries {
+			adjustedTailLength := int64(expectedTailLength)
+			adjustedTailLength += storageTagSize
+			adjustedTailLength += int64(protokit.SizeVarint64(expectedTailLength))
+
+			lastFieldStart, err = sr.Seek(-adjustedTailLength, io.SeekEnd)
+			if err != nil {
+				return err
+			}
+			if tailLength, err = tailField.DecodeFrom(sr); err != nil {
 				return err
 			}
 			break outer
 		}
 
-		if err := p.readStorageEntry(sr, entryNo, entryLength, minEntryLength, maxEntryLength, hasSelfLen,
+		if err := p.readStorageEntry(sr, entryNo, entryLength, minChapterLength, maxChapterLength, hasSelfLen,
 			func(ofs int64, b []byte, magicSeq, crc uint32) error {
 				if p.MagicZero+uint32(entryNo) != magicSeq {
 					return fmt.Errorf("corrupted content, magic mismatch: entry=%v expected=%x actual=%x",
 						entryNo, p.MagicZero+uint32(entryNo), magicSeq)
 				}
-				AddCrc32(totalCrc, crc)
+				addCrc32(totalCrc, crc)
 				return p.readEntry(b, ofs, entryNo, entryId)
 			},
 		); err != nil {
@@ -215,11 +273,11 @@ outer:
 			entryNo, expectedTailLength, tailLength)
 	}
 
-	if tailOffset := sr.Offset(); tailOffset%TailOffsetAlignment != 0 {
-		return fmt.Errorf("illegal content, tail is unaligned")
+	if lastFieldStart%int64(p.TailAlign) != 0 {
+		return fmt.Errorf("illegal content, tail is unaligned: position=%d", lastFieldStart)
 	}
 
-	if err := p.readStorageEntry(sr, entryNo, tailLength, minTailLength, maxTailLength, true,
+	if err := p.readStorageEntry(sr, entryNo, tailLength, minTailLength-selfChkFieldLength, maxTailLength, true,
 		func(ofs int64, b []byte, magicSeq, _ uint32) error {
 			if p.MagicZero != magicSeq {
 				return fmt.Errorf("corrupted content, magic mismatch: entry=%v expected=%x actual=%x",
@@ -249,18 +307,11 @@ outer:
 	return nil
 }
 
-func AddCrc32(hash hash.Hash32, x uint32) {
-	// byte order is according to crc32.appendUint32
-	if n, err := hash.Write([]byte{byte(x >> 24), byte(x >> 16), byte(x >> 8), byte(x)}); err != nil || n != 4 {
-		panic(fmt.Errorf("crc calc failure: %d, %v", n, err))
-	}
-}
-
-func (p *StorageFileV1) readStorageEntry(sr StorageSeqReader, entryNo entryNo, delimLen uint64, minLen, maxLen int,
-	hasSelfLen bool, processFn func(ofs int64, b []byte, magicSeq, crc uint32) error,
+func (p *StorageFileV1Reader) readStorageEntry(sr dbcommon.StorageSeqReader, entryNo entryNo, delimLen uint64, minLen, maxLen int,
+	hasSelfCheck bool, processFn func(ofs int64, b []byte, magicSeq, crc uint32) error,
 ) error {
-	if hasSelfLen {
-		minLen += selfLenFieldLength
+	if hasSelfCheck {
+		minLen += selfChkFieldLength
 	}
 
 	if delimLen < uint64(minLen) || delimLen > uint64(maxLen) {
@@ -272,6 +323,7 @@ func (p *StorageFileV1) readStorageEntry(sr StorageSeqReader, entryNo entryNo, d
 	//}
 
 	rawStart := sr.Offset()
+
 	magicAndCrc, err := magicCrcField.DecodeFrom(sr)
 	if err != nil {
 		return err
@@ -298,35 +350,33 @@ func (p *StorageFileV1) readStorageEntry(sr StorageSeqReader, entryNo entryNo, d
 		}
 	}
 
-	if hasSelfLen {
-		fieldOfs := len(buf) - selfLenFieldLength
+	if hasSelfCheck {
+		fieldOfs := len(buf) - selfChkFieldLength
 		if fieldOfs < 0 {
 			return fmt.Errorf("corrupted content, insufficient length: entry=%v outer=%d deficit=%d", entryNo, delimLen, fieldOfs)
 		}
 		rBuf := bytes.NewBuffer(buf[fieldOfs:])
-		switch selfLen, err := selfLenField.DecodeFrom(rBuf); {
+		switch selfChk, err := selfChkField.DecodeFrom(rBuf); {
 		case err != nil:
 			return err
-		case delimLen != selfLen:
-			return fmt.Errorf("corrupted content, length mismatch: entry=%v outer=%d self=%d", entryNo, delimLen, selfLen)
 		case rBuf.Len() != 0:
 			return fmt.Errorf("internal error, unaligned read: entry=%v field=selfLen", entryNo)
+		case delimLen != selfChk&selfCheckLengthMask:
+			return fmt.Errorf("corrupted content, self check failed: entry=%v outer=%d selfLength=%d", entryNo, delimLen, selfChk&selfCheckLengthMask)
+		case uint64(rawStart) != selfChk>>bitsSelfCheckLength:
+			return fmt.Errorf("corrupted content, self check failed: entry=%v actual=%d selfPos=%d", entryNo, rawStart, selfChk>>bitsSelfCheckLength)
 		}
 		buf = buf[:fieldOfs]
 	}
 
-	crcCoder := crc32.New(p.CrcTable)
-	switch n, err := crcCoder.Write(buf); {
-	case n != len(buf) || err != nil:
-		panic(fmt.Errorf("crc calc failure: entry=%v n=%d len=%d", entryNo, n, len(buf)))
-	case crcValue != crcCoder.Sum32():
+	if crcCoder := calcCrc32(crc32.New(p.CrcTable), buf); crcValue != crcCoder.Sum32() {
 		return fmt.Errorf("corrupted content, crc mismatch: entry=%v expected=%x actual=%x", entryNo, crcValue, crcCoder.Sum32())
 	}
 
 	return processFn(dataStart, buf, uint32(magicAndCrc), crcValue)
 }
 
-func (p *StorageFileV1) readPreamble(buf []byte, ofs int64) (uint64, error) {
+func (p *StorageFileV1Reader) readPrelude(buf []byte, ofs int64) (uint64, error) {
 	rBuf := bytes.NewBuffer(buf)
 
 	switch strLen, err := magicStringField.DecodeFrom(rBuf); {
@@ -335,7 +385,7 @@ func (p *StorageFileV1) readPreamble(buf []byte, ofs int64) (uint64, error) {
 	case uint64(len(magicStrHead)) != strLen:
 		return 0, fmt.Errorf("illegal content: entry=%v len(headMagic)=%d expected=%d", headEntry, strLen, len(magicStrHead))
 	default:
-		strBuf := rBuf.Bytes()[:len(magicStrHead)]
+		strBuf := rBuf.Next(len(magicStrHead))
 		if magicStrHead != string(strBuf) {
 			return 0, fmt.Errorf("illegal content: entry=%v headMagic='%s'", headEntry, strBuf)
 		}
@@ -346,16 +396,26 @@ func (p *StorageFileV1) readPreamble(buf []byte, ofs int64) (uint64, error) {
 	} else if declaredTailLen < uint64(minTailLength) || declaredTailLen > uint64(maxTailLength) {
 		return 0, fmt.Errorf("illegal content: entry=%v declaredTailLen=%d", headEntry, declaredTailLen)
 	} else {
-		err = p.Builder.AddPreamble(buf, ofs, len(buf)-rBuf.Len())
+		err = p.Builder.AddPrelude(buf, dbcommon.StorageEntryPosition{ofs, len(buf) - rBuf.Len()})
 		return declaredTailLen, err
 	}
 }
 
-func (p *StorageFileV1) readEntry(buf []byte, ofs int64, entryNo entryNo, entryId int) error {
-	return p.Builder.AddEntry(int(entryNo), entryId, buf, ofs, 0)
+func (p *StorageFileV1Reader) readEntry(buf []byte, ofs int64, entryNo entryNo, entryId int) error {
+
+	rBuf := bytes.NewBuffer(buf)
+
+	entryOptions, err := chapterOptionsField.DecodeFrom(rBuf)
+	if err != nil {
+		return err
+	}
+
+	return p.Builder.AddChapter(buf,
+		dbcommon.StorageEntryPosition{ofs, len(buf) - rBuf.Len()},
+		dbcommon.ChapterDetails{int(entryNo), uint32(entryOptions), uint16(entryId - minChapterFieldId)})
 }
 
-func (p *StorageFileV1) readConclude(buf []byte, ofs int64, totalCount uint64, partialCount bool, totalCrc uint32) error {
+func (p *StorageFileV1Reader) readConclude(buf []byte, ofs int64, totalCount uint64, partialCount bool, totalCrc uint32) error {
 	rBuf := bytes.NewBuffer(buf)
 
 	switch strLen, err := magicStringField.DecodeFrom(rBuf); {
@@ -364,7 +424,7 @@ func (p *StorageFileV1) readConclude(buf []byte, ofs int64, totalCount uint64, p
 	case uint64(len(magicStrTail)) != strLen:
 		return fmt.Errorf("illegal content: entry=%v len(tailMagic)=%d expected=%d", tailEntry, strLen, len(magicStrTail))
 	default:
-		strBuf := rBuf.Bytes()[:len(magicStrTail)]
+		strBuf := rBuf.Next(len(magicStrTail))
 		if magicStrTail != string(strBuf) {
 			return fmt.Errorf("illegal content: entry=%v tailMagic='%s'", tailEntry, strBuf)
 		}
@@ -379,23 +439,37 @@ func (p *StorageFileV1) readConclude(buf []byte, ofs int64, totalCount uint64, p
 		if uint32(totalCount) >= uint32(totals) {
 			return fmt.Errorf("illegal content: entry=%v partialCount=%d expected=%d", tailEntry, totalCount, uint32(totals))
 		}
+		totalCount = totals & math.MaxUint32
 	case uint32(totalCount) != uint32(totals):
 		return fmt.Errorf("illegal content: entry=%v totalCount=%d expected=%d", tailEntry, totalCount, uint32(totals))
 	case totalCrc != uint32(totals>>32):
 		return fmt.Errorf("corrupted content, crc mismatch: entry=%v expected=%x actual=%x", tailEntry, uint32(totals>>32), totalCrc)
 	}
 
-	return p.Builder.AddConclude(buf, ofs, len(buf)-rBuf.Len())
+	switch paddingLength, err := tailInnerPadding.DecodeFrom(rBuf); {
+	case err != nil:
+		return err
+	case paddingLength >= maxTailLength:
+		return fmt.Errorf("illegal content: entry=%v padding=%d", tailEntry, paddingLength)
+	default:
+		skippedLen := len(rBuf.Next(int(paddingLength)))
+		if skippedLen != int(paddingLength) {
+			return fmt.Errorf("illegal content: entry=%v padding=%d actual=%d", tailEntry, paddingLength, skippedLen)
+		}
+	}
+
+	return p.Builder.AddConclude(buf, dbcommon.StorageEntryPosition{ofs, len(buf) - rBuf.Len()},
+		uint32(totalCount))
 }
 
 const skipPortion = 4096
 
-func (p *StorageFileV1) skipPadding(sr StorageSeqReader, paddingLength uint64, maxLength int) error {
+func (p *StorageFileV1Reader) skipPadding(sr dbcommon.StorageSeqReader, paddingLength uint64, maxLength int) error {
 	switch {
 	case paddingLength == 0:
 		return nil
 	case paddingLength > uint64(maxLength):
-		return fmt.Errorf("unsupported storage format: entry=padding length=%d", paddingLength)
+		return fmt.Errorf("illegal content: entry=padding length=%d", paddingLength)
 	case sr.CanSeek():
 		_, err := sr.Seek(int64(paddingLength), io.SeekCurrent)
 		return err
@@ -406,13 +480,18 @@ func (p *StorageFileV1) skipPadding(sr StorageSeqReader, paddingLength uint64, m
 
 	skipBuf := make([]byte, skipPortion)
 	for {
-		switch n, err := io.ReadAtLeast(sr, skipBuf, 1); {
+		switch n, err := io.ReadFull(sr, skipBuf); {
 		case err != nil:
 			return err
 		case paddingLength == uint64(n):
 			return nil
 		default:
 			paddingLength -= uint64(n)
+
+			if paddingLength < skipPortion {
+				_, err = io.ReadFull(sr, skipBuf[:paddingLength])
+				return err
+			}
 		}
 	}
 }

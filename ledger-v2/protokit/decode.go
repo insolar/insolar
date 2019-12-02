@@ -32,26 +32,26 @@ func DecodeVarint(r io.ByteReader) (uint64, error) {
 	return decodeVarint(b, r)
 }
 
+// Continues to read Varint that was stated with the given (b)
+// So we can't use binary.ReadUvarint(r) here
+
 func decodeVarint(b byte, r io.ByteReader) (n uint64, err error) {
-	v := uint64(0)
+	v := uint64(b & 0x7F)
 
-	for i := uint8(7); i < 70; i += 7 {
-
-		v |= uint64(b & 0x7F)
+	for i := uint8(7); i < 64; i += 7 {
 		if b&0x80 == 0 {
 			return v, nil
 		}
 		if b, err = r.ReadByte(); err != nil {
 			return 0, err
 		}
-		v <<= i
+		v |= uint64(b&0x7F) << i
 	}
 
 	if b > 1 {
 		return 0, errOverflow
 	}
-
-	return v | uint64(b)<<63, nil
+	return v, nil
 }
 
 func TryDecodeTag(expectedType WireType, r io.ByteScanner) (WireTag, error) {
@@ -126,7 +126,7 @@ func decodeFixed32(r io.ByteReader) (v uint64, err error) {
 	if b, err = r.ReadByte(); err != nil {
 		return 0, err
 	}
-	v |= uint64(b)
+	v = uint64(b)
 	if b, err = r.ReadByte(); err != nil {
 		return 0, err
 	}

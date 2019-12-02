@@ -18,42 +18,29 @@ package dropbag
 
 import (
 	"fmt"
-	"math"
+	"github.com/insolar/insolar/ledger-v2/dropbag/dbcommon"
+	"github.com/insolar/insolar/ledger-v2/dropbag/dbsv1"
 )
 
-type PayloadFactory interface {
-	CreatePayloadBuilder(format FileFormat, sr StorageSeqReader) PayloadBuilder
-}
-
-type PayloadBuilder interface {
-	AddPreamble(bytes []byte, storageOffset int64, localOffset int) error
-	AddConclude(bytes []byte, storageOffset int64, localOffset int) error
-	AddEntry(entryNo, entryFieldNo int, bytes []byte, storageStart int64, localOffset int) error
-	NeedsNextEntry() bool
-
-	Finished() error
-	Failed(error) error
-}
-
-type FileFormat uint16
-type FormatOptions uint64
-
-func OpenStorage(sr StorageSeqReader, config ReadConfig, payloadFactory PayloadFactory) (PayloadBuilder, error) {
-	f, opt, err := ReadFormatAndOptions(sr)
+func OpenReadStorage(sr dbcommon.StorageSeqReader, config dbcommon.ReadConfig, payloadFactory dbcommon.PayloadFactory) (dbcommon.PayloadBuilder, error) {
+	f, opt, err := dbcommon.ReadFormatAndOptions(sr)
 	if err != nil {
 		return nil, err
 	}
 
-	config.StorageOptions = opt
-	var pb PayloadBuilder
-
+	var pb dbcommon.PayloadBuilder
 	switch f {
 	case 1:
-		pb = payloadFactory.CreatePayloadBuilder(f, sr)
-		v1 := StorageFileV1{Config: config, Builder: pb}
-		err = v1.Read(sr)
+		pb, err = dbsv1.OpenReadStorage(sr, payloadFactory, config, opt)
 	default:
 		return nil, fmt.Errorf("unknown storage format: format%x", f)
+	}
+
+	if pb == nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to read storage: format=%x", f)
 	}
 
 	if err == nil {
@@ -65,16 +52,31 @@ func OpenStorage(sr StorageSeqReader, config ReadConfig, payloadFactory PayloadF
 	return pb, err
 }
 
-func ReadFormatAndOptions(sr StorageSeqReader) (FileFormat, FormatOptions, error) {
-	if v, err := formatField.DecodeFrom(sr); err != nil {
-		return 0, 0, err
-	} else {
-		return FileFormat(v & math.MaxUint16), FormatOptions(v >> 16), nil
-	}
-}
+func OpenWriteStorage(sw dbcommon.StorageSeqWriter, f dbcommon.FileFormat, options dbcommon.FormatOptions) (dbcommon.PayloadWriter, error) {
+	var pw dbcommon.PayloadWriter
+	var err error
 
-type ReadConfig struct {
-	ReadAllEntries bool
-	AlwaysCopy     bool
-	StorageOptions FormatOptions
+	switch f {
+	case 1:
+		pw, err = dbsv1.PrepareWriteStorage(sw, options)
+	default:
+		return nil, fmt.Errorf("unknown storage format: format%x", f)
+	}
+	if pw == nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to write storage: format=%x", f)
+	}
+
+	if err != nil {
+		_ = pw.Close()
+		return nil, err
+	}
+
+	if err := dbcommon.WriteFormatAndOptions(sw, f, options); err != nil {
+		_ = pw.Close()
+		return nil, err
+	}
+	return pw, nil
 }

@@ -16,8 +16,24 @@
 
 package protokit
 
+import "io"
+
+func SizeVarint32(x uint32) int {
+	switch {
+	case x < 1<<7:
+		return 1
+	case x < 1<<14:
+		return 2
+	case x < 1<<21:
+		return 3
+	case x < 1<<28:
+		return 4
+	}
+	return 5
+}
+
 // SizeVarint returns the varint encoding size of an integer.
-func SizeVarint(x uint64) int {
+func SizeVarint64(x uint64) int {
 	switch {
 	case x < 1<<7:
 		return 1
@@ -39,4 +55,40 @@ func SizeVarint(x uint64) int {
 		return 9
 	}
 	return 10
+}
+
+func EncodeVarint(w io.ByteWriter, u uint64) error {
+	for u > 0x7F {
+		if err := w.WriteByte(byte(u&0x7F | 0x80)); err != nil {
+			return err
+		}
+		u >>= 7
+	}
+	return w.WriteByte(byte(u))
+}
+
+func EncodeFixed64(w io.ByteWriter, u uint64) error {
+	if err := EncodeFixed32(w, uint32(u)); err != nil {
+		return err
+	}
+	return EncodeFixed32(w, uint32(u>>32))
+}
+
+func EncodeFixed32(w io.ByteWriter, u uint32) error {
+	if err := w.WriteByte(byte(u)); err != nil {
+		return err
+	}
+	u >>= 8
+	if err := w.WriteByte(byte(u)); err != nil {
+		return err
+	}
+	u >>= 8
+	if err := w.WriteByte(byte(u)); err != nil {
+		return err
+	}
+	u >>= 8
+	if err := w.WriteByte(byte(u)); err != nil {
+		return err
+	}
+	return nil
 }

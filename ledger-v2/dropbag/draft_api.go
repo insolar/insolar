@@ -17,7 +17,7 @@
 package dropbag
 
 import (
-	"io"
+	"github.com/insolar/insolar/ledger-v2/dropbag/dbcommon"
 )
 
 type DropStorageBuilder interface {
@@ -36,7 +36,6 @@ type EntryStorageCabinet interface {
 	// Has ControlSection that keeps DropLifelines etc
 	// Jet trees
 	// Node lists
-
 }
 
 type EntryStorageShelf interface {
@@ -82,23 +81,6 @@ type StorageURI string
 type StorageReadAdapter interface {
 	GetURI() StorageURI
 
-	OpenForSeqRead() StorageSeqReader
-	OpenForBlockRead() StorageBlockReader
-}
-
-type StorageSeqReader interface {
-	io.ByteReader
-	io.Reader
-	io.Closer
-	io.Seeker
-	CanSeek() bool
-	CanReadMapped() bool
-	Offset() int64
-	ReadMapped(n int64) ([]byte, error)
-}
-
-type StorageBlockReader interface {
-	io.ReaderAt
-	io.Closer
-	ReadAtMapped(n int64, off int64) ([]byte, error)
+	OpenForSeqRead() dbcommon.StorageSeqReader
+	OpenForBlockRead() dbcommon.StorageBlockReader
 }
