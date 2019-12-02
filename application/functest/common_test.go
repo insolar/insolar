@@ -33,7 +33,11 @@ import (
 
 func TestGetRequest(t *testing.T) {
 	postResp, err := http.Get(launchnet.TestRPCUrl)
-	defer postResp.Body.Close()
+	defer func() {
+		if postResp != nil {
+			postResp.Body.Close()
+		}
+	}()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
 }
@@ -42,14 +46,22 @@ func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
 	testURL := launchnet.AdminHostPort + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
-	defer postResp.Body.Close()
+	defer func() {
+		if postResp != nil {
+			postResp.Body.Close()
+		}
+	}()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
 func TestWrongJson(t *testing.T) {
 	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
-	defer postResp.Body.Close()
+	defer func() {
+		if postResp != nil {
+			postResp.Body.Close()
+		}
+	}()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
