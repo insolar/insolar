@@ -23,7 +23,6 @@ type StepLoggerEvent uint8
 const (
 	StepLoggerUpdate StepLoggerEvent = iota
 	StepLoggerMigrate
-	StepLoggerUpdateError
 	StepLoggerInternal
 
 	StepLoggerTrace

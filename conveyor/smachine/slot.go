@@ -510,7 +510,7 @@ func (s *Slot) logStepError(action ErrorHandlerAction, stateUpdate StateUpdate, 
 	if wasAsync {
 		flags |= StepLoggerDetached
 	}
-	s._logStepUpdate(StepLoggerUpdateError, 0, stateUpdate, flags, err)
+	s._logStepUpdate(StepLoggerUpdate, 0, stateUpdate, flags, err)
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {

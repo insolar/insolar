@@ -80,7 +80,6 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 	special := ""
 
 	switch data.EventType {
-	case smachine.StepLoggerUpdateError:
 	case smachine.StepLoggerUpdate:
 	case smachine.StepLoggerMigrate:
 		special = "migrate "
@@ -96,7 +95,7 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 		detached = "(detached)"
 	}
 
-	if data.EventType != smachine.StepLoggerUpdateError {
+	if data.Error == nil {
 		fmt.Printf("[LOG] %s[%3d]: %03d @ %03d: %s%s%s current=%v next=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
 			data.StepNo.SlotID(), data.StepNo.StepNo(),
 			special, upd.UpdateType, detached, data.CurrentStep.GetStepName(), upd.NextStep.GetStepName(), v.sm, v.tracer)
