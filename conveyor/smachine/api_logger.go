@@ -23,6 +23,7 @@ type StepLoggerEvent uint8
 const (
 	StepLoggerUpdate StepLoggerEvent = iota
 	StepLoggerMigrate
+	StepLoggerUpdateError
 	StepLoggerInternal
 
 	StepLoggerTrace
@@ -35,8 +36,22 @@ const (
 type StepLoggerUpdateFlags uint8
 
 const (
-	StepLoggerDetached StepLoggerUpdateFlags = 1 << iota
+	StepLoggerUpdateErrorDefault StepLoggerUpdateFlags = iota
+	StepLoggerUpdateErrorMuted
+	StepLoggerUpdateErrorRecovered
+	StepLoggerUpdateErrorRecoveryDenied
 )
+const StepLoggerErrorMask StepLoggerUpdateFlags = 3
+
+const (
+	StepLoggerDetached StepLoggerUpdateFlags = 1 << (2 + iota)
+)
+
+type SlotMachineData struct {
+	CycleNo uint32
+	StepNo  StepLink
+	Error   error
+}
 
 type StepLoggerData struct {
 	CycleNo     uint32
@@ -52,6 +67,12 @@ type StepLoggerUpdateData struct {
 	PrevStepNo uint32
 	NextStep   StepDeclaration
 	Flags      StepLoggerUpdateFlags
+}
+
+type SlotMachineLogger interface {
+	CreateStepLogger(context.Context, StateMachine, TracerId) StepLogger
+	LogInternal(data SlotMachineData, msg string)
+	LogCritical(data SlotMachineData, msg string)
 }
 
 type StepLoggerFactoryFunc func(context.Context, StateMachine, TracerId) StepLogger

@@ -45,9 +45,7 @@ func TestConveyor(t *testing.T) {
 			return sm
 		}
 	}
-	machineConfig.StepLoggerFactoryFn = func(ctx context.Context, sm smachine.StateMachine, tracer smachine.TracerId) smachine.StepLogger {
-		return conveyorStepLogger{ctx, sm, tracer}
-	}
+	machineConfig.SlotMachineLogger = conveyorSlotMachineLogger{}
 
 	conveyor := NewPulseConveyor(context.Background(), PulseConveyorConfig{
 		ConveyorMachineConfig: machineConfig,

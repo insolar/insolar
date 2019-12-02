@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -38,9 +37,9 @@ type SlotMachineConfig struct {
 	ScanCountLimit       int
 	CleanupWeakOnMigrate bool
 
-	SlotIdGenerateFn    func() SlotID
-	StepLoggerFactoryFn StepLoggerFactoryFunc
-	SlotAliasRegistry   SlotAliasRegistry
+	SlotIdGenerateFn  func() SlotID
+	SlotMachineLogger SlotMachineLogger
+	SlotAliasRegistry SlotAliasRegistry
 }
 
 type SlotAliasRegistry interface {
@@ -435,7 +434,8 @@ func (m *SlotMachine) queueAsyncCallback(link SlotLink,
 			return true
 		}
 		if worker == nil {
-			// TODO _handleAsyncDetachmentLimitExceeded
+			step, _ := link.GetStepLink()
+			m.logInternal(step, "async detachment retry limit exceeded", nil)
 			return true
 		}
 
@@ -674,49 +674,63 @@ func (m *SlotMachine) recycleSlot(slot *Slot, worker FixedSlotWorker) {
 
 func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, err error) {
 
-	link := slot.NewStepLink()
-	slot.invalidateSlotId() // slotId is reset here and all links are invalid since this moment
+	var link StepLink
+	hasPanic := false
+	func() {
+		defer func() {
+			recovered := recover()
+			hasPanic = recovered != nil
+			err = RecoverSlotPanicWithStack("internal panic - prepare recycle", recovered, err)
+		}()
 
-	th := slot.defTerminate
-	if th != nil {
-		slot.defTerminate = nil // avoid self-loops
-		m.runTerminationHandler(slot.ctx, th, TerminationData{
-			Slot:   link,
-			Parent: slot.parent,
-			Result: slot.defResult,
-			Error:  err,
-			worker: worker,
-		})
-	}
+		link = slot.NewStepLink()
+		slot.invalidateSlotId() // slotId is reset here and all links are invalid since this moment
 
-	if slot.slotFlags&(slotHadAsync|slotHasBargeIn|slotHasAliases) != 0 {
-		defer m.syncQueue.FlushSlotDetachQueue(link.SlotLink)
-	}
-
-	if slot.slotFlags&slotHasAliases != 0 {
-		// cleanup aliases associated with the slot
-		// MUST happen before releasing of dependencies
-		m.unregisterBoundAliases(link.SlotID())
-	}
-
-	{
-		// cleanup synchronization dependency
-		if slot.dependency != nil {
-			released := slot._releaseDependency()
-			m.activateDependants(released, link.SlotLink, worker)
+		th := slot.defTerminate
+		if th != nil {
+			slot.defTerminate = nil // avoid self-loops
+			m.runTerminationHandler(slot.ctx, th, TerminationData{
+				Slot:   link,
+				Parent: slot.parent,
+				Result: slot.defResult,
+				Error:  err,
+				worker: worker,
+			})
 		}
-	}
 
-	{ // cleanup queues
-		if slot.isQueueHead() {
-			s := slot.removeHeadedQueue()
-			m._activateDependantChain(s, worker)
-		} else {
-			slot.removeFromQueue()
+		if slot.slotFlags&(slotHadAsync|slotHasBargeIn|slotHasAliases) != 0 {
+			defer m.syncQueue.FlushSlotDetachQueue(link.SlotLink)
 		}
-	}
 
-	slot.logInternal(link, "recycle", err)
+		if slot.slotFlags&slotHasAliases != 0 {
+			// cleanup aliases associated with the slot
+			// MUST happen before releasing of dependencies
+			m.unregisterBoundAliases(link.SlotID())
+		}
+
+		{
+			// cleanup synchronization dependency
+			if slot.dependency != nil {
+				released := slot._releaseDependency()
+				m.activateDependants(released, link.SlotLink, worker)
+			}
+		}
+
+		{ // cleanup queues
+			if slot.isQueueHead() {
+				s := slot.removeHeadedQueue()
+				m._activateDependantChain(s, worker)
+			} else {
+				slot.removeFromQueue()
+			}
+		}
+	}()
+
+	if hasPanic {
+		m.logCritical(link, "recycle", err)
+	} else {
+		slot.logInternal(link, "recycle", err)
+	}
 	m._recycleSlot(slot)
 }
 
@@ -767,8 +781,7 @@ func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) bool {
 		mc := machineCallContext{m: m, w: worker}
 		err := mc.executeCall(fn)
 		if err != nil {
-			// TODO log call error
-			runtime.KeepAlive(err)
+			m.logInternal(StepLink{}, "schedule call execution", err)
 		}
 	}
 	if isSignal {
@@ -793,7 +806,7 @@ func (m *SlotMachine) runTerminationHandler(ctx context.Context, th TerminationH
 			return nil
 		}()
 		if err != nil {
-			m.defaultDeadSlotErrorHandler(td.Slot.SlotLink, err)
+			m.logInternal(StepLink{SlotLink: td.Slot.SlotLink}, "failed termination handler", err)
 		}
 		return true
 	})
@@ -948,10 +961,10 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 		cc.injects, defValues.inheritable)
 
 	// Step Logger
-	if stepLogger, ok := decl.GetStepLogger(slot.ctx, sm, cc.tracerId, m.config.StepLoggerFactoryFn); ok {
+	if stepLogger, ok := decl.GetStepLogger(slot.ctx, sm, cc.tracerId, m.config.SlotMachineLogger.CreateStepLogger); ok {
 		slot.stepLogger = stepLogger
-	} else if m.config.StepLoggerFactoryFn != nil {
-		slot.stepLogger = m.config.StepLoggerFactoryFn(slot.ctx, sm, cc.tracerId)
+	} else if m.config.SlotMachineLogger != nil {
+		slot.stepLogger = m.config.SlotMachineLogger.CreateStepLogger(slot.ctx, sm, cc.tracerId)
 	}
 	if slot.stepLogger == nil && len(cc.tracerId) > 0 {
 		slot.stepLogger = StepLoggerStub{cc.tracerId}
@@ -1210,65 +1223,65 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate, w Fi
 		return isAvailable
 	}
 
-	return m.handleSlotUpdateError(slot, w, isPanic, err)
+	return m.handleSlotUpdateError(slot, w, stateUpdate, isPanic, err)
 }
 
-func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, isPanic bool, err error) bool {
+func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, stateUpdate StateUpdate, isPanic bool, err error) bool {
 
 	canRecover := false
+	isAsync := false
+	if se, ok := err.(SlotPanicError); ok {
+		isAsync = se.IsAsync
+	}
+	canRecover = isAsync // || !isPanic
+
 	action := ErrorHandlerDefault
 
 	eh := slot.getErrorHandler()
 	if eh != nil {
-		fc := failureContext{isPanic: isPanic, err: err, result: slot.defResult}
-		if se, ok := err.(SlotPanicError); ok {
-			fc.isAsync = se.IsAsync
-		}
-		canRecover = fc.isAsync // || !fc.isPanic
+		fc := failureContext{isPanic: isPanic, isAsync: isAsync, canRecover: canRecover, err: err, result: slot.defResult}
 
-		fc.canRecover = canRecover
 		ok := false
 		if ok, action, err = fc.executeFailure(eh); ok {
 			// do not change result on failure of the error handler
 			slot.defResult = fc.result
+		} else {
+			action = ErrorHandlerDefault
 		}
 	}
 
 	switch action {
-	case ErrorHandlerMute:
-		//recoverState = "recover=muted "
-		break
 	case ErrorHandlerRecover, ErrorHandlerRecoverAndWakeUp:
 		switch {
 		case !canRecover:
-			//break
+			slot.logStepError(errorHandlerRecoverDenied, stateUpdate, isAsync, err)
 		case action == ErrorHandlerRecoverAndWakeUp:
 			slot.activateSlot(worker)
-			return true
+			fallthrough
 		default:
+			slot.logStepError(ErrorHandlerRecover, stateUpdate, isAsync, err)
 			return true
 		}
-		m.defaultSlotErrorHandler(slot, true, err)
+	case ErrorHandlerMute:
+		slot.logStepError(ErrorHandlerMute, stateUpdate, isAsync, err)
 	default:
-		m.defaultSlotErrorHandler(slot, false, err)
+		slot.logStepError(ErrorHandlerDefault, stateUpdate, isAsync, err)
 	}
 
 	m.recycleSlotWithError(slot, worker, err)
 	return false
 }
 
-func (m *SlotMachine) defaultSlotErrorHandler(slot *Slot, deniedRecovery bool, err error) {
-	recoverState := ""
-	if deniedRecovery {
-		recoverState = "recovery=denied "
+func (m *SlotMachine) logCritical(link StepLink, msg string, err error) {
+	if sml := m.config.SlotMachineLogger; sml != nil {
+		sml.LogCritical(SlotMachineData{m.getScanCount(), link, err}, msg)
 	}
-	// TODO log error to slot.context
-	fmt.Printf("SLOT ERROR: slot=%v %serr=%v\n", slot.GetSlotID(), recoverState, err)
 }
 
-func (m *SlotMachine) defaultDeadSlotErrorHandler(link SlotLink, err error) {
-	// TODO log error to machine context - as slot is reused
-	fmt.Printf("SLOT ERROR: slot=%v err=%v\n", link.SlotID(), err)
+func (m *SlotMachine) logInternal(link StepLink, msg string, err error) {
+	if sml := m.config.SlotMachineLogger; sml != nil {
+		sml.LogInternal(SlotMachineData{m.getScanCount(), link, err}, msg)
+	}
 }
 
 /* ------ BargeIn support -------------------------- */

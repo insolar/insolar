@@ -26,6 +26,23 @@ import (
 	"github.com/insolar/insolar/conveyor/smachine"
 )
 
+type conveyorSlotMachineLogger struct {
+}
+
+func (conveyorSlotMachineLogger) LogInternal(data smachine.SlotMachineData, msg string) {
+	fmt.Printf("[MACHINE][LOG] %s[%3d]: %03d @ %03d: internal %s err=%v\n", data.StepNo.MachineId(), data.CycleNo,
+		data.StepNo.SlotID(), data.StepNo.StepNo(), msg, data.Error)
+}
+
+func (conveyorSlotMachineLogger) LogCritical(data smachine.SlotMachineData, msg string) {
+	fmt.Printf("[MACHINE][ERR] %s[%3d]: %03d @ %03d: internal %s err=%v\n", data.StepNo.MachineId(), data.CycleNo,
+		data.StepNo.SlotID(), data.StepNo.StepNo(), msg, data.Error)
+}
+
+func (conveyorSlotMachineLogger) CreateStepLogger(ctx context.Context, sm smachine.StateMachine, tracer smachine.TracerId) smachine.StepLogger {
+	return conveyorStepLogger{ctx, sm, tracer}
+}
+
 type conveyorStepLogger struct {
 	ctx    context.Context
 	sm     smachine.StateMachine
@@ -63,6 +80,7 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 	special := ""
 
 	switch data.EventType {
+	case smachine.StepLoggerUpdateError:
 	case smachine.StepLoggerUpdate:
 	case smachine.StepLoggerMigrate:
 		special = "migrate "
@@ -77,17 +95,41 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 	if upd.Flags&smachine.StepLoggerDetached != 0 {
 		detached = "(detached)"
 	}
-	fmt.Printf("%s[%3d]: %03d @ %03d: %s%s%s current=%v next=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+
+	if data.EventType != smachine.StepLoggerUpdateError {
+		fmt.Printf("[LOG] %s[%3d]: %03d @ %03d: %s%s%s current=%v next=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+			data.StepNo.SlotID(), data.StepNo.StepNo(),
+			special, upd.UpdateType, detached, data.CurrentStep.GetStepName(), upd.NextStep.GetStepName(), v.sm, v.tracer)
+		return
+	}
+
+	errSpecial := ""
+	switch upd.Flags & smachine.StepLoggerErrorMask {
+	case smachine.StepLoggerUpdateErrorMuted:
+		errSpecial = "muted "
+	case smachine.StepLoggerUpdateErrorRecovered:
+		errSpecial = "recovered "
+	case smachine.StepLoggerUpdateErrorRecoveryDenied:
+		errSpecial = "recover-denied "
+	}
+
+	fmt.Printf("[ERR] %s[%3d]: %03d @ %03d: %s%s%s%s current=%v next=%v payload=%T tracer=%v err=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		special, upd.UpdateType, detached, data.CurrentStep.GetStepName(), upd.NextStep.GetStepName(), v.sm, v.tracer)
+		special, errSpecial, upd.UpdateType, detached, data.CurrentStep.GetStepName(), upd.NextStep.GetStepName(), v.sm, v.tracer, data.Error)
 }
 
 func (v conveyorStepLogger) LogInternal(data smachine.StepLoggerData, updateType string) {
 	v.prepareStepName(&data.CurrentStep)
 
-	fmt.Printf("%s[%3d]: %03d @ %03d: internal %s current=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
-		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		updateType, data.CurrentStep.GetStepName(), v.sm, v.tracer)
+	if data.Error == nil {
+		fmt.Printf("[LOG] %s[%3d]: %03d @ %03d: internal %s current=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+			data.StepNo.SlotID(), data.StepNo.StepNo(),
+			updateType, data.CurrentStep.GetStepName(), v.sm, v.tracer)
+	} else {
+		fmt.Printf("[ERR] %s[%3d]: %03d @ %03d: internal %s current=%v payload=%T tracer=%v err=%v\n", data.StepNo.MachineId(), data.CycleNo,
+			data.StepNo.SlotID(), data.StepNo.StepNo(),
+			updateType, data.CurrentStep.GetStepName(), v.sm, v.tracer, data.Error)
+	}
 }
 
 func (v conveyorStepLogger) LogEvent(data smachine.StepLoggerData, customEvent interface{}) {

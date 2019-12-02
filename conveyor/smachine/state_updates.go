@@ -88,7 +88,13 @@ func init() {
 			filter:    updCtxExec | updCtxInit | updCtxMigrate | updCtxBargeIn,
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
-			apply:     stateUpdateDefaultError,
+			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+				err = stateUpdate.param1.(error)
+				if err == nil {
+					err = errors.New("error argument is missing")
+				}
+				return slot.machine.handleSlotUpdateError(slot, worker, stateUpdate, false, err), nil
+			},
 		},
 
 		stateUpdPanic: {
@@ -96,7 +102,13 @@ func init() {
 			filter:    updCtxInternal, // can't be created by a template
 			params:    updParamVar,
 			varVerify: stateUpdateDefaultVerifyError,
-			apply:     stateUpdateDefaultError,
+			apply: func(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {
+				err = stateUpdate.param1.(error)
+				if err == nil {
+					err = errors.New("error argument is missing")
+				}
+				return slot.machine.handleSlotUpdateError(slot, worker, stateUpdate, true, err), nil
+			},
 		},
 
 		stateUpdReplaceWith: {
@@ -371,16 +383,6 @@ func stateUpdateDefaultVerifyError(u interface{}) {
 	if err == nil {
 		panic("illegal value")
 	}
-}
-
-func stateUpdateDefaultError(slot *Slot, stateUpdate StateUpdate, w FixedSlotWorker) (isAvailable bool, err error) {
-	err = stateUpdate.param1.(error)
-	if err == nil {
-		err = errors.New("error argument is missing")
-	}
-
-	return slot.machine.handleSlotUpdateError(slot, w,
-		getStateUpdateKind(stateUpdate) == stateUpdPanic, err), nil
 }
 
 func stateUpdateDefaultJump(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker) (isAvailable bool, err error) {

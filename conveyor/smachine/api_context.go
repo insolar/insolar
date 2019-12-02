@@ -34,6 +34,7 @@ const (
 	ErrorHandlerMute
 	ErrorHandlerRecover
 	ErrorHandlerRecoverAndWakeUp
+	errorHandlerRecoverDenied
 )
 
 type BasicContext interface {

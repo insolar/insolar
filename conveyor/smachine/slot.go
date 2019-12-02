@@ -496,15 +496,37 @@ func (s *Slot) logInternal(link StepLink, updateType string, err error) {
 	}()
 }
 
+func (s *Slot) logStepError(action ErrorHandlerAction, stateUpdate StateUpdate, wasAsync bool, err error) {
+	flags := StepLoggerUpdateErrorDefault
+	switch action {
+	case ErrorHandlerMute:
+		flags = StepLoggerUpdateErrorMuted
+	case ErrorHandlerRecover, ErrorHandlerRecoverAndWakeUp:
+		flags = StepLoggerUpdateErrorRecovered
+	case errorHandlerRecoverDenied:
+		flags = StepLoggerUpdateErrorRecoveryDenied
+	}
+
+	if wasAsync {
+		flags |= StepLoggerDetached
+	}
+	s._logStepUpdate(StepLoggerUpdateError, 0, stateUpdate, flags, err)
+}
+
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
-	s._logStepUpdate(StepLoggerUpdate, prevStepNo, stateUpdate, wasAsync)
+	flags := StepLoggerUpdateFlags(0)
+	if wasAsync {
+		flags |= StepLoggerDetached
+	}
+	s._logStepUpdate(StepLoggerUpdate, prevStepNo, stateUpdate, flags, nil)
 }
 
 func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
-	s._logStepUpdate(StepLoggerMigrate, prevStepNo, stateUpdate, false)
+	s._logStepUpdate(StepLoggerMigrate, prevStepNo, stateUpdate, 0, nil)
 }
 
-func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
+func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32,
+	stateUpdate StateUpdate, flags StepLoggerUpdateFlags, err error) {
 	if s.stepLogger == nil {
 		return
 	}
@@ -522,7 +544,9 @@ func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32, stat
 	}
 
 	stepData := s.newStepLoggerData(eventType, s.NewStepLink())
-	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo}
+	stepData.Error = err
+
+	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo, Flags: flags}
 
 	if nextStep := stateUpdate.step.Transition; nextStep != nil {
 		nextDecl := s.declaration.GetStepDeclaration(nextStep)
@@ -533,15 +557,11 @@ func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32, stat
 
 	updData.UpdateType, _ = getStateUpdateTypeName(stateUpdate)
 
-	if wasAsync {
-		updData.Flags |= StepLoggerDetached
-	}
-
 	s.stepLogger.LogUpdate(stepData, updData)
 }
 
 func (s *Slot) setStepLoggerAfterInit(updateFn StepLoggerUpdateFunc) {
-	newStepLogger := updateFn(s.stepLogger, s.machine.config.StepLoggerFactoryFn)
+	newStepLogger := updateFn(s.stepLogger, s.machine.config.SlotMachineLogger.CreateStepLogger)
 
 	if newStepLogger == nil && s.stepLogger != nil {
 		tracerId := s.stepLogger.GetTracerId()

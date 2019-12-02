@@ -160,11 +160,11 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 	// configuration steps for slot machine
 	machineConfig := smachine.SlotMachineConfig{
-		PollingPeriod:       500 * time.Millisecond,
-		PollingTruncate:     1 * time.Millisecond,
-		SlotPageSize:        1000,
-		ScanCountLimit:      100000,
-		StepLoggerFactoryFn: SlotMachineLoggerFactory,
+		PollingPeriod:     500 * time.Millisecond,
+		PollingTruncate:   1 * time.Millisecond,
+		SlotPageSize:      1000,
+		ScanCountLimit:    100000,
+		SlotMachineLogger: SlotMachineLoggerFactory,
 	}
 
 	lr.ObjectCatalog = &sm_object.LocalObjectCatalog{}
