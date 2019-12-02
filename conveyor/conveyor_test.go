@@ -32,10 +32,11 @@ import (
 
 func TestConveyor(t *testing.T) {
 	machineConfig := smachine.SlotMachineConfig{
-		SlotPageSize:    1000,
-		PollingPeriod:   500 * time.Millisecond,
-		PollingTruncate: 1 * time.Millisecond,
-		ScanCountLimit:  100000,
+		SlotPageSize:      1000,
+		PollingPeriod:     500 * time.Millisecond,
+		PollingTruncate:   1 * time.Millisecond,
+		ScanCountLimit:    100000,
+		SlotAliasRegistry: &GlobalAliases{},
 	}
 
 	factoryFn := func(pn pulse.Number, v InputEvent) smachine.CreateFunc {
@@ -76,6 +77,7 @@ func TestConveyor(t *testing.T) {
 		fmt.Println("<<<================================== ", pd, " ====================================")
 		time.Sleep(10 * time.Millisecond)
 
+		eventToCall := ""
 		if eventCount < math.MaxInt32 {
 			eventCount++
 			require.NoError(t, conveyor.AddInput(context.Background(), pd.NextPulseNumber(), fmt.Sprintf("event-%d-future", eventCount)))
@@ -84,11 +86,21 @@ func TestConveyor(t *testing.T) {
 
 			for j := 0; j < 1; j++ {
 				eventCount++
+				eventToCall = fmt.Sprintf("event-%d-present", eventCount)
 				require.NoError(t, conveyor.AddInput(context.Background(), pd.PulseNumber, fmt.Sprintf("event-%d-present", eventCount)))
 			}
 		}
 
 		time.Sleep(time.Second)
+
+		if eventToCall != "" {
+			link := conveyor.GetPublishedGlobalAlias(eventToCall)
+			//require.False(t, link.IsEmpty())
+			smachine.ScheduleCallTo(link, func(callContext smachine.MachineCallContext) {
+				fmt.Println("Global call: ", callContext.GetMachineId(), link)
+			}, false)
+		}
+
 	}
 	time.Sleep(100 * time.Millisecond)
 	fmt.Println("======================")

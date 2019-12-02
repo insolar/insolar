@@ -155,6 +155,7 @@ func (p *PulseSlotMachine) GetInitStateFor(sm smachine.StateMachine) smachine.In
 
 func (p *PulseSlotMachine) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultErrorHandler(p.errorHandler)
+
 	switch p.pulseSlot.State() {
 	case Future:
 		ctx.SetDefaultMigration(p.stepMigrateFromFuture)

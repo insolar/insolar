@@ -83,6 +83,11 @@ func (p *machineCallContext) SlotMachine() *SlotMachine {
 	return p.m
 }
 
+func (p *machineCallContext) GetMachineId() string {
+	p.ensureValid()
+	return p.m.GetMachineId()
+}
+
 func (p *machineCallContext) BargeInNow(link SlotLink, param interface{}, fn BargeInApplyFunc) bool {
 	p.ensureValid()
 	return p.m.bargeInNow(link, param, fn, p.w)

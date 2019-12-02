@@ -54,6 +54,8 @@ func (sm *AppEventSM) GetInitStateFor(machine smachine.StateMachine) smachine.In
 func (sm *AppEventSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
 	fmt.Println("init: ", sm.eventValue, sm.pn)
 	ctx.SetDefaultMigration(sm.migrateToClosing)
+	ctx.PublishGlobalAlias(sm.eventValue)
+
 	return ctx.Jump(sm.stepRun)
 }
 

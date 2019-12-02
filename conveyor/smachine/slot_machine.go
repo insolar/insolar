@@ -45,7 +45,7 @@ type SlotMachineConfig struct {
 
 type SlotAliasRegistry interface {
 	PublishAlias(key interface{}, slot SlotLink) bool
-	UnpublishAlias(key interface{}) bool
+	UnpublishAlias(key interface{})
 	GetPublishedAlias(key interface{}) SlotLink
 }
 
@@ -192,6 +192,10 @@ func (m *SlotMachine) TryPutDependency(id string, v interface{}) bool {
 	}
 	_, loaded := m.localRegistry.LoadOrStore(dependencyKey(id), v)
 	return !loaded
+}
+
+func (m *SlotMachine) GetPublishedGlobalAlias(key interface{}) SlotLink {
+	return m.getGlobalPublished(key)
 }
 
 /* -------------- Methods to run state machines --------------- */
@@ -692,7 +696,7 @@ func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, e
 	if slot.slotFlags&slotHasAliases != 0 {
 		// cleanup aliases associated with the slot
 		// MUST happen before releasing of dependencies
-		slot.unregisterBoundAliases()
+		m.unregisterBoundAliases(link.SlotID())
 	}
 
 	{
@@ -755,7 +759,7 @@ func (m *SlotMachine) AllocatedSlotCount() int {
 
 /* -- General purpose synchronization ------------------------------ */
 
-func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) {
+func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) bool {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -768,9 +772,9 @@ func (m *SlotMachine) ScheduleCall(fn MachineCallFunc, isSignal bool) {
 		}
 	}
 	if isSignal {
-		m.syncQueue.AddAsyncSignal(SlotLink{}, callFn)
+		return m.syncQueue.AddAsyncSignal(SlotLink{}, callFn)
 	} else {
-		m.syncQueue.AddAsyncUpdate(SlotLink{}, callFn)
+		return m.syncQueue.AddAsyncUpdate(SlotLink{}, callFn)
 	}
 }
 
@@ -1195,8 +1199,9 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate, w Fi
 
 	func() {
 		defer func() {
-			isPanic = true
-			err = RecoverSlotPanic("apply state update panic", recover(), err)
+			recovered := recover()
+			isPanic = recovered != nil
+			err = RecoverSlotPanicWithStack("apply state update panic", recovered, err)
 		}()
 		isAvailable, err = typeOfStateUpdate(stateUpdate).Apply(slot, stateUpdate, w)
 	}()

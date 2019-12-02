@@ -78,17 +78,17 @@ func (s *Slot) unregisterBoundAlias(k interface{}) bool {
 }
 
 // ONLY to be used by a holder of a slot
-func (s *Slot) unregisterBoundAliases() {
-	m := &s.machine.localRegistry // SAFE for concurrent use
-	var key interface{} = slotIdKey(s.GetSlotID())
+func (m *SlotMachine) unregisterBoundAliases(id SlotID) {
+	mm := &m.localRegistry // SAFE for concurrent use
+	var key interface{} = slotIdKey(id)
 
-	if isa, ok := m.Load(key); ok {
+	if isa, ok := mm.Load(key); ok {
 		sa := isa.(*slotAliasesValue)
-		m.Delete(key)
+		mm.Delete(key)
 
-		sar := s.machine.config.SlotAliasRegistry
+		sar := m.config.SlotAliasRegistry
 		for _, k := range sa.keys {
-			m.Delete(k)
+			mm.Delete(k)
 
 			if sar != nil {
 				if ga, ok := k.(globalAliasKey); ok {
@@ -111,7 +111,7 @@ func (m *SlotMachine) _unregisterSlotBoundAlias(slotID SlotID, k interface{}) bo
 				m.localRegistry.Delete(k)
 				if sar := m.config.SlotAliasRegistry; sar != nil {
 					if ga, ok := k.(globalAliasKey); ok {
-						return sar.UnpublishAlias(ga.key)
+						sar.UnpublishAlias(ga.key)
 					}
 				}
 

@@ -120,6 +120,10 @@ func (p *PulseConveyor) TryPutDependency(id string, v interface{}) bool {
 	return p.slotMachine.TryPutDependency(id, v)
 }
 
+func (p *PulseConveyor) GetPublishedGlobalAlias(key interface{}) smachine.SlotLink {
+	return p.slotMachine.GetPublishedGlobalAlias(key)
+}
+
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
 	pulseSlotMachine, targetPN, pulseState, err := p.mapToPulseSlotMachine(pn)
 	switch {

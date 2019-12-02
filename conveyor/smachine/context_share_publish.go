@@ -55,7 +55,7 @@ func (p *slotContext) Unpublish(key interface{}) bool {
 
 func (p *slotContext) UnpublishAll() {
 	p.ensureAtLeast(updCtxInit)
-	p.s.unregisterBoundAliases()
+	p.s.machine.unregisterBoundAliases(p.s.GetSlotID())
 }
 
 func (p *slotContext) GetPublished(key interface{}) interface{} {
