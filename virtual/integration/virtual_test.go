@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
@@ -59,6 +60,9 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		}
 
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+
+		cfg.LogicRunner = configuration.NewLogicRunner()
+		cfg.LogicRunner.RPCListen = ":0"
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 			lifeTime := &record.Lifeline{
