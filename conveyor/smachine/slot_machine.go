@@ -40,6 +40,13 @@ type SlotMachineConfig struct {
 
 	SlotIdGenerateFn    func() SlotID
 	StepLoggerFactoryFn StepLoggerFactoryFunc
+	SlotAliasRegistry   SlotAliasRegistry
+}
+
+type SlotAliasRegistry interface {
+	PublishAlias(key interface{}, slot SlotLink) bool
+	UnpublishAlias(key interface{}) bool
+	GetPublishedAlias(key interface{}) SlotLink
 }
 
 const maxLoopCount = 10000

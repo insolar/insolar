@@ -51,7 +51,7 @@ func (v SharedDataLink) isLocal(local *Slot) bool {
 }
 
 func (v SharedDataLink) getData() interface{} {
-	if _, ok := v.data.(*uniqueAlias); ok {
+	if _, ok := v.data.(*uniqueAliasKey); ok {
 		if v.IsUnbound() || v.flags&ShareDataDirect != 0 { // shouldn't happen
 			panic("impossible")
 		}
@@ -67,7 +67,7 @@ func (v SharedDataLink) getData() interface{} {
 // Returns true when the underlying data is of the given type
 func (v SharedDataLink) IsOfType(t reflect.Type) bool {
 	switch a := v.data.(type) {
-	case *uniqueAlias:
+	case *uniqueAliasKey:
 		return a.valueType == t
 	}
 	return reflect.TypeOf(v.data) == t
@@ -78,7 +78,7 @@ func (v SharedDataLink) IsAssignableToType(t reflect.Type) bool {
 	switch a := v.data.(type) {
 	case nil:
 		return false
-	case *uniqueAlias:
+	case *uniqueAliasKey:
 		return a.valueType.AssignableTo(t)
 	}
 	return reflect.TypeOf(v.data).AssignableTo(t)
@@ -89,7 +89,7 @@ func (v SharedDataLink) IsAssignableTo(t interface{}) bool {
 	switch a := v.data.(type) {
 	case nil:
 		return false
-	case *uniqueAlias:
+	case *uniqueAliasKey:
 		return a.valueType.AssignableTo(reflect.TypeOf(t))
 	}
 	return reflect.TypeOf(v.data).AssignableTo(reflect.TypeOf(t))

@@ -18,10 +18,17 @@ package smachine
 
 /* ------- Slot-dependant aliases and mappings ------------- */
 
-type slotAliases struct {
+type slotIdKey SlotID
+
+type slotAliasesValue struct {
 	//owner *Slot
 	keys []interface{}
 }
+
+//type slotAliasesMap struct {
+//	//owner *Slot
+//	keys map[interface{}
+//}
 
 // ONLY to be used by a holder of a slot
 func (s *Slot) registerBoundAlias(k, v interface{}) bool {
@@ -33,10 +40,24 @@ func (s *Slot) registerBoundAlias(k, v interface{}) bool {
 	if _, loaded := m.LoadOrStore(k, v); loaded {
 		return false
 	}
-	isa, _ := m.LoadOrStore(s.GetSlotID(), &slotAliases{ /* owner:s */ })
-	sa := isa.(*slotAliases)
-	sa.keys = append(sa.keys, k)
-	s.slotFlags |= slotHasAliases
+
+	var key interface{} = slotIdKey(s.GetSlotID())
+
+	switch isa, ok := m.Load(key); {
+	case !ok:
+		isa, _ = m.LoadOrStore(key, &slotAliasesValue{ /* owner:s */ })
+		fallthrough
+	default:
+		sa := isa.(*slotAliasesValue)
+		sa.keys = append(sa.keys, k)
+		s.slotFlags |= slotHasAliases
+	}
+
+	if sar := s.machine.config.SlotAliasRegistry; sar != nil {
+		if ga, ok := k.(globalAliasKey); ok {
+			return sar.PublishAlias(ga.key, s.NewLink())
+		}
+	}
 
 	return true
 }
@@ -59,14 +80,53 @@ func (s *Slot) unregisterBoundAlias(k interface{}) bool {
 // ONLY to be used by a holder of a slot
 func (s *Slot) unregisterBoundAliases() {
 	m := &s.machine.localRegistry // SAFE for concurrent use
-	var key interface{} = s.GetSlotID()
+	var key interface{} = slotIdKey(s.GetSlotID())
 
 	if isa, ok := m.Load(key); ok {
-		sa := isa.(*slotAliases)
+		sa := isa.(*slotAliasesValue)
 		m.Delete(key)
 
+		sar := s.machine.config.SlotAliasRegistry
 		for _, k := range sa.keys {
 			m.Delete(k)
+
+			if sar != nil {
+				if ga, ok := k.(globalAliasKey); ok {
+					sar.UnpublishAlias(ga.key)
+				}
+			}
 		}
 	}
+}
+
+// ONLY to be used by a holder of a slot
+func (m *SlotMachine) _unregisterSlotBoundAlias(slotID SlotID, k interface{}) bool {
+	var key interface{} = slotIdKey(slotID)
+
+	if isa, loaded := m.localRegistry.Load(key); loaded {
+		sa := isa.(*slotAliasesValue)
+
+		for i, kk := range sa.keys {
+			if k == kk {
+				m.localRegistry.Delete(k)
+				if sar := m.config.SlotAliasRegistry; sar != nil {
+					if ga, ok := k.(globalAliasKey); ok {
+						return sar.UnpublishAlias(ga.key)
+					}
+				}
+
+				switch last := len(sa.keys) - 1; {
+				case last == 0:
+					m.localRegistry.Delete(key)
+				case i < last:
+					copy(sa.keys[i:], sa.keys[i+1:])
+					fallthrough
+				default:
+					sa.keys = sa.keys[:last]
+				}
+				return true
+			}
+		}
+	}
+	return false
 }

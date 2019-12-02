@@ -19,20 +19,13 @@ package smachine
 import "reflect"
 
 // this structure provides isolation of shared data to avoid SM being retained via SharedDataLink
-type uniqueAlias struct {
+type uniqueAliasKey struct {
 	valueType reflect.Type
 }
 
 func (p *slotContext) Share(data interface{}, flags ShareDataFlags) SharedDataLink {
 	p.ensureAtLeast(updCtxInit)
-	switch data.(type) {
-	case nil:
-		panic("illegal value")
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
-	case SharedDataLink, *SharedDataLink:
-		panic("illegal value - SharedDataLink can't be shared")
-	}
+	ensureShareValue(data)
 
 	switch {
 	case flags&ShareDataUnbound != 0: // ShareDataDirect is irrelevant
@@ -40,7 +33,7 @@ func (p *slotContext) Share(data interface{}, flags ShareDataFlags) SharedDataLi
 	case flags&ShareDataDirect != 0:
 		return SharedDataLink{p.s.NewLink(), data, flags}
 	default:
-		alias := &uniqueAlias{reflect.TypeOf(data)}
+		alias := &uniqueAliasKey{reflect.TypeOf(data)}
 		if !p.s.registerBoundAlias(alias, data) {
 			panic("impossible")
 		}
@@ -50,19 +43,8 @@ func (p *slotContext) Share(data interface{}, flags ShareDataFlags) SharedDataLi
 
 func (p *slotContext) Publish(key, data interface{}) bool {
 	p.ensureAtLeast(updCtxInit)
-	switch key.(type) {
-	case nil:
-		panic("illegal value")
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
-	}
-
-	switch data.(type) {
-	case nil:
-		panic("illegal value")
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
-	}
+	ensurePublishKey(key)
+	ensurePublishValue(data)
 	return p.s.registerBoundAlias(key, data)
 }
 
@@ -84,6 +66,22 @@ func (p *slotContext) GetPublished(key interface{}) interface{} {
 	return nil
 }
 
+func (p *slotContext) PublishGlobalAlias(key interface{}) bool {
+	p.ensureAtLeast(updCtxInit)
+	ensurePublishKey(key)
+	return p.s.registerBoundAlias(globalAliasKey{key}, p.s.NewLink())
+}
+
+func (p *slotContext) UnpublishGlobalAlias(key interface{}) bool {
+	p.ensureAtLeast(updCtxInit)
+	return p.s.unregisterBoundAlias(globalAliasKey{key})
+}
+
+func (p *slotContext) GetPublishedGlobalAlias(key interface{}) SlotLink {
+	p.ensureAtLeast(updCtxInit)
+	return p.s.machine.getGlobalPublished(key)
+}
+
 func (p *machineCallContext) GetPublished(key interface{}) interface{} {
 	p.ensureValid()
 	if v, ok := p.m.getPublished(key); ok {
@@ -92,14 +90,26 @@ func (p *machineCallContext) GetPublished(key interface{}) interface{} {
 	return nil
 }
 
+func (p *machineCallContext) GetPublishedGlobalAlias(key interface{}) SlotLink {
+	p.ensureValid()
+	return p.m.getGlobalPublished(key)
+}
+
 func (m *SlotMachine) getPublished(key interface{}) (interface{}, bool) {
-	switch key.(type) {
-	case nil:
-		return nil, false
-	case dependencyKey, *slotAliases, *uniqueAlias:
+	if !isValidPublishKey(key) {
 		return nil, false
 	}
 	return m.localRegistry.Load(key)
+}
+
+func (m *SlotMachine) getGlobalPublished(key interface{}) SlotLink {
+	if v, ok := m.getPublished(globalAliasKey{key}); ok {
+		return v.(SlotLink)
+	}
+	if sar := m.config.SlotAliasRegistry; sar != nil {
+		return sar.GetPublishedAlias(key)
+	}
+	return SlotLink{}
 }
 
 // Provides external access to published data.
@@ -110,8 +120,6 @@ func (m *SlotMachine) GetPublished(key interface{}) (interface{}, bool) {
 		// unwrap unbound values
 		// but slot-bound values can NOT be accessed outside of a slot machine
 		switch sdl := v.(type) {
-		case dependencyKey, *slotAliases, *uniqueAlias:
-			return nil, false
 		case SharedDataLink:
 			if sdl.IsUnbound() {
 				return sdl.getData(), true
@@ -122,24 +130,23 @@ func (m *SlotMachine) GetPublished(key interface{}) (interface{}, bool) {
 				return sdl.getData(), true
 			}
 			return nil, true
-		default:
+		case nil:
 			return v, true
+		default:
+			if isValidPublishValue(v) {
+				return v, true
+			}
+			return nil, false
 		}
 	}
 	return nil, false
 }
 
 func (m *SlotMachine) TryPublish(key, data interface{}) (interface{}, bool) {
-	switch key.(type) {
-	case nil:
-		panic("illegal value")
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
-	}
+	ensurePublishKey(key)
 
+	ensurePublishValue(data)
 	switch sdl := data.(type) {
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
 	case SharedDataLink:
 		if !sdl.IsUnbound() {
 			panic("illegal value")
@@ -159,12 +166,7 @@ func (m *SlotMachine) TryPublish(key, data interface{}) (interface{}, bool) {
 // As a result - a hidden registry of names published by SM can become inconsistent and will
 // cause an SM to remove key(s) if they were later published by another SM.
 func (m *SlotMachine) TryUnsafeUnpublish(key interface{}) (keyExists, wasUnpublished bool) {
-	switch key.(type) {
-	case nil:
-		panic("illegal value")
-	case dependencyKey, *slotAliases, *uniqueAlias:
-		panic("illegal value")
-	}
+	ensurePublishKey(key)
 
 	// Lets try to make it right
 
@@ -214,32 +216,6 @@ func (m *SlotMachine) unpublishUnbound(k interface{}) (keyExists, wasUnpublished
 		}
 		return true, false, v
 	}
-}
-
-// ONLY to be used by a holder of a slot
-func (m *SlotMachine) _unregisterSlotBoundAlias(slotID SlotID, k interface{}) bool {
-	var key interface{} = slotID
-
-	if isa, loaded := m.localRegistry.Load(key); loaded {
-		sa := isa.(*slotAliases)
-
-		for i, kk := range sa.keys {
-			if k == kk {
-				m.localRegistry.Delete(k)
-				switch last := len(sa.keys) - 1; {
-				case last == 0:
-					m.localRegistry.Delete(key)
-				case i < last:
-					copy(sa.keys[i:], sa.keys[i+1:])
-					fallthrough
-				default:
-					sa.keys = sa.keys[:last]
-				}
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func _asSharedDataLink(v interface{}) SharedDataLink {

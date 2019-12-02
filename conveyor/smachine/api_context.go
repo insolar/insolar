@@ -168,6 +168,17 @@ type InOrderStepContext interface {
 	// It is recommended to use typed wrappers to access the data.
 	GetPublishedLink(key interface{}) SharedDataLink
 
+	// Publish this Slot globally under the given (key).
+	// Published aliases will be unpublished on terminations of SM.
+	// Returns false when key is in use.
+	PublishGlobalAlias(key interface{}) bool
+	// Unpublish the given (key)
+	// Returns false when (key) is not published or is published by another slot.
+	UnpublishGlobalAlias(key interface{}) bool
+	// Get SlotLink for the given alias (key).
+	// When (key) is unknown, then zero/empty SlotLink is returned.
+	GetPublishedGlobalAlias(key interface{}) SlotLink
+
 	// Slot will be terminated by calling an error handler.
 	Error(error) StateUpdate
 	Errorf(msg string, a ...interface{}) StateUpdate
