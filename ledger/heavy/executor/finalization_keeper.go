@@ -73,7 +73,9 @@ func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar
 		return errors.New(fmt.Sprintf("Current pulse ( %d ) is less than last confirmed ( %d )", current, lastConfirmedPulse))
 	}
 
-	if lastConfirmedPulse <= bottomLevel.PulseNumber {
+	// Note: We can't do '<=' here. Consider the case when we just started and there is
+	// only one finalized pulse. In this case bottomLevel == lastConfirmedPulse and it's OK.
+	if lastConfirmedPulse < bottomLevel.PulseNumber {
 		logger.Panicf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse)
 	}
 
