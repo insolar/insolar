@@ -49,6 +49,10 @@ type ByteString string
 
 // TODO check behavior with nil/zero strings
 
+func (v ByteString) IsEmpty() bool {
+	return len(v) == 0
+}
+
 func (v ByteString) AsReader() FoldableReader {
 	return &v
 }
