@@ -44,17 +44,6 @@ func GetDefaultLogMsgFormatter() MsgFormatConfig {
 	}
 }
 
-type FieldReporterFunc func(collector insolar.LogObjectMetricCollector, fieldName string, v interface{})
-
-type MarshallerFactory interface {
-	CreateLogObjectMarshaller(o reflect.Value) insolar.LogObjectMarshaller
-	RegisterFieldReporter(fieldType reflect.Type, fn FieldReporterFunc)
-}
-
-func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
-	return marshallerFactory
-}
-
 func (v MsgFormatConfig) fmtLogStruct(a interface{}) (insolar.LogObjectMarshaller, *string) {
 	switch vv := a.(type) {
 	case insolar.LogObject:

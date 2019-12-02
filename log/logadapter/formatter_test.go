@@ -109,6 +109,45 @@ func TestTryLogObject_Str(t *testing.T) {
 	require.Equal(t, "text", f.testTryLogObject(func() string { return "text" }))
 }
 
+func TestStruct_NamelessFields(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t, "int:1:int,msg:some text", f.testTryLogObject(
+		struct {
+			string
+			int
+		}{
+			"some text", 1,
+		}))
+
+	require.Equal(t, "int:1:int,Msg:another text:string,msg:some text", f.testTryLogObject(
+		struct {
+			string
+			int
+			Msg string
+		}{
+			"some text", 1, "another text",
+		}))
+
+	require.Equal(t, "int:1:int,string:some text:string,msg:another text", f.testTryLogObject(
+		struct {
+			int
+			Msg string
+			string
+		}{
+			1, "another text", "some text",
+		}))
+
+	require.Equal(t, "_txtTag1:tag text:string,string:another text:string,msg:Msg text", f.testTryLogObject(
+		struct {
+			Msg string
+			_   string `txt:"tag text"`
+			string
+		}{
+			"Msg text", "", "another text",
+		}))
+}
+
 func TestTryLogObject_SingleUnnamed(t *testing.T) {
 	f := GetDefaultLogMsgFormatter()
 

@@ -24,6 +24,17 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+type FieldReporterFunc func(collector insolar.LogObjectMetricCollector, fieldName string, v interface{})
+
+type MarshallerFactory interface {
+	CreateLogObjectMarshaller(o reflect.Value) insolar.LogObjectMarshaller
+	RegisterFieldReporter(fieldType reflect.Type, fn FieldReporterFunc)
+}
+
+func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
+	return marshallerFactory
+}
+
 var marshallerFactory MarshallerFactory = &defaultLogObjectMarshallerFactory{}
 
 type defaultLogObjectMarshallerFactory struct {
@@ -51,6 +62,9 @@ func (p *defaultLogObjectMarshallerFactory) CreateLogObjectMarshaller(o reflect.
 		panic("illegal value")
 	}
 	t := p.getTypeMarshaller(o.Type())
+	if t == nil {
+		return nil
+	}
 	return defaultLogObjectMarshaller{t, t.prepareValue(o)} // do prepare for a repeated use of marshaller
 }
 
@@ -160,22 +174,35 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		fd.reportFn = getReporterFn(fd.Type)
 		tagType, fmtStr := singleTag(fd.Tag)
 
-		if tagType == fmtTagText && (tf.Anonymous || fieldName == "_") {
-			// a special case - we can take `txt` of an anonymous as a message text
-			fieldName = "Message"
-		} else if fd.reportFn == nil && (tf.Anonymous || fieldName == "" || fieldName[0] == '_') {
+		msgField := false
+		switch {
+		case tagType == fmtTagText && fieldName == "_":
+			msgField = true
+		case fd.reportFn != nil:
+			//
+		case fieldName == "" || fieldName[0] == '_':
+			continue
+		case !fd.Anonymous:
+			//
+		case tagType == fmtTagText:
+			msgField = true
+		case fd.Type.Kind() == reflect.String:
+			//
+		case fd.Type.Kind() >= reflect.Array:
 			continue
 		}
+
 		outputFn, optional, needsValue := outputOfField(tagType, fmtStr)
 
-		msgField := false
-		if outputFn == nil {
+		switch {
+		case outputFn == nil:
 			if fd.reportFn == nil {
 				continue
 			}
-		} else {
+		case msgField:
+		default:
 			switch fieldName {
-			case "msg", "Msg", "message", "Message":
+			case "msg", "Msg", "message", "Message", "string":
 				msgField = true
 			}
 		}
@@ -189,9 +216,13 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 			}
 		}
 
-		if msgField {
+		switch {
+		case msgField && msgGetter.getFn == nil:
 			msgGetter = fd
-		} else {
+		case msgField && fieldName == "_":
+			fd.StructField.Name = fmt.Sprintf("_txtTag%d", i)
+			fallthrough
+		default:
 			valueGetters = append(valueGetters, fd)
 		}
 
@@ -284,27 +315,27 @@ type stringCapturer struct {
 	v string
 }
 
-func (p *stringCapturer) AddIntField(key string, v int64, _ insolar.LogFieldFormat) {
+func (p *stringCapturer) AddIntField(_ string, v int64, _ insolar.LogFieldFormat) {
 	p.v = fmt.Sprintf("%v", v)
 }
 
-func (p *stringCapturer) AddUintField(key string, v uint64, _ insolar.LogFieldFormat) {
+func (p *stringCapturer) AddUintField(_ string, v uint64, _ insolar.LogFieldFormat) {
 	p.v = fmt.Sprintf("%v", v)
 }
 
-func (p *stringCapturer) AddFloatField(key string, v float64, _ insolar.LogFieldFormat) {
+func (p *stringCapturer) AddFloatField(_ string, v float64, _ insolar.LogFieldFormat) {
 	p.v = fmt.Sprintf("%v", v)
 }
 
-func (p *stringCapturer) AddStrField(key string, v string, _ insolar.LogFieldFormat) {
+func (p *stringCapturer) AddStrField(_ string, v string, _ insolar.LogFieldFormat) {
 	p.v = v
 }
 
-func (p *stringCapturer) AddIntfField(k string, v interface{}, _ insolar.LogFieldFormat) {
+func (p *stringCapturer) AddIntfField(_ string, v interface{}, _ insolar.LogFieldFormat) {
 	p.v = fmt.Sprintf("%s", v)
 }
 
-func (p *stringCapturer) AddRawJSONField(key string, b []byte) {
+func (p *stringCapturer) AddRawJSONField(_ string, b []byte) {
 	p.v = string(b)
 }
 
