@@ -48,9 +48,12 @@ type ObjectInfo struct {
 }
 
 type SharedObjectState struct {
-	SemaphoreReadyToWork              smachine.SyncLink
+	SemaphoreReadyToWork         smachine.SyncLink
+	SemaphorePreviousResultSaved smachine.SyncLink
+
 	SemaphorePreviousExecutorFinished smachine.SyncLink
-	SemaphorePreviousResultSaved      smachine.SyncLink
+	PreviousExecutorFinished          smachine.BoolConditionalLink
+
 	ObjectInfo
 }
 
@@ -67,10 +70,11 @@ type ObjectSM struct {
 	smachine.StateMachineDeclTemplate
 
 	SharedObjectState
-	readyToWorkCtl           smachine.BoolConditionalLink
-	previousExecutorFinished smachine.BoolConditionalLink
-	previousResultSaved      smachine.BoolConditionalLink
-	oldObject                bool
+
+	readyToWorkCtl      smachine.BoolConditionalLink
+	previousResultSaved smachine.BoolConditionalLink
+
+	oldObject bool
 }
 
 /* -------- Declaration ------------- */
@@ -114,7 +118,7 @@ func (sm *ObjectSM) Init(ctx smachine.InitializationContext) smachine.StateUpdat
 	sm.readyToWorkCtl = smachine.NewConditionalBool(false, "readyToWork")
 	sm.SemaphoreReadyToWork = sm.readyToWorkCtl.SyncLink()
 
-	sm.previousExecutorFinished = smachine.NewConditionalBool(false, "previousExecutorFinished")
+	sm.PreviousExecutorFinished = smachine.NewConditionalBool(false, "PreviousExecutorFinished")
 	sm.SemaphorePreviousExecutorFinished = sm.readyToWorkCtl.SyncLink()
 
 	sm.previousResultSaved = smachine.NewConditionalBool(false, "previousResultSaved")
@@ -143,6 +147,7 @@ func (sm *ObjectSM) stepCheckPreviousExecutor(ctx smachine.ExecutionContext) sma
 		// we shouldn't be here
 		// if we came to that place - means MutableRequestsAreReady, but PreviousExecutor still executes)
 		panic("unreachable")
+
 	case payload.PreviousExecutorFinished:
 		return ctx.Jump(sm.stepGetLatestValidatedState)
 	default:

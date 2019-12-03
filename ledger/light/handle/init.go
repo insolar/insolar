@@ -78,7 +78,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 
 	logger := inslogger.FromContext(ctx)
-	logger.Debug("Start to handle new message")
+	logger.WithField("msg_type", payloadType.String()).Debug("Start to handle new message")
 
 	switch payloadType {
 	case payload.TypeGetObject:

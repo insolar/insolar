@@ -74,9 +74,11 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 	prepareStepName(&stepLoggerData.CurrentStep)
 	prepareStepName(&stepLoggerUpdateData.NextStep)
 
-	detached := ""
+	suffix := ""
 	if stepLoggerUpdateData.Flags&smachine.StepLoggerDetached != 0 {
-		detached = " (detached)"
+		suffix = " (detached)"
+	} else if stepLoggerData.Error != nil {
+		suffix = fmt.Sprintf(" (%v)", stepLoggerData.Error)
 	}
 
 	if _, ok := stepLoggerData.Declaration.(*conveyor.PulseSlotMachine); ok {
@@ -84,7 +86,7 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 	}
 
 	c.logger.Error(LogStepMessage{
-		Message: special + stepLoggerUpdateData.UpdateType + detached,
+		Message: special + stepLoggerUpdateData.UpdateType + suffix,
 
 		MachineName: stepLoggerData.Declaration,
 		MachineID:   fmt.Sprintf("%s[%3d]", stepLoggerData.StepNo.MachineId(), stepLoggerData.CycleNo),

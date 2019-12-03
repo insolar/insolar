@@ -75,10 +75,10 @@ func (s *ExecuteIncomingMutableRequest) GetStateMachineDeclaration() smachine.St
 }
 
 func (s *ExecuteIncomingMutableRequest) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	sdl := ctx.Share(&s.SharedRequestState, 0)
-	if !ctx.Publish(s.RequestInfo.RequestReference, sdl) {
-		return ctx.Stop()
-	}
+	// sdl := ctx.Share(&s.SharedRequestState, 0)
+	// if !ctx.Publish(s.RequestInfo.RequestReference, sdl) {
+	// 	return ctx.Stop()
+	// }
 
 	return ctx.Jump(s.stepTakeLock)
 }
@@ -120,8 +120,24 @@ func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.Execu
 
 	goCtx := ctx.GetContext()
 
+	var result interface{}
+
+	switch s.nextStep.Outgoing.(type) {
+	case outgoing.DeactivateEvent:
+		result = nil
+
+	case outgoing.GetCodeEvent:
+		result = s.code
+
+	case outgoing.RouteCallEvent, outgoing.SaveAsChildEvent:
+		result = s.outgoingResult.Payload
+
+	default:
+		panic(fmt.Sprintf("unknown type of event %T", s.nextStep.Outgoing))
+	}
+
 	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
-		nextStep, err := svc.ExecutionContinue(goCtx, transcript.RequestRef, nil)
+		nextStep, err := svc.ExecutionContinue(goCtx, transcript.RequestRef, result)
 
 		return func(ctx smachine.AsyncResultContext) {
 			s.externalError = err
@@ -143,6 +159,7 @@ func (s *ExecuteIncomingMutableRequest) stepDecide(ctx smachine.ExecutionContext
 		return ctx.Jump(s.stepOutgoingClassify)
 	case s_contract_runner.ContractDone:
 		// extract result, register it and
+		s.executionResult = s.nextStep.Result
 		return ctx.Jump(s.stepRegisterResult)
 	default:
 		panic("TODO")
@@ -225,7 +242,20 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingExecute(ctx smachine.Executi
 
 	if s.outgoingReply == nil {
 		return s.ContractRequester.PrepareAsync(ctx, func(svc s_contract_requester.ContractRequesterService) smachine.AsyncResultFunc {
-			callResult, _, err := svc.SendRequest(goCtx, pl)
+			callResult, requestReference, err := svc.SendRequest(goCtx, pl)
+
+			inslogger.FromContext(goCtx).Warn(struct {
+				*insolar.LogObjectTemplate
+
+				Message          string        `txt:"obtained request result"`
+				CallResultType   insolar.Reply `fmt:"%T"`
+				RequestReference string
+				Error            error
+			}{
+				CallResultType:   callResult,
+				Error:            err,
+				RequestReference: requestReference.String(),
+			})
 
 			return func(ctx smachine.AsyncResultContext) {
 				s.externalError = err
@@ -243,6 +273,7 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingSaveResult(ctx smachine.Exec
 	}
 
 	var (
+		goCtx            = ctx.GetContext()
 		requestReference = s.outgoingRequestInfo.RequestReference
 		caller           = s.outgoingRequestInfo.Request.(*record.OutgoingRequest).Caller
 		result           []byte
@@ -266,7 +297,7 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingSaveResult(ctx smachine.Exec
 	requestResult := requestresult.New(result, caller)
 
 	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		err := svc.RegisterResult(ctx.GetContext(), requestReference, requestResult)
+		err := svc.RegisterResult(goCtx, requestReference, requestResult)
 
 		return func(ctx smachine.AsyncResultContext) {
 			if err != nil {
@@ -304,11 +335,7 @@ func (s *ExecuteIncomingMutableRequest) stepSetLastObjectState(ctx smachine.Exec
 }
 
 func (s *ExecuteIncomingMutableRequest) stepReturnResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	var (
-		goCtx    = ctx.GetContext()
-		logger   = inslogger.FromContext(goCtx)
-		incoming = s.RequestInfo.Request.(*record.IncomingRequest)
-	)
+	incoming := s.RequestInfo.Request.(*record.IncomingRequest)
 
 	switch incoming.ReturnMode {
 	case record.ReturnResult:
@@ -316,9 +343,10 @@ func (s *ExecuteIncomingMutableRequest) stepReturnResult(ctx smachine.ExecutionC
 			panic("unreachable")
 		}
 
+		ctx.Log().Trace("sending result")
 		s.internalSendResult(ctx)
 	case record.ReturnSaga:
-		logger.Debug("Not sending result, request type is Saga")
+		ctx.Log().Trace("Not sending result, request type is Saga")
 	default:
 		return ctx.Errorf("unknown ReturnMode: %s", incoming.ReturnMode.String())
 	}

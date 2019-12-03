@@ -217,7 +217,7 @@ func (c *contractRunnerService) executeConstructor(ctx context.Context, requestR
 	}
 
 	// form and return result
-	res := requestresult.New(result, *request.Object)
+	res := requestresult.New(result, executionContext.transcript.RequestRef)
 	if newData != nil {
 		res.SetActivate(*request.Base, *request.Prototype, newData)
 	}
@@ -394,7 +394,7 @@ func (c *contractRunnerService) GetCode(in rpctypes.UpGetCodeReq, out *rpctypes.
 	case error:
 		return val
 	default:
-		panic("TODO")
+		panic(fmt.Sprintf("GetCode result unexpected type %T", val))
 	}
 
 	return nil
@@ -423,7 +423,8 @@ func (c *contractRunnerService) RouteCall(in rpctypes.UpRouteReq, out *rpctypes.
 	case error:
 		return val
 	default:
-		panic("TODO")
+		panic(fmt.Sprintf("RouteCall result unexpected type %T", val))
+
 	}
 
 	return nil
@@ -448,7 +449,7 @@ func (c *contractRunnerService) SaveAsChild(in rpctypes.UpSaveAsChildReq, out *r
 	case error:
 		return val
 	default:
-		panic("TODO")
+		panic(fmt.Sprintf("SaveAsChild result unexpected type %T", val))
 	}
 
 	return nil
@@ -468,10 +469,12 @@ func (c *contractRunnerService) DeactivateObject(in rpctypes.UpDeactivateObjectR
 	rawValue := <-executionContext.input
 
 	switch val := rawValue.(type) {
+	case nil:
+		return nil
 	case error:
 		return val
 	default:
-		panic("TODO")
+		panic(fmt.Sprintf("Deactivate result unexpected type %T", val))
 	}
 
 	return nil

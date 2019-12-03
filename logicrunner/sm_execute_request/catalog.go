@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
-	outgoing2 "github.com/insolar/insolar/logicrunner/s_contract_runner/outgoing"
 )
 
 type RequestCatalog struct{}
@@ -49,39 +48,6 @@ type SharedRequestStateAccessor struct {
 func (v SharedRequestStateAccessor) Prepare(fn func(*SharedRequestState)) smachine.SharedDataAccessor {
 	return v.PrepareAccess(func(data interface{}) bool {
 		fn(data.(*SharedRequestState))
-		return false
-	})
-}
-
-// ///////////////////////////////////////////////////////////////////////////////
-
-type LocalOutgoingCallCatalog struct{}
-
-func (p LocalOutgoingCallCatalog) Get(ctx smachine.ExecutionContext, requestReference insolar.Reference) SharedOutgoingCallStateAccessor {
-	if v, ok := p.TryGet(ctx, requestReference); ok {
-		return v
-	}
-	panic(fmt.Sprintf("missing entry: %s", requestReference.String()))
-}
-
-func (p LocalOutgoingCallCatalog) TryGet(ctx smachine.ExecutionContext, requestReference insolar.Reference) (SharedOutgoingCallStateAccessor, bool) {
-	key := outgoing2.SharedOutgoingCallStateKey{requestReference}
-
-	if v := ctx.GetPublishedLink(key.String()); v.IsAssignableTo((*outgoing2.SharedOutgoingCallState)(nil)) {
-		return SharedOutgoingCallStateAccessor{v}, true
-	}
-	return SharedOutgoingCallStateAccessor{}, false
-}
-
-// //////////////////////////////////////
-
-type SharedOutgoingCallStateAccessor struct {
-	smachine.SharedDataLink
-}
-
-func (v SharedOutgoingCallStateAccessor) Prepare(fn func(state *outgoing2.SharedOutgoingCallState)) smachine.SharedDataAccessor {
-	return v.PrepareAccess(func(data interface{}) bool {
-		fn(data.(*outgoing2.SharedOutgoingCallState))
 		return false
 	})
 }

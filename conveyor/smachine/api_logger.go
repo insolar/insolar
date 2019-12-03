@@ -92,7 +92,7 @@ const (
 
 type StepLogger interface {
 	CanLogEvent(eventType StepLoggerEvent, stepLevel StepLogLevel) bool
-	//LogMetric()
+
 	LogUpdate(StepLoggerData, StepLoggerUpdateData)
 	LogInternal(data StepLoggerData, updateType string)
 	LogEvent(data StepLoggerData, customEvent interface{})

@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -134,14 +135,20 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 	switch {
 	case s.externalError != nil: // execution error
 		executionError = s.externalError.Error()
+		ctx.Log().Trace("return: external error")
 	case s.RequestInfo.Result != nil: // result of deduplication
 		if s.executionResult != nil {
 			panic("we got deduplicated result and execution result, unreachable")
 		}
 
 		executionBytes = s.RequestInfo.GetResultBytes()
+		ctx.Log().Trace("return: duplicated results")
 	case s.executionResult != nil: // result of execution
-		executionBytes = s.executionResult.Result()
+		executionBytes = reply.ToBytes(&reply.CallMethod{
+			Object: &s.objectInfo.ObjectReference,
+			Result: s.executionResult.Result(),
+		})
+		ctx.Log().Trace("return: execution results")
 	default:
 		// we have no result and no error (??)
 		panic("unreachable")
@@ -184,8 +191,6 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 		}
 		done()
 	}).Send()
-
-	return
 }
 
 func (s *ExecuteIncomingCommon) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
