@@ -79,7 +79,7 @@ func (v *Global) Read(p []byte) (int, error) {
 }
 
 func (v *Global) AsByteString() longbits.ByteString {
-	return longbits.NewByteString(v.AsBytes())
+	return longbits.Copy(v.AsBytes())
 }
 
 func (v *Global) AsBytes() []byte {

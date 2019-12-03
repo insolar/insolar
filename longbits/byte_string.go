@@ -19,28 +19,55 @@ package longbits
 import (
 	"io"
 	"math/bits"
-	"strings"
+	"reflect"
+	"unsafe"
 )
 
 const EmptyByteString = ByteString("")
 
-func NewByteStringOf(s string) ByteString {
+func Wrap(s string) ByteString {
 	return ByteString(s)
 }
 
-func NewByteString(v []byte) ByteString {
+func Copy(v []byte) ByteString {
 	return ByteString(v)
 }
 
-func NewZeroByteString(len int) ByteString {
-	return ByteString(make([]byte, len))
+// WARNING! The given array MUST be immutable
+func WrapBytes(b []byte) ByteString {
+	if len(b) == 0 {
+		return EmptyByteString
+	}
+	return wrap(b)
 }
 
-func NewFillByteString(len int, fill byte) ByteString {
-	if fill == 0 {
-		return NewZeroByteString(len)
+func wrap(b []byte) ByteString {
+	pSlice := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+
+	var res ByteString
+	pString := (*reflect.StringHeader)(unsafe.Pointer(&res))
+
+	pString.Data = pSlice.Data
+	pString.Len = pSlice.Len
+
+	return res
+}
+
+func Zero(len int) ByteString {
+	return Fill(len, 0)
+}
+
+func Fill(len int, fill byte) ByteString {
+	if len == 0 {
+		return EmptyByteString
 	}
-	return ByteString(strings.Repeat(string([]byte{fill}), len))
+	b := make([]byte, len)
+	if fill != 0 {
+		for i := len - 1; i >= 0; i-- {
+			b[i] = fill
+		}
+	}
+	return wrap(b)
 }
 
 var _ FoldableReader = EmptyByteString.AsReader()

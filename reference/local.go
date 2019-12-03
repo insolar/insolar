@@ -98,7 +98,7 @@ func (v Local) len() int {
 }
 
 func (v *Local) AsByteString() longbits.ByteString {
-	return longbits.NewByteString(v.AsBytes())
+	return longbits.Copy(v.AsBytes())
 }
 
 func (v *Local) AsBytes() []byte {

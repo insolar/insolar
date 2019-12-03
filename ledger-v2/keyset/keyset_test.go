@@ -232,8 +232,10 @@ func testMutableOp(t *testing.T, genFactoryFn func() mutableGeneratorFunc, testF
 	}
 }
 
+const testKeyLen = 16
+
 func bitToKey(index int) Key {
-	return longbits.NewByteString([]byte{byte(index + '0')})
+	return longbits.Fill(testKeyLen, byte(index+'0'))
 }
 
 func bitsToKeySet(v uint) KeySet {
@@ -269,7 +271,7 @@ func bitsToMutableKeySet(v uint) *MutableKeySet {
 func keySetToBits(ks KeySet) uint {
 	r := uint(0)
 	ks.EnumRawKeys(func(k Key, _ bool) bool {
-		if k.FixedByteSize() != 1 {
+		if k.FixedByteSize() != testKeyLen {
 			panic("illegal value")
 		}
 		if k[0] < '0' || k[0] >= '0'+32 {
