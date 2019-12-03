@@ -16,7 +16,10 @@
 
 package smachine
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 type PollingQueue struct {
 	prepared *poll
@@ -31,8 +34,43 @@ type poll struct {
 	pollAfter time.Time
 }
 
-func (p *PollingQueue) Add(slot *Slot) {
+func (p *PollingQueue) AddToLatest(slot *Slot) {
 	p.prepared.AddLast(slot)
+}
+
+func (p *PollingQueue) AddToLatestBefore(waitUntil time.Time, slot *Slot) bool {
+
+	switch nextPoll := p.GetPreparedPollTime(); {
+	case nextPoll.IsZero():
+		return false
+	case !waitUntil.Before(nextPoll):
+		p.prepared.AddLast(slot)
+		return true
+	case p.seqLen == 0:
+		return false
+	case waitUntil.Before(p.polls[p.seqTail].pollAfter):
+		return false
+	case p.seqLen == 1:
+		p.polls[p.seqTail].AddLast(slot)
+		return true
+	}
+
+	base, count := int(p.seqTail), int(p.seqLen)
+	switch {
+	case int(p.seqTail+p.seqLen) <= len(p.polls): // continuous range
+		// base, count = p.seqTail, p.seqLen
+	case waitUntil.Before(p.polls[0].pollAfter): // wrapped range - lets just split it in halves
+		count = len(p.polls) - base
+	default:
+		count -= len(p.polls) - base
+		base = 0
+	}
+
+	pos := base - 1 + sort.Search(count, func(i int) bool {
+		return !waitUntil.Before(p.polls[base+i].pollAfter)
+	})
+	p.polls[pos].AddLast(slot)
+	return true
 }
 
 func (p *PollingQueue) growPollingSlots() {
@@ -52,10 +90,16 @@ func (p *PollingQueue) growPollingSlots() {
 	}
 	p.polls = cp
 
-	bodies := make([]poll, sizeInc)
-	for i := range bodies {
-		bodies[i].initSlotQueue(PollingSlots)
-		p.polls = append(p.polls, &bodies[i])
+	if sizeInc == 1 {
+		addPoll := &poll{}
+		addPoll.initSlotQueue(PollingSlots)
+		p.polls = append(p.polls, addPoll)
+	} else {
+		bodies := make([]poll, sizeInc)
+		for i := range bodies {
+			bodies[i].initSlotQueue(PollingSlots)
+			p.polls = append(p.polls, &bodies[i])
+		}
 	}
 }
 

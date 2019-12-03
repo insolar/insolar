@@ -212,7 +212,7 @@ func init() {
 				m := slot.machine
 				slot.setNextStep(stateUpdate.step, nil)
 				m.updateSlotQueue(slot, worker, deactivateSlot)
-				m.pollingSlots.Add(slot)
+				m.pollingSlots.AddToLatest(slot)
 				return true, nil
 			},
 		},
@@ -246,19 +246,16 @@ func init() {
 
 				waitUntil := m.fromRelativeTime(stateUpdate.param0)
 
-				if m.scanStartedAt.After(waitUntil) {
+				if !m.scanStartedAt.Before(waitUntil) { // !started<Until ==> started>=Until
 					m.updateSlotQueue(slot, worker, activateSlot)
 					return true, nil
 				}
 
-				nextPoll := m.pollingSlots.GetPreparedPollTime()
-
-				if nextPoll.IsZero() || waitUntil.Before(nextPoll) {
+				if m.pollingSlots.AddToLatestBefore(waitUntil, slot) {
+					m.updateSlotQueue(slot, worker, deactivateSlot)
+				} else {
 					m.scanWakeUpAt = minTime(m.scanWakeUpAt, waitUntil)
 					m.updateSlotQueue(slot, worker, activateHotWaitSlot)
-				} else {
-					m.updateSlotQueue(slot, worker, deactivateSlot)
-					m.pollingSlots.Add(slot)
 				}
 
 				return true, nil
