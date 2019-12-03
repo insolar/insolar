@@ -8,6 +8,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.1
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
+	github.com/dgraph-io/badger v1.6.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
