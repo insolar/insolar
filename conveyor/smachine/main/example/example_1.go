@@ -62,7 +62,7 @@ func (s *StateMachine1) GetStateMachineDeclaration() smachine.StateMachineDeclar
 }
 
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	s.testKey = longbits.NewByteStringOf("testObjectID")
+	s.testKey = longbits.Wrap("testObjectID")
 
 	//fmt.Printf("init: %v %v\n", ctx.SlotLink(), time.Now())
 	return ctx.Jump(s.State1)

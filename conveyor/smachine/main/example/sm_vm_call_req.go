@@ -54,8 +54,8 @@ func (s *StateMachineCallRequest) GetStateMachineDeclaration() smachine.StateMac
 }
 
 func (s *StateMachineCallRequest) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	s.callerObj = longbits.NewByteStringOf("testObjectA")
-	s.calleeObj = longbits.NewByteStringOf("testObjectB")
+	s.callerObj = longbits.Wrap("testObjectA")
+	s.calleeObj = longbits.Wrap("testObjectB")
 	s.callMethod = "someMethod"
 
 	ctx.SetDefaultMigration(s.cancelOnMigrate)
