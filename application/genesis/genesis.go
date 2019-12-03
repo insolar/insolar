@@ -271,7 +271,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			application.GenesisNameRootDomain,
 		),
 		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LockupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses, g.ContractsConfig.MAShardCount),
-		contracts.GetCostCenterGenesisContractState(g.ContractsConfig.Fee),
+		contracts.GetCostCenterGenesisContractState(),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
