@@ -676,7 +676,7 @@ func (m *SlotMachine) recycleSlotWithError(slot *Slot, worker FixedSlotWorker, e
 		defer func() {
 			recovered := recover()
 			hasPanic = recovered != nil
-			err = RecoverSlotPanicWithStack("internal panic - prepare recycle", recovered, err)
+			err = RecoverSlotPanicWithStack("internal panic - recycleSlot", recovered, err)
 		}()
 
 		link = slot.NewStepLink()
