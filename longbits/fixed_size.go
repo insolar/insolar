@@ -18,6 +18,7 @@ package longbits
 
 import (
 	"bytes"
+	"errors"
 	"io"
 )
 
@@ -28,6 +29,7 @@ type Foldable interface {
 //go:generate minimock -i github.com/insolar/insolar/longbits.FixedReader -o . -s _mock.go -g
 type FixedReader interface {
 	io.WriterTo
+	//io.ReaderAt
 	io.Reader
 	AsBytes() []byte
 	AsByteString() ByteString
@@ -157,4 +159,18 @@ func CopyFixedSize(v FoldableReader) FoldableReader {
 		panic("unexpected")
 	}
 	return &r
+}
+
+func VerifyReadAt(b []byte, off int64, max int) (n int, err error) {
+	switch {
+	case off < 0:
+		return 0, errors.New("negative offset")
+	case off > int64(max):
+		return 0, io.ErrUnexpectedEOF
+	case len(b) == 0:
+		return 0, nil
+	case max == int(off):
+		return 0, io.EOF
+	}
+	return len(b), nil
 }

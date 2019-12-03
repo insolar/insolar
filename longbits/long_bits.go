@@ -47,6 +47,15 @@ func (v *Bits64) Read(p []byte) (n int, err error) {
 	return copy(p, (*v)[:]), nil
 }
 
+// TODO test for all ReadAt
+func (v *Bits64) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
+}
+
 func (v *Bits64) FoldToUint64() uint64 {
 	return binary.LittleEndian.Uint64(v[:])
 }
@@ -112,6 +121,14 @@ func (v *Bits128) Read(p []byte) (n int, err error) {
 	return copy(p, (*v)[:]), nil
 }
 
+func (v *Bits128) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
+}
+
 func (v *Bits128) FoldToUint64() uint64 {
 	return FoldToUint64(v[:])
 }
@@ -145,6 +162,14 @@ func (v *Bits224) WriteTo(w io.Writer) (int64, error) {
 
 func (v *Bits224) Read(p []byte) (n int, err error) {
 	return copy(p, (*v)[:]), nil
+}
+
+func (v *Bits224) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
 }
 
 func (v *Bits224) FoldToUint64() uint64 {
@@ -182,6 +207,14 @@ func (v *Bits256) WriteTo(w io.Writer) (int64, error) {
 
 func (v *Bits256) Read(p []byte) (n int, err error) {
 	return copy(p, (*v)[:]), nil
+}
+
+func (v *Bits256) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
 }
 
 func (v *Bits256) FoldToUint64() uint64 {
@@ -233,6 +266,14 @@ func (v *Bits512) WriteTo(w io.Writer) (int64, error) {
 
 func (v *Bits512) Read(p []byte) (n int, err error) {
 	return copy(p, (*v)[:]), nil
+}
+
+func (v *Bits512) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
 }
 
 func (v *Bits512) FoldToUint64() uint64 {
@@ -341,7 +382,7 @@ func BytesToGroupedString(s []byte, prefix string, separator string, everyN int)
 func copyToFixedBits(dst, src []byte, expectedSize int) {
 	size := len(src)
 	if size != expectedSize {
-		panic(fmt.Sprintf("Length mismatch, expected: %d, actual: %d", expectedSize, size))
+		panic(fmt.Sprintf("length mismatch, expected: %d, actual: %d", expectedSize, size))
 	}
 
 	copy(dst, src)

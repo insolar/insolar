@@ -21,6 +21,8 @@ import (
 	"math/bits"
 	"reflect"
 	"unsafe"
+
+	"github.com/insolar/insolar/longbits/bytehash"
 )
 
 const EmptyByteString = ByteString("")
@@ -81,31 +83,47 @@ func (v ByteString) IsEmpty() bool {
 }
 
 func (v ByteString) AsReader() FoldableReader {
-	return &v
+	return v
 }
 
-func (v *ByteString) WriteTo(w io.Writer) (int64, error) {
-	n, err := w.Write([]byte(*v))
+func (v ByteString) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write([]byte(v))
 	return int64(n), err
 }
 
-func (v *ByteString) Read(p []byte) (n int, err error) {
-	return copy(p, *v), nil
+func (v ByteString) Hash() uint32 {
+	return bytehash.HashStr(string(v))
 }
 
-func (v *ByteString) AsBytes() []byte {
-	return ([]byte)(*v)
+func (v ByteString) HashWithSeed(seed uint32) uint32 {
+	return bytehash.HashStrWithSeed(string(v), uint(seed))
 }
 
-func (v *ByteString) AsByteString() ByteString {
-	return *v
+func (v ByteString) Read(b []byte) (n int, err error) {
+	return copy(b, v), nil
 }
 
-func (v *ByteString) FixedByteSize() int {
-	return len(*v)
+func (v ByteString) ReadAt(b []byte, off int64) (n int, err error) {
+	if n, err = VerifyReadAt(b, off, len(v)); err != nil || n == 0 {
+		return n, err
+	} else {
+		return copy(b, v[off:]), nil
+	}
 }
 
-func (v *ByteString) FoldToUint64() uint64 {
+func (v ByteString) AsBytes() []byte {
+	return ([]byte)(v)
+}
+
+func (v ByteString) AsByteString() ByteString {
+	return v
+}
+
+func (v ByteString) FixedByteSize() int {
+	return len(v)
+}
+
+func (v ByteString) FoldToUint64() uint64 {
 	folded := v.FoldToBits64()
 	return folded.FoldToUint64()
 }
