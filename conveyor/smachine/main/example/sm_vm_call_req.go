@@ -17,9 +17,6 @@
 package example
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/longbits"
 )
@@ -39,23 +36,10 @@ type StateMachineCallRequest struct {
 
 /* -------- Declaration ------------- */
 
-var declCallRequest smachine.StateMachineDeclaration = declarationCallRequest{}
+var declCallRequest smachine.StateMachineDeclaration = &declarationCallRequest{}
 
-type declarationCallRequest struct{}
-
-func (declarationCallRequest) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
-}
-
-func (declarationCallRequest) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-}
-
-func (declarationCallRequest) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (declarationCallRequest) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
+type declarationCallRequest struct {
+	smachine.StateMachineDeclTemplate
 }
 
 func (declarationCallRequest) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {

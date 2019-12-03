@@ -17,7 +17,6 @@
 package example
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -39,26 +38,16 @@ type StateMachine1 struct {
 
 /* -------- Declaration ------------- */
 
-var declarationStateMachine1 smachine.StateMachineDeclaration = stateMachine1Declaration{}
+var declarationStateMachine1 smachine.StateMachineDeclaration = &stateMachine1Declaration{}
 
-type stateMachine1Declaration struct{}
-
-func (stateMachine1Declaration) GetStepLogger(context.Context, smachine.StateMachine) (smachine.StepLoggerFunc, bool) {
-	return nil, false
+type stateMachine1Declaration struct {
+	smachine.StateMachineDeclTemplate
 }
 
 func (stateMachine1Declaration) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
 	s := sm.(*StateMachine1)
 	injector.MustInject(&s.serviceA)
 	injector.MustInject(&s.catalogC)
-}
-
-func (stateMachine1Declaration) IsConsecutive(cur, next smachine.StateFunc) bool {
-	return false
-}
-
-func (stateMachine1Declaration) GetShadowMigrateFor(smachine.StateMachine) smachine.ShadowMigrateFunc {
-	return nil
 }
 
 func (stateMachine1Declaration) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
