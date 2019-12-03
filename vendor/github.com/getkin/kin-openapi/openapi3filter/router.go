@@ -183,7 +183,7 @@ func (router *Router) FindRoute(method string, url *url.URL) (*Route, map[string
 				Swagger: swagger,
 				Server:  server,
 			},
-			Reason: "Path was not found "+ remainingPath,
+			Reason: "Path was not found",
 		}
 	}
 

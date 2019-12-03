@@ -40,10 +40,10 @@ github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.2.0
-github.com/getkin/kin-openapi/openapi3filter
 github.com/getkin/kin-openapi/openapi3
-github.com/getkin/kin-openapi/pathpattern
+github.com/getkin/kin-openapi/openapi3filter
 github.com/getkin/kin-openapi/jsoninfo
+github.com/getkin/kin-openapi/pathpattern
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
 # github.com/gogo/protobuf v1.2.1
@@ -303,6 +303,23 @@ golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/internal/module
+# gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
+gonum.org/v1/gonum/stat
+gonum.org/v1/gonum/floats
+gonum.org/v1/gonum/mat
+gonum.org/v1/gonum/internal/asm/f64
+gonum.org/v1/gonum/blas
+gonum.org/v1/gonum/blas/blas64
+gonum.org/v1/gonum/blas/cblas128
+gonum.org/v1/gonum/lapack
+gonum.org/v1/gonum/lapack/lapack64
+gonum.org/v1/gonum/blas/gonum
+gonum.org/v1/gonum/lapack/gonum
+gonum.org/v1/gonum/internal/asm/c128
+gonum.org/v1/gonum/internal/asm/c64
+gonum.org/v1/gonum/internal/asm/f32
+gonum.org/v1/gonum/internal/cmplx64
+gonum.org/v1/gonum/internal/math32
 # google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/api/httpbody
