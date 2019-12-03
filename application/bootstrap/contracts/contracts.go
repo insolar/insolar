@@ -118,8 +118,8 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 	}
 }
 
-func GetCostCenterGenesisContractState(fee string) application.GenesisContractState {
-	cc, err := costcenter.New(&genesisrefs.ContractFeeMember, fee)
+func GetCostCenterGenesisContractState() application.GenesisContractState {
+	cc, err := costcenter.New(&genesisrefs.ContractFeeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}

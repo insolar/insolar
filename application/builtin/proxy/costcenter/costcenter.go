@@ -84,10 +84,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(feeMember *insolar.Reference, fee string) *ContractConstructorHolder {
-	var args [2]interface{}
+func New(feeMember *insolar.Reference) *ContractConstructorHolder {
+	var args [1]interface{}
 	args[0] = feeMember
-	args[1] = fee
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
