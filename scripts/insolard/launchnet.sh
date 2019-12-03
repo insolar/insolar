@@ -482,7 +482,7 @@ set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}1/output.log > /dev/null &
+    2>&1 | tee /dev/tty | gzip --stdout > ${DISCOVERY_NODE_LOGS}1/output.log.gz &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -493,7 +493,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}${i}/output.log > /dev/null &
+        2>&1 | tee /dev/tty | gzip --stdout > ${DISCOVERY_NODE_LOGS}${i}/output.log.gz &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"
