@@ -239,7 +239,11 @@ func (p *dependencyQueueEntry) Release() (SlotDependency, []PostponedDependency,
 
 func (p *dependencyQueueEntry) ReleaseAll() ([]PostponedDependency, []StepLink) {
 	if inQueue, flags := p.getFlags(); inQueue {
-		d, s := p.queue.controller.Release(p.link, flags, p.removeFromQueue)
+		d, s := p.queue.controller.Release(p.link, flags, func() {
+			if p.isInQueue() {
+				p.removeFromQueue()
+			}
+		})
 		p.stacker.ReleasedBy(p, flags)
 		return d, s
 	}
