@@ -339,12 +339,8 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 	}
 	slot.slotFlags &^= slotWokenUp
 
-	// TODO consider use of sync.Pool for executionContext if they are allocated on heap
 	var stateUpdate StateUpdate
 	wasDetached := worker.DetachableCall(func(worker DetachableSlotWorker) {
-		//defer func() {
-		//	// kill slot on fail
-		//}()
 
 		for ; loopCount < loopLimit; loopCount++ {
 			canLoop := false
@@ -961,10 +957,14 @@ func (m *SlotMachine) prepareNewSlot(creator *Slot, fn CreateFunc, sm StateMachi
 		cc.injects, defValues.inheritable)
 
 	// Step Logger
-	if stepLogger, ok := decl.GetStepLogger(slot.ctx, sm, cc.tracerId, m.config.SlotMachineLogger.CreateStepLogger); ok {
+	var stepLoggerFactory StepLoggerFactoryFunc
+	if m.config.SlotMachineLogger != nil {
+		stepLoggerFactory = m.config.SlotMachineLogger.CreateStepLogger
+	}
+	if stepLogger, ok := decl.GetStepLogger(slot.ctx, sm, cc.tracerId, stepLoggerFactory); ok {
 		slot.stepLogger = stepLogger
-	} else if m.config.SlotMachineLogger != nil {
-		slot.stepLogger = m.config.SlotMachineLogger.CreateStepLogger(slot.ctx, sm, cc.tracerId)
+	} else if stepLoggerFactory != nil {
+		slot.stepLogger = stepLoggerFactory(slot.ctx, sm, cc.tracerId)
 	}
 	if slot.stepLogger == nil && len(cc.tracerId) > 0 {
 		slot.stepLogger = StepLoggerStub{cc.tracerId}
