@@ -329,7 +329,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		stateIniter := executor.NewStateIniter(
-			Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+			conf, Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		dep := proc.NewDependencies(

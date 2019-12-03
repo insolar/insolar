@@ -118,6 +118,7 @@ func DefaultLightInitialState() *payload.LightInitialState {
 		Drops: []drop.Drop{
 			{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 		},
+		LightChainLimit: math.MaxInt32,
 	}
 }
 
@@ -296,7 +297,7 @@ func NewServer(
 		)
 
 		stateIniter := executor.NewStateIniter(
-			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+			conf, Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		metricsRegistry := executor.NewMetricsRegistry()
