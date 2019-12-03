@@ -33,7 +33,7 @@ func main() {
 	signal := tools.NewVersionedSignal()
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:    1000,
-		PollingPeriod:   1 * time.Millisecond,
+		PollingPeriod:   10 * time.Millisecond,
 		PollingTruncate: 1 * time.Microsecond,
 		ScanCountLimit:  scanCountLimit,
 	}, signal.NextBroadcast, signal.NextBroadcast, nil)

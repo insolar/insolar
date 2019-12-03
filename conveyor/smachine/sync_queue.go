@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
@@ -73,6 +73,7 @@ func (p *queueControllerTemplate) GetName() string {
 type DependencyQueueHead struct {
 	controller DependencyQueueController
 	head       dependencyQueueEntry
+	priority   *DependencyPrioritizer
 	count      int
 }
 
@@ -80,8 +81,12 @@ func (p *DependencyQueueHead) AddSlot(link SlotLink, flags SlotDependencyFlags) 
 	if !link.IsValid() {
 		panic("illegal value")
 	}
-	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsOffset)}
-	p.AddLast(entry)
+	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsShift)}
+	if p.priority != nil && p.priority.IsPriority(entry, p) {
+		p.AddFirst(entry)
+	} else {
+		p.AddLast(entry)
+	}
 	return entry
 }
 
@@ -194,7 +199,7 @@ func (p *DependencyQueueHead) FlushAllAsLinks() []StepLink {
 
 const (
 	atomicInQueue = 1 << iota
-	flagsOffset   = iota
+	flagsShift    = iota
 )
 
 var _ SlotDependency = &dependencyQueueEntry{}
@@ -210,7 +215,7 @@ type dependencyQueueEntry struct {
 
 func (p *dependencyQueueEntry) getFlags() (bool, SlotDependencyFlags) {
 	v := atomic.LoadUint32(&p.slotFlags)
-	return v&atomicInQueue != 0, SlotDependencyFlags(v >> flagsOffset)
+	return v&atomicInQueue != 0, SlotDependencyFlags(v >> flagsShift)
 }
 
 func (p *dependencyQueueEntry) IsReleaseOnStepping() bool {
