@@ -49,12 +49,19 @@ func (r *One) Panic() error {
 	panic("AAAAAAAA!")
 	return nil
 }
+
+func NewPanic() (*One, error) {
+	panic("BBBBBBBB!")
+}
 `
 	prototype := uploadContractOnce(t, "panic", panicContractCode)
 	obj := callConstructor(t, prototype, "New")
 
-	resp := callMethodNoChecks(t, obj, "Panic")
-	require.Contains(t, resp.Error.Message, "executor error: problem with API call: AAAAAAAA!")
+	resp1 := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp1.Result.ExtractedError, "AAAAAAAA!")
+
+	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
+	require.Contains(t, resp2.Result.Error.S, "BBBBBBBB!")
 }
 
 func TestRecursiveCallError(t *testing.T) {

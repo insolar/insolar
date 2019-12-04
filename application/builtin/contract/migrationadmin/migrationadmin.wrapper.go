@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/pkg/errors"
 )
 
 func INS_META_INFO() []map[string]string {
@@ -83,19 +84,21 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_MigrationAdminCall(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_MigrationAdminCall(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 3)
@@ -108,98 +111,144 @@ func INSMETHOD_MigrationAdminCall(object []byte, data []byte) ([]byte, []byte, e
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.MigrationAdminCall(args0, args1, args2)
+	var ret0 interface{}
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.MigrationAdminCall(args0, args1, args2)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetDepositParameters(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.GetDepositParameters()
+	var ret0 *VestingParams
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.GetDepositParameters()
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_GetMigrationDaemonByMemberRef(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetMigrationDaemonByMemberRef(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 1)
@@ -208,49 +257,72 @@ func INSMETHOD_GetMigrationDaemonByMemberRef(object []byte, data []byte) ([]byte
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.GetMigrationDaemonByMemberRef(args0)
+	var ret0 insolar.Reference
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.GetMigrationDaemonByMemberRef(args0)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 1)
@@ -259,49 +331,72 @@ func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, 
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.GetMemberByMigrationAddress(args0)
+	var ret0 *insolar.Reference
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.GetMemberByMigrationAddress(args0)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 1)
@@ -310,49 +405,72 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.GetFreeMigrationAddress(args0)
+	var ret0 string
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.GetFreeMigrationAddress(args0)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 2)
@@ -363,34 +481,54 @@ func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) ([]byte,
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0 := self.AddNewMigrationAddressToMaps(args0, args1)
+	var ret0 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret0 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0 = self.AddNewMigrationAddressToMaps(args0, args1)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret0 = ph.MakeErrorSerializable(ret0)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
 func Initialize() insolar.ContractWrapper {

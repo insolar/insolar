@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/pkg/errors"
 )
 
 func INS_META_INFO() []map[string]string {
@@ -83,19 +84,21 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_RegisterNode(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(NodeDomain)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 2)
@@ -106,49 +109,72 @@ func INSMETHOD_RegisterNode(object []byte, data []byte) ([]byte, []byte, error) 
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeRegisterNode ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.RegisterNode(args0, args1)
+	var ret0 string
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.RegisterNode(args0, args1)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	self := new(NodeDomain)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		err = &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
 	}
 
-	err := ph.Deserialize(object, self)
+	err = ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
 	}
 
 	args := make([]interface{}, 1)
@@ -157,78 +183,124 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) ([]byte, []byte
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeGetNodeRefByPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := self.GetNodeRefByPublicKey(args0)
+	var ret0 string
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			newState = object
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = self.GetNodeRefByPublicKey(args0)
+
+	needRecover = false
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	state := []byte{}
-	err = ph.Serialize(self, &state)
+	err = ph.Serialize(self, &newState)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1}},
-		&ret,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, ret, err
+	return
 }
 
-func INSCONSTRUCTOR_NewNodeDomain(ref insolar.Reference, data []byte) ([]byte, []byte, error) {
+func INSCONSTRUCTOR_NewNodeDomain(ref insolar.Reference, data []byte) (state []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
+
 	args := []interface{}{}
 
-	err := ph.Deserialize(data, &args)
+	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeNewNodeDomain ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
+		err = &foundation.Error{S: "[ FakeNewNodeDomain ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
 	}
 
-	ret0, ret1 := NewNodeDomain()
+	var ret0 *NodeDomain
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ref, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			ret1 = ph.MakeErrorSerializable(recoveredError)
+
+			state = data
+			err = serializeResults()
+		}
+	}()
+
+	ret0, ret1 = NewNodeDomain()
+
+	needRecover = false
+
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}
 	}
 
 	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
+		err = ph.GetSystemError()
+		return
 	}
 
-	result := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ref, ret1}},
-		&result,
-	)
+	err = serializeResults()
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
 	if ret1 != nil {
 		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, result, nil
+		state = nil
+		return
 	}
 
-	state := []byte{}
 	err = ph.Serialize(ret0, &state)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 
-	return state, result, nil
+	return
 }
 
 func Initialize() insolar.ContractWrapper {
