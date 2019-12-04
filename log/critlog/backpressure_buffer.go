@@ -3,13 +3,14 @@ package critlog
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/log/logoutput"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logcommon"
+	"github.com/insolar/insolar/log/logoutput"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
@@ -106,9 +107,9 @@ func newBackpressureBuffer(output *logoutput.Adapter, bufSize int, extraPenalty 
 	return &BackpressureBuffer{internal}
 }
 
-type MissedEventFunc func(missed int) (insolar.LogLevel, []byte)
+type MissedEventFunc func(missed int) (logcommon.LogLevel, []byte)
 
-var _ insolar.LogLevelWriter = &internalBackpressureBuffer{}
+var _ logcommon.LogLevelWriter = &internalBackpressureBuffer{}
 
 /*
 Provides weak-reference behavior to enable auto-stop of workers
@@ -120,7 +121,7 @@ type BackpressureBuffer struct {
 type internalBackpressureBuffer struct {
 	output  *logoutput.Adapter
 	missFn  MissedEventFunc
-	writeFn func(insolar.LogLevel, []byte, int64) (int, error)
+	writeFn func(logcommon.LogLevel, []byte, int64) (int, error)
 
 	buffer chan bufEntry
 
@@ -137,7 +138,7 @@ type internalBackpressureBuffer struct {
 }
 
 type bufEntry struct {
-	lvl       insolar.LogLevel
+	lvl       logcommon.LogLevel
 	b         []byte
 	start     int64
 	flushMark bufferMark
@@ -175,7 +176,7 @@ func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffe
 	return p
 }
 
-const internalOpLevel = insolar.LogLevel(255)
+const internalOpLevel = logcommon.LogLevel(255)
 
 func (p *internalBackpressureBuffer) Close() error {
 	if p.output.IsFatal() {
@@ -212,19 +213,19 @@ func (p *internalBackpressureBuffer) Flush() error {
 }
 
 func (p *internalBackpressureBuffer) Write(b []byte) (n int, err error) {
-	return p.LogLevelWrite(insolar.NoLevel, b)
+	return p.LogLevelWrite(logcommon.NoLevel, b)
 }
 
 func (p *internalBackpressureBuffer) IsLowLatencySupported() bool {
 	return true
 }
 
-func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) LowLatencyWrite(level logcommon.LogLevel, b []byte) (n int, err error) {
 	if p.output.IsFatal() {
 		return p.output.LogLevelWrite(level, b)
 	}
 
-	if level == insolar.FatalLevel {
+	if level == logcommon.FatalLevel {
 		return p.writeFatal(level, b)
 	}
 
@@ -245,7 +246,7 @@ func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b [
 	return len(b), nil
 }
 
-func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte, startNano int64) bufEntry {
+func (p *internalBackpressureBuffer) newQueueEntry(level logcommon.LogLevel, b []byte, startNano int64) bufEntry {
 	if p.flags&BufferReuse != 0 {
 		return bufEntry{lvl: level, b: b, start: startNano}
 	}
@@ -253,16 +254,16 @@ func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []b
 	return bufEntry{lvl: level, b: append(v, b...), start: startNano}
 }
 
-func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) LogLevelWrite(level logcommon.LogLevel, b []byte) (n int, err error) {
 	if p.output.IsFatal() {
 		return p.output.LogLevelWrite(level, b)
 	}
 
 	switch level {
-	case insolar.FatalLevel:
+	case logcommon.FatalLevel:
 		return p.writeFatal(level, b)
 
-	case insolar.PanicLevel:
+	case logcommon.PanicLevel:
 		n, err = p.flushTillMark(level, b, 0)
 		_ = p.output.Flush()
 		return n, err
@@ -272,7 +273,7 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 	return p.writeFn(level, b, startNano)
 }
 
-func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) writeFatal(level logcommon.LogLevel, b []byte) (n int, err error) {
 	if !p.output.SetFatal() {
 		return p.output.LogLevelWrite(level, b)
 	}
@@ -292,7 +293,7 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 	return n, nil
 }
 
-func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) bypassWrite(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 	p.bypassCond.L.Lock() // ensure ordering
 	for {
 		counts := atomic.LoadInt32(&p.writerCounts)
@@ -333,7 +334,7 @@ func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byt
 	return n, err
 }
 
-func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) checkWrite(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 	writeSeq := atomic.AddUint32(&p.writeSeq, 1)
 
 	for i := 0; ; i++ {
@@ -363,7 +364,7 @@ func (p *internalBackpressureBuffer) drawStraw(writerSeq uint32, writersInQueue 
 
 type bufferMark uint8
 
-func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) fairQueueWrite(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 	waitNano := int64(p.GetAvgWriteDuration())
 	n, err := p.queueWrite(level, b, startNano)
 
@@ -377,7 +378,7 @@ func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []
 	return n, err
 }
 
-func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) flushWrite(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 
 	bufLen := len(p.buffer)
 	if bufLen == 0 { // dirty check
@@ -414,12 +415,12 @@ func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte
 	return p.queueWrite(level, b, startNano)
 }
 
-func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte, startName int64) (int, error) {
+func (p *internalBackpressureBuffer) queueWrite(level logcommon.LogLevel, b []byte, startName int64) (int, error) {
 	p.buffer <- p.newQueueEntry(level, b, startName)
 	return len(b), nil
 }
 
-func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) directWrite(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 	n, err := p.output.DirectLevelWrite(level, b)
 
 	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
@@ -429,7 +430,7 @@ func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byt
 	return n, err
 }
 
-func (p *internalBackpressureBuffer) flushTillMark(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) flushTillMark(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 
 	if p.bypassCond != nil {
 		p.bypassCond.Broadcast() // wake all on flush
@@ -490,7 +491,7 @@ outer:
 	return p.directWrite(level, b, startNano)
 }
 
-func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) flushTillDepletion(level logcommon.LogLevel, b []byte, startNano int64) (int, error) {
 
 	if p.bypassCond != nil {
 		p.bypassCond.Broadcast() // wake all depletion
@@ -673,7 +674,7 @@ func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {
 		return
 	}
 	lvl, missMsg := p.missFn(missedCount)
-	if lvl == insolar.NoLevel || len(missMsg) == 0 {
+	if lvl == logcommon.NoLevel || len(missMsg) == 0 {
 		return
 	}
 	_, _ = p.output.DirectLevelWrite(lvl, missMsg)

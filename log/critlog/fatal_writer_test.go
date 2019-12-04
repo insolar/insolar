@@ -1,12 +1,14 @@
 package critlog
 
 import (
-	"github.com/insolar/insolar/log/logoutput"
-	"github.com/pkg/errors"
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/log/logcommon"
+	"github.com/insolar/insolar/log/logoutput"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,27 +43,27 @@ func TestFatalDirectWriter_mute_on_fatal(t *testing.T) {
 	// We don't want to lock the writer on fatal in tests.
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must pass\n"))
 	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.ErrorLevel, []byte("ERROR must pass\n"))
 	require.NoError(t, err)
 
 	assert.False(t, tw.flushed)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.PanicLevel, []byte("PANIC must pass\n"))
 	require.NoError(t, err)
 	assert.True(t, tw.flushed)
 
 	tw.flushed = false
 	require.PanicsWithValue(t, "fatal", func() {
-		_, _ = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+		_, _ = writer.LogLevelWrite(logcommon.FatalLevel, []byte("FATAL must pass\n"))
 	})
 	assert.True(t, tw.flushed)
 	assert.False(t, tw.closed)
 
 	// MUST hang. Tested by logoutput.Adapter
-	//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.ErrorLevel, []byte("ERROR must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.PanicLevel, []byte("PANIC must NOT pass\n"))
 	testLog := tw.String()
 	assert.Contains(t, testLog, "WARN must pass")
 	assert.Contains(t, testLog, "ERROR must pass")
@@ -76,18 +78,18 @@ func TestFatalDirectWriter_close_on_fatal_without_flush(t *testing.T) {
 	writer := NewFatalDirectWriter(logoutput.NewAdapter(&tw, false, nil, nil))
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must pass\n"))
 	require.NoError(t, err)
 
-	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.FatalLevel, []byte("FATAL must pass\n"))
 	require.NoError(t, err)
 	assert.False(t, tw.flushed)
 	assert.True(t, tw.closed)
 
 	// MUST hang. Tested by logoutput.Adapter
-	//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.ErrorLevel, []byte("ERROR must NOT pass\n"))
+	//_, _ = writer.LogLevelWrite(logcommon.PanicLevel, []byte("PANIC must NOT pass\n"))
 	testLog := tw.String()
 	assert.Contains(t, testLog, "WARN must pass")
 	assert.Contains(t, testLog, "FATAL must pass")

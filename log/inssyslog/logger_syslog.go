@@ -17,9 +17,10 @@
 package inssyslog
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"io"
 	"regexp"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 /*
@@ -28,7 +29,7 @@ import (
 */
 
 type LogLevelWriteCloser interface {
-	insolar.LogLevelWriter
+	logcommon.LogLevelWriter
 }
 
 // SyslogWriter is an interface matching a syslog.Writer struct.
@@ -87,21 +88,21 @@ func (sw *syslogWriter) Write(p []byte) (n int, err error) {
 }
 
 // WriteLevel implements LevelWriter interface.
-func (sw *syslogWriter) LogLevelWrite(level insolar.LogLevel, p []byte) (n int, err error) {
+func (sw *syslogWriter) LogLevelWrite(level logcommon.LogLevel, p []byte) (n int, err error) {
 	switch level {
-	case insolar.DebugLevel:
+	case logcommon.DebugLevel:
 		err = sw.w.Debug(string(p))
-	case insolar.InfoLevel:
+	case logcommon.InfoLevel:
 		err = sw.w.Info(string(p))
-	case insolar.WarnLevel:
+	case logcommon.WarnLevel:
 		err = sw.w.Warning(string(p))
-	case insolar.ErrorLevel:
+	case logcommon.ErrorLevel:
 		err = sw.w.Err(string(p))
-	case insolar.FatalLevel:
+	case logcommon.FatalLevel:
 		err = sw.w.Emerg(string(p))
-	case insolar.PanicLevel:
+	case logcommon.PanicLevel:
 		err = sw.w.Crit(string(p))
-	case insolar.NoLevel:
+	case logcommon.NoLevel:
 		err = sw.w.Info(string(p))
 	default:
 		panic("invalid level")

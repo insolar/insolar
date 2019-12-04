@@ -26,9 +26,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/insolar/insolar/log/logcommon"
+
 	"github.com/rs/zerolog"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/logadapter"
 	"github.com/insolar/insolar/log/logmetrics"
 	"github.com/insolar/insolar/network/consensus/common/args"
@@ -44,11 +45,11 @@ func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 	config logadapter.BuildConfig) (needsHook bool, fieldName string, reportFn logmetrics.DurationReportFunc) {
 
 	metricsMode := config.Instruments.MetricsMode
-	if metricsMode&(insolar.LogMetricsWriteDelayField|insolar.LogMetricsWriteDelayReport) == 0 {
+	if metricsMode&(logcommon.LogMetricsWriteDelayField|logcommon.LogMetricsWriteDelayReport) == 0 {
 		return
 	}
 
-	if metricsMode&insolar.LogMetricsWriteDelayField != 0 {
+	if metricsMode&logcommon.LogMetricsWriteDelayField != 0 {
 		fieldName = "writeDuration"
 	}
 

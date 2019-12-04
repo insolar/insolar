@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/log/logglobal"
+
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -33,7 +35,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
-	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
@@ -72,7 +73,7 @@ func (m *Metrics) Init(ctx context.Context) error {
 	promHandler := promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errLogger})
 	mux.Handle("/metrics", promHandler)
 	mux.Handle("/_status", newProcStatus())
-	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
+	mux.Handle("/debug/loglevel", logglobal.NewLoglevelChangeHandler())
 	pprof.Handle(mux)
 	if m.config.ZpagesEnabled {
 		// https://opencensus.io/zpages/

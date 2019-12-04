@@ -17,9 +17,10 @@
 package critlog
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/logoutput"
 	"io"
+
+	"github.com/insolar/insolar/log/logcommon"
+	"github.com/insolar/insolar/log/logoutput"
 )
 
 func NewFatalDirectWriter(output *logoutput.Adapter) *FatalDirectWriter {
@@ -32,7 +33,7 @@ func NewFatalDirectWriter(output *logoutput.Adapter) *FatalDirectWriter {
 	}
 }
 
-var _ insolar.LogLevelWriter = &FatalDirectWriter{}
+var _ logcommon.LogLevelWriter = &FatalDirectWriter{}
 var _ io.WriteCloser = &FatalDirectWriter{}
 
 type FatalDirectWriter struct {
@@ -51,7 +52,7 @@ func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
 	return p.output.Write(b)
 }
 
-func (p *FatalDirectWriter) LowLatencyWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *FatalDirectWriter) LowLatencyWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	return p.LogLevelWrite(level, b)
 }
 
@@ -59,9 +60,9 @@ func (p *FatalDirectWriter) IsLowLatencySupported() bool {
 	return false
 }
 
-func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *FatalDirectWriter) LogLevelWrite(level logcommon.LogLevel, b []byte) (n int, err error) {
 	switch level {
-	case insolar.FatalLevel:
+	case logcommon.FatalLevel:
 		if !p.output.SetFatal() {
 			break
 		}
@@ -69,7 +70,7 @@ func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n i
 		_ = p.output.DirectFlushFatal()
 		return n, nil
 
-	case insolar.PanicLevel:
+	case logcommon.PanicLevel:
 		n, err = p.output.LogLevelWrite(level, b)
 		_ = p.output.Flush()
 		return n, err

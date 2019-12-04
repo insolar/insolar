@@ -26,10 +26,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/log/logcommon"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/logoutput"
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
@@ -103,8 +104,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 	ch := make(chan []byte)
 	cw := &chanWriter{out: ch}
 
-	missedFn := func(missed int) (level insolar.LogLevel, i []byte) {
-		return insolar.WarnLevel, []byte(fmt.Sprintf("missed %d", missed))
+	missedFn := func(missed int) (level logcommon.LogLevel, i []byte) {
+		return logcommon.WarnLevel, []byte(fmt.Sprintf("missed %d", missed))
 	}
 
 	allocatedBufSize := int(args.Prime(parWriters)) * 2
@@ -208,7 +209,7 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 		msg := fmt.Sprintf("test LL msg %d", i)
 		go func() {
 			//go fmt.Println("before: ", msg)
-			n, err := bb.LowLatencyWrite(insolar.InfoLevel, []byte(msg))
+			n, err := bb.LowLatencyWrite(logcommon.InfoLevel, []byte(msg))
 			//go fmt.Println(" after: ", msg)
 
 			require.Equal(t, n, len(msg))
@@ -289,27 +290,27 @@ func TestBackpressureBuffer_mute_on_fatal(t *testing.T) {
 
 			var err error
 
-			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+			_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must pass\n"))
 			require.NoError(t, err)
-			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
+			_, err = writer.LogLevelWrite(logcommon.ErrorLevel, []byte("ERROR must pass\n"))
 			require.NoError(t, err)
 
 			assert.False(t, tw.flushed)
-			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
+			_, err = writer.LogLevelWrite(logcommon.PanicLevel, []byte("PANIC must pass\n"))
 			require.NoError(t, err)
 			assert.True(t, tw.flushed)
 
 			tw.flushed = false
 			require.PanicsWithValue(t, "fatal", func() {
-				_, _ = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+				_, _ = writer.LogLevelWrite(logcommon.FatalLevel, []byte("FATAL must pass\n"))
 			})
 			assert.True(t, tw.flushed)
 			assert.False(t, tw.closed)
 
 			// MUST hang. Tested by logoutput.Adapter
-			//_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-			//_, _ = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-			//_, _ = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+			//_, _ = writer.LogLevelWrite(logcommon.WarnLevel, []byte("WARN must NOT pass\n"))
+			//_, _ = writer.LogLevelWrite(logcommon.ErrorLevel, []byte("ERROR must NOT pass\n"))
+			//_, _ = writer.LogLevelWrite(logcommon.PanicLevel, []byte("PANIC must NOT pass\n"))
 			//
 			testLog := tw.String()
 			assert.Contains(t, testLog, "WARN must pass")

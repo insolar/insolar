@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/log/logcommon"
 	"io"
 	"strconv"
 	"strings"
@@ -32,9 +33,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/logoutput"
 )
 
@@ -111,7 +110,8 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 		lastVal[v.Thread] = v
 	}
 
-	ttlMean, ttlStd := stat.MeanStdDev(allDistances, nil)
+	//"gonum.org/v1/gonum/stat"
+	//ttlMean, ttlStd := stat.MeanStdDev(allDistances, nil)
 	ttlSum := float64(0)
 	for _, d := range allDistances {
 		ttlSum += d
@@ -122,18 +122,18 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 			assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
 		}
 
-		mean, std := stat.MeanStdDev(v, nil)
-		_, _ = mean, std
+		//mean, std := stat.MeanStdDev(v, nil)
+		//_, _ = mean, std
 		// fmt.Printf("Thread %03d: mean = %8.2f ms %+6.2f%%, stddev = %8.2f ms %+6.2f%%\n", k,
 		// 	mean*1e3, 100*(mean-ttlMean)/ttlMean, std*1e3, 100*(std-ttlStd)/ttlStd)
 	}
 
-	fmt.Printf("\tTotal: sum = %8.2f s, mean = %8.2f ms, stddev = %8.2f ms\n", ttlSum, ttlMean*1e3, ttlStd*1e3)
-	meanDisplace, stdDisplace := stat.MeanStdDev(displacements, nil)
-	fmt.Printf("\tDisplacements: total = %d, mean = %.2f (std = %.2f)\n", len(displacements), meanDisplace, stdDisplace)
+	//fmt.Printf("\tTotal: sum = %8.2f s, mean = %8.2f ms, stddev = %8.2f ms\n", ttlSum, ttlMean*1e3, ttlStd*1e3)
+	//meanDisplace, stdDisplace := stat.MeanStdDev(displacements, nil)
+	//fmt.Printf("\tDisplacements: total = %d, mean = %.2f (std = %.2f)\n", len(displacements), meanDisplace, stdDisplace)
 }
 
-func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generateDelay time.Duration) {
+func generateLogs(logger logcommon.LoggerOutput, threads, iterations int, generateDelay time.Duration) {
 	var start, finish sync.WaitGroup
 	start.Add(threads)
 	finish.Add(threads)
@@ -144,7 +144,7 @@ func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generate
 			for j := 0; j < iterations; j++ {
 				msg := fmt.Sprintf(`{"message":"%d %d %d"}%s`, threadID, j, time.Now().UnixNano(), "\n")
 
-				_, _ = logger.LogLevelWrite(insolar.InfoLevel, []byte(msg))
+				_, _ = logger.LogLevelWrite(logcommon.InfoLevel, []byte(msg))
 				if generateDelay > 0 {
 					time.Sleep(generateDelay)
 				}
@@ -198,7 +198,7 @@ type logOutput struct {
 	Time              time.Time
 }
 
-func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize int, fair bool) insolar.LoggerOutput {
+func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize int, fair bool) logcommon.LoggerOutput {
 	adapter := logoutput.NewAdapter(
 		w,
 		false,

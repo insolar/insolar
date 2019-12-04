@@ -21,15 +21,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/log/logcommon"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/critlog"
 )
 
 // Creates and sets global logger. It has a different effect than SetGlobalLogger(NewLog(...)) as it sets a global filter also.
-func NewGlobalLogger(cfg configuration.Log) (insolar.Logger, error) {
+func NewGlobalLogger(cfg configuration.Log) (logcommon.Logger, error) {
 	logger, err := NewLog(cfg)
 	if err != nil {
 		return nil, err
@@ -54,15 +55,11 @@ func NewGlobalLogger(cfg configuration.Log) (insolar.Logger, error) {
 var globalLogger = struct {
 	mutex   sync.RWMutex
 	output  critlog.ProxyLoggerOutput
-	logger  insolar.Logger
-	adapter insolar.GlobalLogAdapter
+	logger  logcommon.Logger
+	adapter logcommon.GlobalLogAdapter
 }{}
 
-func g() insolar.EmbeddedLogger {
-	return GlobalLogger().Embeddable()
-}
-
-func GlobalLogger() insolar.Logger {
+func GlobalLogger() logcommon.Logger {
 	globalLogger.mutex.RLock()
 	l := globalLogger.logger
 	globalLogger.mutex.RUnlock()
@@ -80,7 +77,7 @@ func GlobalLogger() insolar.Logger {
 	return globalLogger.logger
 }
 
-func CopyGlobalLoggerForContext() insolar.Logger {
+func CopyGlobalLoggerForContext() logcommon.Logger {
 	return GlobalLogger()
 }
 
@@ -114,7 +111,7 @@ var globalTickerOnce sync.Once
 func InitTicker() {
 	globalTickerOnce.Do(func() {
 		// as we use GlobalLogger() - the copy will follow any redirection made on the GlobalLogger()
-		tickLogger, err := GlobalLogger().Copy().WithCaller(insolar.NoCallerField).Build()
+		tickLogger, err := GlobalLogger().Copy().WithCaller(logcommon.NoCallerField).Build()
 		if err != nil {
 			panic(err)
 		}
@@ -150,22 +147,22 @@ func createNoConfigGlobalLogger() {
 	}
 }
 
-func getGlobalLogAdapter(b insolar.LoggerBuilder) insolar.GlobalLogAdapter {
-	if f, ok := b.(insolar.GlobalLogAdapterFactory); ok {
+func getGlobalLogAdapter(b logcommon.LoggerBuilder) logcommon.GlobalLogAdapter {
+	if f, ok := b.(logcommon.GlobalLogAdapterFactory); ok {
 		return f.CreateGlobalLogAdapter()
 	}
 	return nil
 }
 
-func setGlobalLogger(logger insolar.Logger, isDefault, isNewGlobal bool) error {
+func setGlobalLogger(logger logcommon.Logger, isDefault, isNewGlobal bool) error {
 	b := logger.Copy()
 
-	output := b.(insolar.LoggerOutputGetter).GetLoggerOutput()
+	output := b.(logcommon.LoggerOutputGetter).GetLoggerOutput()
 	b = b.WithOutput(&globalLogger.output)
 
 	if isDefault {
 		// TODO move to logger construction configuration?
-		b = b.WithCaller(insolar.CallerField)
+		b = b.WithCaller(logcommon.CallerField)
 		b = b.WithField("loginstance", "global_default")
 	} else {
 		b = b.WithField("loginstance", "global")
@@ -183,7 +180,7 @@ func setGlobalLogger(logger insolar.Logger, isDefault, isNewGlobal bool) error {
 		break
 	case isNewGlobal:
 		adapter.SetGlobalLoggerFilter(lvl)
-		logger = logger.Level(insolar.DebugLevel)
+		logger = logger.Level(logcommon.DebugLevel)
 	case globalLogger.adapter != adapter && globalLogger.adapter != nil:
 		adapter.SetGlobalLoggerFilter(globalLogger.adapter.GetGlobalLoggerFilter())
 	}
@@ -195,7 +192,7 @@ func setGlobalLogger(logger insolar.Logger, isDefault, isNewGlobal bool) error {
 	return nil
 }
 
-func SetGlobalLogger(logger insolar.Logger) {
+func SetGlobalLogger(logger logcommon.Logger) {
 	globalLogger.mutex.Lock()
 	defer globalLogger.mutex.Unlock()
 
@@ -213,7 +210,7 @@ func SetGlobalLogger(logger insolar.Logger) {
 
 // SetLevel lets log level for global logger
 func SetLevel(level string) error {
-	lvl, err := insolar.ParseLevel(level)
+	lvl, err := logcommon.ParseLevel(level)
 	if err != nil {
 		return err
 	}
@@ -222,7 +219,7 @@ func SetLevel(level string) error {
 	return nil
 }
 
-func SetLogLevel(level insolar.LogLevel) {
+func SetLogLevel(level logcommon.LogLevel) {
 	globalLogger.mutex.Lock()
 	defer globalLogger.mutex.Unlock()
 
@@ -233,14 +230,14 @@ func SetLogLevel(level insolar.LogLevel) {
 	globalLogger.logger = globalLogger.logger.Level(level)
 }
 
-func SetGlobalLevelFilter(level insolar.LogLevel) error {
+func SetGlobalLevelFilter(level logcommon.LogLevel) error {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
 
 	return setGlobalLevelFilter(level)
 }
 
-func setGlobalLevelFilter(level insolar.LogLevel) error {
+func setGlobalLevelFilter(level logcommon.LogLevel) error {
 	if globalLogger.adapter != nil {
 		globalLogger.adapter.SetGlobalLoggerFilter(level)
 		return nil
@@ -248,7 +245,7 @@ func setGlobalLevelFilter(level insolar.LogLevel) error {
 	return errors.New("not supported")
 }
 
-func GetGlobalLevelFilter() insolar.LogLevel {
+func GetGlobalLevelFilter() logcommon.LogLevel {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
 
@@ -256,97 +253,101 @@ func GetGlobalLevelFilter() insolar.LogLevel {
 	return l
 }
 
-func getGlobalLevelFilter() (bool, insolar.LogLevel) {
+func getGlobalLevelFilter() (bool, logcommon.LogLevel) {
 	if globalLogger.adapter != nil {
 		return true, globalLogger.adapter.GetGlobalLoggerFilter()
 	}
-	return false, insolar.NoLevel
+	return false, logcommon.NoLevel
 }
 
 /*
 We use EmbeddedLog functions here to avoid SkipStackFrame corrections
 */
 
-func Event(level insolar.LogLevel, args ...interface{}) {
+func g() logcommon.EmbeddedLogger {
+	return GlobalLogger().Embeddable()
+}
+
+func Event(level logcommon.LogLevel, args ...interface{}) {
 	if fn := g().NewEvent(level); fn != nil {
 		fn(args)
 	}
 }
 
-func Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
+func Eventf(level logcommon.LogLevel, fmt string, args ...interface{}) {
 	if fn := g().NewEventFmt(level); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Debug(args ...interface{}) {
-	if fn := g().NewEvent(insolar.DebugLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.DebugLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Debugf(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.DebugLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.DebugLevel); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Info(args ...interface{}) {
-	if fn := g().NewEvent(insolar.InfoLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.InfoLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Infof(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.InfoLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.InfoLevel); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Warn(args ...interface{}) {
-	if fn := g().NewEvent(insolar.WarnLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.WarnLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Warnf(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.WarnLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.WarnLevel); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Error(args ...interface{}) {
-	if fn := g().NewEvent(insolar.ErrorLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.ErrorLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Errorf(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.ErrorLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.ErrorLevel); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Fatal(args ...interface{}) {
-	if fn := g().NewEvent(insolar.FatalLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.FatalLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Fatalf(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.FatalLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.FatalLevel); fn != nil {
 		fn(fmt, args)
 	}
 }
 
 func Panic(args ...interface{}) {
-	if fn := g().NewEvent(insolar.PanicLevel); fn != nil {
+	if fn := g().NewEvent(logcommon.PanicLevel); fn != nil {
 		fn(args)
 	}
 }
 
 func Panicf(fmt string, args ...interface{}) {
-	if fn := g().NewEventFmt(insolar.PanicLevel); fn != nil {
+	if fn := g().NewEventFmt(logcommon.PanicLevel); fn != nil {
 		fn(fmt, args)
 	}
 }

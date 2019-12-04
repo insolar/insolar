@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,11 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package logadapter
 
 import (
-	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -191,42 +190,6 @@ var fieldValueGetters = map[reflect.Kind]fieldValueGetterFactoryFunc{
 	//reflect.UnsafePointer
 }
 
-var prepareObjTypes = []struct { // MUST be ordered, not map
-	t  reflect.Type
-	fn func(interface{}) (interface{}, bool)
-}{
-	{reflect.TypeOf((*LogStringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
-		if vv, ok := value.(LogStringer); ok {
-			return vv.LogString(), true
-		}
-		return value, false
-	}},
-	{reflect.TypeOf((*fmt.Stringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
-		if vv, ok := value.(fmt.Stringer); ok {
-			return vv.String(), true
-		}
-		return value, false
-	}},
-}
-
-func defaultStrValuePrepare(iv interface{}) (string, bool) {
-	switch vv := iv.(type) {
-	case string:
-		return vv, true
-	case *string:
-		if vv == nil {
-			return "", false
-		}
-		return *vv, true
-	case func() string:
-		return vv(), true
-	}
-	if vv, ok := tryDefaultValuePrepare(iv); ok {
-		return vv.(string), true
-	}
-	return "", false
-}
-
 func defaultObjFieldGetterFactory(unexported bool, t reflect.Type, checkZero bool) (bool, fieldValueGetterFunc) {
 	for _, f := range prepareObjTypes {
 		if !t.Implements(f.t) {
@@ -292,15 +255,6 @@ func _defaultObjFieldGetterFactoryNoConv(t reflect.Type, checkZero bool) fieldVa
 		vv := value.Interface()
 		return vv, checkZero && vv == nil
 	}
-}
-
-func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
-	for _, f := range prepareObjTypes {
-		if vv, ok := f.fn(iv); ok {
-			return vv, true
-		}
-	}
-	return iv, false
 }
 
 func getFieldGetter(index int, fd reflect.StructField, useAddr bool, baseOffset uintptr) func(reflect.Value) reflect.Value {

@@ -18,9 +18,10 @@ package logoutput
 
 import (
 	"errors"
-	"github.com/insolar/insolar/insolar"
 	"io"
 	"sync/atomic"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 type LogFlushFunc func() error
@@ -31,7 +32,7 @@ func NewAdapter(output io.Writer, protectedClose bool, flushFn, fatalFlushFn Log
 		flags |= adapterProtectClose
 	}
 
-	if w, ok := output.(insolar.LogLevelWriter); ok {
+	if w, ok := output.(logcommon.LogLevelWriter); ok {
 		return &Adapter{output: w, flushFn: flushFn, state: uint32(flags)}
 	}
 
@@ -41,7 +42,7 @@ func NewAdapter(output io.Writer, protectedClose bool, flushFn, fatalFlushFn Log
 var errClosed = errors.New("closed")
 
 type Adapter struct {
-	output       insolar.LogLevelWriter
+	output       logcommon.LogLevelWriter
 	flushFn      LogFlushFunc
 	fatalFlushFn LogFlushFunc
 	state        uint32 // atomic
@@ -142,14 +143,14 @@ func (p *Adapter) Write(b []byte) (int, error) {
 	return p.output.Write(b)
 }
 
-func (p *Adapter) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *Adapter) LogLevelWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	if ok, err := p.applyState(); !ok {
 		return 0, err
 	}
 	return p.output.LogLevelWrite(level, b)
 }
 
-func (p *Adapter) DirectLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *Adapter) DirectLevelWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	return p.output.LogLevelWrite(level, b)
 }
 
@@ -178,7 +179,7 @@ func (p *Adapter) LockFatal() {
 
 /* =============================  */
 
-var _ insolar.LogLevelWriter = &writerAdapter{}
+var _ logcommon.LogLevelWriter = &writerAdapter{}
 
 type writerAdapter struct {
 	output io.Writer
@@ -213,6 +214,6 @@ func (p writerAdapter) Write(b []byte) (int, error) {
 	return p.output.Write(b)
 }
 
-func (p writerAdapter) LogLevelWrite(_ insolar.LogLevel, b []byte) (int, error) {
+func (p writerAdapter) LogLevelWrite(_ logcommon.LogLevel, b []byte) (int, error) {
 	return p.output.Write(b)
 }

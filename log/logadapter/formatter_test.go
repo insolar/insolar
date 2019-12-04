@@ -22,9 +22,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/log/logcommon"
+
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
@@ -166,43 +167,43 @@ func TestTryLogObject_SingleNamed(t *testing.T) {
 		f.testTryLogObject(SomeType{7}))
 }
 
-var _ insolar.LogObject = SomeLogObjectValue{}
+var _ logcommon.LogObject = SomeLogObjectValue{}
 
 type SomeLogObjectValue struct {
 	IntVal int
 	Msg    string
 }
 
-func (SomeLogObjectValue) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
+func (SomeLogObjectValue) GetLogObjectMarshaller() logcommon.LogObjectMarshaller {
 	return nil
 }
 
-var _ insolar.LogObject = &SomeLogObjectPtr{}
+var _ logcommon.LogObject = &SomeLogObjectPtr{}
 
 type SomeLogObjectPtr struct {
 	IntVal int
 	Msg    string
 }
 
-func (*SomeLogObjectPtr) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
+func (*SomeLogObjectPtr) GetLogObjectMarshaller() logcommon.LogObjectMarshaller {
 	return nil
 }
 
-var _ insolar.LogObject = SomeLogObjectWithTemplate{}
-var _ insolar.LogObject = &SomeLogObjectWithTemplate{}
+var _ logcommon.LogObject = SomeLogObjectWithTemplate{}
+var _ logcommon.LogObject = &SomeLogObjectWithTemplate{}
 
 type SomeLogObjectWithTemplate struct {
-	*insolar.LogObjectTemplate
+	*logcommon.LogObjectTemplate
 	IntVal int
 }
 
 type SomeLogObjectWithTemplateAndMsg struct {
-	*insolar.LogObjectTemplate `txt:"TemplateAndMsg"`
-	IntVal                     int
+	*logcommon.LogObjectTemplate `txt:"TemplateAndMsg"`
+	IntVal                       int
 }
 
 type SomeLogObjectWithTemplateAndMsg2 struct {
-	*insolar.LogObjectTemplate
+	*logcommon.LogObjectTemplate
 	IntVal int
 	_      struct{} `txt:"TemplateAndMsg"`
 }
@@ -240,7 +241,7 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 }
 
 type SomeLogObjectWithMsg struct {
-	*insolar.LogObjectTemplate
+	*logcommon.LogObjectTemplate
 	IntVal int    `opt:""`
 	Msg    string `txt:"fixedObjectMessage"`
 }
@@ -290,29 +291,29 @@ func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
 	return o.buf.String()
 }
 
-var _ insolar.LogObjectWriter = &output{}
+var _ logcommon.LogObjectWriter = &output{}
 
 type output struct {
 	buf strings.Builder
 }
 
-func (p *output) AddIntField(key string, v int64, fmt insolar.LogFieldFormat) {
+func (p *output) AddIntField(key string, v int64, fmt logcommon.LogFieldFormat) {
 	p.AddIntfField(key, v, fmt)
 }
 
-func (p *output) AddUintField(key string, v uint64, fmt insolar.LogFieldFormat) {
+func (p *output) AddUintField(key string, v uint64, fmt logcommon.LogFieldFormat) {
 	p.AddIntfField(key, v, fmt)
 }
 
-func (p *output) AddFloatField(key string, v float64, fmt insolar.LogFieldFormat) {
+func (p *output) AddFloatField(key string, v float64, fmt logcommon.LogFieldFormat) {
 	p.AddIntfField(key, v, fmt)
 }
 
-func (p *output) AddStrField(key string, v string, fmt insolar.LogFieldFormat) {
+func (p *output) AddStrField(key string, v string, fmt logcommon.LogFieldFormat) {
 	p.AddIntfField(key, v, fmt)
 }
 
-func (p *output) AddIntfField(k string, v interface{}, fmtStr insolar.LogFieldFormat) {
+func (p *output) AddIntfField(k string, v interface{}, fmtStr logcommon.LogFieldFormat) {
 	switch {
 	case v == nil:
 		p.buf.WriteString(fmt.Sprintf("%s:nil,", k))

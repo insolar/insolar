@@ -18,22 +18,24 @@ package logmetrics
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"go.opencensus.io/stats"
 	"time"
+
+	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
-func NewMetricsHelper(recorder insolar.LogMetricsRecorder) *MetricsHelper {
+func NewMetricsHelper(recorder logcommon.LogMetricsRecorder) *MetricsHelper {
 	return &MetricsHelper{recorder}
 }
 
 type MetricsHelper struct {
-	recorder insolar.LogMetricsRecorder
+	recorder logcommon.LogMetricsRecorder
 }
 
 type DurationReportFunc func(d time.Duration)
 
-func (p *MetricsHelper) OnNewEvent(ctx context.Context, level insolar.LogLevel) {
+func (p *MetricsHelper) OnNewEvent(ctx context.Context, level logcommon.LogLevel) {
 	if p == nil {
 		return
 	}
@@ -46,7 +48,7 @@ func (p *MetricsHelper) OnNewEvent(ctx context.Context, level insolar.LogLevel) 
 	}
 }
 
-func (p *MetricsHelper) OnFilteredEvent(ctx context.Context, level insolar.LogLevel) {
+func (p *MetricsHelper) OnFilteredEvent(ctx context.Context, level logcommon.LogLevel) {
 	if p == nil {
 		return
 	}
@@ -65,7 +67,7 @@ func (p *MetricsHelper) OnWriteDuration(d time.Duration) {
 	}
 	stats.Record(context.Background(), statLogWriteDelays.M(int64(d)))
 	if p.recorder != nil {
-		p.recorder.RecordLogDelay(insolar.NoLevel, d)
+		p.recorder.RecordLogDelay(logcommon.NoLevel, d)
 	}
 }
 
@@ -83,7 +85,7 @@ func (p *MetricsHelper) OnWriteSkip(skippedCount int) {
 	stats.Record(context.Background(), statLogSkips.M(int64(skippedCount)))
 }
 
-func (p *MetricsHelper) GetMetricsCollector() insolar.LogObjectMetricCollector {
+func (p *MetricsHelper) GetMetricsCollector() logcommon.LogObjectMetricCollector {
 	//if p == nil {
 	//	return nil
 	//}

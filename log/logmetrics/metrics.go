@@ -18,18 +18,20 @@ package logmetrics
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
+	"time"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"time"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 var levelContexts = initLevelContexts()
 
 func initLevelContexts() (contexts []context.Context) {
-	contexts = make([]context.Context, insolar.LogLevelCount)
-	level := insolar.LogLevel(0)
+	contexts = make([]context.Context, logcommon.LogLevelCount)
+	level := logcommon.LogLevel(0)
 	for i := range contexts {
 		var err error
 		contexts[i], err = tag.New(context.Background(), tag.Insert(tagLevel, level.String()))
@@ -41,7 +43,7 @@ func initLevelContexts() (contexts []context.Context) {
 	return
 }
 
-func GetLogLevelContext(level insolar.LogLevel) context.Context {
+func GetLogLevelContext(level logcommon.LogLevel) context.Context {
 	if int(level) >= len(levelContexts) {
 		return context.Background()
 	}

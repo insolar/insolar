@@ -18,11 +18,13 @@ package logoutput
 
 import (
 	"errors"
-	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 type testWriter struct {
@@ -50,7 +52,7 @@ func (w *testWriter) Flush() error {
 	return nil
 }
 
-var _ insolar.LogLevelWriter = &testLevelWriter{}
+var _ logcommon.LogLevelWriter = &testLevelWriter{}
 
 type testLevelWriter struct {
 	testWriter
@@ -60,7 +62,7 @@ func (p *testLevelWriter) Write([]byte) (int, error) {
 	panic("unexpected")
 }
 
-func (p *testLevelWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *testLevelWriter) LogLevelWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	return p.testWriter.Write([]byte(level.String() + string(b)))
 }
 
@@ -93,7 +95,7 @@ func TestAdapter_fatal(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("NORM must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("NORM must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "NORM must pass")
 
@@ -109,7 +111,7 @@ func TestAdapter_fatal(t *testing.T) {
 	require.True(t, writer.IsFatal())
 
 	require.Panics(t, func() {
-		_, _ = writer.LogLevelWrite(insolar.WarnLevel, []byte("must NOT pass\n"))
+		_, _ = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must NOT pass\n"))
 	})
 	require.Panics(t, func() {
 		_ = writer.Flush()
@@ -129,7 +131,7 @@ func TestAdapter_fatal(t *testing.T) {
 
 	assert.NotContains(t, tw.String(), "must NOT pass")
 
-	_, err = writer.DirectLevelWrite(insolar.WarnLevel, []byte("DIRECT must pass\n"))
+	_, err = writer.DirectLevelWrite(logcommon.WarnLevel, []byte("DIRECT must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "DIRECT must pass")
 }
@@ -182,7 +184,7 @@ func TestAdapter_fatal_flush(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "must pass")
 
@@ -205,7 +207,7 @@ func TestAdapter_fatal_flush_helper(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "must pass")
 
@@ -239,7 +241,7 @@ func TestAdapter_close(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "must pass")
 
@@ -254,7 +256,7 @@ func TestAdapter_close(t *testing.T) {
 	err = writer.Close()
 	require.Error(t, err)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must NOT pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must NOT pass\n"))
 	require.Error(t, err)
 
 	assert.NotContains(t, tw.String(), "must NOT pass")
@@ -263,7 +265,7 @@ func TestAdapter_close(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 2, tw.closeCount)
 
-	_, err = writer.DirectLevelWrite(insolar.WarnLevel, []byte("DIRECT must pass\n"))
+	_, err = writer.DirectLevelWrite(logcommon.WarnLevel, []byte("DIRECT must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "DIRECT must pass")
 }
@@ -274,7 +276,7 @@ func TestAdapter_close_protect(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "must pass")
 
@@ -290,7 +292,7 @@ func TestAdapter_close_protect(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, 0, tw.closeCount)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must NOT pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must NOT pass\n"))
 	require.Error(t, err)
 
 	assert.NotContains(t, tw.String(), "must NOT pass")
@@ -302,7 +304,7 @@ func TestAdapter_direct_close_protect(t *testing.T) {
 
 	var err error
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "must pass")
 
@@ -318,7 +320,7 @@ func TestAdapter_direct_close_protect(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, tw.closeCount)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("must NOT pass\n"))
+	_, err = writer.LogLevelWrite(logcommon.WarnLevel, []byte("must NOT pass\n"))
 	require.Error(t, err)
 
 	assert.NotContains(t, tw.String(), "must NOT pass")
@@ -328,7 +330,7 @@ func TestAdapter_level_write(t *testing.T) {
 	tw := testLevelWriter{}
 	writer := NewAdapter(&tw, false, nil, nil)
 
-	_, err := writer.LogLevelWrite(insolar.WarnLevel, []byte(" must pass\n"))
+	_, err := writer.LogLevelWrite(logcommon.WarnLevel, []byte(" must pass\n"))
 	require.NoError(t, err)
 	assert.Contains(t, tw.String(), "warn must pass")
 }

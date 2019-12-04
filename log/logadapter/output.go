@@ -17,22 +17,40 @@
 package logadapter
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/inssyslog"
-	"github.com/pkg/errors"
 	"os"
+
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/log/inssyslog"
 )
 
-func OpenLogBareOutput(output insolar.LogOutput, param string) (BareOutput, error) {
+type LogOutput uint8
+
+const (
+	StdErrOutput LogOutput = iota
+	SysLogOutput
+)
+
+func (l LogOutput) String() string {
+	switch l {
+	case StdErrOutput:
+		return "stderr"
+	case SysLogOutput:
+		return "syslog"
+	}
+	return string(l)
+}
+
+func OpenLogBareOutput(output LogOutput, param string) (BareOutput, error) {
 	switch output {
-	case insolar.StdErrOutput:
+	case StdErrOutput:
 		w := os.Stderr
 		return BareOutput{
 			Writer:         w,
 			FlushFn:        w.Sync,
 			ProtectedClose: true,
 		}, nil
-	case insolar.SysLogOutput:
+	case SysLogOutput:
 		w, err := inssyslog.ConnectSyslogByParam(param, "insolar")
 		if err != nil {
 			return BareOutput{}, err

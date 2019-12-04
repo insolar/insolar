@@ -21,6 +21,7 @@ package logbuf
 import (
 	"encoding/binary"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logcommon"
 	"io"
 )
 
@@ -72,7 +73,7 @@ func (p *LevelBuffer) Write(b []byte) (n int, err error) {
 	return p.LogLevelWrite(insolar.NoLevel, b)
 }
 
-func (p *LevelBuffer) LevelWriteTo(w insolar.LogLevelWriter) (int64, error) {
+func (p *LevelBuffer) LevelWriteTo(w logcommon.LogLevelWriter) (int64, error) {
 	return p.buffer.WriteTo(chunkingLevelWriter{w, p.serviceHeaderSize})
 }
 
@@ -86,7 +87,7 @@ func (p *LevelBuffer) WriteTo(w io.Writer) (int64, error) {
 /* ============================ */
 
 type chunkingLevelWriter struct {
-	w                 insolar.LogLevelWriter
+	w                 logcommon.LogLevelWriter
 	serviceHeaderSize uint32
 }
 

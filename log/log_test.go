@@ -23,12 +23,13 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/insolar/insolar/log/logcommon"
+
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 )
 
 func capture(f func()) string {
@@ -54,7 +55,7 @@ func assertHelloWorld(t *testing.T, out string) {
 func TestLog_GlobalLogger_redirection(t *testing.T) {
 	defer SaveGlobalLogger()()
 
-	SetLogLevel(insolar.InfoLevel)
+	SetLogLevel(logcommon.InfoLevel)
 
 	originalG := GlobalLogger()
 
@@ -144,9 +145,9 @@ func TestLog_GlobalLogger_FilterLevel(t *testing.T) {
 	defer SaveGlobalLoggerAndFilter(true)()
 
 	assert.NoError(t, SetLevel("debug"))
-	assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
+	assert.NoError(t, SetGlobalLevelFilter(logcommon.DebugLevel))
 	assertHelloWorld(t, capture(func() { Debug("HelloWorld") }))
-	assert.NoError(t, SetGlobalLevelFilter(insolar.InfoLevel))
+	assert.NoError(t, SetGlobalLevelFilter(logcommon.InfoLevel))
 	assert.Equal(t, "", capture(func() { Debug("HelloWorld") }))
 }
 
@@ -157,17 +158,17 @@ func TestLog_GlobalLogger_Save(t *testing.T) {
 	level := GlobalLogger().Copy().GetLogLevel()
 	filter := GetGlobalLevelFilter()
 
-	if level != insolar.PanicLevel {
+	if level != logcommon.PanicLevel {
 		SetLogLevel(level + 1)
 	} else {
-		SetLogLevel(insolar.DebugLevel)
+		SetLogLevel(logcommon.DebugLevel)
 	}
 	assert.NotEqual(t, level, GlobalLogger().Copy().GetLogLevel())
 
-	if filter != insolar.PanicLevel {
+	if filter != logcommon.PanicLevel {
 		assert.NoError(t, SetGlobalLevelFilter(filter+1))
 	} else {
-		assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
+		assert.NoError(t, SetGlobalLevelFilter(logcommon.DebugLevel))
 	}
 	assert.NotEqual(t, filter, GetGlobalLevelFilter())
 
@@ -187,18 +188,18 @@ func TestLog_AddFields(t *testing.T) {
 	)
 	tt := []struct {
 		name    string
-		fieldfn func(la insolar.Logger) insolar.Logger
+		fieldfn func(la logcommon.Logger) logcommon.Logger
 	}{
 		{
 			name: "WithFields",
-			fieldfn: func(la insolar.Logger) insolar.Logger {
+			fieldfn: func(la logcommon.Logger) logcommon.Logger {
 				fields := map[string]interface{}{fieldname: fieldvalue}
 				return la.WithFields(fields)
 			},
 		},
 		{
 			name: "WithField",
-			fieldfn: func(la insolar.Logger) insolar.Logger {
+			fieldfn: func(la logcommon.Logger) logcommon.Logger {
 				return la.WithField(fieldname, fieldvalue)
 			},
 		},
@@ -266,13 +267,13 @@ func TestLog_WriteDuration(t *testing.T) {
 			require.NotNil(t, logger)
 
 			var buf bytes.Buffer
-			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(insolar.LogMetricsResetMode).Build()
+			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(logcommon.LogMetricsResetMode).Build()
 			require.NoError(t, err)
 
-			logger2, err := logger.Copy().WithMetrics(insolar.LogMetricsWriteDelayField).Build()
+			logger2, err := logger.Copy().WithMetrics(logcommon.LogMetricsWriteDelayField).Build()
 			require.NoError(t, err)
 
-			logger3, err := logger.Copy().WithMetrics(insolar.LogMetricsResetMode).Build()
+			logger3, err := logger.Copy().WithMetrics(logcommon.LogMetricsResetMode).Build()
 			require.NoError(t, err)
 
 			logger.Error("test")
@@ -318,12 +319,12 @@ func TestLog_DynField(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	l, err := GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
+	l, err := GlobalLogger().Copy().WithFormat(logcommon.JSONFormat).WithLevel(logcommon.DebugLevel).Build()
 	if err != nil {
 		panic(err)
 	}
 	SetGlobalLogger(l)
-	_ = SetGlobalLevelFilter(insolar.DebugLevel)
+	_ = SetGlobalLevelFilter(logcommon.DebugLevel)
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }

@@ -19,11 +19,13 @@ package zlogadapter
 import (
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/log/logadapter"
-	"github.com/rs/zerolog"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/rs/zerolog"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 var fieldsOrder = []string{
@@ -57,7 +59,7 @@ func newDefaultTextOutput(out io.Writer) io.WriteCloser {
 	return &closableConsoleWriter{zerolog.ConsoleWriter{
 		Out:          out,
 		NoColor:      true,
-		TimeFormat:   logadapter.TimestampFormat,
+		TimeFormat:   insolar.TimestampFormat,
 		PartsOrder:   fieldsOrder,
 		FormatCaller: formatCaller(),
 	}}

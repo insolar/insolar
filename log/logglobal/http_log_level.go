@@ -14,12 +14,14 @@
 //    limitations under the License.
 //
 
-package log
+package logglobal
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/insolar"
 	"net/http"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
 )
 
 // ServeHTTP is an HTTP handler that changes the global minimum log level
@@ -44,7 +46,7 @@ func (h *loglevelChangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = SetGlobalLevelFilter(level)
+	err = log.SetGlobalLevelFilter(level)
 
 	if err == nil {
 		w.WriteHeader(200)

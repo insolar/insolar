@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/log/logoutput"
 	"io"
 	"math"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logcommon"
+	"github.com/insolar/insolar/log/logoutput"
+
 	"github.com/insolar/insolar/log/critlog"
 	"github.com/insolar/insolar/log/logmetrics"
 )
@@ -33,13 +34,13 @@ type Config struct {
 	BuildConfig
 
 	BareOutput   BareOutput
-	LoggerOutput insolar.LoggerOutput
+	LoggerOutput logcommon.LoggerOutput
 
 	Metrics   *logmetrics.MetricsHelper
 	MsgFormat MsgFormatConfig
 }
 
-type DynFieldMap map[string]insolar.DynFieldFunc
+type DynFieldMap map[string]logcommon.DynFieldFunc
 
 type BareOutput struct {
 	Writer         io.Writer
@@ -55,7 +56,7 @@ type BuildConfig struct {
 type OutputConfig struct {
 	BufferSize      int
 	ParallelWriters int
-	Format          insolar.LogFormat
+	Format          logcommon.LogFormat
 
 	// allow buffer for regular events
 	EnableRegularBuffer bool
@@ -67,14 +68,14 @@ func (v OutputConfig) CanReuseOutputFor(config OutputConfig) bool {
 }
 
 type InstrumentationConfig struct {
-	Recorder               insolar.LogMetricsRecorder
-	MetricsMode            insolar.LogMetricsMode
-	CallerMode             insolar.CallerFieldMode
+	Recorder               logcommon.LogMetricsRecorder
+	MetricsMode            logcommon.LogMetricsMode
+	CallerMode             logcommon.CallerFieldMode
 	SkipFrameCountBaseline uint8
 	SkipFrameCount         int8
 }
 
-const writeDelayFieldFlags = insolar.LogMetricsWriteDelayReport | insolar.LogMetricsWriteDelayField
+const writeDelayFieldFlags = logcommon.LogMetricsWriteDelayReport | logcommon.LogMetricsWriteDelayField
 
 func (v InstrumentationConfig) CanReuseOutputFor(config InstrumentationConfig) bool {
 	vTWD := v.MetricsMode&writeDelayFieldFlags != 0
@@ -97,14 +98,14 @@ const (
 
 type CopyLoggerParams struct {
 	Reqs            FactoryRequirementFlags
-	Level           insolar.LogLevel
+	Level           logcommon.LogLevel
 	AppendFields    map[string]interface{}
 	AppendDynFields DynFieldMap
 }
 
 type NewLoggerParams struct {
 	Reqs      FactoryRequirementFlags
-	Level     insolar.LogLevel
+	Level     logcommon.LogLevel
 	Fields    map[string]interface{}
 	DynFields DynFieldMap
 
@@ -113,7 +114,7 @@ type NewLoggerParams struct {
 
 type Factory interface {
 	PrepareBareOutput(output BareOutput, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
-	CreateNewLogger(params NewLoggerParams) (insolar.EmbeddedLogger, error)
+	CreateNewLogger(params NewLoggerParams) (logcommon.EmbeddedLogger, error)
 	CanReuseMsgBuffer() bool
 }
 
@@ -121,10 +122,10 @@ type Template interface {
 	Factory
 	GetTemplateConfig() Config
 	// NB! Must ignore RequiresLowLatency flag
-	CopyTemplateLogger(CopyLoggerParams) insolar.EmbeddedLogger
+	CopyTemplateLogger(CopyLoggerParams) logcommon.EmbeddedLogger
 }
 
-func NewBuilderWithTemplate(template Template, level insolar.LogLevel) LoggerBuilder {
+func NewBuilderWithTemplate(template Template, level logcommon.LogLevel) LoggerBuilder {
 	config := template.GetTemplateConfig()
 	return LoggerBuilder{
 		factory:     template,
@@ -134,7 +135,7 @@ func NewBuilderWithTemplate(template Template, level insolar.LogLevel) LoggerBui
 	}
 }
 
-func NewBuilder(factory Factory, config Config, level insolar.LogLevel) LoggerBuilder {
+func NewBuilder(factory Factory, config Config, level logcommon.LogLevel) LoggerBuilder {
 	return LoggerBuilder{
 		factory: factory,
 		level:   level,
@@ -142,13 +143,13 @@ func NewBuilder(factory Factory, config Config, level insolar.LogLevel) LoggerBu
 	}
 }
 
-var _ insolar.GlobalLogAdapterFactory = &LoggerBuilder{}
+var _ logcommon.GlobalLogAdapterFactory = &LoggerBuilder{}
 
 type LoggerBuilder struct {
 	factory     Factory
 	hasTemplate bool
 
-	level insolar.LogLevel
+	level logcommon.LogLevel
 
 	noFields    bool
 	noDynFields bool
@@ -159,8 +160,8 @@ type LoggerBuilder struct {
 	Config
 }
 
-func (z LoggerBuilder) CreateGlobalLogAdapter() insolar.GlobalLogAdapter {
-	if f, ok := z.factory.(insolar.GlobalLogAdapterFactory); ok {
+func (z LoggerBuilder) CreateGlobalLogAdapter() logcommon.GlobalLogAdapter {
+	if f, ok := z.factory.(logcommon.GlobalLogAdapterFactory); ok {
 		return f.CreateGlobalLogAdapter()
 	}
 	return nil
@@ -170,15 +171,15 @@ func (z LoggerBuilder) GetOutput() io.Writer {
 	return z.BareOutput.Writer
 }
 
-func (z LoggerBuilder) GetLoggerOutput() insolar.LoggerOutput {
+func (z LoggerBuilder) GetLoggerOutput() logcommon.LoggerOutput {
 	return z.Config.LoggerOutput
 }
 
-func (z LoggerBuilder) GetLogLevel() insolar.LogLevel {
+func (z LoggerBuilder) GetLogLevel() logcommon.LogLevel {
 	return z.level
 }
 
-func (z LoggerBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithOutput(w io.Writer) logcommon.LoggerBuilder {
 
 	z.BareOutput = BareOutput{Writer: w}
 	switch ww := w.(type) {
@@ -191,20 +192,20 @@ func (z LoggerBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {
 	return z
 }
 
-func (z LoggerBuilder) WithBuffer(bufferSize int, bufferForAll bool) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithBuffer(bufferSize int, bufferForAll bool) logcommon.LoggerBuilder {
 	z.Output.BufferSize = bufferSize
 	z.Output.EnableRegularBuffer = bufferForAll
 	return z
 }
 
-func (z LoggerBuilder) WithLevel(level insolar.LogLevel) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithLevel(level logcommon.LogLevel) logcommon.LoggerBuilder {
 	z.level = level
 	return z
 }
 
-//func (z LoggerBuilder) WithTracingLevel(level insolar.LogLevel) insolar.LoggerBuilder {
+//func (z LoggerBuilder) WithTracingLevel(level logcommon.LogLevel) logcommon.LoggerBuilder {
 //	switch level {
-//	case insolar.NoLevel, insolar.WarnLevel, insolar.InfoLevel:
+//	case logcommon.NoLevel, logcommon.WarnLevel, logcommon.InfoLevel:
 //		z.Config.TraceLevel = level
 //	default:
 //		panic("illegal value")
@@ -212,36 +213,36 @@ func (z LoggerBuilder) WithLevel(level insolar.LogLevel) insolar.LoggerBuilder {
 //	return z
 //}
 //
-//func (z LoggerBuilder) WithTracing(remapTrace bool) insolar.LoggerBuilder {
+//func (z LoggerBuilder) WithTracing(remapTrace bool) logcommon.LoggerBuilder {
 //	z.traceRemap = remapTrace
 //	return z
 //}
 
-func (z LoggerBuilder) WithFormat(format insolar.LogFormat) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithFormat(format logcommon.LogFormat) logcommon.LoggerBuilder {
 	z.Output.Format = format
 	return z
 }
 
-func (z LoggerBuilder) WithCaller(mode insolar.CallerFieldMode) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithCaller(mode logcommon.CallerFieldMode) logcommon.LoggerBuilder {
 	z.Instruments.CallerMode = mode
 	return z
 }
 
-func (z LoggerBuilder) WithMetrics(mode insolar.LogMetricsMode) insolar.LoggerBuilder {
-	if mode&insolar.LogMetricsResetMode != 0 {
+func (z LoggerBuilder) WithMetrics(mode logcommon.LogMetricsMode) logcommon.LoggerBuilder {
+	if mode&logcommon.LogMetricsResetMode != 0 {
 		z.Instruments.MetricsMode = 0
-		mode &^= insolar.LogMetricsResetMode
+		mode &^= logcommon.LogMetricsResetMode
 	}
 	z.Instruments.MetricsMode |= mode
 	return z
 }
 
-func (z LoggerBuilder) WithMetricsRecorder(recorder insolar.LogMetricsRecorder) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithMetricsRecorder(recorder logcommon.LogMetricsRecorder) logcommon.LoggerBuilder {
 	z.Instruments.Recorder = recorder
 	return z
 }
 
-func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) logcommon.LoggerBuilder {
 	if skipFrameCount < math.MinInt8 || skipFrameCount > math.MaxInt8 {
 		panic("illegal value")
 	}
@@ -249,18 +250,18 @@ func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuil
 	return z
 }
 
-func (z LoggerBuilder) WithoutInheritedFields() insolar.LoggerBuilder {
+func (z LoggerBuilder) WithoutInheritedFields() logcommon.LoggerBuilder {
 	z.noFields = true
 	z.noDynFields = true
 	return z
 }
 
-func (z LoggerBuilder) WithoutInheritedDynFields() insolar.LoggerBuilder {
+func (z LoggerBuilder) WithoutInheritedDynFields() logcommon.LoggerBuilder {
 	z.noDynFields = true
 	return z
 }
 
-func (z LoggerBuilder) WithFields(fields map[string]interface{}) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithFields(fields map[string]interface{}) logcommon.LoggerBuilder {
 	if z.fields == nil {
 		z.fields = make(map[string]interface{}, len(fields))
 	}
@@ -271,7 +272,7 @@ func (z LoggerBuilder) WithFields(fields map[string]interface{}) insolar.LoggerB
 	return z
 }
 
-func (z LoggerBuilder) WithField(k string, v interface{}) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithField(k string, v interface{}) logcommon.LoggerBuilder {
 	if z.fields == nil {
 		z.fields = make(map[string]interface{})
 	}
@@ -280,7 +281,7 @@ func (z LoggerBuilder) WithField(k string, v interface{}) insolar.LoggerBuilder 
 	return z
 }
 
-func (z LoggerBuilder) WithDynamicField(k string, fn insolar.DynFieldFunc) insolar.LoggerBuilder {
+func (z LoggerBuilder) WithDynamicField(k string, fn logcommon.DynFieldFunc) logcommon.LoggerBuilder {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -292,27 +293,27 @@ func (z LoggerBuilder) WithDynamicField(k string, fn insolar.DynFieldFunc) insol
 	return z
 }
 
-func (z LoggerBuilder) Build() (insolar.Logger, error) {
+func (z LoggerBuilder) Build() (logcommon.Logger, error) {
 	return z.build(false)
 }
 
-func (z LoggerBuilder) BuildLowLatency() (insolar.Logger, error) {
+func (z LoggerBuilder) BuildLowLatency() (logcommon.Logger, error) {
 	return z.build(true)
 }
 
-func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
+func (z LoggerBuilder) build(needsLowLatency bool) (logcommon.Logger, error) {
 	if el, err := z.buildEmbedded(needsLowLatency); err != nil {
 		return nil, err
 	} else {
-		return insolar.WrapEmbeddedLogger(el), nil
+		return logcommon.WrapEmbeddedLogger(el), nil
 	}
 }
 
-func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (insolar.EmbeddedLogger, error) {
+func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (logcommon.EmbeddedLogger, error) {
 
 	var metrics *logmetrics.MetricsHelper
 
-	if z.Config.Instruments.MetricsMode != insolar.NoLogMetrics {
+	if z.Config.Instruments.MetricsMode != logcommon.NoLogMetrics {
 		metrics = logmetrics.NewMetricsHelper(z.Config.Instruments.Recorder)
 	}
 
@@ -327,7 +328,7 @@ func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (insolar.EmbeddedLogg
 		reqs |= RequiresLowLatency
 	}
 
-	var output insolar.LoggerOutput
+	var output logcommon.LoggerOutput
 
 	switch {
 	case z.BareOutput.Writer == nil:
@@ -361,7 +362,7 @@ func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (insolar.EmbeddedLogg
 			}
 			break
 		}
-		if lo, ok := z.BareOutput.Writer.(insolar.LoggerOutput); ok {
+		if lo, ok := z.BareOutput.Writer.(logcommon.LoggerOutput); ok {
 			// something strange, but we can also work this way
 			output = lo
 			break
@@ -390,7 +391,7 @@ func (z LoggerBuilder) buildEmbedded(needsLowLatency bool) (insolar.EmbeddedLogg
 	return z.factory.CreateNewLogger(params)
 }
 
-func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (insolar.LoggerOutput, error) {
+func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (logcommon.LoggerOutput, error) {
 
 	outputWriter, err := z.factory.PrepareBareOutput(z.BareOutput, metrics, z.Config.BuildConfig)
 	if err != nil {
@@ -420,12 +421,12 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			flags |= critlog.BufferReuse
 		}
 
-		missedFn := z.loggerMissedEvent(insolar.WarnLevel, metrics)
+		missedFn := z.loggerMissedEvent(logcommon.WarnLevel, metrics)
 
 		var bpb *critlog.BackpressureBuffer
 		switch {
 		case z.Config.Output.EnableRegularBuffer:
-			pw := uint8(insolar.DefaultOutputParallelLimit)
+			pw := uint8(logcommon.DefaultOutputParallelLimit)
 			if z.Config.Output.ParallelWriters != 0 {
 				pw = uint8(z.Config.Output.ParallelWriters)
 			}
@@ -450,8 +451,8 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 	return fdw, nil
 }
 
-func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel, metrics *logmetrics.MetricsHelper) critlog.MissedEventFunc {
-	return func(missed int) (insolar.LogLevel, []byte) {
+func (z LoggerBuilder) loggerMissedEvent(level logcommon.LogLevel, metrics *logmetrics.MetricsHelper) critlog.MissedEventFunc {
+	return func(missed int) (logcommon.LogLevel, []byte) {
 		metrics.OnWriteSkip(missed)
 		return level, ([]byte)(
 			fmt.Sprintf(`{"level":"%v","message":"logger dropped %d messages"}`, level.String(), missed))

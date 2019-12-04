@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/log/logcommon"
 	"reflect"
 	"runtime"
 	"strings"
@@ -28,15 +29,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 type logRecord struct {
 	s string
 }
 
-func (x logRecord) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
+func (x logRecord) GetLogObjectMarshaller() logcommon.LogObjectMarshaller {
 	return &mar{x: &x}
 }
 
@@ -44,12 +43,12 @@ type mar struct {
 	x *logRecord
 }
 
-func (m mar) MarshalLogObject(lw insolar.LogObjectWriter, lmc insolar.LogObjectMetricCollector) string {
+func (m mar) MarshalLogObject(lw logcommon.LogObjectWriter, lmc logcommon.LogObjectMetricCollector) string {
 	return m.x.s
 }
 
 type LogObject struct {
-	insolar.LogObjectTemplate
+	logcommon.LogObjectTemplate
 	s string
 }
 
@@ -131,14 +130,14 @@ func TestLogLevels(t *testing.T) {
 	buf := bytes.Buffer{}
 	lg, _ := GlobalLogger().Copy().WithOutput(&buf).Build()
 
-	lg.Level(insolar.FatalLevel).Warn(logstring)
+	lg.Level(logcommon.FatalLevel).Warn(logstring)
 	require.Nil(t, buf.Bytes(), "do not log warns at panic level")
 
 	lg.Warn(logstring)
 	require.NotNil(t, buf.Bytes(), "previous logger saves it's level")
 
 	if false {
-		SetGlobalLevelFilter(insolar.PanicLevel)
+		SetGlobalLevelFilter(logcommon.PanicLevel)
 		lg.Warn(logstring)
 		require.Nil(t, buf.String(), "do not log warns at global panic level")
 	}

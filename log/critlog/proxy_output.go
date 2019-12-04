@@ -17,25 +17,26 @@
 package critlog
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"sync"
+
+	"github.com/insolar/insolar/log/logcommon"
 )
 
-var _ insolar.LoggerOutput = &ProxyLoggerOutput{}
+var _ logcommon.LoggerOutput = &ProxyLoggerOutput{}
 
 type ProxyLoggerOutput struct {
 	mutex  sync.RWMutex
-	target insolar.LoggerOutput
+	target logcommon.LoggerOutput
 }
 
-func (p *ProxyLoggerOutput) GetTarget() insolar.LoggerOutput {
+func (p *ProxyLoggerOutput) GetTarget() logcommon.LoggerOutput {
 	p.mutex.RLock()
 	t := p.target
 	p.mutex.RUnlock()
 	return t
 }
 
-func (p *ProxyLoggerOutput) SetTarget(t insolar.LoggerOutput) {
+func (p *ProxyLoggerOutput) SetTarget(t logcommon.LoggerOutput) {
 	for {
 		if t == p {
 			return
@@ -60,7 +61,7 @@ func (p *ProxyLoggerOutput) Close() error {
 	return p.GetTarget().Close()
 }
 
-func (p *ProxyLoggerOutput) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *ProxyLoggerOutput) LogLevelWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	return p.GetTarget().LogLevelWrite(level, b)
 }
 
@@ -68,7 +69,7 @@ func (p *ProxyLoggerOutput) Flush() error {
 	return p.GetTarget().Flush()
 }
 
-func (p *ProxyLoggerOutput) LowLatencyWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *ProxyLoggerOutput) LowLatencyWrite(level logcommon.LogLevel, b []byte) (int, error) {
 	return p.GetTarget().LowLatencyWrite(level, b)
 }
 

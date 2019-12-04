@@ -20,12 +20,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logcommon"
 )
-
-type LogStringer interface {
-	LogString() string
-}
 
 type FormatFunc func(...interface{}) string
 type FormatfFunc func(string, ...interface{}) string
@@ -44,9 +40,9 @@ func GetDefaultLogMsgFormatter() MsgFormatConfig {
 	}
 }
 
-func (v MsgFormatConfig) fmtLogStruct(a interface{}) (insolar.LogObjectMarshaller, *string) {
+func (v MsgFormatConfig) fmtLogStruct(a interface{}) (logcommon.LogObjectMarshaller, *string) {
 	switch vv := a.(type) {
-	case insolar.LogObject:
+	case logcommon.LogObject:
 		m := vv.GetLogObjectMarshaller()
 		if m != nil {
 			return m, nil
@@ -56,7 +52,7 @@ func (v MsgFormatConfig) fmtLogStruct(a interface{}) (insolar.LogObjectMarshalle
 			vr = vr.Elem()
 		}
 		return v.MFactory.CreateLogObjectMarshaller(vr), nil
-	case insolar.LogObjectMarshaller:
+	case logcommon.LogObjectMarshaller:
 		return vv, nil
 	case string: // the most obvious case
 		return nil, &vv
@@ -89,7 +85,7 @@ func (v MsgFormatConfig) fmtLogStruct(a interface{}) (insolar.LogObjectMarshalle
 	return nil, nil
 }
 
-func (v MsgFormatConfig) FmtLogStruct(a interface{}) (insolar.LogObjectMarshaller, string) {
+func (v MsgFormatConfig) FmtLogStruct(a interface{}) (logcommon.LogObjectMarshaller, string) {
 	if m, s := v.fmtLogStruct(a); m != nil {
 		return m, ""
 	} else if s != nil {
@@ -98,7 +94,7 @@ func (v MsgFormatConfig) FmtLogStruct(a interface{}) (insolar.LogObjectMarshalle
 	return nil, v.Sformat(a)
 }
 
-func (v MsgFormatConfig) FmtLogStructOrObject(a interface{}) (insolar.LogObjectMarshaller, string) {
+func (v MsgFormatConfig) FmtLogStructOrObject(a interface{}) (logcommon.LogObjectMarshaller, string) {
 	if m, s := v.fmtLogStruct(a); m != nil {
 		return m, ""
 	} else if s != nil {
@@ -111,13 +107,13 @@ func (v MsgFormatConfig) FmtLogObject(a ...interface{}) string {
 	return v.Sformat(a...)
 }
 
-func (v MsgFormatConfig) PrepareMutedLogObject(a ...interface{}) insolar.LogObjectMarshaller {
+func (v MsgFormatConfig) PrepareMutedLogObject(a ...interface{}) logcommon.LogObjectMarshaller {
 	if len(a) != 1 {
 		return nil
 	}
 
 	switch vv := a[0].(type) {
-	case insolar.LogObject:
+	case logcommon.LogObject:
 		m := vv.GetLogObjectMarshaller()
 		if m != nil {
 			return m
@@ -127,7 +123,7 @@ func (v MsgFormatConfig) PrepareMutedLogObject(a ...interface{}) insolar.LogObje
 			vr = vr.Elem()
 		}
 		return v.MFactory.CreateLogObjectMarshaller(vr)
-	case insolar.LogObjectMarshaller:
+	case logcommon.LogObjectMarshaller:
 		return vv
 	case string, *string, nil: // the most obvious case(s) - avoid reflect
 		return nil

@@ -19,7 +19,7 @@
 package inssyslog
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 )
 
 func ConnectDefaultSyslog(tag string) (LogLevelWriteCloser, error) {

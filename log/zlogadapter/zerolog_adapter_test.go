@@ -18,16 +18,17 @@ package zlogadapter
 
 import (
 	"bytes"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/logadapter"
 	"sync"
 	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logadapter"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestZeroLogAdapter_CallerInfoWithFunc(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
@@ -52,7 +53,7 @@ func TestZeroLogAdapter_CallerInfoWithFunc(t *testing.T) {
 }
 
 func TestZeroLogAdapter_CallerInfo(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
@@ -77,7 +78,7 @@ func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 }
 
 func TestZeroLogAdapter_InheritFields(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
@@ -109,7 +110,7 @@ func TestZeroLogAdapter_InheritFields(t *testing.T) {
 }
 
 func TestZeroLogAdapter_ChangeLevel(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
@@ -136,7 +137,7 @@ func TestZeroLogAdapter_ChangeLevel(t *testing.T) {
 }
 
 func TestZeroLogAdapter_BuildFields(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
@@ -179,7 +180,7 @@ func TestZeroLogAdapter_BuildFields(t *testing.T) {
 }
 
 func TestZeroLogAdapter_BuildDynFields(t *testing.T) {
-	pCfg := logadapter.ParsedLogConfig{
+	pCfg := insolar.ParsedLogConfig{
 		OutputType: insolar.DefaultLogOutput,
 		LogLevel:   insolar.InfoLevel,
 		Output: logadapter.OutputConfig{
