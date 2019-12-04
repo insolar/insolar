@@ -52,7 +52,7 @@ func (sm *AppEventSM) GetInitStateFor(machine smachine.StateMachine) smachine.In
 }
 
 func (sm *AppEventSM) stepInit(ctx smachine.InitializationContext) smachine.StateUpdate {
-	fmt.Println("init: ", sm.eventValue, sm.pn)
+	ctx.Log().Trace(fmt.Sprint("init: ", sm.eventValue, sm.pn))
 	ctx.SetDefaultMigration(sm.migrateToClosing)
 	ctx.PublishGlobalAlias(sm.eventValue)
 
@@ -60,22 +60,23 @@ func (sm *AppEventSM) stepInit(ctx smachine.InitializationContext) smachine.Stat
 }
 
 func (sm *AppEventSM) stepRun(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	fmt.Println("run: ", sm.eventValue, sm.pn, sm.pulseSlot.PulseData())
+	ctx.Log().Trace(fmt.Sprint("run: ", sm.eventValue, sm.pn, sm.pulseSlot.PulseData()))
+	ctx.LogAsync().Trace(fmt.Sprint("(via async log) run: ", sm.eventValue, sm.pn, sm.pulseSlot.PulseData()))
 	return ctx.Poll().ThenRepeat()
 }
 
 func (sm *AppEventSM) migrateToClosing(ctx smachine.MigrationContext) smachine.StateUpdate {
 	sm.expiry = time.Now().Add(2600 * time.Millisecond)
-	fmt.Println("migrate: ", sm.eventValue, sm.pn)
+	ctx.Log().Trace(fmt.Sprint("migrate: ", sm.eventValue, sm.pn))
 	ctx.SetDefaultMigration(nil)
 	return ctx.Jump(sm.stepClosingRun)
 }
 
 func (sm *AppEventSM) stepClosingRun(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	if su, wait := ctx.WaitAnyUntil(sm.expiry).ThenRepeatOrElse(); wait {
-		fmt.Println("wait: ", sm.eventValue, sm.pn)
+		ctx.Log().Trace(fmt.Sprint("wait: ", sm.eventValue, sm.pn))
 		return su
 	}
-	fmt.Println("stop: ", sm.eventValue, sm.pn, "late=", time.Since(sm.expiry))
+	ctx.Log().Trace(fmt.Sprint("stop: ", sm.eventValue, sm.pn, "late=", time.Since(sm.expiry)))
 	return ctx.Stop()
 }

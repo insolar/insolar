@@ -172,7 +172,7 @@ func (c *adapterCallRequest) _startSync(isTry bool) bool {
 		return false
 	}
 
-	rc := asyncResultContext{slot: c.ctx.s}
+	rc := asyncResultContext{s: c.ctx.s}
 	rc.executeResult(resultFn)
 	return true
 }

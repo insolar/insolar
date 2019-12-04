@@ -32,18 +32,18 @@ const (
 	StepLoggerFatal
 )
 
-type StepLoggerUpdateFlags uint8
+type StepLoggerFlags uint8
 
 const (
-	StepLoggerUpdateErrorDefault StepLoggerUpdateFlags = iota
+	StepLoggerUpdateErrorDefault StepLoggerFlags = iota
 	StepLoggerUpdateErrorMuted
 	StepLoggerUpdateErrorRecovered
 	StepLoggerUpdateErrorRecoveryDenied
 )
-const StepLoggerErrorMask StepLoggerUpdateFlags = 3
+const StepLoggerErrorMask StepLoggerFlags = 3
 
 const (
-	StepLoggerDetached StepLoggerUpdateFlags = 1 << (2 + iota)
+	StepLoggerDetached StepLoggerFlags = 1 << (2 + iota)
 )
 
 type SlotMachineData struct {
@@ -59,13 +59,13 @@ type StepLoggerData struct {
 	Declaration StateMachineDeclaration
 	EventType   StepLoggerEvent
 	Error       error
+	Flags       StepLoggerFlags
 }
 
 type StepLoggerUpdateData struct {
 	UpdateType string
 	PrevStepNo uint32
 	NextStep   StepDeclaration
-	Flags      StepLoggerUpdateFlags
 }
 
 type SlotMachineLogger interface {
@@ -92,86 +92,75 @@ type StepLogger interface {
 	LogEvent(data StepLoggerData, customEvent interface{})
 
 	GetTracerId() TracerId
+
+	CreateAsyncLogger(context.Context, *StepLoggerData) (context.Context, StepLogger)
 }
 
 type StepLoggerFunc func(*StepLoggerData, *StepLoggerUpdateData)
 
 type TracerId = string
 
-type Logger = slotLogger
-
-type slotLogger struct { // we use an explicit struct here to enable compiler optimizations when logging is not needed
-	c *slotContext
+type Logger struct { // we use an explicit struct here to enable compiler optimizations when logging is not needed
+	ctx      context.Context
+	loggerFn interface {
+		getStepLogger() (StepLogger, StepLogLevel, uint32)
+	}
+	stepData StepLoggerData
 }
 
-func (p slotLogger) IsTracing() bool {
-	p.c.ensureValid()
-	return p.c.s.isTracing()
+func (p Logger) getStepLogger() (StepLogger, StepLogLevel, uint32) {
+	if p.loggerFn != nil {
+		return p.loggerFn.getStepLogger()
+	}
+	return nil, 0, 0
 }
 
-func (p slotLogger) getStepLogger() StepLogger {
-	p.c.ensureValid()
-	return p.c.s.stepLogger
+func (p Logger) GetContext() context.Context {
+	_, _, _ = p.getStepLogger() // check context availability
+	return p.ctx
 }
 
-func (p slotLogger) GetTracerId() TracerId {
-	if stepLogger := p.getStepLogger(); stepLogger != nil {
+func (p Logger) GetTracerId() TracerId {
+	if stepLogger, _, _ := p.getStepLogger(); stepLogger != nil {
 		return stepLogger.GetTracerId()
 	}
 	return ""
 }
 
-func (p slotLogger) _logCustom(eventType StepLoggerEvent, msg interface{}, err error) {
-	if stepLogger := p.getStepLogger(); stepLogger != nil {
-		stepLevel := p.c.s.getStepLogLevel()
+func (p Logger) _logCustom(eventType StepLoggerEvent, msg interface{}, err error) {
+	if stepLogger, stepLevel, stepUpdate := p.getStepLogger(); stepLogger != nil {
 		if !stepLogger.CanLogEvent(eventType, stepLevel) {
 			return
 		}
-		s := p.c.s
 
 		if stepLevel == StepLogLevelTracing && eventType == StepLoggerTrace {
 			eventType = StepLoggerActiveTrace
 		}
 
-		stepData := s.newStepLoggerData(eventType, s.NewStepLink())
+		stepData := p.stepData
+		stepData.EventType = eventType
 		stepData.Error = err
+
+		if stepUpdate != 0 {
+			stepData.StepNo.step = stepUpdate
+		}
+
 		stepLogger.LogEvent(stepData, msg)
 	}
 }
 
-func (p slotLogger) Trace(msg interface{}) {
+func (p Logger) Trace(msg interface{}) {
 	p._logCustom(StepLoggerTrace, msg, nil)
 }
 
-func (p slotLogger) Warn(msg interface{}) {
+func (p Logger) Warn(msg interface{}) {
 	p._logCustom(StepLoggerWarn, msg, nil)
 }
 
-func (p slotLogger) Error(msg interface{}, err error) {
+func (p Logger) Error(msg interface{}, err error) {
 	p._logCustom(StepLoggerError, msg, err)
 }
 
-func (p slotLogger) Fatal(msg interface{}) {
+func (p Logger) Fatal(msg interface{}) {
 	p._logCustom(StepLoggerFatal, msg, nil)
-}
-
-type StepLoggerStub struct {
-	TracerId TracerId
-}
-
-func (StepLoggerStub) CanLogEvent(StepLoggerEvent, StepLogLevel) bool {
-	return false
-}
-
-func (StepLoggerStub) LogUpdate(StepLoggerData, StepLoggerUpdateData) {
-}
-
-func (StepLoggerStub) LogInternal(StepLoggerData, string) {
-}
-
-func (StepLoggerStub) LogEvent(StepLoggerData, interface{}) {
-}
-
-func (v StepLoggerStub) GetTracerId() TracerId {
-	return v.TracerId
 }

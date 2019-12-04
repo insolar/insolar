@@ -71,6 +71,11 @@ func (p *bargingInContext) IsAtOriginalStep() bool {
 	return p.atOriginal
 }
 
+func (p *bargingInContext) Log() Logger {
+	p.ensureAtLeast(updCtxBargeIn)
+	return p._newLogger()
+}
+
 func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) (stateUpdate StateUpdate) {
 	p.setMode(updCtxBargeIn)
 	defer func() {
@@ -93,23 +98,33 @@ var _ AsyncResultContext = &asyncResultContext{}
 
 type asyncResultContext struct {
 	contextTemplate
-	slot   *Slot
+	s      *Slot
 	wakeup bool
 }
 
 func (p *asyncResultContext) SlotLink() SlotLink {
 	p.ensure(updCtxAsyncCallback)
-	return p.slot.NewLink()
+	return p.s.NewLink()
 }
 
 func (p *asyncResultContext) ParentLink() SlotLink {
 	p.ensure(updCtxAsyncCallback)
-	return p.slot.parent
+	return p.s.parent
 }
 
 func (p *asyncResultContext) GetContext() context.Context {
 	p.ensure(updCtxAsyncCallback)
-	return p.slot.ctx
+	return p.s.ctx
+}
+
+func (p *asyncResultContext) Log() Logger {
+	p.ensure(updCtxAsyncCallback)
+	return Logger{p.s.ctx, p, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
+}
+
+func (p *asyncResultContext) getStepLogger() (StepLogger, StepLogLevel, uint32) {
+	p.ensureAtLeast(updCtxAsyncCallback)
+	return p.s.stepLogger, p.s.getStepLogLevel(), 0
 }
 
 func (p *asyncResultContext) WakeUp() {

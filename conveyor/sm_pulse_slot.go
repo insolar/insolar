@@ -275,7 +275,7 @@ func (p *PulseSlotMachine) stepPastLoop(ctx smachine.ExecutionContext) smachine.
 	case !nextPollTime.IsZero():
 		return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
 	case !p.innerMachine.IsEmpty():
-		return ctx.Yield().ThenRepeat()
+		return ctx.Poll().ThenRepeat()
 	}
 	return ctx.WaitAny().ThenRepeat()
 }

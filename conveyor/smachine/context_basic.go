@@ -283,9 +283,35 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 	return link
 }
 
+func (p *slotContext) _newLogger() Logger {
+	return Logger{p.s.ctx, p, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
+}
+
 func (p *slotContext) Log() Logger {
 	p.ensureAtLeast(updCtxInit)
-	return slotLogger{p}
+	return p._newLogger()
+}
+
+func (p *slotContext) LogAsync() Logger {
+	p.ensure(updCtxExec)
+	logger := Logger{p.s.ctx, nil, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
+	stepLogger, level, _ := p.getStepLogger()
+	if stepLogger == nil {
+		return logger
+	}
+	logger.ctx, stepLogger = stepLogger.CreateAsyncLogger(logger.ctx, &logger.stepData)
+	if logger.ctx == nil {
+		panic("illegal state")
+	}
+
+	logger.stepData.Flags |= StepLoggerDetached
+	logger.loggerFn = fixedSlotLogger{logger: stepLogger, level: level, link: logger.stepData.StepNo.SlotLink}
+	return logger
+}
+
+func (p *slotContext) getStepLogger() (StepLogger, StepLogLevel, uint32) {
+	p.ensureValid()
+	return p.s.stepLogger, p.s.getStepLogLevel(), 0
 }
 
 func (p *slotContext) SetLogTracing(b bool) {

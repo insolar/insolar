@@ -57,6 +57,10 @@ func (v conveyorStepLogger) GetTracerId() smachine.TracerId {
 	return v.tracer
 }
 
+func (v conveyorStepLogger) CreateAsyncLogger(ctx context.Context, _ *smachine.StepLoggerData) (context.Context, smachine.StepLogger) {
+	return ctx, v
+}
+
 func getStepName(step interface{}) string {
 	fullName := runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name()
 	if lastIndex := strings.LastIndex(fullName, "."); lastIndex >= 0 {
@@ -91,7 +95,7 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 	v.prepareStepName(&upd.NextStep)
 
 	detached := ""
-	if upd.Flags&smachine.StepLoggerDetached != 0 {
+	if data.Flags&smachine.StepLoggerDetached != 0 {
 		detached = "(detached)"
 	}
 
@@ -103,7 +107,7 @@ func (v conveyorStepLogger) LogUpdate(data smachine.StepLoggerData, upd smachine
 	}
 
 	errSpecial := ""
-	switch upd.Flags & smachine.StepLoggerErrorMask {
+	switch data.Flags & smachine.StepLoggerErrorMask {
 	case smachine.StepLoggerUpdateErrorMuted:
 		errSpecial = "muted "
 	case smachine.StepLoggerUpdateErrorRecovered:
@@ -148,14 +152,14 @@ func (v conveyorStepLogger) LogEvent(data smachine.StepLoggerData, customEvent i
 	case smachine.StepLoggerFatal:
 		special = "FTL"
 	default:
-		fmt.Printf("%s[%3d]: %03d @ %03d: unknown (%s) current=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+		fmt.Printf("[U%d] %s[%3d]: %03d @ %03d: current=%v payload=%T tracer=%v custom=%v\n", data.EventType, data.StepNo.MachineId(), data.CycleNo,
 			data.StepNo.SlotID(), data.StepNo.StepNo(),
-			customEvent, data.CurrentStep.GetStepName(), v.sm, v.tracer)
+			data.CurrentStep.GetStepName(), v.sm, v.tracer, customEvent)
 		return
 	}
-	fmt.Printf("%s[%3d]: %03d @ %03d: custom %s current=%v event=%v payload=%T tracer=%v\n", data.StepNo.MachineId(), data.CycleNo,
+	fmt.Printf("[%s] %s[%3d]: %03d @ %03d: current=%v payload=%T tracer=%v custom=%v\n", special, data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(),
-		special, data.CurrentStep.GetStepName(), customEvent, v.sm, v.tracer)
+		data.CurrentStep.GetStepName(), v.sm, v.tracer, customEvent)
 
 	if data.EventType == smachine.StepLoggerFatal {
 		panic("os.Exit(1)")

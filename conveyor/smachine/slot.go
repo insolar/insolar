@@ -514,7 +514,7 @@ func (s *Slot) logStepError(action ErrorHandlerAction, stateUpdate StateUpdate, 
 }
 
 func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
-	flags := StepLoggerUpdateFlags(0)
+	flags := StepLoggerFlags(0)
 	if wasAsync {
 		flags |= StepLoggerDetached
 	}
@@ -526,7 +526,7 @@ func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
 }
 
 func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32,
-	stateUpdate StateUpdate, flags StepLoggerUpdateFlags, err error) {
+	stateUpdate StateUpdate, flags StepLoggerFlags, err error) {
 	if s.stepLogger == nil {
 		return
 	}
@@ -544,9 +544,10 @@ func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32,
 	}
 
 	stepData := s.newStepLoggerData(eventType, s.NewStepLink())
+	stepData.Flags = flags
 	stepData.Error = err
 
-	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo, Flags: flags}
+	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo}
 
 	if nextStep := stateUpdate.step.Transition; nextStep != nil {
 		nextDecl := s.declaration.GetStepDeclaration(nextStep)

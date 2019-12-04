@@ -26,9 +26,9 @@ import (
 
 type AdapterCallbackFunc func(AsyncResultFunc, error)
 
-func NewAdapterCallback(adapterId AdapterId, caller StepLink, callback AdapterCallbackFunc, flags AsyncCallFlags,
+func NewAdapterCallback(adapterId AdapterId, caller StepLink, callbackOverride AdapterCallbackFunc, flags AsyncCallFlags,
 	nestedFn CreateFactoryFunc) *AdapterCallback {
-	return &AdapterCallback{adapterId, caller, callback, nil, nestedFn, 0, flags}
+	return &AdapterCallback{adapterId, caller, callbackOverride, nil, nestedFn, 0, flags}
 }
 
 type AdapterCallback struct {
@@ -124,7 +124,7 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 			wakeup = c.flags&WakeUpOnCancel != 0
 
 		default:
-			rc := asyncResultContext{slot: slot}
+			rc := asyncResultContext{s: slot}
 			wakeupResult := rc.executeResult(resultFn)
 			wakeup = wakeupResult || c.flags&WakeUpOnResult != 0
 		}

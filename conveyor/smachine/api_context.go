@@ -123,7 +123,7 @@ type InOrderStepContext interface {
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
 
-	// Returns slot logger
+	// Returns a slot logger for this context. It is only valid while this context is valid.
 	Log() Logger
 	// Sets tracing mode for the slot. Actual impact depends on implementation of a logger.
 	SetLogTracing(bool)
@@ -243,6 +243,10 @@ type ExecutionContext interface {
 	// Will panic when: (1) not supported by current worker, (2) detachment limit exceeded, (3) called repeatedly.
 	InitiateLongRun(LongRunFlags)
 
+	// Returns slot logger usable in async calls on adapter side. It will be able to report until the slot is invalidated.
+	// This logger reports all events as at the step the logger was created at.
+	LogAsync() Logger
+
 	// Immediately allocates a new slot and constructs SM. And schedules initialization.
 	// It is guaranteed that:
 	// 1) the child will start at the same migration state as the creator (caller of this function)
@@ -344,6 +348,9 @@ type ConditionalBuilder interface {
 type AsyncResultContext interface {
 	BasicContext
 
+	// Returns a slot logger for this context. It is only valid while this context is valid.
+	Log() Logger
+
 	// Makes SM active if it was waiting or polling
 	WakeUp()
 }
@@ -367,6 +374,9 @@ type BargeInBuilder interface {
 
 type BargeInContext interface {
 	BasicContext
+
+	// Returns a slot logger for this context. It is only valid while this context is valid.
+	Log() Logger
 
 	AffectedStep() SlotStep
 
