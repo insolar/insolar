@@ -18,6 +18,7 @@
 package integration_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -347,7 +348,8 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 						Pulse: insolarPulse.PulseProto{
 							PulseNumber: pulse.MinTimePulse,
 						},
-						Drops: createDrops(initialJets),
+						Drops:           createDrops(initialJets),
+						LightChainLimit: math.MaxInt32,
 					},
 				}
 			}
