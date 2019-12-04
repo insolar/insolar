@@ -14,7 +14,7 @@
 //    limitations under the License.
 //
 
-package bytehash
+package aeshash
 
 import (
 	"testing"
@@ -23,11 +23,11 @@ import (
 )
 
 func TestHash(t *testing.T) {
-	require.Equal(t, uint32(0x1a8572be), HashStr("insolar"))
-	require.Equal(t, uint32(0x1a8572be), HashStrWithSeed("insolar", 0))
-	require.Equal(t, uint32(0x4a4ed3ef), HashStrWithSeed("insolar", 1))
+	require.Equal(t, uint(0xa0be041b1a8572be), Str("insolar"))
+	require.Equal(t, uint(0xa0be041b1a8572be), StrWithSeed("insolar", 0))
+	require.Equal(t, uint(0xafa17a6f4a4ed3ef), StrWithSeed("insolar", 1))
 
-	require.Equal(t, uint32(0x1a8572be), HashSlice([]byte("insolar")))
-	require.Equal(t, uint32(0x1a8572be), HashSliceWithSeed([]byte("insolar"), 0))
-	require.Equal(t, uint32(0x4a4ed3ef), HashSliceWithSeed([]byte("insolar"), 1))
+	require.Equal(t, uint(0xa0be041b1a8572be), Slice([]byte("insolar")))
+	require.Equal(t, uint(0xa0be041b1a8572be), SliceWithSeed([]byte("insolar"), 0))
+	require.Equal(t, uint(0xafa17a6f4a4ed3ef), SliceWithSeed([]byte("insolar"), 1))
 }

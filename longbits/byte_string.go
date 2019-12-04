@@ -17,12 +17,11 @@
 package longbits
 
 import (
+	"hash"
 	"io"
 	"math/bits"
-	"reflect"
-	"unsafe"
 
-	"github.com/insolar/insolar/longbits/bytehash"
+	"github.com/insolar/insolar/longbits/aeshash"
 )
 
 const EmptyByteString = ByteString("")
@@ -40,19 +39,7 @@ func WrapBytes(b []byte) ByteString {
 	if len(b) == 0 {
 		return EmptyByteString
 	}
-	return wrap(b)
-}
-
-func wrap(b []byte) ByteString {
-	pSlice := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-
-	var res ByteString
-	pString := (*reflect.StringHeader)(unsafe.Pointer(&res))
-
-	pString.Data = pSlice.Data
-	pString.Len = pSlice.Len
-
-	return res
+	return wrapUnsafe(b)
 }
 
 func Zero(len int) ByteString {
@@ -69,14 +56,14 @@ func Fill(len int, fill byte) ByteString {
 			b[i] = fill
 		}
 	}
-	return wrap(b)
+	return wrapUnsafe(b)
 }
 
-var _ FoldableReader = EmptyByteString.AsReader()
+var _ FoldableReader = EmptyByteString
 
 type ByteString string
 
-// TODO check behavior with nil/zero strings
+// TODO test behavior with nil/zero strings
 
 func (v ByteString) IsEmpty() bool {
 	return len(v) == 0
@@ -91,12 +78,27 @@ func (v ByteString) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-func (v ByteString) Hash() uint32 {
-	return bytehash.HashStr(string(v))
+//func (v ByteString) UnsafeWriteTo(w io.Writer) (int64, error) {
+//	n, err := w.Write(unwrapUnsafe(v))
+//	return int64(n), err
+//}
+//
+
+// TODO test
+
+func (v ByteString) Hash(h hash.Hash) hash.Hash {
+	_, _ = h.Write(unwrapUnsafe(v))
+	return h
 }
 
-func (v ByteString) HashWithSeed(seed uint32) uint32 {
-	return bytehash.HashStrWithSeed(string(v), uint(seed))
+// TODO test
+
+func (v ByteString) GoMapHash() uint32 {
+	return uint32(aeshash.Str(string(v)))
+}
+
+func (v ByteString) GoMapHashWithSeed(seed uint32) uint32 {
+	return uint32(aeshash.StrWithSeed(string(v), uint(seed)))
 }
 
 func (v ByteString) Read(b []byte) (n int, err error) {
@@ -141,7 +143,7 @@ func (v ByteString) BitBool(index int) bool {
 	return false
 }
 
-func (v ByteString) BitByte(index int) byte {
+func (v ByteString) BitValue(index int) byte {
 	if b, _ := v.BitMasked(index); b != 0 {
 		return 1
 	}
@@ -194,7 +196,6 @@ func (v ByteString) searchBit1(startAt int) int {
 		}
 	}
 	return -1
-
 }
 
 func (v ByteString) searchBit0(startAt int) int {
@@ -213,16 +214,6 @@ func (v ByteString) searchBit0(startAt int) int {
 		}
 	}
 	return -1
-}
-
-func BitPos(index int) (bytePos int, bitPos uint8) {
-	if index < 0 {
-		panic("illegal value")
-	}
-	if index == 0 {
-		return 0, 0
-	}
-	return index >> 3, uint8(index & 0x07)
 }
 
 func (v ByteString) FoldToBits64() Bits64 {

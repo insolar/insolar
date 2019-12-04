@@ -4,11 +4,16 @@
 
 // hash function using AES hardware instructions
 
-TEXT ·aeshashstr(SB),NOSPLIT,$0-24
-	MOVQ	p+0(FP), AX	// ptr to string/slice struct
-	MOVQ	8(AX), CX	// length of data
-	MOVQ	(AX), AX	// data
-	LEAQ	ret+16(FP), DX
+TEXT ·aeshash(SB),NOSPLIT,$0-32
+	MOVQ	p+0(FP), AX	// ptr to data
+	MOVQ	s+16(FP), CX	// size
+	LEAQ	ret+24(FP), DX
+
+//TEXT ·aeshashstr(SB),NOSPLIT,$0-24
+//	MOVQ	p+0(FP), AX	// ptr to string/slice struct
+//	MOVQ	8(AX), CX	// length of data
+//	MOVQ	(AX), AX	// data
+//	LEAQ	ret+16(FP), DX
 
 	// Fill an SSE register with our seeds.
 	MOVQ	h+8(FP), X0			// 64 bits of per-table hash seed
