@@ -100,11 +100,13 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 }
 
 func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
-	goCtx := ctx.GetContext()
+	var (
+		goCtx = ctx.GetContext()
 
-	objectReference := s.RequestInfo.RequestObjectReference
-	requestReference := s.RequestInfo.RequestReference
-	executionResult := s.executionResult
+		objectReference  = s.RequestInfo.RequestObjectReference
+		requestReference = s.RequestInfo.RequestReference
+		executionResult  = s.executionResult
+	)
 
 	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		var objectDescriptor artifacts.ObjectDescriptor
@@ -112,6 +114,7 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 		err := svc.RegisterResult(goCtx, requestReference, executionResult)
 		if err == nil && fetchNew {
 			objectDescriptor, err = svc.GetObject(goCtx, objectReference, nil)
+			inslogger.FromContext(goCtx).Debugf("NewObject fetched %s", objectReference.String())
 		}
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -120,7 +123,7 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 				s.newObjectDescriptor = objectDescriptor
 			}
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep()
+	}).DelayedStart().Sleep()
 }
 
 // it'll panic or execute
@@ -163,7 +166,8 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 	var (
 		incoming   = s.RequestInfo.Request.(*record.IncomingRequest)
 		APIRequest = s.RequestInfo.Request.IsAPIRequest()
-		target     insolar.Reference
+
+		target insolar.Reference
 	)
 	if !APIRequest {
 		target = incoming.Caller
@@ -194,6 +198,8 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 }
 
 func (s *ExecuteIncomingCommon) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	ctx.Log().Trace(describeTakeLockStep{Message: "freed", Object: s.objectInfo.ObjectReference})
+
 	if s.externalError != nil {
 		return ctx.Jump(s.stepError)
 	}
@@ -201,5 +207,6 @@ func (s *ExecuteIncomingCommon) stepStop(ctx smachine.ExecutionContext) smachine
 }
 
 func (s *ExecuteIncomingCommon) stepError(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	s.internalSendResult(ctx)
 	return ctx.Error(s.externalError)
 }

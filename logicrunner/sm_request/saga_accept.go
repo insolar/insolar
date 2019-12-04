@@ -19,14 +19,11 @@ package sm_request
 import (
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/logicrunner/s_artifact"
-	"github.com/insolar/insolar/logicrunner/s_sender"
 	"github.com/insolar/insolar/logicrunner/sm_execute_request/outgoing"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 )
@@ -35,12 +32,6 @@ type StateMachineSagaAccept struct {
 	// input arguments
 	Meta    *payload.Meta
 	Payload *payload.SagaCallAcceptNotification
-
-	// injected arguments
-	pulseSlot      *conveyor.PulseSlot
-	objectCatalog  sm_object.LocalObjectCatalog
-	artifactClient *s_artifact.ArtifactClientServiceAdapter
-	sender         *s_sender.SenderServiceAdapter
 
 	sharedStateLink sm_object.SharedObjectStateAccessor
 	externalError   error
@@ -59,10 +50,8 @@ func (declarationSagaAccept) GetInitStateFor(sm smachine.StateMachine) smachine.
 	return s.Init
 }
 
-func (declarationSagaAccept) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, injector *injector.DependencyInjector) {
-	s := sm.(*StateMachineSagaAccept)
-
-	injector.MustInject(&s.artifactClient)
+func (declarationSagaAccept) InjectDependencies(sm smachine.StateMachine, _ smachine.SlotLink, _ *injector.DependencyInjector) {
+	_ = sm.(*StateMachineSagaAccept)
 }
 
 /* -------- Instance ------------- */
@@ -72,10 +61,10 @@ func (s *StateMachineSagaAccept) GetStateMachineDeclaration() smachine.StateMach
 }
 
 func (s *StateMachineSagaAccept) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	return ctx.Jump(s.stepSendOutgoing)
+	return ctx.Jump(s.stepExecuteOutgoing)
 }
 
-func (s *StateMachineSagaAccept) stepSendOutgoing(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (s *StateMachineSagaAccept) stepExecuteOutgoing(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	// parse outgoing request from virtual record
 	virtual := record.Virtual{}
 	err := virtual.Unmarshal(s.Payload.Request)
@@ -88,12 +77,11 @@ func (s *StateMachineSagaAccept) stepSendOutgoing(ctx smachine.ExecutionContext)
 		return ctx.Error(errors.Errorf("unexpected request received %T", rec))
 	}
 
-	sm := outgoing.ExecuteOutgoingSagaRequest{
-		OutgoingRequestReference: *insolar.NewReference(s.Payload.DetachedRequestID),
-		RequestObjectReference:   *insolar.NewReference(s.Payload.ObjectID),
-		Request:                  outgoingRequest,
-	}
-	ctx.ReplaceWith(&sm)
-
-	return ctx.Stop()
+	return ctx.Replace(func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &outgoing.ExecuteOutgoingSagaRequest{
+			OutgoingRequestReference: *insolar.NewReference(s.Payload.DetachedRequestID),
+			RequestObjectReference:   *insolar.NewReference(s.Payload.ObjectID),
+			Request:                  outgoingRequest,
+		}
+	})
 }

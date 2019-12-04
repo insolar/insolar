@@ -111,7 +111,7 @@ func (s *ExecuteOutgoingRequest) stepRegisterOutgoing(ctx smachine.ExecutionCont
 
 			return
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepSendCallMethod)
+	}).DelayedStart().Sleep().ThenJump(s.stepSendCallMethod)
 }
 
 func (s *ExecuteOutgoingRequest) stepSendCallMethod(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -139,7 +139,7 @@ func (s *ExecuteOutgoingRequest) stepSendCallMethod(ctx smachine.ExecutionContex
 			s.externalError = err
 			s.callReply = callReply
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepSaveResult)
+	}).DelayedStart().Sleep().ThenJump(s.stepSaveResult)
 }
 
 // func (s *ExecuteOutgoingRequest) useParentRequestInfo(ctx smachine.ExecutionContext, cb func(state *SharedOutgoingCallState)) smachine.StateUpdate {
@@ -201,7 +201,7 @@ func (s *ExecuteOutgoingRequest) stepSaveResult(ctx smachine.ExecutionContext) s
 		}
 
 		return func(ctx smachine.AsyncResultContext) {}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepStop)
+	}).DelayedStart().Sleep().ThenJump(s.stepStop)
 }
 
 func (s *ExecuteOutgoingRequest) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {

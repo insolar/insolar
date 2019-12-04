@@ -46,7 +46,7 @@ func (p LocalObjectCatalog) Create(ctx smachine.ExecutionContext, objectReferenc
 
 	ctx.InitChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		ctx.SetTracerId(fmt.Sprintf("object-%s", objectReference.String()))
-		return NewObjectSM(objectReference, false)
+		return NewStateMachineObject(objectReference, false)
 	})
 
 	return p.Get(ctx, objectReference)
@@ -59,7 +59,7 @@ func (p LocalObjectCatalog) GetOrCreate(ctx smachine.ExecutionContext, objectRef
 
 	ctx.InitChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		ctx.SetTracerId(fmt.Sprintf("object-%s", objectReference.String()))
-		return NewObjectSM(objectReference, true)
+		return NewStateMachineObject(objectReference, true)
 	})
 
 	return p.Get(ctx, objectReference)

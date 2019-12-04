@@ -165,6 +165,7 @@ type Request interface {
 	// IsTemporaryUploadCode tells us that that request is temporary hack
 	// for uploading code.
 	IsTemporaryUploadCode() bool
+	IsDetachedCall() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -238,7 +239,7 @@ func (r *OutgoingRequest) IsCreationRequest() bool {
 	return false
 }
 
-func (r *OutgoingRequest) IsDetached() bool {
+func (r *OutgoingRequest) IsDetachedCall() bool {
 	return r.ReturnMode == ReturnSaga
 }
 

@@ -63,7 +63,7 @@ func (p *DetachedNotifierDefault) Notify(
 		if !ok {
 			continue
 		}
-		if !outgoing.IsDetached() {
+		if !outgoing.IsDetachedCall() {
 			continue
 		}
 		if reasonRef := outgoing.ReasonRef(); *reasonRef.GetLocal() != closedRequestID {

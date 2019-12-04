@@ -224,7 +224,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 
 		case *record.OutgoingRequest:
 			_, reasonClosed := hasResult[*r.Reason.GetLocal()]
-			isReadyDetached := r.IsDetached() && reasonClosed
+			isReadyDetached := r.IsDetachedCall() && reasonClosed
 			if pendingOnly && !isReadyDetached {
 				break
 			}

@@ -11,6 +11,8 @@ import (
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	logger "github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 type ConveyorLogger struct {
@@ -24,17 +26,20 @@ func (c ConveyorLogger) CanLogEvent(eventType smachine.StepLoggerEvent, stepLeve
 }
 
 type LogStepMessage struct {
-	*insolar.LogObjectTemplate
+	*logcommon.LogObjectTemplate
 
 	Message   string
 	Component string `txt:"sm"`
-	TraceID   string
+	TraceID   string `opt:""`
 
 	MachineName interface{} `fmt:"%T"`
 	MachineID   string
 	SlotStep    string
 	From        string
 	To          string `opt:""`
+
+	Error     string `opt:""`
+	Backtrace string `opt:""`
 }
 
 func getStepName(step interface{}) string {
@@ -75,31 +80,103 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 	prepareStepName(&stepLoggerUpdateData.NextStep)
 
 	suffix := ""
-	if stepLoggerUpdateData.Flags&smachine.StepLoggerDetached != 0 {
+	if stepLoggerData.Flags&smachine.StepLoggerDetached != 0 {
 		suffix = " (detached)"
-	} else if stepLoggerData.Error != nil {
-		suffix = fmt.Sprintf(" (%v)", stepLoggerData.Error)
 	}
 
 	if _, ok := stepLoggerData.Declaration.(*conveyor.PulseSlotMachine); ok {
 		return
 	}
 
+	var (
+		backtrace string
+		err       string
+	)
+	if stepLoggerData.Error != nil {
+		if slotPanicError, ok := stepLoggerData.Error.(smachine.SlotPanicError); ok {
+			backtrace = string(slotPanicError.Stack)
+		}
+		err = stepLoggerData.Error.Error()
+	}
 	c.logger.Error(LogStepMessage{
 		Message: special + stepLoggerUpdateData.UpdateType + suffix,
 
 		MachineName: stepLoggerData.Declaration,
 		MachineID:   fmt.Sprintf("%s[%3d]", stepLoggerData.StepNo.MachineId(), stepLoggerData.CycleNo),
 		SlotStep:    fmt.Sprintf("%03d @ %03d", stepLoggerData.StepNo.StepNo(), stepLoggerData.StepNo.StepNo()),
-		From:        stepLoggerData.CurrentStep.GetStepName(),
-		To:          stepLoggerUpdateData.NextStep.GetStepName(),
+
+		From: stepLoggerData.CurrentStep.GetStepName(),
+		To:   stepLoggerUpdateData.NextStep.GetStepName(),
+
+		Error:     err,
+		Backtrace: backtrace,
 	})
 }
 
-func NewConveyorLogger(ctx context.Context, _ smachine.StateMachine, traceID smachine.TracerId) smachine.StepLogger {
+type ConveyorLoggerFactory struct{}
+
+func (c ConveyorLoggerFactory) CreateStepLogger(ctx context.Context, _ smachine.StateMachine, traceID smachine.TracerId) smachine.StepLogger {
 	_, logger := inslogger.WithTraceField(context.Background(), traceID)
 	return &ConveyorLogger{
 		StepLoggerStub: smachine.StepLoggerStub{TracerId: traceID},
 		logger:         logger,
 	}
+}
+
+type LogInternal struct {
+	*logcommon.LogObjectTemplate `txt:"internal"`
+
+	Message   string `fmt:"internal - %s"`
+	Component string `txt:"sm"`
+
+	MachineID string
+	SlotStep  string
+	Error     error  `opt:""`
+	Backtrace string `opt:""`
+}
+
+func (ConveyorLoggerFactory) LogInternal(slotMachineData smachine.SlotMachineData, msg string) {
+	backtrace := ""
+	if slotMachineData.Error != nil {
+		if slotPanicError, ok := slotMachineData.Error.(smachine.SlotPanicError); ok {
+			backtrace = string(slotPanicError.Stack)
+		}
+	}
+	logger.GlobalLogger().Error(LogInternal{
+		Message: msg,
+
+		MachineID: fmt.Sprintf("%s[%3d]", slotMachineData.StepNo.MachineId(), slotMachineData.CycleNo),
+		SlotStep:  fmt.Sprintf("%03d @ %03d", slotMachineData.StepNo.StepNo(), slotMachineData.StepNo.StepNo()),
+		Error:     slotMachineData.Error,
+		Backtrace: backtrace,
+	})
+}
+
+type LogCritical struct {
+	*logcommon.LogObjectTemplate `txt:"internal"`
+
+	Message   string `fmt:"internal critical - %s"`
+	Component string `txt:"sm"`
+
+	MachineID string
+	SlotStep  string
+	Error     error  `opt:""`
+	Backtrace string `opt:""`
+}
+
+func (ConveyorLoggerFactory) LogCritical(slotMachineData smachine.SlotMachineData, msg string) {
+	backtrace := ""
+	if slotMachineData.Error != nil {
+		if slotPanicError, ok := slotMachineData.Error.(smachine.SlotPanicError); ok {
+			backtrace = string(slotPanicError.Stack)
+		}
+	}
+	logger.GlobalLogger().Error(LogCritical{
+		Message: msg,
+
+		MachineID: fmt.Sprintf("%s[%3d]", slotMachineData.StepNo.MachineId(), slotMachineData.CycleNo),
+		SlotStep:  fmt.Sprintf("%03d @ %03d", slotMachineData.StepNo.StepNo(), slotMachineData.StepNo.StepNo()),
+		Error:     slotMachineData.Error,
+		Backtrace: backtrace,
+	})
 }

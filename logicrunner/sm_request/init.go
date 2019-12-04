@@ -21,15 +21,15 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log/logcommon"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type logProcessing struct {
-	*insolar.LogObjectTemplate `txt:"processing message"`
+	*logcommon.LogObjectTemplate `txt:"processing message"`
 
 	message_type string
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -190,6 +191,8 @@ func (c *contractRunnerService) getExecution(request insolar.Reference) *Executi
 	return c.executions[request]
 }
 
+type ExecuteFuncType func(context.Context, insolar.Reference) bool
+
 func (c *contractRunnerService) executeConstructor(ctx context.Context, requestReference insolar.Reference) bool {
 	var (
 		executionContext = c.getExecution(requestReference)
@@ -345,6 +348,22 @@ func (c *contractRunnerService) waitForReply(requestReference insolar.Reference)
 	}
 }
 
+func (c *contractRunnerService) executionRecover(ctx context.Context, requestReference insolar.Reference) {
+	if r := recover(); r != nil {
+		// replace with custom error, not RecoverSlotPanicWithStack
+		err := smachine.RecoverSlotPanicWithStack("ContractRunnerService panic", r, nil)
+
+		executionContext := c.getExecution(requestReference)
+		if executionContext == nil {
+			inslogger.FromContext(ctx).Errorf("[executionRecover] Failed to find a job execution context %s", requestReference.String())
+			inslogger.FromContext(ctx).Errorf("[executionRecover] Failed to execute a job, panic: %v", r)
+			return
+		}
+
+		executionContext.Error(err)
+	}
+}
+
 // means - create new Job for execution, that'll barge in two cases:
 // 1) create outgoing call
 // 2) finished execution
@@ -355,11 +374,19 @@ func (c *contractRunnerService) ExecutionStart(ctx context.Context, transcript *
 		return nil, errors.Errorf("request %s already executed", requestReference.String())
 	}
 
-	if transcript.Request.CallType == record.CTSaveAsChild {
-		go c.executeConstructor(ctx, requestReference)
-	} else {
-		go c.executeMethod(ctx, requestReference)
+	var executeFunc ExecuteFuncType = c.executeMethod
+	switch transcript.Request.CallType {
+	case record.CTMethod:
+		executeFunc = c.executeMethod
+	case record.CTSaveAsChild:
+		executeFunc = c.executeConstructor
 	}
+
+	go func() {
+		defer c.executionRecover(ctx, requestReference)
+
+		executeFunc(ctx, requestReference)
+	}()
 
 	return c.waitForReply(requestReference)
 }
@@ -420,6 +447,8 @@ func (c *contractRunnerService) RouteCall(in rpctypes.UpRouteReq, out *rpctypes.
 	switch val := rawValue.(type) {
 	case insolar.Arguments:
 		out.Result = val
+	case []uint8:
+		out.Result = insolar.Arguments(val)
 	case error:
 		return val
 	default:
@@ -446,6 +475,8 @@ func (c *contractRunnerService) SaveAsChild(in rpctypes.UpSaveAsChildReq, out *r
 	switch val := rawValue.(type) {
 	case insolar.Arguments:
 		out.Result = val
+	case []uint8:
+		out.Result = insolar.Arguments(val)
 	case error:
 		return val
 	default:

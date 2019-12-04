@@ -80,7 +80,7 @@ func (s *ExecuteIncomingImmutableRequest) stepExecute(ctx smachine.ExecutionCont
 			s.externalError = err
 			// s.executionResult = result
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepRegisterResult)
+	}).DelayedStart().Sleep().ThenJump(s.stepRegisterResult)
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepRegisterResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -96,9 +96,12 @@ func (s *ExecuteIncomingImmutableRequest) stepRegisterResult(ctx smachine.Execut
 }
 
 func (s *ExecuteIncomingImmutableRequest) stepSetLastObjectState(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	logger := ctx.Log()
+
 	if s.newObjectDescriptor != nil {
 		stateUpdate := s.useSharedObjectInfo(ctx, func(state *sm_object.SharedObjectState) {
-			s.objectInfo.ObjectLatestDescriptor = s.newObjectDescriptor
+			state.SetObjectDescriptor(logger, s.newObjectDescriptor)
+			s.newObjectDescriptor = nil
 		})
 
 		if !stateUpdate.IsZero() {

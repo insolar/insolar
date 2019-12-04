@@ -72,6 +72,27 @@ func StartChannelWorker(ctx context.Context, ch <-chan AdapterCall, runArg inter
 	}()
 }
 
+func StartDynamicChannelWorker(ctx context.Context, ch <-chan AdapterCall, runArg interface{}) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case t, ok := <-ch:
+				if !ok {
+					return
+				}
+				go func() {
+					err := t.RunAndSendResult(runArg)
+					if err != nil {
+						log.Println(err)
+					}
+				}()
+			}
+		}
+	}()
+}
+
 type channelRecord = AdapterCall
 
 type OverflowPanicCallChannel struct {

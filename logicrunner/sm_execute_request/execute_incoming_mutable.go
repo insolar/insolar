@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log/logcommon"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/requestresult"
@@ -75,12 +76,15 @@ func (s *ExecuteIncomingMutableRequest) GetStateMachineDeclaration() smachine.St
 }
 
 func (s *ExecuteIncomingMutableRequest) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	// sdl := ctx.Share(&s.SharedRequestState, 0)
-	// if !ctx.Publish(s.RequestInfo.RequestReference, sdl) {
-	// 	return ctx.Stop()
-	// }
-
 	return ctx.Jump(s.stepTakeLock)
+}
+
+type describeTakeLockStep struct {
+	*logcommon.LogObjectTemplate
+
+	Message string            `fmt:"lock %s"`
+	Object  insolar.Reference `fmt:"%v"`
+	Type    string
 }
 
 func (s *ExecuteIncomingMutableRequest) stepTakeLock(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -88,9 +92,15 @@ func (s *ExecuteIncomingMutableRequest) stepTakeLock(ctx smachine.ExecutionConte
 		return ctx.Jump(s.stepReturnResult)
 	}
 
-	if !ctx.Acquire(s.objectInfo.MutableExecute) {
+	ctx.SetLogTracing(true)
+	// ctx.Log().Trace(describeTakeLockStep{Message: "taken", Object: s.objectInfo.ObjectReference, Type: "mutable"})
+	ctx.Log().Trace("trying to take lock " + s.objectInfo.ObjectReference.String())
+
+	if !ctx.AcquireAndRelease(s.objectInfo.MutableExecute) {
 		return ctx.Sleep().ThenRepeat()
 	}
+
+	ctx.Log().Trace("finished take lock " + s.objectInfo.ObjectReference.String())
 
 	return ctx.Jump(s.stepOrderingCheck)
 }
@@ -112,7 +122,7 @@ func (s *ExecuteIncomingMutableRequest) stepStartExecution(ctx smachine.Executio
 			s.externalError = err
 			s.nextStep = nextStep
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepDecide)
+	}).DelayedStart().Sleep().ThenJump(s.stepDecide)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -143,7 +153,7 @@ func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.Execu
 			s.externalError = err
 			s.nextStep = nextStep
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepDecide)
+	}).DelayedStart().Sleep().ThenJump(s.stepDecide)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepDecide(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -184,7 +194,7 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingClassify(ctx smachine.Execut
 					s.code, s.externalError = desc.Code()
 				}
 			}
-		}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
+		}).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
 
 	case outgoing.RouteCallEvent:
 		s.outgoing = event.ConstructOutgoing(*s.contractTranscript)
@@ -229,7 +239,7 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingRegister(ctx smachine.Execut
 
 			return
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepOutgoingExecute)
+	}).DelayedStart().Sleep().ThenJump(s.stepOutgoingExecute)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepOutgoingExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -240,28 +250,55 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingExecute(ctx smachine.Executi
 		pl          = &payload.CallMethod{Request: incoming, PulseNumber: pulseNumber}
 	)
 
+	if s.outgoingRequestInfo.Request.IsDetachedCall() {
+		return ctx.Jump(s.stepContinueExecution)
+	}
+
 	if s.outgoingReply == nil {
 		return s.ContractRequester.PrepareAsync(ctx, func(svc s_contract_requester.ContractRequesterService) smachine.AsyncResultFunc {
-			callResult, requestReference, err := svc.SendRequest(goCtx, pl)
+			var (
+				objectReferenceString  string
+				requestReferenceString string
+			)
+
+			if pl.Request.Object != nil {
+				objectReferenceString = pl.Request.Object.String()
+			}
 
 			inslogger.FromContext(goCtx).Warn(struct {
-				*insolar.LogObjectTemplate
+				*logcommon.LogObjectTemplate `txt:"external call"`
 
-				Message          string        `txt:"obtained request result"`
+				Method string
+				Object string
+			}{
+				Method: pl.Request.Method,
+				Object: objectReferenceString,
+			})
+
+			callResult, requestReference, err := svc.SendRequest(goCtx, pl)
+			if requestReference != nil {
+				requestReferenceString = requestReference.String()
+			}
+
+			inslogger.FromContext(goCtx).Warn(struct {
+				*logcommon.LogObjectTemplate `txt:"obtained request result"`
+
 				CallResultType   insolar.Reply `fmt:"%T"`
 				RequestReference string
+				Method           string
 				Error            error
 			}{
+				Method:           pl.Request.Method,
 				CallResultType:   callResult,
 				Error:            err,
-				RequestReference: requestReference.String(),
+				RequestReference: requestReferenceString,
 			})
 
 			return func(ctx smachine.AsyncResultContext) {
 				s.externalError = err
 				s.outgoingReply = callResult
 			}
-		}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepOutgoingSaveResult)
+		}).DelayedStart().Sleep().ThenJump(s.stepOutgoingSaveResult)
 	}
 
 	return ctx.Jump(s.stepContinueExecution)
@@ -296,15 +333,17 @@ func (s *ExecuteIncomingMutableRequest) stepOutgoingSaveResult(ctx smachine.Exec
 	// Register result of the outgoing method
 	requestResult := requestresult.New(result, caller)
 
+	ctx.Log().Trace("Saving req")
 	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
 		err := svc.RegisterResult(goCtx, requestReference, requestResult)
 
 		return func(ctx smachine.AsyncResultContext) {
+			s.outgoingReply = nil
 			if err != nil {
 				s.externalError = errors.Wrap(err, "can't register result")
 			}
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
+	}).DelayedStart().Sleep().ThenJump(s.stepContinueExecution)
 }
 
 func (s *ExecuteIncomingMutableRequest) stepRegisterResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -321,9 +360,12 @@ func (s *ExecuteIncomingMutableRequest) stepRegisterResult(ctx smachine.Executio
 }
 
 func (s *ExecuteIncomingMutableRequest) stepSetLastObjectState(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	logger := ctx.Log()
+
 	if s.newObjectDescriptor != nil {
 		stateUpdate := s.useSharedObjectInfo(ctx, func(state *sm_object.SharedObjectState) {
-			s.objectInfo.ObjectLatestDescriptor = s.newObjectDescriptor
+			state.SetObjectDescriptor(logger, s.newObjectDescriptor)
+			s.newObjectDescriptor = nil
 		})
 
 		if !stateUpdate.IsZero() {

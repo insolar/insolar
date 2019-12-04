@@ -97,6 +97,7 @@ func (e *RouteCallEvent) ConstructOutgoing(transcript common.Transcript) record.
 
 		CallType:   record.CTMethod,
 		Base:       &e.ParentObjectReference,
+		Object:     &e.Object,
 		Prototype:  &e.Prototype,
 		Method:     e.Method,
 		Arguments:  e.Arguments,
@@ -155,6 +156,7 @@ func (r rpcBuilder) RouteCall(
 		ParentRequestReference: r.request,
 		ParentObjectReference:  r.object,
 
+		Object:    object,
 		Method:    method,
 		Arguments: arguments,
 		Prototype: prototype,

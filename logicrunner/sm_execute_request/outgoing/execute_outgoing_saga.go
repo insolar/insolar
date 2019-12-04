@@ -81,19 +81,21 @@ func (s *ExecuteOutgoingSagaRequest) Init(ctx smachine.InitializationContext) sm
 
 func (s *ExecuteOutgoingSagaRequest) stepSendCallMethod(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	var (
+		goCtx = ctx.GetContext()
+
 		incoming    = outgoing.BuildIncomingRequestFromOutgoing(s.Request)
 		pulseNumber = s.pulseSlot.PulseData().PulseNumber
 		pl          = &payload.CallMethod{Request: incoming, PulseNumber: pulseNumber}
 	)
 
 	return s.contractRequester.PrepareAsync(ctx, func(svc s_contract_requester.ContractRequesterService) smachine.AsyncResultFunc {
-		callReply, _, err := svc.SendRequest(ctx.GetContext(), pl)
+		callReply, _, err := svc.SendRequest(goCtx, pl)
 
 		return func(ctx smachine.AsyncResultContext) {
 			s.externalError = err
 			s.callReply = callReply
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepCheckSendCallMethod)
+	}).DelayedStart().Sleep().ThenJump(s.stepCheckSendCallMethod)
 }
 
 // if we've failed to register request:
@@ -102,12 +104,14 @@ func (s *ExecuteOutgoingSagaRequest) stepSendCallMethod(ctx smachine.ExecutionCo
 // otherwise - continue execution
 func (s *ExecuteOutgoingSagaRequest) stepCheckSendCallMethod(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	switch {
+	case s.externalError == nil:
+		return ctx.Jump(s.stepSaveResult)
 	case strings.Contains(s.externalError.Error(), "flow cancelled"):
 		return ctx.Jump(s.stepSendCallMethod)
 	case s.externalError != nil:
 		return ctx.Jump(s.stepError)
 	default:
-		return ctx.Jump(s.stepSaveResult)
+		panic("unreachable")
 	}
 }
 
@@ -117,6 +121,8 @@ func (s *ExecuteOutgoingSagaRequest) stepSaveResult(ctx smachine.ExecutionContex
 	}
 
 	var (
+		goCtx = ctx.GetContext()
+
 		requestReference = s.OutgoingRequestReference
 		caller           = s.Request.Caller
 		result           []byte
@@ -135,16 +141,17 @@ func (s *ExecuteOutgoingSagaRequest) stepSaveResult(ctx smachine.ExecutionContex
 	requestResult := requestresult.New(result, caller)
 
 	return s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		err := svc.RegisterResult(ctx.GetContext(), requestReference, requestResult)
+		err := svc.RegisterResult(goCtx, requestReference, requestResult)
 		if err != nil {
 			err = errors.Wrap(err, "can't register result")
+
 			return func(ctx smachine.AsyncResultContext) {
 				s.externalError = err
 			}
 		}
 
 		return func(ctx smachine.AsyncResultContext) {}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJump(s.stepStop)
+	}).DelayedStart().Sleep().ThenJump(s.stepStop)
 }
 
 func (s *ExecuteOutgoingSagaRequest) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {

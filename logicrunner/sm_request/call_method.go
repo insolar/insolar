@@ -102,7 +102,7 @@ func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionCont
 
 			return
 		}
-	}).WithFlags(smachine.AutoWakeUp).DelayedStart().Sleep().ThenJumpExt(smachine.SlotStep{
+	}).DelayedStart().Sleep().ThenJumpExt(smachine.SlotStep{
 		Transition: s.stepSendRequestID,
 		Migration:  s.migrationSendRegisteredCall,
 	})

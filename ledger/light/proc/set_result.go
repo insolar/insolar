@@ -382,7 +382,7 @@ func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedReque
 		}
 
 		// Is not saga and reason of opened outgoing is equal request closed by this set_result
-		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
+		if !out.IsDetachedCall() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
 				Code: payload.CodeRequestNonClosedOutgoing,
