@@ -8,6 +8,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
+	"github.com/insolar/insolar/log/logcommon"
 )
 
 // LoggerMock implements Logger
@@ -32,7 +33,7 @@ type LoggerMock struct {
 	beforeDebugfCounter uint64
 	DebugfMock          mLoggerMockDebugf
 
-	funcEmbeddable          func() (e1 EmbeddedLogger)
+	funcEmbeddable          func() (e1 logcommon.EmbeddedLogger)
 	inspectFuncEmbeddable   func()
 	afterEmbeddableCounter  uint64
 	beforeEmbeddableCounter uint64
@@ -737,7 +738,7 @@ type LoggerMockEmbeddableExpectation struct {
 
 // LoggerMockEmbeddableResults contains results of the Logger.Embeddable
 type LoggerMockEmbeddableResults struct {
-	e1 EmbeddedLogger
+	e1 logcommon.EmbeddedLogger
 }
 
 // Expect sets up expected params for Logger.Embeddable
@@ -765,7 +766,7 @@ func (mmEmbeddable *mLoggerMockEmbeddable) Inspect(f func()) *mLoggerMockEmbedda
 }
 
 // Return sets up results that will be returned by Logger.Embeddable
-func (mmEmbeddable *mLoggerMockEmbeddable) Return(e1 EmbeddedLogger) *LoggerMock {
+func (mmEmbeddable *mLoggerMockEmbeddable) Return(e1 logcommon.EmbeddedLogger) *LoggerMock {
 	if mmEmbeddable.mock.funcEmbeddable != nil {
 		mmEmbeddable.mock.t.Fatalf("LoggerMock.Embeddable mock is already set by Set")
 	}
@@ -778,7 +779,7 @@ func (mmEmbeddable *mLoggerMockEmbeddable) Return(e1 EmbeddedLogger) *LoggerMock
 }
 
 //Set uses given function f to mock the Logger.Embeddable method
-func (mmEmbeddable *mLoggerMockEmbeddable) Set(f func() (e1 EmbeddedLogger)) *LoggerMock {
+func (mmEmbeddable *mLoggerMockEmbeddable) Set(f func() (e1 logcommon.EmbeddedLogger)) *LoggerMock {
 	if mmEmbeddable.defaultExpectation != nil {
 		mmEmbeddable.mock.t.Fatalf("Default expectation is already set for the Logger.Embeddable method")
 	}
@@ -792,7 +793,7 @@ func (mmEmbeddable *mLoggerMockEmbeddable) Set(f func() (e1 EmbeddedLogger)) *Lo
 }
 
 // Embeddable implements Logger
-func (mmEmbeddable *LoggerMock) Embeddable() (e1 EmbeddedLogger) {
+func (mmEmbeddable *LoggerMock) Embeddable() (e1 logcommon.EmbeddedLogger) {
 	mm_atomic.AddUint64(&mmEmbeddable.beforeEmbeddableCounter, 1)
 	defer mm_atomic.AddUint64(&mmEmbeddable.afterEmbeddableCounter, 1)
 
