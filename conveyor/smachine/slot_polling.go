@@ -55,10 +55,10 @@ func (p *PollingQueue) AddToLatestBefore(waitUntil time.Time, slot *Slot) bool {
 		return true
 	}
 
-	base, count := int(p.seqTail), int(p.seqLen)
+	base, count := int(p.seqTail)+1, int(p.seqLen)-1
 	switch {
-	case int(p.seqTail+p.seqLen) <= len(p.polls): // continuous range
-		// base, count = p.seqTail, p.seqLen
+	case int(p.seqTail+p.seqLen) <= len(p.polls):
+		// continuous range
 	case waitUntil.Before(p.polls[0].pollAfter): // wrapped range - lets just split it in halves
 		count = len(p.polls) - base
 	default:
@@ -66,9 +66,15 @@ func (p *PollingQueue) AddToLatestBefore(waitUntil time.Time, slot *Slot) bool {
 		base = 0
 	}
 
-	pos := base - 1 + sort.Search(count, func(i int) bool {
+	pos := base + sort.Search(count, func(i int) bool {
 		return !waitUntil.Before(p.polls[base+i].pollAfter)
 	})
+	if pos == 0 {
+		pos = len(p.polls) - 1
+	} else {
+		pos--
+	}
+
 	p.polls[pos].AddLast(slot)
 	return true
 }
