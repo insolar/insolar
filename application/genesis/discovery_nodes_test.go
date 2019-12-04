@@ -199,7 +199,7 @@ func publicKeysFromDir(dir string, keysMetaFile string) ([]nodeInfoRaw, error) {
 		if !ok {
 			return nil, errors.Errorf("not found file %v in directory %v", meta.File, dir)
 		}
-		pair, err := secrets.ReadKeysFile(f)
+		pair, err := secrets.ReadKeysFile(f, true)
 		if err != nil {
 			return nil, errors.Wrapf(err, "can't read dir %v", dir)
 		}
