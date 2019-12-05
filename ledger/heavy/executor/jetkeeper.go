@@ -278,9 +278,10 @@ func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, err
 func compareJets(ctx context.Context, what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{}) (bool, error) {
 	if len(actualJetsSet) != len(what) {
 		if len(actualJetsSet) > len(what) {
-			return false, errors.New("num actual jets is more then topSyncJets." +
+			inslogger.FromContext(ctx).Debug("num actual jets is more then topSyncJets." +
 				" TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
 				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
+			return false, nil
 		}
 		inslogger.FromContext(ctx).Debug("actual and top sync pule jets are still different")
 		return false, nil
