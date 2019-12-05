@@ -141,10 +141,12 @@ func INSMETHOD_DepositMigrationCall(object []byte, data []byte) (newState []byte
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -221,10 +223,12 @@ func INSMETHOD_SetActivationStatus(object []byte, data []byte) (newState []byte,
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -300,10 +304,12 @@ func INSMETHOD_GetActivationStatus(object []byte, data []byte) (newState []byte,
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -379,10 +385,12 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) (newState []
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 

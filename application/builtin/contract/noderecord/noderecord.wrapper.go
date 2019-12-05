@@ -135,10 +135,12 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) (newState []byte, result 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -214,10 +216,12 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) (newState []byte, result
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -293,10 +297,12 @@ func INSMETHOD_GetRole(object []byte, data []byte) (newState []byte, result []by
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -361,8 +367,10 @@ func INSCONSTRUCTOR_NewNodeRecord(ref insolar.Reference, data []byte) (state []b
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err == nil {
+					state = data
+				}
 			} else {
 				err = recoveredError
 			}

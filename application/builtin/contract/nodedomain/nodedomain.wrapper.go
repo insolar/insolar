@@ -139,10 +139,12 @@ func INSMETHOD_RegisterNode(object []byte, data []byte) (newState []byte, result
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -220,10 +222,12 @@ func INSMETHOD_GetNodeRefByPublicKey(object []byte, data []byte) (newState []byt
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -284,8 +288,10 @@ func INSCONSTRUCTOR_NewNodeDomain(ref insolar.Reference, data []byte) (state []b
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err == nil {
+					state = data
+				}
 			} else {
 				err = recoveredError
 			}

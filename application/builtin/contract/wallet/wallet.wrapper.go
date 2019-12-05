@@ -137,10 +137,12 @@ func INSMETHOD_GetAccount(object []byte, data []byte) (newState []byte, result [
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -226,10 +228,12 @@ func INSMETHOD_Transfer(object []byte, data []byte) (newState []byte, result []b
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -307,10 +311,12 @@ func INSMETHOD_GetBalance(object []byte, data []byte) (newState []byte, result [
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -389,10 +395,12 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) (newState []byte, result [
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -468,10 +476,12 @@ func INSMETHOD_GetDeposits(object []byte, data []byte) (newState []byte, result 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -550,10 +560,12 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) (newState []byte, result 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -616,8 +628,10 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, resul
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err == nil {
+					state = data
+				}
 			} else {
 				err = recoveredError
 			}

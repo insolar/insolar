@@ -76,11 +76,12 @@ type SagaInfo struct {
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
-	name        string
-	code        []byte
-	fileSet     *token.FileSet
-	node        *ast.File
-	machineType insolar.MachineType
+	name                string
+	code                []byte
+	fileSet             *token.FileSet
+	node                *ast.File
+	machineType         insolar.MachineType
+	panicIsLogicalError bool
 
 	types        map[string]*ast.TypeSpec
 	methods      map[string][]*ast.FuncDecl
@@ -122,6 +123,9 @@ func ParseFile(fileName string, machineType insolar.MachineType) (*ParsedFile, e
 	}
 
 	return res, nil
+}
+func (pf *ParsedFile) SetPanicIsLogicalError() {
+	pf.panicIsLogicalError = true
 }
 
 func (pf *ParsedFile) parseTypes() error {
@@ -331,14 +335,15 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	data := map[string]interface{}{
-		"Package":            packageName,
-		"ContractType":       pf.contract,
-		"Methods":            methodsInfo,
-		"Functions":          functionsInfo,
-		"ParsedCode":         pf.code,
-		"FoundationPath":     foundationPath,
-		"Imports":            imports,
-		"GenerateInitialize": pf.machineType == insolar.MachineTypeBuiltin,
+		"Package":             packageName,
+		"ContractType":        pf.contract,
+		"Methods":             methodsInfo,
+		"Functions":           functionsInfo,
+		"ParsedCode":          pf.code,
+		"FoundationPath":      foundationPath,
+		"Imports":             imports,
+		"GenerateInitialize":  pf.machineType == insolar.MachineTypeBuiltin,
+		"PanicIsLogicalError": pf.panicIsLogicalError,
 	}
 
 	return formatAndWrite(out, "wrapper", data)

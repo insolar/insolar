@@ -597,6 +597,45 @@ func ( A ) Get() error {
 	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
 
+func (s *PreprocessorSuite) TestImportsFromContractUseForReturnValue() {
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+package main
+import (
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"some/test/import/path"
+)
+type A struct{
+	foundation.BaseContract
+}
+func ( A ) Get() (path.SomeValue, error) {
+	f := path.SomeMethod()
+	return f, nil
+}
+`)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
+	s.NoError(err)
+	s.Contains(bufProxy.String(), `"some/test/import/path"`)
+	code, err := ioutil.ReadAll(&bufProxy)
+	s.NoError(err)
+	s.NotEqual(len(code), 0)
+
+	var bufWrapper bytes.Buffer
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
+	s.NoError(err)
+	s.Contains(bufWrapper.String(), `"some/test/import/path"`)
+}
+
 func (s *PreprocessorSuite) TestNotMatchFileNameForProxy() {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)

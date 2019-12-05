@@ -144,10 +144,12 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) (newState []byte, result []
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -223,10 +225,12 @@ func INSMETHOD_GetAmount(object []byte, data []byte) (newState []byte, result []
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -302,10 +306,12 @@ func INSMETHOD_GetPulseUnHold(object []byte, data []byte) (newState []byte, resu
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -381,10 +387,12 @@ func INSMETHOD_Itself(object []byte, data []byte) (newState []byte, result []byt
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -469,10 +477,12 @@ func INSMETHOD_Confirm(object []byte, data []byte) (newState []byte, result []by
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -557,10 +567,12 @@ func INSMETHOD_TransferToDeposit(object []byte, data []byte) (newState []byte, r
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -642,10 +654,12 @@ func INSMETHOD_Transfer(object []byte, data []byte) (newState []byte, result []b
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -722,10 +736,12 @@ func INSMETHOD_Accept(object []byte, data []byte) (newState []byte, result []byt
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -794,8 +810,10 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, resul
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err == nil {
+					state = data
+				}
 			} else {
 				err = recoveredError
 			}

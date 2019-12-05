@@ -141,10 +141,12 @@ func INSMETHOD_MigrationAdminCall(object []byte, data []byte) (newState []byte, 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -220,10 +222,12 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) (newState []byte
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -301,10 +305,12 @@ func INSMETHOD_GetMigrationDaemonByMemberRef(object []byte, data []byte) (newSta
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -382,10 +388,12 @@ func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) (newState
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -463,10 +471,12 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) (newState []b
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -545,10 +555,12 @@ func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) (newStat
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 

@@ -124,7 +124,7 @@ func (b *BuiltIn) CallMethod(
 ) {
 	executeStart := time.Now()
 	ctx = insmetrics.InsertTag(ctx, metrics.TagContractPrototype, b.PrototypeRefRegistry[codeRef])
-	ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, "Constructor")
+	ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, method)
 
 	defer func(ctx context.Context) {
 		executionTime := time.Since(executeStart).Nanoseconds()

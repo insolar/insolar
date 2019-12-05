@@ -135,10 +135,12 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) (newState
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -215,10 +217,12 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) (newState [
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -294,10 +298,12 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) (newState []b
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -375,10 +381,12 @@ func INSMETHOD_GetRef(object []byte, data []byte) (newState []byte, result []byt
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -457,10 +465,12 @@ func INSMETHOD_SetRef(object []byte, data []byte) (newState []byte, result []byt
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -523,8 +533,10 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, resul
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err == nil {
+					state = data
+				}
 			} else {
 				err = recoveredError
 			}

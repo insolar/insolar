@@ -25,7 +25,7 @@ import (
 {{- end }}
 )
 
-const PanicIsLogicalError = false
+const PanicIsLogicalError = {{ .PanicIsLogicalError }}
 
 func INS_META_INFO() ([] map[string]string) {
 	result := make([]map[string] string, 0)
@@ -143,10 +143,12 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) (newState []byte, 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+				    newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -210,8 +212,10 @@ func INSCONSTRUCTOR_{{ $f.Name }}(ref insolar.Reference, data []byte) (state []b
 			if PanicIsLogicalError {
 				ret1 = recoveredError
 
-				state = data
 				err = serializeResults()
+				if err== nil {
+				    state = data
+				}
 			} else {
 				err = recoveredError
 			}

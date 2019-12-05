@@ -137,10 +137,12 @@ func INSMETHOD_GetMemberByPublicKey(object []byte, data []byte) (newState []byte
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 
@@ -219,10 +221,12 @@ func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) (newState 
 
 				newState = object
 				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
 			} else {
 				err = recoveredError
 			}
-
 		}
 	}()
 

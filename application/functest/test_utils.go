@@ -453,8 +453,12 @@ func newUserWithKeys() (*launchnet.User, error) {
 // uploadContractOnce is needed for running tests with count
 // use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t testing.TB, name string, code string) *insolar.Reference {
+	return uploadContractOnceExt(t, name, code, false)
+}
+
+func uploadContractOnceExt(t testing.TB, name string, code string, panicIsLogicalError bool) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		ref := uploadContract(t, name, code)
+		ref := uploadContract(t, name, code, panicIsLogicalError)
 		contracts[name] = &contractInfo{
 			reference: ref,
 			testName:  t.Name(),
@@ -467,14 +471,15 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 	return contracts[name].reference
 }
 
-func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
+func uploadContract(t testing.TB, contractName string, contractCode string, panicIsLogicalError bool) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.upload",
 		"id":      "",
-		"params": map[string]string{
-			"name": contractName,
-			"code": contractCode,
+		"params": map[string]interface{}{
+			"name":                contractName,
+			"code":                contractCode,
+			"panicIsLogicalError": panicIsLogicalError,
 		},
 	})
 	require.NotEmpty(t, uploadBody)
