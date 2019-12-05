@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const PanicIsLogicalError = false
+
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 
@@ -132,10 +134,17 @@ func INSMETHOD_DepositMigrationCall(object []byte, data []byte) (newState []byte
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -205,10 +214,17 @@ func INSMETHOD_SetActivationStatus(object []byte, data []byte) (newState []byte,
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret0 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret0 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -277,10 +293,17 @@ func INSMETHOD_GetActivationStatus(object []byte, data []byte) (newState []byte,
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -349,10 +372,17 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) (newState []
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 

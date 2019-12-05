@@ -25,6 +25,8 @@ import (
 {{- end }}
 )
 
+const PanicIsLogicalError = false
+
 func INS_META_INFO() ([] map[string]string) {
 	result := make([]map[string] string, 0)
 	{{ range $method := .Methods }}
@@ -134,10 +136,17 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) (newState []byte, 
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret{{ $method.LastErrorInRes }} = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret{{ $method.LastErrorInRes }} = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -195,11 +204,17 @@ func INSCONSTRUCTOR_{{ $f.Name }}(ref insolar.Reference, data []byte) (state []b
 			return
 		}
 		if r := recover(); r != nil {
-			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute constructor (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			state = data
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				state = data
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
 		}
 	}()
 

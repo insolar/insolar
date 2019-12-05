@@ -58,10 +58,16 @@ func NewPanic() (*One, error) {
 	obj := callConstructor(t, prototype, "New")
 
 	resp1 := callMethodNoChecks(t, obj, "Panic")
-	require.Contains(t, resp1.Result.ExtractedError, "AAAAAAAA!")
+	// For Logical Errors
+	// require.Contains(t, resp1.Result.ExtractedError, "AAAAAAAA!")
+	// For System Errors
+	require.Contains(t, resp1.Error.Message, "AAAAAAAA!")
 
 	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
-	require.Contains(t, resp2.Result.Error.S, "BBBBBBBB!")
+	// For Logical Errors
+	// require.Contains(t, resp2.Result.Error.S, "BBBBBBBB!")
+	// For System Errors
+	require.Contains(t, resp2.Error.Message, "BBBBBBBB!")
 }
 
 func TestRecursiveCallError(t *testing.T) {

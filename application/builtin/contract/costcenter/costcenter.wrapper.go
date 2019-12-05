@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const PanicIsLogicalError = false
+
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 
@@ -126,10 +128,17 @@ func INSMETHOD_GetFeeMember(object []byte, data []byte) (newState []byte, result
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -200,10 +209,17 @@ func INSMETHOD_CalcFee(object []byte, data []byte) (newState []byte, result []by
 		}
 		if r := recover(); r != nil {
 			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			newState = object
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
+
 		}
 	}()
 
@@ -260,11 +276,17 @@ func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, resul
 			return
 		}
 		if r := recover(); r != nil {
-			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			ret1 = ph.MakeErrorSerializable(recoveredError)
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute constructor (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
 
-			state = data
-			err = serializeResults()
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				state = data
+				err = serializeResults()
+			} else {
+				err = recoveredError
+			}
 		}
 	}()
 
