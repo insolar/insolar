@@ -226,7 +226,7 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
 	case payload.TypeGetLightInitialState:
-		p := proc.NewSendInitialState(meta)
+		p := proc.NewSendInitialState(meta, h.cfg)
 		h.dep.SendInitialState(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetPulse:

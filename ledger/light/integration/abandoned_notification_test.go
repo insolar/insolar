@@ -85,6 +85,7 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 				Drops: []drop.Drop{
 					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
+				LightChainLimit: 5,
 			}}
 		case *payload.SearchIndex:
 			return []payload.Payload{
@@ -203,6 +204,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},
 				},
+				LightChainLimit: 5,
 			}}
 		}
 		panic(fmt.Sprintf("unexpected message to heavy %T", pl))

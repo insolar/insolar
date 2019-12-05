@@ -235,6 +235,7 @@ generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+
     bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
@@ -422,16 +423,16 @@ bootstrap()
     else
         set -x
         ${CMD}
-        BOOTSTRAP_EXIT_CODE=$?
+        GENESIS_EXIT_CODE=$?
         { set +x; } 2>/dev/null
     fi
     set -e
-    if [[ ${BOOTSTRAP_EXIT_CODE} -ne 0 ]]; then
+    if [[ ${GENESIS_EXIT_CODE} -ne 0 ]]; then
         echo "Genesis failed"
         if [[ "${NO_BOOTSTRAP_LOG_REDIRECT}" != "1" ]]; then
             echo "check log: ${LAUNCHNET_LOGS_DIR}/bootstrap.log"
         fi
-        exit ${BOOTSTRAP_EXIT_CODE}
+        exit ${GENESIS_EXIT_CODE}
     fi
     echo "bootstrap is done"
 
