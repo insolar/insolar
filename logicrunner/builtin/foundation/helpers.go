@@ -62,7 +62,7 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 
 // TrimPublicKey trims public key
 func TrimPublicKey(publicKey string) string {
-	return TrimAddress(between(publicKey, "KEY-----", "-----END"))
+	return strings.Join(strings.Split(strings.TrimSpace(between(publicKey, "KEY-----", "-----END")), "\n"), "")
 }
 
 // TrimAddress trims address
