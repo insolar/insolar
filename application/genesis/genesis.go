@@ -65,14 +65,6 @@ const (
 	MigrationDaemonVesting     = 31536000   // 365 days
 	MigrationDaemonVestingStep = 2629746    // 1 month
 
-	EnterpriseUnholdDate  = pulse.UnixTimeOfMinTimePulse
-	EnterpriseVesting     = 10
-	EnterpriseVestingStep = 10
-
-	FundsUnholdDate  = pulse.UnixTimeOfMinTimePulse
-	FundsVesting     = 10
-	FundsVestingStep = 10
-
 	NetworkIncentivesUnholdDate  = 1602720000 // 15.10.2020
 	NetworkIncentivesVesting     = 315569520  // 10 years
 	NetworkIncentivesVestingStep = 2629746    // 1 month
@@ -367,15 +359,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 	for i, key := range g.ContractsConfig.FundsPublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameFundsMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractFundsWallets[i]))
-		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFundsAccounts[i], application.GenesisNameRootDomain))
-		states = append(states, contracts.GetDepositGenesisContractState(
+		states = append(states, contracts.GetAccountGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FundsUnholdDate)-pulse.MinTimePulse),
-			FundsVesting,
-			FundsVestingStep,
-			appfoundation.Vesting2,
-			pulse.OfUnixTime(FundsUnholdDate),
-			application.GenesisNameFundsDeposits[i],
+			application.GenesisNameFundsAccounts[i],
 			application.GenesisNameRootDomain,
 		))
 
@@ -383,7 +369,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractFundsAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractFundsDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			application.GenesisNameFundsWallets[i],
@@ -395,15 +380,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameEnterpriseMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractEnterpriseWallets[i]))
-		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameEnterpriseAccounts[i], application.GenesisNameRootDomain))
-		states = append(states, contracts.GetDepositGenesisContractState(
+		states = append(states, contracts.GetAccountGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(EnterpriseUnholdDate)-pulse.MinTimePulse),
-			EnterpriseVesting,
-			EnterpriseVestingStep,
-			appfoundation.Vesting2,
-			pulse.OfUnixTime(EnterpriseUnholdDate),
-			application.GenesisNameEnterpriseDeposits[i],
+			application.GenesisNameEnterpriseAccounts[i],
 			application.GenesisNameRootDomain,
 		))
 
@@ -411,7 +390,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		membersAccounts[XNS] = genesisrefs.ContractEnterpriseAccounts[i].String()
 
 		membersDeposits := make(foundation.StableMap)
-		membersDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractEnterpriseDeposits[i].String()
 
 		states = append(states, contracts.GetPreWalletGenesisContractState(
 			application.GenesisNameEnterpriseWallets[i],
