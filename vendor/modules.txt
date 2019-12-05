@@ -39,6 +39,13 @@ github.com/fatih/color
 github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
+# github.com/getkin/kin-openapi v0.2.0
+github.com/getkin/kin-openapi/openapi3
+github.com/getkin/kin-openapi/openapi3filter
+github.com/getkin/kin-openapi/jsoninfo
+github.com/getkin/kin-openapi/pathpattern
+# github.com/ghodss/yaml v1.0.0
+github.com/ghodss/yaml
 # github.com/gogo/protobuf v1.2.1
 github.com/gogo/protobuf/protoc-gen-gogoslick
 github.com/gogo/protobuf/gogoproto

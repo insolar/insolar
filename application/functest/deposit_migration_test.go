@@ -123,7 +123,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "failed to get 'amount' param")
+	expectedError(t, data.Trace, "Property 'amount' is missing")
 	require.Nil(t, result)
 }
 
@@ -133,7 +133,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	result, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, launchnet.MigrationDaemons[0],
 		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "failed to get 'ethTxHash' param")
+	expectedError(t, data.Trace, `Error at "/params/callParams/ethTxHash":Value is not nullable`)
 	require.Nil(t, result)
 
 }

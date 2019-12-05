@@ -21,7 +21,6 @@ package functest
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -34,20 +33,6 @@ import (
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 )
-
-func contractError(body []byte) error {
-	var t map[string]interface{}
-	err := json.Unmarshal(body, &t)
-	if err != nil {
-		return err
-	}
-	if e, ok := t["error"]; ok {
-		if ee, ok := e.(map[string]interface{})["message"].(string); ok && ee != "" {
-			return errors.New(ee)
-		}
-	}
-	return nil
-}
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
@@ -103,13 +88,13 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "unexpected end of JSON input", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "The JSON received is not a valid request payload.", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "looking for beginning of value")
+	require.Equal(t, res["error"].(map[string]interface{})["message"].(string), "The JSON received is not a valid request payload.")
 }
 
 func TestIncorrectSign(t *testing.T) {
@@ -208,7 +193,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 }
 
 func TestIncorrectMethodName(t *testing.T) {
-	res, err := requester.GetResponseBodyContract(
+	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
 		requester.ContractRequest{
 			Request: requester.Request{
@@ -220,7 +205,12 @@ func TestIncorrectMethodName(t *testing.T) {
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Error(t, res.Error)
+	data := res.Error.Data
+	expectedError(t, data.Trace, "unknown method")
 }
 
 func TestIncorrectParams(t *testing.T) {
@@ -228,7 +218,7 @@ func TestIncorrectParams(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "expected 'map[string]interface{}', got 'string'")
+	expectedError(t, data.Trace, `doesn't match the schema: Error at "/params/callParams":Field must be set to string or not be present`)
 }
 
 func TestNilParams(t *testing.T) {
@@ -236,7 +226,7 @@ func TestNilParams(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "call params are nil")
+	expectedError(t, data.Trace, `doesn't match the schema: Error at "/params":Property 'callParams' is missing`)
 }
 
 func TestRequestReference(t *testing.T) {
@@ -255,5 +245,6 @@ func TestNotAllowedMethod(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
 		map[string]interface{}{"reference": member.Ref})
 	require.Error(t, err)
-	require.Equal(t, "Method does not exist / is not available.", err.Error())
+	data := checkConvertRequesterError(t, err).Data
+	expectedError(t, data.Trace, "unknown method")
 }

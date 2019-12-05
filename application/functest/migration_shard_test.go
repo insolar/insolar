@@ -99,7 +99,7 @@ func TestGetFreeAddressCount_IncorrectIndexType(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": "0"})
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "failed to get 'startWithIndex' param")
+	expectedError(t, data.Trace, "doesn't match the schema")
 }
 
 func TestGetFreeAddressCount_FromMember(t *testing.T) {

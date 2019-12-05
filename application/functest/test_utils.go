@@ -286,7 +286,7 @@ func getInfo(t testing.TB) infoResponse {
 	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.getInfo",
-		"id":      "",
+		"id":      1,
 	}
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
@@ -299,7 +299,7 @@ func getStatus(t testing.TB) statusResponse {
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getStatus",
-		"id":      "",
+		"id":      "1",
 	})
 	rpcStatusResponse := &rpcStatusResponse{}
 	unmarshalRPCResponse(t, body, rpcStatusResponse)
@@ -350,7 +350,7 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 		if ok {
 			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
 		}
-		t.Error(err.Error() + suffix)
+		t.Error("[" + method + "]" + err.Error() + suffix)
 	}
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
@@ -487,8 +487,8 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	}{}
 
 	err := json.Unmarshal(uploadBody, &uploadRes)
-	require.NoError(t, err)
-	require.Empty(t, uploadRes.Error)
+	require.NoError(t, err, "unmarshal error")
+	require.Empty(t, uploadRes.Error, "upload result error %#v", uploadRes)
 
 	prototypeRef, err := insolar.NewReferenceFromString(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
@@ -721,4 +721,20 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", TestDepositAmount, deposit["amount"]))
 	}
 	return nil
+}
+
+func expectedError(t *testing.T, trace []string, expected string) {
+	found := hasSubstring(trace, expected)
+	require.True(t, found, "Expected error (%s) not found in trace: %v", expected, trace)
+}
+
+func hasSubstring(trace []string, expected string) bool {
+	found := false
+	for _, trace := range trace {
+		found = strings.Contains(trace, expected)
+		if found {
+			return found
+		}
+	}
+	return found
 }
