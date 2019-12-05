@@ -715,11 +715,9 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 	if !ok {
 		return errors.New(fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 	}
-	_, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
-	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != TestDepositAmount {
-		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", TestDepositAmount, deposit["amount"]))
-	}
+	balance, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
+	require.Equal(t, TestDepositAmount, balance.String())
+	require.Empty(t, deposits)
 	return nil
 }
 
