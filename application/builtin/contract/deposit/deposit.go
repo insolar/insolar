@@ -121,9 +121,13 @@ func (d *Deposit) Itself() (interface{}, error) {
 	if err == nil {
 		pulseDepositUnHold = t.Unix()
 	}
+	holdStartDate := pulseDepositUnHold - d.Lockup
+	if holdStartDate < 0 {
+		holdStartDate = 0
+	}
 	return &DepositOut{
 		Balance:                 d.Balance,
-		HoldStartDate:           pulseDepositUnHold - d.Lockup,
+		HoldStartDate:           holdStartDate,
 		PulseDepositUnHold:      pulseDepositUnHold,
 		MigrationDaemonConfirms: daemonConfirms,
 		Amount:                  d.Amount,
