@@ -24,6 +24,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
@@ -51,6 +52,7 @@ const timeout = 10 * time.Second
 
 // NewStateIniter creates StateIniterDefault with all required components.
 func NewStateIniter(
+	cfg configuration.Ledger,
 	jetModifier jet.Modifier,
 	jetReleaser JetReleaser,
 	drops drop.Modifier,
@@ -62,6 +64,7 @@ func NewStateIniter(
 	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
+		cfg:           cfg,
 		jetModifier:   jetModifier,
 		jetReleaser:   jetReleaser,
 		drops:         drops,
@@ -82,6 +85,7 @@ func NewStateIniter(
 
 // StateIniterDefault implements StateIniter.
 type StateIniterDefault struct {
+	cfg           configuration.Ledger
 	jetModifier   jet.Modifier
 	jetReleaser   JetReleaser
 	drops         drop.Modifier
@@ -189,6 +193,14 @@ func (s *StateIniterDefault) loadStateRetry(
 	state, ok := pl.(*payload.LightInitialState)
 	if !ok {
 		return nil, fmt.Errorf("unexpected reply %T", pl)
+	}
+
+	if uint32(s.cfg.LightChainLimit) != state.LightChainLimit {
+		panic(fmt.Sprintf(
+			"configuration mismatch: LightChainLimit: from heavy %v, from light %v",
+			state.LightChainLimit,
+			s.cfg.LightChainLimit,
+		))
 	}
 
 	prevPulse := insolarPulse.FromProto(&state.Pulse)

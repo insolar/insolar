@@ -22,7 +22,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -70,6 +72,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		defer mc.Finish()
 
 		s := executor.NewStateIniter(
+			configuration.Ledger{},
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -91,6 +94,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		var heavy []insolar.Node
 		s := executor.NewStateIniter(
+			configuration.Ledger{},
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -114,6 +118,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		jets := []insolar.JetID{gen.JetID(), gen.JetID(), gen.JetID()}
 		s := executor.NewStateIniter(
+			configuration.Ledger{},
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -145,6 +150,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		heavy := []insolar.Node{{ID: *insolar.NewReference(gen.ID()), Role: insolar.StaticRoleHeavyMaterial}}
 		s := executor.NewStateIniter(
+			configuration.Ledger{},
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -160,6 +166,40 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		assert.Error(t, err, "must be error 'failed to fetch state from heavy'")
 		assert.Nil(t, jetsReturned)
 		assert.False(t, justAdded)
+	})
+
+	t.Run("panic because of configuration mismatch", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		heavy := []insolar.Node{{ID: *insolar.NewReference(gen.ID()), Role: insolar.StaticRoleHeavyMaterial}}
+
+		reps := make(chan *message.Message, 1)
+		reps <- payload.MustNewMessage(&payload.Meta{
+			Payload: payload.MustMarshal(&payload.LightInitialState{
+				LightChainLimit: 10,
+			}),
+		})
+
+		s := executor.NewStateIniter(
+			configuration.Ledger{
+				LightChainLimit: 5,
+			},
+			jetModifier,
+			jetReleaser,
+			drops,
+			nodes.InRoleMock.Return(heavy, nil),
+			sender.SendTargetMock.Return(reps, func() {}),
+			pulseAppender,
+			pulseAccessor.LatestMock.Return(insolar.Pulse{}, insolarPulse.ErrNotFound),
+			jetCalculator,
+			indexes,
+		)
+
+		// configuration mismatch: LightChainLimit: from heavy 10, from light 5
+		require.Panics(t, func() {
+			_, _, _ = s.PrepareState(ctx, pulse.MinTimePulse+10)
+		})
 	})
 
 	t.Run("fetching init data", func(t *testing.T) {
@@ -188,6 +228,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		})
 
 		s := executor.NewStateIniter(
+			configuration.Ledger{},
 			jetModifier.UpdateMock.Return(nil),
 			jetReleaser.UnlockMock.Return(nil),
 			drops.SetMock.Return(nil),
