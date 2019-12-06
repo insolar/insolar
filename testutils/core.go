@@ -19,14 +19,49 @@ package testutils
 import (
 	"crypto"
 	"hash"
+	"math/rand"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/insolar"
 )
+
+const letterBytes = "abcdefABCDEF0123456789"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+func RandomHashWithLength(n int) string {
+	sb := strings.Builder{}
+	sb.Grow(n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			sb.WriteByte(letterBytes[idx])
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return sb.String()
+}
+
+func RandomEthHash() string {
+	return "0x" + RandomHashWithLength(40)
+}
 
 // RandomString generates random uuid and return it as a string.
 func RandomString() string {
@@ -110,6 +145,7 @@ func (m *cryptographySchemeMock) IntegrityHashSize() int {
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
 }
+
 type SyncT struct {
 	*testing.T
 
