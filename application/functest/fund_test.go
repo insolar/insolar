@@ -91,54 +91,6 @@ func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.User, expectedBal
 		depositStr, expectedDeposit)
 }
 
-func TestFundsTransferDeposit(t *testing.T) {
-	for _, m := range launchnet.Funds {
-		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
-		require.NoError(t, err)
-		decodedRes2, ok := res2.(map[string]interface{})
-		m.Ref = decodedRes2["reference"].(string)
-		require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
-
-		oldBalance, deposits := getBalanceAndDepositsNoErr(t, m, m.Ref)
-		oldDepositStr := deposits[genesisrefs.FundsDepositName].(map[string]interface{})["balance"].(string)
-		amount, _ := new(big.Int).SetString("100", 10)
-		expectedBalance := new(big.Int).Add(oldBalance, amount)
-		oldDeposit, _ := new(big.Int).SetString(oldDepositStr, 10)
-		expectedDeposit := new(big.Int).Sub(oldDeposit, amount)
-
-		_, err = signedRequest(t, launchnet.TestRPCUrlPublic, m,
-			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
-		)
-		require.NoError(t, err)
-
-		checkBalanceAndDepositFewTimes(t, m, expectedBalance.String(), expectedDeposit.String())
-	}
-}
-
-func TestEnterpriseTransferDeposit(t *testing.T) {
-	for _, m := range launchnet.Enterprise {
-		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
-		require.NoError(t, err)
-		decodedRes2, ok := res2.(map[string]interface{})
-		m.Ref = decodedRes2["reference"].(string)
-		require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
-
-		oldBalance, deposits := getBalanceAndDepositsNoErr(t, m, m.Ref)
-		oldDepositStr := deposits[genesisrefs.FundsDepositName].(map[string]interface{})["balance"].(string)
-		amount, _ := new(big.Int).SetString("100", 10)
-		expectedBalance := new(big.Int).Add(oldBalance, amount)
-		oldDeposit, _ := new(big.Int).SetString(oldDepositStr, 10)
-		expectedDeposit := new(big.Int).Sub(oldDeposit, amount)
-
-		_, err = signedRequest(t, launchnet.TestRPCUrlPublic, m,
-			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
-		)
-		require.NoError(t, err)
-
-		checkBalanceAndDepositFewTimes(t, m, expectedBalance.String(), expectedDeposit.String())
-	}
-}
-
 func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 	for _, m := range launchnet.NetworkIncentives {
 		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)

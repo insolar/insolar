@@ -115,9 +115,6 @@ func init() {
 	for _, el := range application.GenesisNameFundsAccounts {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
 	}
-	for _, el := range application.GenesisNameFundsDeposits {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
-	}
 
 	// Enterprise
 	for _, el := range application.GenesisNameEnterpriseMembers {
@@ -129,10 +126,6 @@ func init() {
 	for _, el := range application.GenesisNameEnterpriseAccounts {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
 	}
-	for _, el := range application.GenesisNameEnterpriseDeposits {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
-	}
-
 }
 
 var (
@@ -285,22 +278,6 @@ var (
 	// ContractFoundationDeposits is the foundation deposits contracts references.
 	ContractFoundationDeposits = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationDeposits {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
-	// ContractFundsDeposits is the foundation deposits contracts references.
-	ContractFundsDeposits = func() (result [application.GenesisAmountFundsMembers]insolar.Reference) {
-		for i, name := range application.GenesisNameFundsDeposits {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
-	// ContractEnterpriseDeposits is the foundation deposits contracts references.
-	ContractEnterpriseDeposits = func() (result [application.GenesisAmountEnterpriseMembers]insolar.Reference) {
-		for i, name := range application.GenesisNameEnterpriseDeposits {
 			result[i] = GenesisRef(name)
 		}
 		return

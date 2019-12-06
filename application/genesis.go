@@ -140,20 +140,6 @@ var GenesisNameFoundationDeposits = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-var GenesisNameFundsDeposits = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
-	}
-	return
-}()
-
-var GenesisNameEnterpriseDeposits = func() (result [GenesisAmountEnterpriseMembers]string) {
-	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
-		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
-	}
-	return
-}()
-
 var GenesisNameNetworkIncentivesWallets = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameWallet

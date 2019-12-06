@@ -25,7 +25,8 @@ type APIRunner struct {
 	Address string
 	RPC     string
 	// IsAdmin indicates status of api (internal or external)
-	IsAdmin bool
+	IsAdmin     bool
+	SwaggerPath string
 }
 
 // NewAPIRunner creates new api config
@@ -45,6 +46,6 @@ func NewAPIRunner(admin bool) APIRunner {
 }
 
 func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", RPC ->", ar.RPC, ", IsAdmin ->", ar.IsAdmin)
+	res := fmt.Sprintf("Addr -> %s, RPC -> %s, IsAdmin -> %t, SwaggerPath -> %s\n", ar.Address, ar.RPC, ar.IsAdmin, ar.SwaggerPath)
 	return res
 }
