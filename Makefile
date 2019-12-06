@@ -231,7 +231,7 @@ ci-test-slow-long: ## run slow tests with race and count
 		$(MAKE) ci-test-slow
 
 .PHONY: ci-test-slow-nightly
-ci-test-slow-nightly: ## run slow tests with race and count
+ci-test-slow-nightly: ## run slow tests with race and count (nightly run)
 	CI_TEST_ARGS=" -race " \
 	TEST_ARGS=" -timeout 480m  " \
 	TEST_COUNT=80 \
