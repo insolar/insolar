@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1574859082439,
+  "iteration": 1575642502578,
   "links": [],
   "panels": [
     {
@@ -521,7 +521,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(max(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"}) - min(observer_last_fetched_pulse)) / 10",
+          "expr": "(max(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"}) - min(observer_last_fetched_pulse{installation=~\"$installation\"})) / 10",
           "instant": true,
           "refId": "A"
         }
@@ -1427,5 +1427,5 @@
   "timezone": "",
   "title": "INS-General",
   "uid": "LmD-fXFZZ",
-  "version": 3
+  "version": 1
 }
