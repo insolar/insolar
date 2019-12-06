@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/rpc/v2"
@@ -95,7 +96,7 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	logger.Info("[ NodeService.getSeed ] ", msg)
 
 	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
-		logger.Error("[ NodeService.getSeed ] API is not available")
+		logger.Warn("[ NodeService.getSeed ] API is not available")
 
 		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
 		return &json2.Error{
@@ -109,6 +110,19 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 
 	err := s.getSeed(ctx, r, args, requestBody, reply)
 	if err != nil {
+		if strings.Contains(err.Error(), pulse.ErrNotFound.Error()) {
+			logger.Warn("[ NodeService.getSeed ] failed to execute: ", err.Error())
+
+			instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+			return &json2.Error{
+				Code:    ServiceUnavailableError,
+				Message: ServiceUnavailableErrorMessage,
+				Data: requester.Data{
+					TraceID: instr.TraceID(),
+				},
+			}
+
+		}
 		logger.Error("[ NodeService.getSeed ] failed to execute: ", err.Error())
 
 		instr.SetError(err, InternalErrorShort)
