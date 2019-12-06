@@ -92,10 +92,13 @@ func TestContractCallingContract(t *testing.T) {
 	var contractOneCode = `
 package main
 
-import "github.com/insolar/insolar/logicrunner/builtin/foundation"
-import "github.com/insolar/insolar/application/proxy/two"
-import "github.com/insolar/insolar/insolar"
-import "errors"
+import (
+	"errors"
+
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/application/proxy/two"
+	"github.com/insolar/insolar/insolar"
+)
 
 type One struct {
 	foundation.BaseContract

@@ -609,11 +609,9 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"some/test/import/path"
 )
-
 type A struct{
 	foundation.BaseContract
 }
-
 func ( A ) Get() (path.SomeValue, error) {
 	f := path.SomeMethod()
 	return f, nil
@@ -635,7 +633,7 @@ func ( A ) Get() (path.SomeValue, error) {
 	var bufWrapper bytes.Buffer
 	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
-	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
+	s.Contains(bufWrapper.String(), `"some/test/import/path"`)
 }
 
 func (s *PreprocessorSuite) TestNotMatchFileNameForProxy() {

@@ -247,6 +247,7 @@ func main() {
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
 	machineType := newMachineTypeFlag("go")
+	var panicIsLogicalError bool
 
 	var cmdProxy = &cobra.Command{
 		Use:   "proxy [flags] <file name to process>",
@@ -282,6 +283,9 @@ func main() {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
+			if panicIsLogicalError {
+				parsed.SetPanicIsLogicalError()
+			}
 
 			err = parsed.WriteWrapper(output.writer, "main")
 			checkError(err)
@@ -289,6 +293,7 @@ func main() {
 	}
 	cmdWrapper.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 	cmdWrapper.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
+	cmdWrapper.Flags().BoolVarP(&panicIsLogicalError, "panic-logical", "p", false, "panics are logical errors (turned off by default)")
 
 	var cmdImports = &cobra.Command{
 		Use:   "imports [flags] <file name to process>",

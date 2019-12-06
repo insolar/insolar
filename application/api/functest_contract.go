@@ -54,8 +54,9 @@ func NewFuncTestContractService(runner *Runner) *FuncTestContractService {
 
 // UploadArgs is arguments that Contract.Upload accepts.
 type UploadArgs struct {
-	Code string
-	Name string
+	Code                string
+	Name                string
+	PanicIsLogicalError bool
 }
 
 // UploadReply is reply that Contract.Upload returns
@@ -96,8 +97,9 @@ func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, requ
 
 	contractMap := make(map[string]string)
 	contractMap[args.Name] = args.Code
+	buildOptions := goplugintestutils.BuildOptions{PanicIsLogicalError: args.PanicIsLogicalError}
 
-	err := s.cb.Build(ctx, contractMap)
+	err := s.cb.Build(ctx, contractMap, buildOptions)
 	if err != nil {
 		return errors.Wrap(err, "can't build contract")
 	}

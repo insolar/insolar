@@ -29,7 +29,7 @@ import (
 
 // Make sure that panic() in a contract causes a system error and that this error
 // is returned by API.
-func TestPanic(t *testing.T) {
+func TestPanicIsSystemError(t *testing.T) {
 	launchnet.RunOnlyWithLaunchnet(t)
 	var panicContractCode = `
 package main
@@ -49,12 +49,57 @@ func (r *One) Panic() error {
 	panic("AAAAAAAA!")
 	return nil
 }
+
+func NewPanic() (*One, error) {
+	panic("BBBBBBBB!")
+}
 `
-	prototype := uploadContractOnce(t, "panic", panicContractCode)
+	prototype := uploadContractOnceExt(t, "panicAsSystemError", panicContractCode, false)
 	obj := callConstructor(t, prototype, "New")
 
-	resp := callMethodNoChecks(t, obj, "Panic")
-	require.Contains(t, resp.Error.Message, "executor error: problem with API call: AAAAAAAA!")
+	resp1 := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp1.Error.Message, "AAAAAAAA!")
+
+	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
+	require.Contains(t, resp2.Error.Message, "BBBBBBBB!")
+}
+
+// Make sure that panic() in a contract causes a system error and that this error
+// is returned by API.
+func TestPanicIsLogicalError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
+	var panicContractCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+var INSATTR_Panic_API = true
+func (r *One) Panic() error {
+	panic("AAAAAAAA!")
+	return nil
+}
+
+func NewPanic() (*One, error) {
+	panic("BBBBBBBB!")
+}
+`
+	prototype := uploadContractOnceExt(t, "panicAsLogicalError", panicContractCode, true)
+	obj := callConstructor(t, prototype, "New")
+
+	resp1 := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp1.Result.ExtractedError, "AAAAAAAA!")
+
+	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
+	require.Contains(t, resp2.Result.Error.S, "BBBBBBBB!")
+
 }
 
 func TestRecursiveCallError(t *testing.T) {

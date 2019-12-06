@@ -453,8 +453,12 @@ func newUserWithKeys() (*launchnet.User, error) {
 // uploadContractOnce is needed for running tests with count
 // use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t testing.TB, name string, code string) *insolar.Reference {
+	return uploadContractOnceExt(t, name, code, false)
+}
+
+func uploadContractOnceExt(t testing.TB, name string, code string, panicIsLogicalError bool) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		ref := uploadContract(t, name, code)
+		ref := uploadContract(t, name, code, panicIsLogicalError)
 		contracts[name] = &contractInfo{
 			reference: ref,
 			testName:  t.Name(),
@@ -467,14 +471,15 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 	return contracts[name].reference
 }
 
-func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
+func uploadContract(t testing.TB, contractName string, contractCode string, panicIsLogicalError bool) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.upload",
 		"id":      "",
-		"params": map[string]string{
-			"name": contractName,
-			"code": contractCode,
+		"params": map[string]interface{}{
+			"name":                contractName,
+			"code":                contractCode,
+			"panicIsLogicalError": panicIsLogicalError,
 		},
 	})
 	require.NotEmpty(t, uploadBody)
@@ -497,7 +502,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+func callConstructorNoChecks(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) callResult {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -513,15 +518,15 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	})
 	require.NotEmpty(t, objectBody)
 
-	callConstructorRes := struct {
-		Version string              `json:"jsonrpc"`
-		ID      string              `json:"id"`
-		Result  api.CallMethodReply `json:"result"`
-		Error   json2.Error         `json:"error"`
-	}{}
-
+	callConstructorRes := callResult{}
 	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
+
+	return callConstructorRes
+}
+
+func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	callConstructorRes := callConstructorNoChecks(t, prototypeRef, method, args...)
 	require.Empty(t, callConstructorRes.Error)
 
 	require.NotEmpty(t, callConstructorRes.Result.Object)
@@ -535,36 +540,14 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 }
 
 func callConstructorExpectSystemError(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) string {
-	argsSerialized, err := insolar.Serialize(args)
-	require.NoError(t, err)
+	callConstructorRes := callConstructorNoChecks(t, prototypeRef, method, args...)
 
-	objectBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
-		"jsonrpc": "2.0",
-		"method":  "funcTestContract.callConstructor",
-		"id":      "",
-		"params": map[string]interface{}{
-			"PrototypeRefString": prototypeRef.String(),
-			"Method":             method,
-			"MethodArgs":         argsSerialized,
-		},
-	})
-	require.NotEmpty(t, objectBody)
-
-	callConstructorRes := struct {
-		Version string              `json:"jsonrpc"`
-		ID      string              `json:"id"`
-		Result  api.CallMethodReply `json:"result"`
-		Error   json2.Error         `json:"error"`
-	}{}
-
-	err = json.Unmarshal(objectBody, &callConstructorRes)
-	require.NoError(t, err)
 	require.NotEmpty(t, callConstructorRes.Error)
 
 	return callConstructorRes.Error.Message
 }
 
-type callRes struct {
+type callResult struct {
 	Version string              `json:"jsonrpc"`
 	ID      string              `json:"id"`
 	Result  api.CallMethodReply `json:"result"`
@@ -585,7 +568,7 @@ func callMethodExpectError(t testing.TB, objectRef *insolar.Reference, method st
 	return callRes.Result
 }
 
-func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
+func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) callResult {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
