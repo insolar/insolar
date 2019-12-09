@@ -315,6 +315,7 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 	defer p.awaiters.mutex.Unlock()
 
 	removeFn()
+	// p.queue.FirstValid() // check for stale items
 	return p.awaiters.moveToActive(p.workerLimit-p.queue.Count(), &p.queue)
 }
 

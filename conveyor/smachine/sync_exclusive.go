@@ -133,7 +133,7 @@ func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFl
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if f, _ := p.queue.FirstValid(); f == nil || f.link != link {
+	if f := p.queue.First(); f == nil || f.link != link {
 		removeFn()
 		return nil, nil
 	}
