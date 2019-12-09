@@ -126,7 +126,7 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 	}
 
 	if !respObj.Available {
-		logger.Error("[ NetworkChecker ] Network is not available for request processing")
+		logger.Warn("[ NetworkChecker ] Network is not available for request processing")
 	}
 	nc.isAvailable = respObj.Available
 }
