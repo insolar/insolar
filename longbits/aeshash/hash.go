@@ -18,9 +18,19 @@ package aeshash
 
 import (
 	"reflect"
-	"runtime"
 	"unsafe"
+
+	"github.com/insolar/insolar/ledger-v2/unsafekit"
+	"github.com/insolar/insolar/longbits"
 )
+
+func GoMapHash(v longbits.ByteString) uint32 {
+	return uint32(Str(string(v)))
+}
+
+func GoMapHashWithSeed(v longbits.ByteString, seed uint32) uint32 {
+	return uint32(StrWithSeed(string(v), uint(seed)))
+}
 
 // Hash hashes the given string using the algorithm used by Go's hash tables
 func Str(s string) uint {
@@ -28,8 +38,10 @@ func Str(s string) uint {
 }
 
 func StrWithSeed(s string, seed uint) uint {
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	return hash(s, sh.Data, sh.Len, seed)
+	return uint(unsafekit.KeepAliveWhile(unsafe.Pointer(&s), func(p unsafe.Pointer) uintptr {
+		sh := (*reflect.StringHeader)(p)
+		return hash(sh.Data, sh.Len, seed)
+	}))
 }
 
 // Hash hashes the given slice using the algorithm used by Go's hash tables
@@ -38,14 +50,14 @@ func Slice(b []byte) uint {
 }
 
 func SliceWithSeed(b []byte, seed uint) uint {
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	return hash(b, sh.Data, sh.Len, seed)
+	return uint(unsafekit.KeepAliveWhile(unsafe.Pointer(&b), func(p unsafe.Pointer) uintptr {
+		sh := (*reflect.SliceHeader)(p)
+		return hash(sh.Data, sh.Len, seed)
+	}))
 }
 
-func hash(keepAlive interface{}, data uintptr, len int, seed uint) uint {
-	r := aeshash(data, uintptr(seed), uintptr(len))
-	runtime.KeepAlive(keepAlive)
-	return uint(r)
+func hash(data uintptr, len int, seed uint) uintptr {
+	return aeshash(data, uintptr(seed), uintptr(len))
 }
 
 func aeshash(pData, hSeed, sLen uintptr) uintptr
