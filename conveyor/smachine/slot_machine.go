@@ -1413,11 +1413,11 @@ func (m *SlotMachine) wakeupOnDeactivationOf(slot *Slot, waitOn SlotLink, worker
 //waitOn MUST belong to this machine!
 func (m *SlotMachine) _wakeupOnDeactivateAsync(wakeUp, waitOn SlotLink) {
 	m.syncQueue.AddAsyncCallback(waitOn, func(waitOn SlotLink, worker DetachableSlotWorker) bool {
-		if !wakeUp.IsValid() {
+		switch {
+		case !wakeUp.IsValid():
 			// requester is dead - no need to to anything
 			return true
-		}
-		if worker != nil && waitOn.isValidAndBusy() {
+		case worker != nil && waitOn.isValidAndBusy():
 			// have to wait further, add this back
 			return false
 		}

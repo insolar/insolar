@@ -87,7 +87,7 @@ func (v SyncLink) IsZero() bool {
 	return v.controller == nil
 }
 
-// Provides an implementation depended state of the sync object. Safe for concurrent use.
+// Provides an implementation depended state of the sync object.
 // Safe for concurrent use.
 func (v SyncLink) GetCounts() (active, inactive int) {
 	return v.controller.GetCounts()

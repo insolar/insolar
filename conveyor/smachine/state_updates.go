@@ -42,7 +42,7 @@ const (
 	stateUpdSleep
 	stateUpdWaitForEvent
 	stateUpdWaitForActive
-	stateUpdWaitForInactive
+	stateUpdWaitForIdle
 )
 
 //const stateUpdWakeup = stateUpdRepeat
@@ -246,14 +246,13 @@ func init() {
 
 				waitUntil := m.fromRelativeTime(stateUpdate.param0)
 
-				if !m.scanStartedAt.Before(waitUntil) { // !started<Until ==> started>=Until
-					m.updateSlotQueue(slot, worker, activateSlot)
+				if !m.scanStartedAt.Before(waitUntil) { // not(started<Until) ==> started>=Until
+					slot.activateSlot(worker)
 					return true, nil
 				}
 
-				if m.pollingSlots.AddToLatestBefore(waitUntil, slot) {
-					m.updateSlotQueue(slot, worker, deactivateSlot)
-				} else {
+				m.updateSlotQueue(slot, worker, deactivateSlot)
+				if !m.pollingSlots.AddToLatestBefore(waitUntil, slot) {
 					m.scanWakeUpAt = minTime(m.scanWakeUpAt, waitUntil)
 					m.updateSlotQueue(slot, worker, activateHotWaitSlot)
 				}
@@ -274,9 +273,11 @@ func init() {
 
 				if waitOn.s == slot {
 					// don't wait for self
-					m.updateSlotQueue(slot, worker, activateSlot)
+					slot.activateSlot(worker)
 					return true, nil
 				}
+
+				m.updateSlotQueue(slot, worker, deactivateSlot)
 
 				// TODO work in progress
 				panic("work in progress")
@@ -317,8 +318,8 @@ func init() {
 			},
 		},
 
-		stateUpdWaitForInactive: {
-			name:    "waitInactive",
+		stateUpdWaitForIdle: {
+			name:    "waitIdle",
 			filter:  updCtxExec,
 			params:  updParamStep | updParamLink,
 			prepare: stateUpdateDefaultNoArgPrepare,
@@ -327,31 +328,24 @@ func init() {
 				slot.setNextStep(stateUpdate.step, nil)
 
 				waitOn := stateUpdate.getLink()
-				if waitOn.s == slot || !waitOn.IsValid() {
+				mWaitOn := waitOn.getActiveMachine()
+				if waitOn.s == slot || !waitOn.IsValid() || mWaitOn == nil {
 					// don't wait for self
 					// don't wait for an expired slot
-					m.updateSlotQueue(slot, worker, activateSlot)
-					return
+					slot.activateSlot(worker)
+					return true, nil
 				}
+
+				m.updateSlotQueue(slot, worker, deactivateSlot)
 
 				wakeupLink := slot.NewLink()
 				// here is a trick - we put a callback on the AWAITED object
-				// because a callback is executed on non-busy object
+				// because a callback is executed on non-busy object only
 				// hence our call back will only be triggered when the object became available
-				m.syncQueue.AddAsyncCallback(waitOn, func(waitOn SlotLink, worker DetachableSlotWorker) bool {
-					switch {
-					case !wakeupLink.IsValid():
-						// requester is dead, don't wait anymore
-						return true
-					case waitOn.isValidAndBusy():
-						// someone got it already, this callback should be added back to the queue
-						return false
-					case !worker.NonDetachableCall(wakeupLink.s.activateSlot):
-						m.syncQueue.AddAsyncUpdate(wakeupLink, SlotLink.activateSlot)
-					}
-					return true
-				})
-
+				if !mWaitOn.syncQueue.AddAsyncCallback(waitOn, wakeupLink.activateOnNonBusy) {
+					// callback was declined - wake up the requested back
+					slot.activateSlot(worker)
+				}
 				return true, nil
 			},
 		},

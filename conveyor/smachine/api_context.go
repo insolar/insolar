@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package smachine
 
@@ -282,8 +282,8 @@ type ExecutionContext interface {
 	Poll() StateConditionalBuilder
 
 	// EXPERIMENTAL! SM will apply an action chosen by the builder and wait for activation or stop of the given slot.
-	// WaitActivation(SlotLink) StateConditionalBuilder
-	// WaitStepChange(StepLink, tolerance uint32) StateConditionalBuilder
+	// TODO WaitActivation(SlotLink) StateConditionalBuilder
+	// TODO WaitStepChange(StepLink, tolerance uint32) StateConditionalBuilder
 
 	// SM will apply an action chosen by the builder and wait for availability of the SharedDataLink.
 	WaitShared(SharedDataLink) StateConditionalBuilder

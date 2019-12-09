@@ -36,6 +36,39 @@ func (p StepLink) activateSlotStepWithSlotLink(_ SlotLink, worker FixedSlotWorke
 	p.activateSlotStep(worker)
 }
 
+func (p SlotLink) activateOnNonBusy(waitOn SlotLink, worker DetachableSlotWorker) bool {
+	switch {
+	case !p.IsValid():
+		// requester is dead, don't wait anymore and don't wake it up
+		return true
+	case worker == nil:
+		// too many retries - have to wake up the requester
+	case waitOn.isValidAndBusy():
+		// someone got it already, this callback should be added back to the queue
+		return false
+	}
+
+	// lets try to wake up with synchronous operations
+	m := p.getActiveMachine()
+	switch {
+	case m == nil:
+		// requester is dead, don't wait anymore and don't wake it up
+		return true
+	case worker == nil:
+		//
+	case !waitOn.isMachine(m):
+		if worker.NonDetachableOuterCall(m, p.s.activateSlot) {
+			return true
+		}
+	case worker.NonDetachableCall(p.s.activateSlot):
+		return true
+	}
+
+	// last resort - try to wake up via asynchronous
+	m.syncQueue.AddAsyncUpdate(p, SlotLink.activateSlot)
+	return true
+}
+
 func buildShadowMigrator(localInjects []interface{}, defFn ShadowMigrateFunc) ShadowMigrateFunc {
 	count := len(localInjects)
 	if defFn != nil {
