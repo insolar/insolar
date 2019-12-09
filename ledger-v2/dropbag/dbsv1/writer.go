@@ -19,11 +19,12 @@ package dbsv1
 import (
 	"bytes"
 	"fmt"
-	"github.com/insolar/insolar/ledger-v2/dropbag/dbcommon"
-	"github.com/insolar/insolar/ledger-v2/protokit"
 	"hash"
 	"hash/crc32"
 	"io"
+
+	"github.com/insolar/insolar/ledger-v2/dropbag/dbcommon"
+	"github.com/insolar/insolar/ledger-v2/protokit"
 )
 
 type StorageFileV1Writer struct {
@@ -146,6 +147,7 @@ func (p *StorageFileV1Writer) WriteConclude(b []byte) (dbcommon.StorageEntryPosi
 			return err
 		}
 
+		// TODO Padding with one field is unable to handle some cases, e.g. to pad 128 bytes, as it will cause 2 byte increment due to varint
 		paddingLength := int(p.tailLength) - w.Len() - knownLength - int(tailInnerPadding.FieldSize(0))
 		if paddingLength < 0 {
 			panic("unexpected - invalid inner-tail padding")

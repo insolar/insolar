@@ -26,7 +26,7 @@ type Entry struct {
 
 func NewByteEntry(key, value []byte) Entry {
 	return Entry{
-		Key:   longbits.Copy(key),
+		Key:   longbits.CopyBytes(key),
 		Value: value,
 	}
 }
