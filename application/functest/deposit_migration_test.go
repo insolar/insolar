@@ -432,9 +432,9 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 				map[string]interface{}{"amount": "1000", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 			if err != nil {
 				requestErrorData := checkConvertRequesterError(t, err).Data
-				fmt.Println(requestErrorData)
+				t.Log(requestErrorData)
 			} else {
-				fmt.Println(res)
+				t.Log(res)
 			}
 			wg.Done()
 		}(i)
