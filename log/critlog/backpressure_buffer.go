@@ -359,7 +359,7 @@ func (p *internalBackpressureBuffer) checkWrite(level logcommon.LogLevel, b []by
 }
 
 func (p *internalBackpressureBuffer) drawStraw(writerSeq uint32, writersInQueue uint16) bool {
-	return writersInQueue == 0 || (writerSeq%args.Prime(int(writersInQueue-1))) == 0
+	return writersInQueue == 0 || (writerSeq%uint32(args.Prime(int(writersInQueue-1)))) == 0
 }
 
 type bufferMark uint8

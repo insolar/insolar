@@ -108,7 +108,7 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 		return logcommon.WarnLevel, []byte(fmt.Sprintf("missed %d", missed))
 	}
 
-	allocatedBufSize := int(args.Prime(parWriters)) * 2
+	allocatedBufSize := args.Prime(parWriters) * 2
 	var bb *BackpressureBuffer
 	if hasBuffer {
 		bb = NewBackpressureBuffer(wrapOutput(cw), allocatedBufSize, uint8(parWriters), 0, missedFn)
