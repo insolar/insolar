@@ -25,8 +25,9 @@ import (
 	"github.com/insolar/insolar/longbits"
 )
 
-func UnwrapAsSlice(s longbits.ByteString, t reflect.Type) interface{} {
-	if t.Kind() != reflect.Slice {
+func UnwrapAsSlice(s longbits.ByteString, mt MMapSliceType) interface{} {
+	t := mt.ReflectType()
+	if t.Kind() != reflect.Slice { // double-check
 		panic("illegal value")
 	}
 

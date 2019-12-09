@@ -60,11 +60,11 @@ func WrapPtr(p uintptr, size uintptr) longbits.ByteString {
 	return wrapUnsafePtr(p, size)
 }
 
-func UnwrapAs(v longbits.ByteString, vt reflect.Type) interface{} {
-	if int(vt.Size()) != len(v) {
+func UnwrapAs(v longbits.ByteString, vt MMapType) interface{} {
+	if vt.Size() != len(v) {
 		panic("illegal value")
 	}
-	return reflect.NewAt(vt, _unwrapUnsafe(v)).Interface()
+	return reflect.NewAt(vt.ReflectType(), _unwrapUnsafe(v)).Interface()
 }
 
 func Hash(v longbits.ByteString, h hash.Hash) hash.Hash {

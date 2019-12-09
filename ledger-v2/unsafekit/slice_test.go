@@ -32,7 +32,8 @@ func TestUnwrapAsSlice(t *testing.T) {
 	bytes := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 
 	s := WrapBytes(bytes)
-	slice := UnwrapAsSlice(s, reflect.TypeOf([]uint32(nil))).([]uint32)
+	st := MustMMapSliceType(reflect.TypeOf([]uint32(nil)), false)
+	slice := UnwrapAsSlice(s, st).([]uint32)
 	require.Equal(t, []uint32{0x03020100, 0x07060504, 0x0B0A0908}, slice)
 	bytes[0] = 0xFF
 	bytes[11] = 0xEE

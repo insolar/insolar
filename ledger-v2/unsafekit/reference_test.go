@@ -27,6 +27,11 @@ import (
 	"github.com/insolar/insolar/reference"
 )
 
+func TestRefMappable(t *testing.T) {
+	var v reference.Local
+	require.Equal(t, MemoryModelDepended, MemoryModelDependencyOf(reflect.TypeOf(v)))
+}
+
 func TestLocalRefSize(t *testing.T) {
 	var v reference.Local
 	if unsafe.Sizeof(v) != reference.LocalBinarySize {
@@ -70,7 +75,11 @@ func TestWrapAs(t *testing.T) {
 	binary[2] = 3
 	binary[3] = 4
 	var v reference.Local
-	ref := UnwrapAs(WrapBytes(binary[:]), reflect.TypeOf(v)).(*reference.Local)
+
+	mt := MustMMapType(reflect.TypeOf(v), false)
+	require.NotNil(t, mt)
+
+	ref := UnwrapAs(WrapBytes(binary[:]), mt).(*reference.Local)
 	require.Equal(t, 0x04030201, int(ref.GetPulseNumber()))
 	binary[0] = 0xFF
 	require.Equal(t, 0x040302FF, int(ref.GetPulseNumber()))
