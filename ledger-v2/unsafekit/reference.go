@@ -17,6 +17,7 @@
 package unsafekit
 
 import (
+	"runtime"
 	"unsafe"
 
 	"github.com/insolar/insolar/longbits"
@@ -24,19 +25,27 @@ import (
 )
 
 // WARNING! You MUST make sure that (v) stays alive while the resulting longbits.ByteString is in use.
-func WrapLocalRef(v *reference.Local) longbits.ByteString {
+func WrapLocalRef(v *reference.Local) (r longbits.ByteString) {
 	if v == nil {
 		return ""
 	}
-	return WrapPtr(uintptr((unsafe.Pointer)(v)), unsafe.Sizeof(*v))
+	KeepAliveWhile((unsafe.Pointer)(v), func(p unsafe.Pointer) uintptr {
+		r = wrapUnsafePtr(uintptr(p), unsafe.Sizeof(*v))
+		return 0
+	})
+	return
 }
 
 // WARNING! You MUST make sure that (v) stays alive while the resulting longbits.ByteString is in use.
-func WrapGlobalRef(v *reference.Global) longbits.ByteString {
+func WrapGlobalRef(v *reference.Global) (r longbits.ByteString) {
 	if v == nil {
 		return ""
 	}
-	return WrapPtr(uintptr((unsafe.Pointer)(v)), unsafe.Sizeof(*v))
+	KeepAliveWhile((unsafe.Pointer)(v), func(p unsafe.Pointer) uintptr {
+		r = wrapUnsafePtr(uintptr(p), unsafe.Sizeof(*v))
+		return 0
+	})
+	return
 }
 
 // WARNING! This function has different guarantees based on (s) origin:
@@ -51,7 +60,9 @@ func UnwrapAsLocalRef(s longbits.ByteString) *reference.Local {
 	case 0:
 		return nil
 	case reference.LocalBinarySize:
-		return (*reference.Local)(_unwrapUnsafe(s))
+		r := (*reference.Local)(_unwrapUnsafe(s))
+		runtime.KeepAlive(s)
+		return r
 	default:
 		panic("illegal value")
 	}
@@ -69,7 +80,9 @@ func UnwrapAsGlobalRef(s longbits.ByteString) *reference.Global {
 	case 0:
 		return nil
 	case reference.GlobalBinarySize:
-		return (*reference.Global)(_unwrapUnsafe(s))
+		r := (*reference.Global)(_unwrapUnsafe(s))
+		runtime.KeepAlive(s)
+		return r
 	default:
 		panic("illegal value")
 	}

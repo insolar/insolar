@@ -53,13 +53,6 @@ func WrapStruct(v interface{}) longbits.ByteString {
 	return wrapUnsafePtr(vt.Pointer(), vt.Type().Size())
 }
 
-// WARNING! The given address MUST be of an immutable object.
-// WARNING! This method violates unsafe pointer-conversion rules.
-// You MUST make sure that (p) stays alive while the resulting ByteString is in use.
-func WrapPtr(p uintptr, size uintptr) longbits.ByteString {
-	return wrapUnsafePtr(p, size)
-}
-
 func UnwrapAs(v longbits.ByteString, vt MMapType) interface{} {
 	if vt.Size() != len(v) {
 		panic("illegal value")
