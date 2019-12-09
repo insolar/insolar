@@ -29,18 +29,21 @@ import (
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/testutils"
 )
 
 // TODO: https://insolar.atlassian.net/browse/WLT-768
 func TestDepositTransferToken(t *testing.T) {
-	member := fullMigration(t, "Eth_TxHash_test")
+	ethHash := testutils.RandomEthHash()
+
+	member := fullMigration(t, ethHash)
 
 	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	anon := func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
-			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 
 		data := checkConvertRequesterError(t, err).Data
 		for _, v := range data.Trace {
@@ -57,7 +60,7 @@ func TestDepositTransferToken(t *testing.T) {
 	require.NoError(t, err)
 	anon = func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
-			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 		if err == nil {
 			return api.CallMethodReply{}
 		}
@@ -71,48 +74,59 @@ func TestDepositTransferToken(t *testing.T) {
 }
 
 func TestDepositTransferBeforeUnhold(t *testing.T) {
-	member := fullMigration(t, "Eth_TxHash_test")
+	ethHash := testutils.RandomEthHash()
+
+	member := fullMigration(t, ethHash)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
-		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "hold period didn't end", "check lockup_pulse_period param at bootstrap.yaml: it maybe too low")
 }
 
 func TestDepositTransferBiggerAmount(t *testing.T) {
-	member := fullMigration(t, "Eth_TxHash_test")
+	ethHash := testutils.RandomEthHash()
+
+	member := fullMigration(t, ethHash)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
-		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
+		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")
 }
 
 func TestDepositTransferAnotherTx(t *testing.T) {
-	member := fullMigration(t, "Eth_TxHash_test")
+	ethHash := testutils.RandomEthHash()
+
+	member := fullMigration(t, ethHash)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
-		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_testNovalid"})
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": testutils.RandomEthHash()})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't find deposit")
 }
 
 func TestDepositTransferWrongValueAmount(t *testing.T) {
-	member := fullMigration(t, "Eth_TxHash_test")
+	ethHash := testutils.RandomEthHash()
+
+	member := fullMigration(t, ethHash)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
-		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
+		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": ethHash})
+	require.Error(t, err)
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "can't parse input amount")
+	expectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
+	ethHash := testutils.RandomEthHash()
+
 	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
-	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", member.MigrationAddress, 2)
+	_ = migrate(t, member.Ref, "1000", ethHash, member.MigrationAddress, 2)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
-		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")
 }

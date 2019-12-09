@@ -318,6 +318,10 @@ paths:
                             Parameters of the contract's internal method. May be
                             omitted as the method does not require any.
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key to associate with the new `member`
                             object. Used to check the `<signatureString>`
@@ -399,6 +403,10 @@ paths:
                             Parameters of the contract's internal method. May be
                             omitted as the method does not require any.
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key of your `member` object. Used to check
                             the `<signatureString>` created by the paired
@@ -480,6 +488,10 @@ paths:
                             Parameters of the contract's internal method. May be
                             omitted as the method does not require any.
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key to associate with the new `member`
                             object. Used to check the `<signatureString>`
@@ -555,6 +567,9 @@ paths:
                               type: string
                               description: Amount of coins to transfer.
                               example: '1000'
+                              pattern: '^[1-9][0-9]*$'
+                              minLength: 1
+                              maxLength: 20
                             toMemberReference:
                               allOf:
                                 - $ref: '#/components/schemas/reference'
@@ -572,6 +587,10 @@ paths:
                               example: >-
                                 insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key of your `member` object. Used to check
                             the `<signatureString>` created by the paired
@@ -654,8 +673,12 @@ paths:
                               type: string
                               description: Amount of coins to transfer.
                               example: '1000'
+                              pattern: '^[1-9][0-9]*$'
+                              minLength: 1
+                              maxLength: 20
                             ethTxHash:
                               type: string
+                              pattern: '^(0x[a-fA-F0-9]{40}|genesis_deposit)$'
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
@@ -670,6 +693,10 @@ paths:
                               example: >-
                                 insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key of your `member` object. Used to check
                             the `<signatureString>` created by the paired
@@ -1353,11 +1380,15 @@ paths:
                               type: string
                               description: Amount of Ethereum tokens to transfer.
                               example: '1000'
+                              pattern: '^[1-9][0-9]*$'
+                              minLength: 1
+                              maxLength: 20
                             ethTxHash:
                               type: string
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
+                              pattern: '^(0x[a-fA-F0-9]{40}|genesis_deposit)$'
                               example: >-
                                 0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df
                             migrationAddress:
@@ -1372,6 +1403,10 @@ paths:
                               example: >-
                                 insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE
                         publicKey:
+                          type: string
+                          pattern: >-
+                            ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                            \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
                           description: >
                             Public key of the `migrationDaemonMember` object.
                             Used to check the `<signatureString>` created by the
@@ -1497,6 +1532,9 @@ components:
                   type: object
                 publicKey:
                   type: string
+                  pattern: >-
+                    ^\s*(-+BEGIN[^-]+-+\s+[a-zA-Z0-9+\/=
+                    \n]+-+END[^-]+-+|[a-zA-Z0-9+\/= \n]+)\s*$
       x-json-schema-id: request/contractCall
     response-member:
       title: Success
