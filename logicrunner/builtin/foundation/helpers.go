@@ -74,15 +74,15 @@ func between(value string, a string, b string) string {
 	// Get substring between two strings.
 	pos := strings.Index(value, a)
 	if pos == -1 {
-		return ""
+		return value
 	}
 	posLast := strings.Index(value, b)
 	if posLast == -1 {
-		return ""
+		return value
 	}
 	posFirst := pos + len(a)
 	if posFirst >= posLast {
-		return ""
+		return value
 	}
 	return value[posFirst:posLast]
 }
