@@ -18,7 +18,6 @@ package logadapter
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -52,7 +51,7 @@ func (p *stringerRefStruct) String() string {
 type stubStruct struct {
 }
 
-const sampleStructAsString = "f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,f7:stringerVal:string,f8:stringerRef:string,f9:nil,f10:{}:stubStruct,msg:message title"
+const sampleStructAsString = "f0:  99:int,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:ptr,f6:func_result:func,f7:stringerVal:struct,f8:stringerRef:ptr,f9:nil,f10:{}:logadapter.stubStruct,msg:message title"
 
 func createSampleStruct() interface{} {
 	s := "test2"
@@ -298,19 +297,40 @@ type output struct {
 }
 
 func (p *output) AddIntField(key string, v int64, fmt logcommon.LogFieldFormat) {
-	p.AddIntfField(key, v, fmt)
+	p.addField(key, v, fmt)
 }
 
 func (p *output) AddUintField(key string, v uint64, fmt logcommon.LogFieldFormat) {
-	p.AddIntfField(key, v, fmt)
+	p.addField(key, v, fmt)
+}
+
+func (p *output) AddBoolField(key string, v bool, fmt logcommon.LogFieldFormat) {
+	p.addField(key, v, fmt)
 }
 
 func (p *output) AddFloatField(key string, v float64, fmt logcommon.LogFieldFormat) {
-	p.AddIntfField(key, v, fmt)
+	p.addField(key, v, fmt)
+}
+
+func (p *output) AddComplexField(key string, v complex128, fmt logcommon.LogFieldFormat) {
+	p.addField(key, v, fmt)
 }
 
 func (p *output) AddStrField(key string, v string, fmt logcommon.LogFieldFormat) {
-	p.AddIntfField(key, v, fmt)
+	p.addField(key, v, fmt)
+}
+
+func (p *output) addField(k string, v interface{}, fmtStr logcommon.LogFieldFormat) {
+	switch {
+	case fmtStr.HasFmt:
+		p._addField(k, fmt.Sprintf(fmtStr.Fmt, v), fmtStr.Kind.String())
+	default:
+		p._addField(k, v, fmtStr.Kind.String())
+	}
+}
+
+func (p *output) _addField(k string, v interface{}, tName string) {
+	p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, v, tName))
 }
 
 func (p *output) AddIntfField(k string, v interface{}, fmtStr logcommon.LogFieldFormat) {
@@ -318,12 +338,12 @@ func (p *output) AddIntfField(k string, v interface{}, fmtStr logcommon.LogField
 	case v == nil:
 		p.buf.WriteString(fmt.Sprintf("%s:nil,", k))
 	case fmtStr.HasFmt:
-		p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, fmt.Sprintf(fmtStr.Fmt, v), "string"))
+		p.buf.WriteString(fmt.Sprintf("%s:%v:%T,", k, fmt.Sprintf(fmtStr.Fmt, v), v))
 	default:
-		p.buf.WriteString(fmt.Sprintf("%s:%v:%s,", k, v, reflect.TypeOf(v).Name()))
+		p.buf.WriteString(fmt.Sprintf("%s:%v:%T,", k, v, v))
 	}
 }
 
-func (p *output) AddRawJSONField(k string, b []byte) {
-	p.buf.WriteString(fmt.Sprintf("%s:%s,", k, b))
+func (p *output) AddRawJSONField(k string, v interface{}, fFmt logcommon.LogFieldFormat) {
+	p.buf.WriteString(fmt.Sprintf("%s:%s,", k, fmt.Sprintf(fFmt.Fmt, v)))
 }

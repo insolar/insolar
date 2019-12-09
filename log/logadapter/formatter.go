@@ -61,7 +61,10 @@ func (v MsgFormatConfig) fmtLogStruct(a interface{}) (logcommon.LogObjectMarshal
 	case nil:
 		return nil, nil
 	default:
-		if s, ok := defaultStrValuePrepare(vv); ok {
+		if s, t, isNil := prepareValue(vv); t != reflect.Invalid {
+			if isNil {
+				return nil, nil
+			}
 			return nil, &s
 		}
 

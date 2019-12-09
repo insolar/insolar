@@ -19,6 +19,7 @@ package logcommon
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 )
 
@@ -131,17 +132,35 @@ type LogObjectMetricCollector interface {
 }
 
 type LogFieldFormat struct {
-	HasFmt bool
 	Fmt    string
+	Kind   reflect.Kind
+	HasFmt bool
+}
+
+func (f LogFieldFormat) IsInt() bool {
+	return f.Kind >= reflect.Int && f.Kind <= reflect.Int64
+}
+
+func (f LogFieldFormat) IsUint() bool {
+	return f.Kind >= reflect.Uint && f.Kind <= reflect.Uintptr
+}
+
+func (f LogFieldFormat) ToString(v interface{}, defFmt string) string {
+	if f.HasFmt {
+		return fmt.Sprintf(f.Fmt, v)
+	}
+	return fmt.Sprintf(defFmt, v)
 }
 
 type LogObjectWriter interface {
 	AddIntField(key string, v int64, fmt LogFieldFormat)
 	AddUintField(key string, v uint64, fmt LogFieldFormat)
+	AddBoolField(key string, v bool, fmt LogFieldFormat)
 	AddFloatField(key string, v float64, fmt LogFieldFormat)
+	AddComplexField(key string, v complex128, fmt LogFieldFormat)
 	AddStrField(key string, v string, fmt LogFieldFormat)
 	AddIntfField(key string, v interface{}, fmt LogFieldFormat)
-	AddRawJSONField(key string, b []byte)
+	AddRawJSONField(key string, v interface{}, fmt LogFieldFormat)
 }
 
 type LogLevelWriter interface {

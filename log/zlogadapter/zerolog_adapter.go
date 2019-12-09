@@ -183,11 +183,27 @@ func (m zerologMarshaller) AddUintField(key string, v uint64, fFmt logcommon.Log
 	}
 }
 
+func (m zerologMarshaller) AddBoolField(key string, v bool, fFmt logcommon.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Bool(key, v)
+	}
+}
+
 func (m zerologMarshaller) AddFloatField(key string, v float64, fFmt logcommon.LogFieldFormat) {
 	if fFmt.HasFmt {
 		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
 	} else {
 		m.event.Float64(key, v)
+	}
+}
+
+func (m zerologMarshaller) AddComplexField(key string, v complex128, fFmt logcommon.LogFieldFormat) {
+	if fFmt.HasFmt {
+		m.event.Str(key, fmt.Sprintf(fFmt.Fmt, v))
+	} else {
+		m.event.Str(key, fmt.Sprint(v))
 	}
 }
 
@@ -207,8 +223,8 @@ func (m zerologMarshaller) AddIntfField(key string, v interface{}, fFmt logcommo
 	}
 }
 
-func (m zerologMarshaller) AddRawJSONField(key string, b []byte) {
-	m.event.RawJSON(key, b)
+func (m zerologMarshaller) AddRawJSONField(key string, v interface{}, fFmt logcommon.LogFieldFormat) {
+	m.event.RawJSON(key, []byte(fmt.Sprintf(fFmt.Fmt, v)))
 }
 
 /* ============================ */

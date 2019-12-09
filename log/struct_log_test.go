@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/log/logcommon"
 	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/log/logcommon"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
@@ -192,7 +193,7 @@ var types = map[string]string{
 	"uint64":     "%d",
 	"uint16":     "%d",
 	"int64":      "%d",
-	"uintptr":    "%p",
+	"uintptr":    "%d",
 }
 
 // END OF GENERATED PART
@@ -208,13 +209,13 @@ func TestLogValueGetters(t *testing.T) {
 				msg string
 
 				// BEGIN OF GENERATED PART (struct_test_types_gen)
-				F_uintptr_fmt_opt uintptr `fmt+opt:"<<%p>>"`
-				F_uintptr_raw_opt uintptr `raw+opt:"<<%p>>"`
-				F_uintptr_fmt     uintptr `fmt:"<<%p>>"`
-				F_uintptr_raw     uintptr `raw:"<<%p>>"`
-				F_uintptr_skip    uintptr `skip:"<<%p>>"`
-				F_uintptr_txt     uintptr `txt:"<<%p>>"`
-				F_uintptr_opt     uintptr `opt:"<<%p>>"`
+				F_uintptr_fmt_opt uintptr `fmt+opt:"<<%d>>"`
+				F_uintptr_raw_opt uintptr `raw+opt:"<<%d>>"`
+				F_uintptr_fmt     uintptr `fmt:"<<%d>>"`
+				F_uintptr_raw     uintptr `raw:"<<%d>>"`
+				F_uintptr_skip    uintptr `skip:"<<%d>>"`
+				F_uintptr_txt     uintptr `txt:"<<%d>>"`
+				F_uintptr_opt     uintptr `opt:"<<%d>>"`
 
 				F_complex64_fmt_opt complex64 `fmt+opt:"<<%f>>"`
 				F_complex64_raw_opt complex64 `raw+opt:"<<%f>>"`
@@ -361,20 +362,21 @@ func TestLogValueGetters(t *testing.T) {
 			} else if tag == "opt" {
 				if ft == "string" {
 					mustHave = fmt.Sprintf(`"%s"`, saved.String())
-				} else if strings.Contains(fname, "complex") { // XXX
-					mustHave = `"marshaling error: json`
 				} else {
 					mustHave = fmt.Sprint(saved.Interface())
 				}
 			}
 
-			if !strings.Contains(tag, "raw") && tag != "opt" {
+			if !strings.Contains(tag, "raw") && (tag != "opt" || strings.Contains(fname, "complex")) {
 				mustHave = `"` + mustHave
 			}
 
-			contains := strings.Contains(buf.String(), fname+`":`+mustHave)
-			skip := tag == "skip"
-			require.True(t, contains != skip, "field "+fname+" have proper value "+mustHave)
+			s := buf.String()
+			if tag == "skip" {
+				require.NotContains(t, s, fname+`":`)
+			} else {
+				require.Contains(t, s, fname+`":`+mustHave)
+			}
 		}
 	}
 }
