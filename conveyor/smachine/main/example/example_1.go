@@ -62,7 +62,7 @@ func (s *StateMachine1) GetStateMachineDeclaration() smachine.StateMachineDeclar
 }
 
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	s.testKey = longbits.Wrap("testObjectID")
+	s.testKey = longbits.WrapStr("testObjectID")
 
 	//fmt.Printf("init: %v %v\n", ctx.SlotLink(), time.Now())
 	return ctx.Jump(s.State1)
@@ -107,7 +107,8 @@ func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpda
 }
 
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if ctx.AcquireForThisStep(s.mutex).IsNotPassed() {
+	if ctx.Acquire(s.mutex).IsNotPassed() {
+		//if ctx.AcquireForThisStep(s.mutex).IsNotPassed() {
 		active, inactive := s.mutex.GetCounts()
 		fmt.Println("Mutex queue: ", active, inactive)
 		return ctx.Sleep().ThenRepeat()
@@ -138,6 +139,7 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	fmt.Printf("wait: %d %v result:%v\n", ctx.SlotLink().SlotID(), time.Now(), s.result)
 	s.count = 0
 
+	//return ctx.Jump(s.State5)
 	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State5)
 }
 

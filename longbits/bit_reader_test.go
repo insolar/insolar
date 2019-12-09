@@ -62,7 +62,7 @@ func Test_BitReader_ReadByte(t *testing.T) {
 
 func Test_BitStrReader_ReadByte(t *testing.T) {
 	bytes := copyBits(testSample)
-	br := NewBitStrReader(LSB, Copy(bytes))
+	br := NewBitStrReader(LSB, CopyBytes(bytes))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
 		vb, err := br.ReadByte()
@@ -71,7 +71,7 @@ func Test_BitStrReader_ReadByte(t *testing.T) {
 	}
 	require.True(t, br.IsArrayDepleted())
 
-	br = NewBitStrReader(MSB, Copy(reverseBits(bytes)))
+	br = NewBitStrReader(MSB, CopyBytes(reverseBits(bytes)))
 	for _, b := range bytes {
 		require.False(t, br.IsArrayDepleted())
 		vb, err := br.ReadByte()
@@ -212,10 +212,10 @@ func Test_BitReader_FirstLow_Read(t *testing.T) {
 	bytes := copyBits(testSample)
 	testBitReaderRead(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
 	testBitReaderRead(t, testReader{NewBitArrayReader(LSB, bytes)})
-	testBitReaderRead(t, testReader{NewBitStrReader(LSB, Copy(bytes))})
+	testBitReaderRead(t, testReader{NewBitStrReader(LSB, CopyBytes(bytes))})
 	testBitReaderReadSubByte(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
 	testBitReaderReadSubByte(t, testReader{NewBitArrayReader(LSB, bytes)})
-	testBitReaderReadSubByte(t, testReader{NewBitStrReader(LSB, Copy(bytes))})
+	testBitReaderReadSubByte(t, testReader{NewBitStrReader(LSB, CopyBytes(bytes))})
 }
 
 func testBitReaderReadSubByteCycle(t *testing.T, br testReader) {
@@ -228,12 +228,12 @@ func Test_BitReader_FirstHigh_SubByte(t *testing.T) {
 	bytes := reverseBits([]byte{0x88, 0xC6, 0xFA})
 	testBitReaderReadSubByteCycle(t, testReader{NewBitIoReader(MSB, newByteReader(bytes))})
 	testBitReaderReadSubByteCycle(t, testReader{NewBitArrayReader(MSB, bytes)})
-	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(MSB, Copy(bytes))})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(MSB, CopyBytes(bytes))})
 }
 
 func Test_BitReader_FirstLow_SubByte(t *testing.T) {
 	bytes := []byte{0x88, 0xC6, 0xFA}
 	testBitReaderReadSubByteCycle(t, testReader{NewBitIoReader(LSB, newByteReader(bytes))})
 	testBitReaderReadSubByteCycle(t, testReader{NewBitArrayReader(LSB, bytes)})
-	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(LSB, Copy(bytes))})
+	testBitReaderReadSubByteCycle(t, testReader{NewBitStrReader(LSB, CopyBytes(bytes))})
 }

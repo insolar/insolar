@@ -17,29 +17,18 @@
 package longbits
 
 import (
-	"hash"
 	"io"
 	"math/bits"
-
-	"github.com/insolar/insolar/longbits/aeshash"
 )
 
 const EmptyByteString = ByteString("")
 
-func Wrap(s string) ByteString {
+func WrapStr(s string) ByteString {
 	return ByteString(s)
 }
 
-func Copy(v []byte) ByteString {
+func CopyBytes(v []byte) ByteString {
 	return ByteString(v)
-}
-
-// WARNING! The given array MUST be immutable
-func WrapBytes(b []byte) ByteString {
-	if len(b) == 0 {
-		return EmptyByteString
-	}
-	return wrapUnsafe(b)
 }
 
 func Zero(len int) ByteString {
@@ -56,7 +45,8 @@ func Fill(len int, fill byte) ByteString {
 			b[i] = fill
 		}
 	}
-	return wrapUnsafe(b)
+	// lest hope for the compiler to optimize it
+	return ByteString(b)
 }
 
 var _ FoldableReader = EmptyByteString
@@ -76,29 +66,6 @@ func (v ByteString) AsReader() FoldableReader {
 func (v ByteString) WriteTo(w io.Writer) (int64, error) {
 	n, err := w.Write([]byte(v))
 	return int64(n), err
-}
-
-//func (v ByteString) UnsafeWriteTo(w io.Writer) (int64, error) {
-//	n, err := w.Write(unwrapUnsafe(v))
-//	return int64(n), err
-//}
-//
-
-// TODO test
-
-func (v ByteString) Hash(h hash.Hash) hash.Hash {
-	_, _ = h.Write(unwrapUnsafe(v))
-	return h
-}
-
-// TODO test
-
-func (v ByteString) GoMapHash() uint32 {
-	return uint32(aeshash.Str(string(v)))
-}
-
-func (v ByteString) GoMapHashWithSeed(seed uint32) uint32 {
-	return uint32(aeshash.StrWithSeed(string(v), uint(seed)))
 }
 
 func (v ByteString) Read(b []byte) (n int, err error) {

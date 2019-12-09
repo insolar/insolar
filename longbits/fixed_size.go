@@ -141,11 +141,11 @@ func CopyToMutable(v FoldableReader) FoldableReader {
 }
 
 func NewImmutableFixedSize(data []byte) FixedReader {
-	return Copy(data).AsReader()
+	return CopyBytes(data).AsReader()
 }
 
 func CopyToImmutable(v FoldableReader) FoldableReader {
-	return Copy(ReadFixedSize(v)).AsReader()
+	return CopyBytes(ReadFixedSize(v)).AsReader()
 }
 
 func CopyFixedSize(v FoldableReader) FoldableReader {

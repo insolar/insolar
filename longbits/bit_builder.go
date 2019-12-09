@@ -386,7 +386,7 @@ func (p *BitBuilder) DoneToBytes() []byte {
 
 func (p *BitBuilder) DoneToByteString() (ByteString, int) {
 	b, l := p.Done()
-	return Copy(b), l
+	return CopyBytes(b), l
 }
 
 func (p *BitBuilder) Copy() *BitBuilder {
