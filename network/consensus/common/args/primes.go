@@ -16,29 +16,93 @@
 
 package args
 
-func Prime(i int) uint32 {
-	return primes[i]
+import "sort"
+
+const PrimeCount = 6550
+const MaxPrime = 65581
+
+func Prime(i int) int {
+	switch n := len(primes); {
+	case i >= n:
+		return int(primesOverUint16[i-n])
+	default:
+		return int(primes[i])
+	}
 }
 
-var primes = []uint32{
-	2, 3, 5, 7, 11, 13, 17, 19, 23, 29,
-	31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
-	73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
-	127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
-	179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
-	233, 239, 241, 251, 257, 263, 269, 271, 277, 281,
-	283, 293, 307, 311, 313, 317, 331, 337, 347, 349,
-	353, 359, 367, 373, 379, 383, 389, 397, 401, 409,
-	419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
-	467, 479, 487, 491, 499, 503, 509, 521, 523, 541,
-	547, 557, 563, 569, 571, 577, 587, 593, 599, 601,
-	607, 613, 617, 619, 631, 641, 643, 647, 653, 659,
-	661, 673, 677, 683, 691, 701, 709, 719, 727, 733,
-	739, 743, 751, 757, 761, 769, 773, 787, 797, 809,
-	811, 821, 823, 827, 829, 839, 853, 857, 859, 863,
-	877, 881, 883, 887, 907, 911, 919, 929, 937, 941,
-	947, 953, 967, 971, 977, 983, 991, 997, 1009, 1013,
-	1019, 1021, 1031, 1033, 1039, 1049, 1051, 1061, 1063, 1069,
-	1087, 1091, 1093, 1097, 1103, 1109, 1117, 1123, 1129, 1151,
-	1153, 1163, 1171, 1181, 1187, 1193, 1201, 1213, 1217, 1223,
+func Primes() PrimeList {
+	return allPrimes
+}
+
+func OddPrimes() PrimeList {
+	return oddPrimes
+}
+
+func IsolatedOddPrimes() PrimeList {
+	return isolatedOddPrimes
+}
+
+var allPrimes = PrimeList{primes, primesOverUint16[0]}
+var oddPrimes = PrimeList{primes[1:], primesOverUint16[0]}
+var isolatedOddPrimes = PrimeList{isolatedPrimes[1:], isolatedPrimeOverUint16[0]}
+
+type PrimeList struct {
+	primes   []uint16
+	maxPrime uint
+}
+
+func (m PrimeList) search(v int) uint {
+	return uint(sort.Search(len(m.primes), func(i int) bool { return int(m.primes[i]) >= v }))
+}
+
+func (m PrimeList) Len() int {
+	return len(m.primes) + 1
+}
+
+func (m PrimeList) Prime(i int) int {
+	if len(m.primes) == i {
+		return int(m.maxPrime)
+	}
+	return int(m.primes[i])
+}
+
+func (m PrimeList) Ceiling(v int) int {
+	return m.Prime(int(m.search(v)))
+}
+
+func (m PrimeList) Floor(v int) int {
+	switch n := m.search(v); {
+	case n == 0:
+		return int(m.primes[0])
+	case n == uint(len(m.primes)):
+		if v >= int(m.maxPrime) {
+			return int(m.maxPrime)
+		}
+		return int(m.primes[len(m.primes)-1])
+	case int(m.primes[n]) == v:
+		return v
+	default:
+		return int(m.primes[n-1])
+	}
+}
+
+func (m PrimeList) Nearest(v int) int {
+	switch n := m.search(v); {
+	case n == 0:
+		return int(m.primes[0])
+	case n == uint(len(m.primes)):
+		return int(m.maxPrime)
+	case (v - int(m.primes[n-1])) <= (int(m.primes[n]) - v):
+		return int(m.primes[n-1])
+	default:
+		return int(m.primes[n])
+	}
+}
+
+func (m PrimeList) Max() int {
+	return int(m.maxPrime)
+}
+
+func (m PrimeList) Min() int {
+	return int(m.primes[0])
 }
