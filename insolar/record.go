@@ -19,9 +19,10 @@ package insolar
 import (
 	"encoding/binary"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/reference"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -46,7 +47,7 @@ type (
 
 // NewReference returns Reference composed from domain and record.
 func NewReference(id ID) *Reference {
-	global := reference.NewSelfRef(id)
+	global := reference.NewGlobalSelf(id)
 	return &global
 }
 

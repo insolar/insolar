@@ -26,7 +26,7 @@ import (
 
 type ByteDecodeFunc func(s string, target io.ByteWriter) (stringRead int, err error)
 
-type IdentityDecoder func(base *Global, name string) *Global
+type IdentityDecoder func(base Holder, name string) *Global
 
 type DecoderOptions uint8
 
@@ -42,6 +42,7 @@ func DefaultDecoder() GlobalDecoder {
 
 type GlobalDecoder interface {
 	Decode(ref string) (Global, error)
+	DecodeHolder(ref string) (Holder, error)
 }
 
 type decoder struct {
@@ -67,12 +68,28 @@ func NewDefaultDecoder(options DecoderOptions) GlobalDecoder {
 	return NewDecoder(options, NewByteDecoderFactory())
 }
 
-func (v decoder) Decode(ref string) (Global, error) {
+func (v decoder) Decode(ref string) (result Global, err error) {
+	result, err = v.decode(ref)
+	if err != nil {
+		return Global{}, err
+	}
+	return result, nil
+}
+
+func (v decoder) DecodeHolder(ref string) (Holder, error) {
+	result, err := v.decode(ref)
+	if err != nil {
+		return nil, err
+	}
+	return result.tryConvertToCompact(), nil
+}
+
+func (v decoder) decode(ref string) (result Global, err error) {
 	schemaPos := strings.IndexRune(ref, ':')
 	if schemaPos >= 0 {
 		decoder, err := v.parseSchema(ref[:schemaPos], ref)
 		if err != nil {
-			return Global{}, err
+			return result, err
 		}
 		return v.parseReference(ref[schemaPos+1:], decoder)
 	}
@@ -81,17 +98,19 @@ func (v decoder) Decode(ref string) (Global, error) {
 	if v.options&AllowLegacy != 0 && len(ref) >= 2*len(LegacyDomainName)+1 {
 		domainPos := strings.IndexRune(ref, '.')
 		if domainPos >= len(LegacyDomainName) && ref[domainPos+1:] == LegacyDomainName {
-			return v.parseLegacyAddress(ref, domainPos)
+			result.addressLocal, err = v.parseLegacyAddress(ref, domainPos)
+			if err == nil {
+				result.convertToSelf()
+			}
+			return result, err
 		}
 	}
 
 	return v.parseReference(ref, v.defaultDecoder)
 }
 
-func (v decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
-	var result Global
-
-	w := result.addressLocal.asWriter()
+func (v decoder) parseLegacyAddress(ref string, domainPos int) (resultLocal Local, _ error) {
+	w := resultLocal.asWriter()
 	_, err := v.legacyDecoder(ref[:domainPos], w)
 
 	switch {
@@ -99,14 +118,14 @@ func (v decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
 		break
 	case !w.isFull():
 		err = errors.New("insufficient length")
-	case result.addressLocal.getScope() != 0: // there is no scope for legacy
+	case resultLocal.getScope() != 0: // there is no scope for legacy
 		err = errors.New("invalid scope")
-	case !result.tryConvertToSelf():
+	case !resultLocal.canConvertToSelf():
 		err = errors.New("invalid self reference")
 	default:
-		return result, nil
+		return resultLocal, nil
 	}
-	return result, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
+	return resultLocal, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
 }
 
 func (v decoder) parseSchema(schema, refFull string) (ByteDecodeFunc, error) {
@@ -149,44 +168,47 @@ func (v decoder) parseAuthority(ref string) (authority string, remaining string)
 	return ref[:pos], ref[pos+1:]
 }
 
-func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Global, error) {
-	_, ref := v.parseAuthority(refFull)
-	if len(ref) == 0 {
-		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
-	}
-
-	parityPos := strings.IndexRune(ref, '/')
-	var parity []byte
-	switch {
-	case parityPos == 0:
-		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
-	case parityPos > 0:
-		encodedParity := ref[parityPos+1:]
-		if encodedParity[0] != '2' {
-			return Global{}, fmt.Errorf("invalid parity prefix: ref=%s, parity=%s", refFull, encodedParity)
+func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (result Global, _ error) {
+	if err := func() error {
+		_, ref := v.parseAuthority(refFull)
+		if len(ref) == 0 {
+			return fmt.Errorf("empty reference body: ref=%s", refFull)
 		}
-		buf := bytes.NewBuffer(make([]byte, 0, LocalBinaryPulseAndScopeSize))
-		_, err := byteDecoder(encodedParity[1:], buf)
+
+		parityPos := strings.IndexRune(ref, '/')
+		var parity []byte
+		switch {
+		case parityPos == 0:
+			return fmt.Errorf("empty reference body: ref=%s", refFull)
+		case parityPos > 0:
+			encodedParity := ref[parityPos+1:]
+			if encodedParity[0] != '2' {
+				return fmt.Errorf("invalid parity prefix: ref=%s, parity=%s", refFull, encodedParity)
+			}
+			buf := bytes.NewBuffer(make([]byte, 0, LocalBinaryPulseAndScopeSize))
+			_, err := byteDecoder(encodedParity[1:], buf)
+			if err != nil {
+				return fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
+			}
+			ref = ref[:parityPos]
+			if v.options&IgnoreParity == 0 {
+				parity = buf.Bytes()
+			}
+		}
+
+		err := v.parseAddress(ref, byteDecoder, &result)
+
+		if err == nil && parity != nil {
+			err = CheckParity(&result, parity)
+		}
 		if err != nil {
-			return Global{}, fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
+			return fmt.Errorf("invalid reference, %s: ref=%s", err.Error(), refFull)
 		}
-		ref = ref[:parityPos]
-		if v.options&IgnoreParity == 0 {
-			parity = buf.Bytes()
-		}
+		return nil
+	}(); err != nil {
+		return Global{}, err
 	}
-
-	var result Global
-	err := v.parseAddress(ref, byteDecoder, &result)
-
-	if err == nil && parity != nil {
-		err = result.CheckParity(parity)
-	}
-	if err == nil {
-		return result, nil
-	}
-
-	return result, fmt.Errorf("invalid reference, %s: ref=%s", err.Error(), refFull)
+	return result, nil
 }
 
 func (v decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Global) error {

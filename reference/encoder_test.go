@@ -53,7 +53,7 @@ func createRandomSelfReference() *Global {
 	g := &Global{}
 	g.addressLocal.hash = generateBits224(0)
 	populateUsualPulse(&g.addressLocal.pulseAndScope)
-	g.tryConvertToSelf()
+	g.convertToSelf()
 
 	return g
 }
@@ -62,7 +62,7 @@ func createRandomSelfReferenceWithSpecialPulse() *Global {
 	g := &Global{}
 	g.addressLocal.hash = generateBits224(0)
 	populateSpecialPulse(&g.addressLocal.pulseAndScope)
-	g.tryConvertToSelf()
+	g.convertToSelf()
 
 	return g
 }
@@ -82,7 +82,7 @@ func fixedSelfReference() *Global {
 			},
 		},
 	}
-	g.tryConvertToSelf()
+	g.convertToSelf()
 	return g
 }
 
@@ -113,7 +113,6 @@ func fixedReference() *Global {
 			},
 		},
 	}
-	g.tryConvertToSelf()
 	return g
 }
 
@@ -132,7 +131,7 @@ func fixedSelfReferenceWithSpecialPulse() *Global {
 			},
 		},
 	}
-	g.tryConvertToSelf()
+	g.convertToSelf()
 	return g
 
 }
@@ -152,7 +151,7 @@ func fixedSelfReferenceWithSpecialPulseZeroed() *Global {
 			},
 		},
 	}
-	g.tryConvertToSelf()
+	g.convertToSelf()
 	return g
 }
 

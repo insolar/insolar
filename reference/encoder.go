@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type IdentityEncoder func(ref *Global) (domain, object string)
+type IdentityEncoder func(ref Holder) (domain, object string)
 
 type EncoderOptions uint8
 
@@ -37,8 +37,8 @@ const (
 )
 
 type Encoder interface {
-	Encode(ref *Global) (string, error)
-	EncodeToBuilder(ref *Global, b *strings.Builder) error
+	Encode(ref Holder) (string, error)
+	EncodeToBuilder(ref Holder, b *strings.Builder) error
 	EncodeRecord(rec *Local) (string, error)
 }
 
@@ -78,13 +78,13 @@ func NewBase64Encoder(opts EncoderOptions) Encoder {
 	}
 }
 
-func (v encoder) Encode(ref *Global) (string, error) {
+func (v encoder) Encode(ref Holder) (string, error) {
 	b := strings.Builder{}
 	err := v.EncodeToBuilder(ref, &b)
 	return b.String(), err
 }
 
-func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
+func (v encoder) EncodeToBuilder(ref Holder, b *strings.Builder) error {
 	if ref == nil {
 		b.WriteString(NilRef)
 		return nil
@@ -95,8 +95,8 @@ func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 	if ref.IsEmpty() {
 		b.WriteString("0")
 	}
-	if ref.IsRecordScope() {
-		return v.encodeRecord(&ref.addressLocal, b)
+	if IsRecordScope(ref) {
+		return v.encodeRecord(ref.GetLocal(), b)
 	}
 
 	var domainName, objectName string
@@ -111,7 +111,7 @@ func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 		}
 		b.WriteString(objectName)
 	} else {
-		err := v.encodeBinary(&ref.addressLocal, b)
+		err := v.encodeBinary(ref.GetLocal(), b)
 		if err != nil {
 			return err
 		}
@@ -124,18 +124,18 @@ func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 		}
 		b.WriteByte('.')
 		b.WriteString(domainName)
-	case ref.IsSelfScope():
+	case IsSelfScope(ref):
 		// nothing
 	default:
 		b.WriteByte('.')
-		err := v.encodeBinary(&ref.addressBase, b)
+		err := v.encodeBinary(ref.GetBase(), b)
 		if err != nil {
 			return err
 		}
 	}
 
 	if v.options&Parity != 0 {
-		parity := ref.GetParity()
+		parity := GetParity(ref)
 		if len(parity) > 0 {
 			b.WriteByte('/')
 			err := v.byteEncoder(bytes.NewReader(parity), b)

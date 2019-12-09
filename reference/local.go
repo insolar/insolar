@@ -44,7 +44,7 @@ func NewLocal(pn pulse.Number, scope uint8, hash longbits.Bits224) Local {
 	return Local{pulseAndScope: pn.WithFlags(scope), hash: hash}
 }
 
-const JetDepthPosition = 0
+const JetDepthPosition = 0 //
 
 type Local struct {
 	pulseAndScope uint32 // pulse + scope
@@ -98,7 +98,7 @@ func (v Local) len() int {
 }
 
 func (v *Local) AsByteString() longbits.ByteString {
-	return longbits.Copy(v.AsBytes())
+	return longbits.CopyBytes(v.AsBytes())
 }
 
 func (v *Local) AsBytes() []byte {
@@ -255,11 +255,11 @@ func (v *Local) UnmarshalJSON(data []byte) error {
 
 	switch realRepr := repr.(type) {
 	case string:
-		intermidiate, err := DefaultDecoder().Decode(realRepr)
+		decoded, err := DefaultDecoder().Decode(realRepr)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal reference.Local")
 		}
-		*v = intermidiate.addressLocal
+		*v = *decoded.GetLocal()
 	case nil:
 	default:
 		return errors.Wrapf(err, "unexpected type %T when unmarshal reference.Local", repr)
@@ -324,4 +324,8 @@ func (v *Local) DebugString() string {
 	}
 
 	return fmt.Sprintf("%s [%d | %d | %s]", v.String(), v.Pulse(), v.getScope(), base64.RawURLEncoding.EncodeToString(v.Hash()))
+}
+
+func (v Local) canConvertToSelf() bool {
+	return true
 }

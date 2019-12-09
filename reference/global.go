@@ -40,7 +40,7 @@ func NewRecordRef(recID Local) Global {
 	return Global{addressLocal: recID}
 }
 
-func NewSelfRef(localID Local) Global {
+func NewGlobalSelf(localID Local) Global {
 	if localID.getScope() == baseScopeReserved {
 		panic("illegal value")
 	}
@@ -79,7 +79,7 @@ func (v *Global) Read(p []byte) (int, error) {
 }
 
 func (v *Global) AsByteString() longbits.ByteString {
-	return longbits.Copy(v.AsBytes())
+	return longbits.CopyBytes(v.AsBytes())
 }
 
 func (v *Global) AsBytes() []byte {
@@ -97,44 +97,60 @@ func (v Global) IsEmpty() bool {
 }
 
 func (v *Global) IsRecordScope() bool {
-	return v.addressBase.IsEmpty() && !v.addressLocal.IsEmpty() && v.addressLocal.getScope() == baseScopeLifeline
+	return IsRecordScope(v)
 }
 
 func (v *Global) IsObjectReference() bool {
-	return !v.addressBase.IsEmpty() && !v.addressLocal.IsEmpty() && v.addressLocal.getScope() == baseScopeLifeline
+	return IsObjectReference(v)
 }
 
 func (v *Global) IsSelfScope() bool {
-	return v.addressBase == v.addressLocal
+	return IsSelfScope(v)
 }
 
 func (v *Global) IsLifelineScope() bool {
-	return v.addressBase.getScope() == baseScopeLifeline
+	return IsLifelineScope(v)
 }
 
 func (v *Global) IsLocalDomainScope() bool {
-	return v.addressBase.getScope() == baseScopeLocalDomain
+	return IsLocalDomainScope(v)
 }
 
 func (v *Global) IsGlobalScope() bool {
-	return v.addressBase.getScope() == baseScopeGlobal
+	return IsGlobalScope(v)
 }
 
-func (v *Global) GetParity() []byte {
-	panic("not implemented")
-}
-
-func (v *Global) CheckParity(bytes []byte) error {
-	panic("not implemented")
+/* ONLY for parser */
+func (v *Global) convertToSelf() {
+	if !v.tryConvertToSelf() {
+		panic("illegal state")
+	}
 }
 
 /* ONLY for parser */
 func (v *Global) tryConvertToSelf() bool {
-	if !v.addressBase.IsEmpty() {
+	if !v.canConvertToSelf() {
 		return false
 	}
 	v.addressBase = v.addressLocal
 	return true
+}
+
+func (v *Global) canConvertToSelf() bool {
+	return v.addressBase.IsEmpty() && v.addressLocal.canConvertToSelf()
+}
+
+func (v *Global) tryConvertToCompact() Holder {
+	switch {
+	case v.addressBase.IsEmpty():
+		return NewRecord(v.addressLocal)
+	case v.addressLocal.IsEmpty():
+		return New(v.addressLocal, v.addressBase)
+	case v.addressBase == v.addressLocal:
+		return NewSelf(v.addressLocal)
+	default:
+		return v
+	}
 }
 
 /* ONLY for parser */
@@ -186,15 +202,12 @@ func (v Global) Bytes() []byte {
 
 // Equal checks if reference points to the same record.
 func (v Global) Equal(other Global) bool {
-	return v.addressLocal.Equal(other.addressLocal) && v.addressBase.Equal(other.addressBase)
+	return Equal(&v, &other)
 }
 
 // Compare compares two record references
 func (v Global) Compare(other Global) int {
-	if cmp := v.addressBase.Compare(other.addressBase); cmp != 0 {
-		return cmp
-	}
-	return v.addressLocal.Compare(other.addressLocal)
+	return Compare(&v, &other)
 }
 
 // MarshalJSON serializes reference into JSONFormat.
@@ -230,9 +243,11 @@ func (v *Global) UnmarshalJSON(data []byte) error {
 
 	switch realRepr := repr.(type) {
 	case string:
-		*v, err = DefaultDecoder().Decode(realRepr)
-		if err != nil {
+		if decoded, err := DefaultDecoder().Decode(realRepr); err != nil {
 			return errors.Wrap(err, "failed to unmarshal reference.Global")
+		} else {
+			v.addressLocal = *decoded.GetLocal()
+			v.addressBase = *decoded.GetBase()
 		}
 	case nil:
 	default:

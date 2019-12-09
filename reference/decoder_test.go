@@ -32,9 +32,9 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 		dec := NewDefaultDecoder(AllowLegacy)
 		global, err := dec.Decode(legacyReference_ok)
 		if assert.NoError(t, err) {
-			assert.Equal(t, global.addressLocal, global.addressBase)
-			assert.Equal(t, pulse.Number(65537), global.addressLocal.GetPulseNumber())
-			assert.Equal(t, uint8(0x0), global.addressBase.getScope())
+			assert.Equal(t, *global.GetLocal(), *global.GetBase())
+			assert.Equal(t, pulse.Number(65537), global.GetLocal().GetPulseNumber())
+			assert.Equal(t, uint8(0x0), global.GetBase().getScope())
 		}
 	}
 	{ // good old reference, disallow parsing
@@ -107,11 +107,11 @@ func TestDecoder_Decode_new(t *testing.T) {
 		if assert.NoError(t, err1) &&
 			assert.NoError(t, err2) {
 
-			assert.Equal(t, uint8(0), g1.addressLocal.getScope())
-			assert.Equal(t, pulse.Number(0x1000), g1.addressLocal.GetPulseNumber())
-			assert.Equal(t, g1.addressLocal.GetPulseNumber(), g2.addressLocal.GetPulseNumber())
-			assert.Equal(t, g1.addressLocal.getScope(), g2.addressLocal.getScope())
-			assert.Equal(t, g1.addressLocal.GetHash(), g2.addressLocal.GetHash())
+			assert.Equal(t, uint8(0), g1.GetLocal().getScope())
+			assert.Equal(t, pulse.Number(0x1000), g1.GetLocal().GetPulseNumber())
+			assert.Equal(t, g1.GetLocal().GetPulseNumber(), g2.GetLocal().GetPulseNumber())
+			assert.Equal(t, g1.GetLocal().getScope(), g2.GetLocal().getScope())
+			assert.Equal(t, g1.GetLocal().GetHash(), g2.GetLocal().GetHash())
 		}
 	}
 
