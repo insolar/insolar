@@ -340,13 +340,16 @@ func (p *PulseConveyor) CommitPulseChange(pr pulse.Range) error {
 			case prevPresentPN.Next(pr.LeftPrevDelta()) != pr.LeftBoundNumber():
 				panic("illegal state")
 			}
-			p.presentMachine.setPast()
 		}
 
 		pr.EnumNonArticulatedData(func(data pulse.Data) bool {
 			p.pdm.putPulseData(data) // add to the recent cache
 			return false
 		})
+
+		if p.presentMachine != nil {
+			p.presentMachine.setPast()
+		}
 
 		p.pdm.unsetPreparingPulse()
 
