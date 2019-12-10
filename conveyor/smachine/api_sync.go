@@ -99,6 +99,43 @@ func (v SyncLink) GetLimit() (limit int, isAdjustable bool) {
 	return v.controller.GetLimit()
 }
 
+func (v SyncLink) DebugPrint(maxCount int) {
+	active, inactive := v.GetCounts()
+	fmt.Printf("%s[a=%d, i=%d] {", v.String(), active, inactive)
+
+	lastQ := 0
+	hasQ := false
+	lastM := ""
+	v.controller.EnumQueues(func(qId int, link SlotLink, _ SlotDependencyFlags) bool {
+		maxCount--
+		prefix := ""
+		switch {
+		case maxCount < 0:
+			fmt.Print(", ...")
+			return true
+		case lastQ != qId || !hasQ:
+			lastQ = qId
+			if hasQ {
+				fmt.Printf("} Q#%d{", qId)
+			} else {
+				hasQ = true
+				fmt.Printf(" Q#%d{", qId)
+			}
+		default:
+			prefix = ", "
+		}
+		mPrefix := link.MachineId()
+		if lastM != mPrefix {
+			lastM = mPrefix
+			fmt.Print(prefix, "M#", mPrefix, ":", link.SlotID())
+		} else {
+			fmt.Print(prefix, link.SlotID())
+		}
+		return false
+	})
+	fmt.Println("}")
+}
+
 func (v SyncLink) String() string {
 	name := v.controller.GetName()
 	if len(name) > 0 {
@@ -131,6 +168,8 @@ const (
 	syncForOneStep SlotDependencyFlags = 1 << iota
 )
 
+type EnumQueueFunc func(qId int, link SlotLink, flags SlotDependencyFlags) bool
+
 // Internals of a sync object
 type DependencyController interface {
 	CheckState() BoolDecision // reduce down to BoolDecision
@@ -143,4 +182,6 @@ type DependencyController interface {
 
 	GetCounts() (active, inactive int)
 	GetName() string
+
+	EnumQueues(EnumQueueFunc) bool
 }

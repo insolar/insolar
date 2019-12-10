@@ -114,6 +114,13 @@ func (p *hierarchySync) GetName() string {
 	return p.controller.GetName()
 }
 
+func (p *hierarchySync) EnumQueues(fn EnumQueueFunc) bool {
+	p.controller.mutex.RLock()
+	defer p.controller.mutex.RUnlock()
+
+	return p.controller.enum(0, fn)
+}
+
 var _ DependencyQueueController = &subQueueController{}
 var _ dependencyStackController = &subQueueController{}
 

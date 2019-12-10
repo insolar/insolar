@@ -70,6 +70,16 @@ func (p *queueControllerTemplate) GetName() string {
 	return p.name
 }
 
+func (p *queueControllerTemplate) enum(qId int, fn EnumQueueFunc) bool {
+	for item := p.queue.head.QueueNext(); item != nil; item = item.QueueNext() {
+		_, flags := item.getFlags()
+		if fn(qId, item.link, flags) {
+			return true
+		}
+	}
+	return false
+}
+
 type DependencyQueueHead struct {
 	controller DependencyQueueController
 	head       dependencyQueueEntry

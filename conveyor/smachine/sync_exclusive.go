@@ -110,6 +110,13 @@ func (p *exclusiveSync) AdjustLimit(limit int, absolute bool) (deps []StepLink, 
 	panic("illegal state")
 }
 
+func (p *exclusiveSync) EnumQueues(fn EnumQueueFunc) bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.awaiters.enum(1, fn)
+}
+
 var _ DependencyQueueController = &exclusiveQueueController{}
 
 type exclusiveQueueController struct {
@@ -150,4 +157,25 @@ func (p *exclusiveQueueController) Release(link SlotLink, flags SlotDependencyFl
 	default:
 		return nil, []StepLink{step}
 	}
+}
+
+func (p *exclusiveQueueController) enum(qId int, fn EnumQueueFunc) bool {
+	item := p.queue.head.QueueNext()
+	if item == nil {
+		return false
+	}
+
+	_, flags := item.getFlags()
+	if fn(qId, item.link, flags) {
+		return true
+	}
+	qId--
+
+	for item = item.QueueNext(); item != nil; item = item.QueueNext() {
+		_, flags := item.getFlags()
+		if fn(qId, item.link, flags) {
+			return true
+		}
+	}
+	return false
 }

@@ -160,6 +160,13 @@ func (p *conditionalSync) GetName() string {
 	return p.controller.GetName()
 }
 
+func (p *conditionalSync) EnumQueues(fn EnumQueueFunc) bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.controller.enum(0, fn)
+}
+
 type holdingQueueController struct {
 	mutex *sync.RWMutex
 	queueControllerTemplate

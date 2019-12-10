@@ -109,8 +109,9 @@ func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpda
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	if ctx.Acquire(s.mutex).IsNotPassed() {
 		//if ctx.AcquireForThisStep(s.mutex).IsNotPassed() {
-		active, inactive := s.mutex.GetCounts()
-		fmt.Println("Mutex queue: ", active, inactive)
+		//active, inactive := s.mutex.GetCounts()
+		//fmt.Println("Mutex queue: ", active, inactive)
+		s.mutex.DebugPrint(10)
 		return ctx.Sleep().ThenRepeat()
 	}
 

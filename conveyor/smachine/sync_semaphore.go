@@ -219,6 +219,13 @@ func (p *semaphoreSync) GetName() string {
 	return p.controller.GetName()
 }
 
+func (p *semaphoreSync) EnumQueues(fn EnumQueueFunc) bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.controller.enum(1, fn)
+}
+
 type waitingQueueController struct {
 	mutex *sync.RWMutex
 	queueControllerTemplate
@@ -321,4 +328,11 @@ func (p *workingQueueController) Release(link SlotLink, flags SlotDependencyFlag
 
 func (p *workingQueueController) containsInAwaiters(entry *dependencyQueueEntry) bool {
 	return p.awaiters.contains(entry)
+}
+
+func (p *workingQueueController) enum(qId int, fn EnumQueueFunc) bool {
+	if p.queueControllerTemplate.enum(qId, fn) {
+		return true
+	}
+	return p.awaiters.enum(qId-1, fn)
 }

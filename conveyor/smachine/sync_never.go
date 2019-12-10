@@ -73,6 +73,10 @@ func (p *infiniteLock) GetName() string {
 	return p.name
 }
 
+func (p *infiniteLock) EnumQueues(fn EnumQueueFunc) bool {
+	return false
+}
+
 var _ SlotDependency = &infiniteLockEntry{}
 
 type infiniteLockEntry struct {
