@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"fmt"
+	"strings"
 )
 
 type SynchronizationContext interface {
@@ -99,9 +100,10 @@ func (v SyncLink) GetLimit() (limit int, isAdjustable bool) {
 	return v.controller.GetLimit()
 }
 
-func (v SyncLink) DebugPrint(maxCount int) {
+func (v SyncLink) Debug(maxCount int) string {
+	var result []string
 	active, inactive := v.GetCounts()
-	fmt.Printf("%s[a=%d, i=%d] {", v.String(), active, inactive)
+	result = append(result, fmt.Sprintf("%s[a=%d, i=%d] {", v.String(), active, inactive))
 
 	lastQ := 0
 	hasQ := false
@@ -111,15 +113,15 @@ func (v SyncLink) DebugPrint(maxCount int) {
 		prefix := ""
 		switch {
 		case maxCount < 0:
-			fmt.Print(", ...")
+			result = append(result, ", ...")
 			return true
 		case lastQ != qId || !hasQ:
 			lastQ = qId
 			if hasQ {
-				fmt.Printf("} Q#%d{", qId)
+				result = append(result, fmt.Sprintf("} Q#%d{", qId))
 			} else {
 				hasQ = true
-				fmt.Printf(" Q#%d{", qId)
+				result = append(result, fmt.Sprintf(" Q#%d{", qId))
 			}
 		default:
 			prefix = ", "
@@ -127,13 +129,19 @@ func (v SyncLink) DebugPrint(maxCount int) {
 		mPrefix := link.MachineId()
 		if lastM != mPrefix {
 			lastM = mPrefix
-			fmt.Print(prefix, "M#", mPrefix, ":", link.SlotID())
+			result = append(result, fmt.Sprint(prefix, "M#", mPrefix, ":", link.SlotID()))
 		} else {
-			fmt.Print(prefix, link.SlotID())
+			result = append(result, fmt.Sprint(prefix, link.SlotID()))
 		}
 		return false
 	})
-	fmt.Println("}")
+	result = append(result, "}")
+
+	return strings.Join(result, "")
+}
+
+func (v SyncLink) DebugPrint(maxCount int) {
+	fmt.Println(v.Debug(maxCount))
 }
 
 func (v SyncLink) String() string {
