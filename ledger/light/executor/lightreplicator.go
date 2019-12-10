@@ -120,7 +120,8 @@ func (lr *LightReplicatorDefault) Stop() {
 func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
-		logger.Debugf("[Replicator][sync] pn received - %v", pn)
+		logger = logger.WithField("component", "replicator")
+		logger.Debugf("[sync] pn received - %v", pn)
 
 		ctx, span := instracer.StartSpan(ctx, "LightReplicatorDefault.sync")
 		span.SetTag("pulse", int64(pn))
@@ -131,14 +132,14 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		if err != nil {
 			logger.Panic(errors.Wrap(err, "failed to calculate jets to sync"))
 		}
-		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
+		logger.Debugf("[sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
 		for _, jetID := range jets {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
 				instracer.AddError(span, err)
 				logger.Panicf(
-					"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
+					"[sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
 					pn,
 					jetID.DebugString(),
 					err,
@@ -147,9 +148,9 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
 				instracer.AddError(span, err)
-				logger.Fatalf("[Replicator][sync] Problem with sending payload to a heavy node", err)
+				logger.Fatalf("[sync] Problem with sending payload to a heavy node", err)
 			} else {
-				logger.Debugf("[Replicator][sync] Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
+				logger.Debugf("[sync] Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
 		lr.cleaner.NotifyAboutPulse(ctx, pn)

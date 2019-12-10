@@ -103,12 +103,12 @@ func NewCleaner(
 // all the data for it will be cleaned
 func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("cleaner got notification about new pulse :%v", pn)
+	logger.Infof("cleaner got notification about new pulse :%v", pn)
 	c.once.Do(func() {
 		go c.clean(context.Background())
 	})
 
-	logger.Info("cleaner before pulse :%v to waiting channel", pn)
+	logger.Infof("cleaner before pulse :%v to waiting channel", pn)
 	c.pulseForClean <- pn
 }
 
