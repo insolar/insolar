@@ -17,6 +17,7 @@
 package filaments
 
 import (
+	"github.com/insolar/insolar/ledger-v2/unsafekit"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
@@ -46,7 +47,41 @@ func (p *bucketKeyLoader) nextChunk() bool {
 	}
 }
 
-func (p *bucketKeyLoader) loadKeys(expectedCount int) (keys [][]bucketKey, err error) {
+func (p *bucketKeyLoader) loadKeysAsMap(expectedCount int) (bigBucketMap, error) {
+	keys := make(bigBucketMap, expectedCount)
+
+	if err := p._loadKeys(expectedCount, func(_ int, dataChunk longbits.ByteString) error {
+		keyBatch := bucketKeyTypeSlice.Unwrap(dataChunk).([]bucketKey)
+		for _, bk := range keyBatch {
+			key := unsafekit.WrapLocalRef(&bk.local)
+			keys[key] = bk.value
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return keys, nil
+}
+
+func (p *bucketKeyLoader) loadKeys(expectedCount int) ([][]bucketKey, error) {
+	var keys [][]bucketKey
+
+	if err := p._loadKeys(expectedCount, func(remainingCount int, dataChunk longbits.ByteString) error {
+		if remainingCount == 0 && len(keys) == 0 {
+			keys = make([][]bucketKey, 0, 1) // avoid waste
+		}
+		keyBatch := bucketKeyTypeSlice.Unwrap(dataChunk).([]bucketKey)
+		keys = append(keys, keyBatch)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// makes all batches of equal size to support fast indexed access
+	return p.equalizeBatches(expectedCount, keys)
+}
+
+func (p *bucketKeyLoader) _loadKeys(expectedCount int, addFn func(remainingCount int, dataChunk longbits.ByteString) error) error {
 	bucketKeySize := bucketKeyType.Size()
 
 	for remainingCount := expectedCount; remainingCount > 0; {
@@ -70,15 +105,12 @@ func (p *bucketKeyLoader) loadKeys(expectedCount int) (keys [][]bucketKey, err e
 			p.lastChunk = p.lastChunk[dataLen:]
 		}
 
-		if remainingCount == 0 && len(keys) == 0 {
-			keys = make([][]bucketKey, 0, 1)
+		if err := addFn(remainingCount, dataChunk); err != nil {
+			return err
 		}
-		keyBatch := bucketKeyTypeSlice.Unwrap(dataChunk).([]bucketKey)
-		keys = append(keys, keyBatch)
 	}
 
-	// makes all batches of equal size to support fast indexed access
-	return p.equalizeBatches(expectedCount, keys)
+	return nil
 }
 
 // memory-mapped objects shouldn't be copied, so the only way to make all batches equal is to split them
@@ -105,6 +137,9 @@ func (p *bucketKeyLoader) equalizeBatches(totalCount int, keyBatches [][]bucketK
 			allSame = false
 		}
 	}
+
+	// TODO check if possible to use nearest powerOf2
+
 	switch {
 	case gcd < MinKeyBucketBatchSize:
 		panic("illegal value") // TODO error
