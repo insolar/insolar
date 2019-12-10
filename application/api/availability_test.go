@@ -26,10 +26,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {
@@ -46,28 +48,62 @@ func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {
 }
 
 func TestAvailabilityChecker_UpdateStatus(t *testing.T) {
-	ctx := context.Background()
+	cfg := configuration.NewLog()
+	cfg.Level = "Debug"
+	ctx, _ := inslogger.InitNodeLogger(context.Background(), cfg, "", "")
+
+	defer leaktest.Check(t)()
+
+	counter := 0
 
 	keeper := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, err := fmt.Fprintln(w, "{\"available\": true}")
-			require.NoError(t, err)
+			switch counter {
+			case 0:
+				w.WriteHeader(http.StatusOK)
+				_, err := fmt.Fprintln(w, "{\"available\": false}")
+				require.NoError(t, err)
+			case 1:
+				w.WriteHeader(http.StatusBadRequest)
+			case 2:
+				w.WriteHeader(http.StatusOK)
+				_, err := fmt.Fprintln(w, "{\"test\": }")
+				require.NoError(t, err)
+			default:
+				w.WriteHeader(http.StatusOK)
+				_, err := fmt.Fprintln(w, "{\"available\": true}")
+				require.NoError(t, err)
+			}
+			counter += 1
 		}))
 
+	var checkPeriod uint = 1
 	config := configuration.AvailabilityChecker{
 		Enabled:        true,
-		KeeperURL:      keeper.Config.Addr + keeper.URL,
+		KeeperURL:      keeper.URL,
 		RequestTimeout: 2,
-		CheckPeriod:    1,
+		CheckPeriod:    checkPeriod,
 	}
 
 	nc := api.NewNetworkChecker(config)
-	defer nc.Stop()
-
 	require.False(t, nc.IsAvailable(ctx))
 
+	defer nc.Stop()
 	err := nc.Start(ctx)
 	require.NoError(t, err)
+
+	// counter = 0
+	require.False(t, nc.IsAvailable(ctx))
+	time.Sleep(time.Duration(checkPeriod))
+
+	// counter = 1
+	require.False(t, nc.IsAvailable(ctx))
+	time.Sleep(time.Duration(checkPeriod))
+
+	// counter = 2, bad response body
+	require.False(t, nc.IsAvailable(ctx))
+
+	// counter default
 	waitForStatus(t, nc, true)
 
 	keeper.Close()
