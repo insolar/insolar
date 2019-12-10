@@ -28,23 +28,70 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	logger "github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus/adapters"
+	"github.com/insolar/insolar/pulse"
+)
+
+type dispatcherInitializationState int8
+
+const (
+	InitializationStarted dispatcherInitializationState = iota
+	FirstPulseClosed
+	InitializationDone // SecondPulseOpened
 )
 
 type conveyorDispatcher struct {
-	conveyor *conveyor.PulseConveyor
+	conveyor      *conveyor.PulseConveyor
+	state         dispatcherInitializationState
+	previousPulse insolar.PulseNumber
 }
 
 var _ dispatcher.Dispatcher = &conveyorDispatcher{}
 
 func (c *conveyorDispatcher) BeginPulse(ctx context.Context, pulseObject insolar.Pulse) {
-	pulseRange := adapters.NewPulseData(pulseObject).AsRange()
+	logger := inslogger.FromContext(ctx)
+	var (
+		pulseData  = adapters.NewPulseData(pulseObject)
+		pulseRange pulse.Range
+	)
+	switch c.state {
+	case InitializationDone:
+		pulseRange = pulseData.AsRange()
+	case FirstPulseClosed:
+		pulseRange = pulse.NewLeftGapRange(c.previousPulse, 0, pulseData)
+		c.state = InitializationDone
+	case InitializationStarted:
+		fallthrough
+	default:
+		panic("unreachable")
+	}
+
+	logger.Errorf("BeginPulse -> [%d, %d]", c.previousPulse, pulseData.PulseNumber)
 	if err := c.conveyor.CommitPulseChange(pulseRange); err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 }
 
 func (c *conveyorDispatcher) ClosePulse(ctx context.Context, pulseObject insolar.Pulse) {
+	logger.Errorf("ClosePulse -> [%d]", pulseObject.PulseNumber)
+	c.previousPulse = pulseObject.PulseNumber
+
+	switch c.state {
+	case InitializationDone:
+		// channel := make(conveyor.PreparePulseChangeChannel, 1)
+		channel := conveyor.PreparePulseChangeChannel(nil)
+		if err := c.conveyor.PreparePulseChange(channel); err != nil {
+			panic(err)
+		}
+	case InitializationStarted:
+		c.state = FirstPulseClosed
+		return
+	case FirstPulseClosed:
+		fallthrough
+	default:
+		panic("unreachable")
+	}
 }
 
 type DispatcherMessage struct {

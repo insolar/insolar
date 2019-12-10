@@ -66,9 +66,8 @@ type artifactClientService struct {
 
 func CreateArtifactClientService(client artifacts.Client) *ArtifactClientServiceAdapter {
 	ctx := context.Background()
-	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
-
-	smachine.StartChannelWorker(ctx, ch, nil)
+	ae, ch := smachine.NewCallChannelExecutor(ctx, -1, false, 16)
+	smachine.StartDynamicChannelWorker(ctx, ch, nil)
 
 	return &ArtifactClientServiceAdapter{
 		svc: artifactClientService{

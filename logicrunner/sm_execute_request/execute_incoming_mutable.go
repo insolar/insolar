@@ -97,6 +97,7 @@ func (s *ExecuteIncomingMutableRequest) stepTakeLock(ctx smachine.ExecutionConte
 	ctx.Log().Trace("trying to take lock " + s.objectInfo.ObjectReference.String())
 
 	if !ctx.AcquireAndRelease(s.objectInfo.MutableExecute) {
+		ctx.Log().Trace(s.objectInfo.MutableExecute.Debug(100))
 		return ctx.Sleep().ThenRepeat()
 	}
 

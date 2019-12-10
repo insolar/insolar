@@ -55,7 +55,7 @@ type contractRequesterService struct {
 
 func CreateContractRequesterService(ContractRequester insolar.ContractRequester) *ContractRequesterServiceAdapter {
 	ctx := context.Background()
-	ae, ch := smachine.NewCallChannelExecutor(ctx, -1, false, 1000)
+	ae, ch := smachine.NewCallChannelExecutor(ctx, -1, false, 16)
 	smachine.StartDynamicChannelWorker(ctx, ch, nil)
 
 	return &ContractRequesterServiceAdapter{

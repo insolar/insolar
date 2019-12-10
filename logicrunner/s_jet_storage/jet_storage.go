@@ -58,8 +58,8 @@ type jetStorageService struct {
 
 func CreateJetStorageService(JetStorage jet.Storage) *JetStorageServiceAdapter {
 	ctx := context.Background()
-	ae, ch := smachine.NewCallChannelExecutor(ctx, 0, false, 5)
-	smachine.StartChannelWorker(ctx, ch, nil)
+	ae, ch := smachine.NewCallChannelExecutor(ctx, -1, false, 16)
+	smachine.StartDynamicChannelWorker(ctx, ch, nil)
 
 	return &JetStorageServiceAdapter{
 		svc: jetStorageService{

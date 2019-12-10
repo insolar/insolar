@@ -19,6 +19,7 @@ package sm_request
 import (
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
@@ -43,6 +44,7 @@ type StateMachineCallMethod struct {
 	catalogObj     *sm_object.LocalObjectCatalog
 	artifactClient *s_artifact.ArtifactClientServiceAdapter
 	sender         *s_sender.SenderServiceAdapter
+	pulseSlot      *conveyor.PulseSlot
 
 	externalError error // error that is returned from ledger
 
@@ -63,6 +65,7 @@ func (*declarationCallMethod) InjectDependencies(sm smachine.StateMachine, _ sma
 	injector.MustInject(&s.catalogObj)
 	injector.MustInject(&s.artifactClient)
 	injector.MustInject(&s.sender)
+	injector.MustInject(&s.pulseSlot)
 }
 
 func (*declarationCallMethod) GetInitStateFor(sm smachine.StateMachine) smachine.InitFunc {
@@ -77,8 +80,6 @@ func (s *StateMachineCallMethod) GetStateMachineDeclaration() smachine.StateMach
 }
 
 func (s *StateMachineCallMethod) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetDefaultMigration(s.migrationPulseChanged)
-
 	return ctx.Jump(s.stepRegisterIncoming)
 }
 
@@ -102,10 +103,7 @@ func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionCont
 
 			return
 		}
-	}).DelayedStart().Sleep().ThenJumpExt(smachine.SlotStep{
-		Transition: s.stepSendRequestID,
-		Migration:  s.migrationSendRegisteredCall,
-	})
+	}).DelayedStart().Sleep().ThenJump(s.stepSendRequestID)
 }
 
 func (s *StateMachineCallMethod) stepSendRequestID(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -113,14 +111,22 @@ func (s *StateMachineCallMethod) stepSendRequestID(ctx smachine.ExecutionContext
 		return ctx.Jump(s.stepError)
 	}
 
-	messageMeta := s.Meta
-	response := &reply.RegisterRequest{Request: s.requestInfo.RequestReference}
-	goCtx := ctx.GetContext()
+	var (
+		messageMeta = s.Meta
+		response    = &reply.RegisterRequest{Request: s.requestInfo.RequestReference}
+		goCtx       = ctx.GetContext()
+	)
 
-	return s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
+	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
 		msg := bus.ReplyAsMessage(goCtx, response)
 		svc.Reply(goCtx, *messageMeta, msg)
-	}).DelayedSend().ThenJump(s.stepExecute)
+	}).Send()
+
+	if s.pulseSlot.State() == conveyor.Antique {
+		// pulse has changed, send message
+		return ctx.Jump(s.stepSendRegisteredCall)
+	}
+	return ctx.Jump(s.stepExecute)
 }
 
 func (s *StateMachineCallMethod) stepExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
