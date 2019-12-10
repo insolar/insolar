@@ -18,12 +18,14 @@ package filaments
 
 import (
 	"math"
+	"math/bits"
 	"reflect"
 	"runtime"
 	"sort"
 
 	"github.com/insolar/insolar/ledger-v2/unsafekit"
 	"github.com/insolar/insolar/longbits"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/reference"
 )
 
@@ -44,7 +46,7 @@ func NewMappedRefMap(expectedKeyCount int, bucketCount int) MappedRefMap {
 	return MappedRefMap{expectedKeyCount: expectedKeyCount, buckets: make([]mappedBucket, bucketCount)}
 }
 
-// implements map[Holder]int64 with external lazy load support
+// implements map[Holder]uint63 with external lazy load support
 type MappedRefMap struct {
 	hashSeed         uint32
 	expectedKeyCount int
@@ -154,18 +156,20 @@ func (p *MappedRefMap) GetValueOrBucket(ref reference.Holder) ( /* map value or 
 
 var emptyBucketMarker = make([][]bucketKey, 0, 0)
 
-func (p *MappedRefMap) LoadBucket(bucketIndex, bucketKeyCount int, chunks []longbits.ByteString) error {
+func (p *MappedRefMap) LoadBucket(bucketIndex, bucketKeyL0Count, bucketKeyL1Count int, chunks []longbits.ByteString) error {
 	if bucketIndex < 0 || bucketIndex >= len(p.buckets) {
 		panic("illegal value") // TODO error
 	}
 
 	bucket := &p.buckets[bucketIndex]
 	switch {
-	case p.expectedKeyCount < p.loadedKeyCount+bucketKeyCount:
+	case bucketKeyL1Count > bucketKeyL0Count:
+		panic("illegal value")
+	case p.expectedKeyCount < p.loadedKeyCount+bucketKeyL0Count:
 		panic("illegal value") // TODO error
-	case bucket.keysL0 != nil:
+	case bucket.keysL0 != nil || bucket.pageBitsL0 == tooBigBatch:
 		panic("illegal state") // TODO error
-	case bucketKeyCount > 0:
+	case bucketKeyL0Count > 0:
 		// break
 	case len(chunks) > 0:
 		panic("illegal value - unaligned chunk") // TODO error
@@ -173,6 +177,7 @@ func (p *MappedRefMap) LoadBucket(bucketIndex, bucketKeyCount int, chunks []long
 		bucket.keysL0 = emptyBucketMarker
 		return nil
 	}
+
 	switch {
 	case p.bigBucketMinSize > 0:
 		//
@@ -184,50 +189,50 @@ func (p *MappedRefMap) LoadBucket(bucketIndex, bucketKeyCount int, chunks []long
 
 	loader := newBucketKeyLoader(chunks)
 
-	if bucketKeyCount >= p.bigBucketMinSize {
-		loader.loadKeysAsMap(bucketKeyCount)
+	if bucketKeyL0Count >= p.bigBucketMinSize {
+		switch m, err := loader.loadKeysL0AsMap(bucketKeyL0Count, bucketKeyL1Count); {
+		case err != nil:
+			return err
+		case p.bigBuckets == nil:
+			p.bigBuckets = make(map[ /* bucketIndex */ uint32]bigBucketMap)
+			fallthrough
+		default:
+			p.bigBuckets[uint32(bucketIndex)] = m
+			bucket.pageBitsL0 = tooBigBatch
+			p.loadedKeyCount += bucketKeyL0Count
+			return nil
+		}
 	}
 
-	keysL0, err := loader.loadKeys(bucketKeyCount)
+	keysL0, err := loader.loadKeys(bucketKeyL0Count)
 	if err != nil {
 		return err
 	}
 
-	//	if bucketKeyCount
-
-	countL1, countNV := countKeysOfL1(keysL0)
-	if p.expectedKeyCount != countL1+countNV {
-		panic("illegal state") // TODO error
-	}
-
-	keysL1, err := loader.loadKeys(countL1)
+	keysL1, err := loader.loadKeys(bucketKeyL1Count)
 	if err != nil {
 		return err
 	}
 
 	bucket.keysL0 = keysL0
+	bucket.pageBitsL0 = makePageBits(keysL0)
 	bucket.keysL1 = keysL1
-	p.loadedKeyCount += bucketKeyCount
+	bucket.pageBitsL1 = makePageBits(keysL1)
+	p.loadedKeyCount += bucketKeyL0Count
 	return nil
 }
 
-func countKeysOfL1(keysL0 [][]bucketKey) (countL1, countNV int) {
-	for _, bkr := range keysL0 {
-		for _, kb := range bkr {
-			if kb.value.isLeaf() {
-				// self-scope ref
-				countNV++
-				continue
-			}
-
-			_, c := kb.value.asPosAndCount()
-			if c <= 0 {
-				panic("illegal state") // TODO error
-			}
-			countL1 += int(c)
+func makePageBits(keys [][]bucketKey) uint8 {
+	if len(keys) < 2 {
+		return 0
+	}
+	n := uint(len(keys[0]))
+	if n >= MinKeyBucketBatchSize && args.IsPowerOfTwo(n) {
+		if b := uint8(bits.Len(n)); b <= maxPowerOfTwoForBatch {
+			return b
 		}
 	}
-	return
+	return nonPowerOfTwoBatchAlignment
 }
 
 type KeyIndexGetterFunc func(index int) *bucketKey
@@ -242,7 +247,7 @@ type mappedBucket struct {
 }
 
 func (b mappedBucket) isLoaded() bool {
-	return b.keysL0 != nil
+	return b.keysL0 != nil || b.pageBitsL0 == tooBigBatch
 }
 
 func (b mappedBucket) isBigBucket() bool {
@@ -250,7 +255,8 @@ func (b mappedBucket) isBigBucket() bool {
 }
 
 const nonPowerOfTwoBatchAlignment = math.MaxUint8
-const tooBigBatch = nonPowerOfTwoBatchAlignment
+const tooBigBatch = nonPowerOfTwoBatchAlignment - 1
+const maxPowerOfTwoForBatch = 0x1F // also works as a hint for compiler optimization for shift ops
 
 func getKeyCount(keys [][]bucketKey) int {
 	switch batchCount := len(keys); batchCount {
@@ -262,8 +268,6 @@ func getKeyCount(keys [][]bucketKey) int {
 		return len(keys[0])*(batchCount-1) + len(keys[batchCount-1])
 	}
 }
-
-const maxPowerOfTwoBatchMask = 0x1F // hint for compiler optimization for shift ops
 
 type indexerFunc func(int) (pageNum, inPageIndex int)
 
@@ -279,13 +283,13 @@ func getKeyIndexer(keys [][]bucketKey, pageBits uint8) indexerFunc {
 			return index / base, index % base
 		}
 	default:
-		bits := pageBits & maxPowerOfTwoBatchMask // hint for compiler optimization for shift ops
-		if bits != pageBits {
+		b := pageBits & maxPowerOfTwoForBatch // hint for compiler optimization for shift ops
+		if b != pageBits {
 			panic("illegal state")
 		}
-		mask := 1<<bits - 1
+		mask := 1<<b - 1
 		return func(index int) (page, pos int) {
-			return index >> bits, index &^ mask
+			return index >> b, index &^ mask
 		}
 	}
 }

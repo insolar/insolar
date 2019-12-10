@@ -47,34 +47,51 @@ func (p *bucketKeyLoader) nextChunk() bool {
 	}
 }
 
-func (p *bucketKeyLoader) loadKeysAsMap(expectedCount int) (bigBucketMap, error) {
-	keys := make(bigBucketMap, expectedCount)
+func (p *bucketKeyLoader) loadKeysL0AsMap(expectedL0Count, expectedL1Count int) (bigBucketMap, error) {
+	keys := make(bigBucketMap, expectedL0Count)
+	countL1, countNV := 0, 0
 
-	if err := p._loadKeys(expectedCount, func(_ int, dataChunk longbits.ByteString) error {
+	switch err := p._loadKeys(expectedL0Count, func(_ int, dataChunk longbits.ByteString) error {
 		keyBatch := bucketKeyTypeSlice.Unwrap(dataChunk).([]bucketKey)
 		for _, bk := range keyBatch {
 			key := unsafekit.WrapLocalRef(&bk.local)
 			keys[key] = bk.value
+			if bk.value.isLeaf() {
+				countNV++
+			} else {
+				countL1++
+			}
 		}
 		return nil
-	}); err != nil {
+	}); {
+	case err != nil:
 		return nil, err
+	case countL1 != expectedL1Count:
+		panic("illegal state") // TODO return error
+	case countL1+countNV != expectedL0Count:
+		panic("illegal state") // TODO return error
+	case len(keys) != expectedL0Count:
+		panic("illegal state") // TODO return error
 	}
+
 	return keys, nil
 }
 
 func (p *bucketKeyLoader) loadKeys(expectedCount int) ([][]bucketKey, error) {
 	var keys [][]bucketKey
 
-	if err := p._loadKeys(expectedCount, func(remainingCount int, dataChunk longbits.ByteString) error {
+	switch err := p._loadKeys(expectedCount, func(remainingCount int, dataChunk longbits.ByteString) error {
 		if remainingCount == 0 && len(keys) == 0 {
 			keys = make([][]bucketKey, 0, 1) // avoid waste
 		}
 		keyBatch := bucketKeyTypeSlice.Unwrap(dataChunk).([]bucketKey)
 		keys = append(keys, keyBatch)
 		return nil
-	}); err != nil {
+	}); {
+	case err != nil:
 		return nil, err
+	case len(keys) != expectedCount:
+		panic("illegal state") // TODO return error
 	}
 
 	// makes all batches of equal size to support fast indexed access
@@ -138,14 +155,17 @@ func (p *bucketKeyLoader) equalizeBatches(totalCount int, keyBatches [][]bucketK
 		}
 	}
 
-	// TODO check if possible to use nearest powerOf2
-
 	switch {
 	case gcd < MinKeyBucketBatchSize:
 		panic("illegal value") // TODO error
 	case !allSame:
-		//
+		// check if it possible to use some powerOf2 nearby
+		gcd2 := args.GreatestCommonDivisor(gcd, 1<<31)
+		if gcd2 >= MinKeyBucketBatchSize && gcd2 > (gcd>>3) {
+			gcd = gcd2
+		}
 	case len(keyBatches[batchCount-1]) <= gcd:
+		// all are same, but the last one
 		return keyBatches, nil
 	}
 
