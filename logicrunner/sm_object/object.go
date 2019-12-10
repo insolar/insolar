@@ -129,8 +129,8 @@ func (sm *StateMachineObject) Init(ctx smachine.InitializationContext) smachine.
 	sm.previousResultSaved = smachine.NewConditionalBool(false, "previousResultSaved")
 	sm.SemaphorePreviousResultSaved = sm.previousResultSaved.SyncLink()
 
-	sm.ImmutableExecute = smachine.NewFixedSemaphore(5, "immutable calls")
-	sm.MutableExecute = smachine.NewFixedSemaphore(1, "mutable calls") // TODO here we need an ORDERED queue
+	sm.ImmutableExecute = smachine.NewSemaphore(5, "immutable calls").SyncLink()
+	sm.MutableExecute = smachine.NewSemaphore(1, "mutable calls").SyncLink() // TODO here we need an ORDERED queue
 
 	sdl := ctx.Share(&sm.SharedObjectState, 0)
 	if !ctx.Publish(sm.ObjectReference, sdl) {
