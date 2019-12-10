@@ -22,20 +22,20 @@ import (
 	"sync"
 )
 
-var _ AdapterExecutor = &OverflowCallChannel{}
+var _ AdapterExecutor = &OverflowPanicCallChannel{}
 
 func NewCallChannelExecutor(ctx context.Context, bufMax int, requestCancel bool, parallelReaders int) (AdapterExecutor, chan AdapterCall) {
 	if parallelReaders <= 0 {
 		panic("illegal value")
 	}
-	output := make(chan AdapterCall, parallelReaders<<1)
-	if bufMax == 0 { //no buffer
+	switch output := make(chan AdapterCall, parallelReaders<<1); {
+	case bufMax == 0:
 		return WrapCallChannelNoBuffer(requestCancel, output), output
-	}
-	if bufMax < 0 { //unlimited buffer
+	case bufMax < 0: //unlimited buffer
 		return WrapCallChannelNoLimit(ctx, requestCancel, output), output
+	default:
+		return WrapCallChannel(ctx, bufMax, requestCancel, output), output
 	}
-	return WrapCallChannel(ctx, bufMax, requestCancel, output), output
 }
 
 func WrapCallChannel(ctx context.Context, bufMax int, requestCancel bool, output chan AdapterCall) *OverflowBufferCallChannel {
@@ -49,8 +49,8 @@ func WrapCallChannelNoLimit(ctx context.Context, requestCancel bool, output chan
 	return &OverflowBufferCallChannel{ctx: ctx, output: output, needCancel: requestCancel}
 }
 
-func WrapCallChannelNoBuffer(requestCancel bool, output chan AdapterCall) OverflowCallChannel {
-	return OverflowCallChannel{output, requestCancel}
+func WrapCallChannelNoBuffer(requestCancel bool, output chan AdapterCall) OverflowPanicCallChannel {
+	return OverflowPanicCallChannel{output, requestCancel}
 }
 
 func StartChannelWorker(ctx context.Context, ch <-chan AdapterCall, runArg interface{}) {
@@ -65,7 +65,7 @@ func StartChannelWorker(ctx context.Context, ch <-chan AdapterCall, runArg inter
 				}
 				err := t.RunAndSendResult(runArg)
 				if err != nil {
-					log.Println(err)
+					log.Println(err) // TODO logging?
 				}
 			}
 		}
@@ -74,16 +74,16 @@ func StartChannelWorker(ctx context.Context, ch <-chan AdapterCall, runArg inter
 
 type channelRecord = AdapterCall
 
-type OverflowCallChannel struct {
+type OverflowPanicCallChannel struct {
 	output     chan channelRecord
 	needCancel bool
 }
 
-func (v OverflowCallChannel) TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc) {
+func (v OverflowPanicCallChannel) TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc) {
 	return false, nil
 }
 
-func (v OverflowCallChannel) StartCall(fn AdapterCallFunc, callback *AdapterCallback, needCancel bool) context.CancelFunc {
+func (v OverflowPanicCallChannel) StartCall(fn AdapterCallFunc, callback *AdapterCallback, needCancel bool) context.CancelFunc {
 	switch {
 	case fn == nil:
 		panic("illegal value")
@@ -98,7 +98,7 @@ func (v OverflowCallChannel) StartCall(fn AdapterCallFunc, callback *AdapterCall
 	return cancelFn
 }
 
-func (v OverflowCallChannel) SendNotify(fn AdapterNotifyFunc) {
+func (v OverflowPanicCallChannel) SendNotify(fn AdapterNotifyFunc) {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -109,11 +109,11 @@ func (v OverflowCallChannel) SendNotify(fn AdapterNotifyFunc) {
 	v.queueCall(r)
 }
 
-func (v OverflowCallChannel) Channel() chan channelRecord {
+func (v OverflowPanicCallChannel) Channel() chan channelRecord {
 	return v.output
 }
 
-func (v OverflowCallChannel) queueCall(r channelRecord) {
+func (v OverflowPanicCallChannel) queueCall(r channelRecord) {
 	select {
 	case v.output <- r:
 	default:
@@ -123,6 +123,7 @@ func (v OverflowCallChannel) queueCall(r channelRecord) {
 
 var _ AdapterExecutor = &OverflowBufferCallChannel{}
 
+// This wrapper doesn't allocate a buffer unless the channel is full
 type OverflowBufferCallChannel struct {
 	ctx        context.Context
 	mutex      sync.Mutex

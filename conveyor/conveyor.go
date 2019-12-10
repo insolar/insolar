@@ -42,7 +42,7 @@ type PreparePulseChangeChannel = chan<- PreparedState
 type PulseChanger interface {
 	PreparePulseChange(out PreparePulseChangeChannel) error
 	CancelPulseChange() error
-	CommitPulseChange(pd pulse.Data) error
+	CommitPulseChange(pr pulse.Range) error
 }
 
 type PulseConveyorConfig struct {
@@ -318,42 +318,45 @@ func (p *PulseConveyor) CancelPulseChange() error {
 }
 
 func (p *PulseConveyor) CommitPulseChange(pr pulse.Range) error {
+	pd := pr.RightBoundData()
+	pd.EnsurePulsarData()
+
 	return p.sendSignal(func(ctx smachine.MachineCallContext) {
+		prevPresentPN, prevFuturePN := p.pdm.GetPresentPulse()
+
+		if p.presentMachine == nil {
+			switch {
+			case prevFuturePN != uninitializedFuture:
+				panic("illegal state")
+			case p.getPulseSlotMachine(prevPresentPN) != nil:
+				panic("illegal state")
+			}
+		} else {
+			switch {
+			case p.getPulseSlotMachine(prevPresentPN) != p.presentMachine:
+				panic("illegal state")
+			case pr.LeftBoundNumber() != prevFuturePN:
+				panic("illegal state")
+			case prevPresentPN.Next(pr.LeftPrevDelta()) != pr.LeftBoundNumber():
+				panic("illegal state")
+			}
+			p.presentMachine.setPast()
+		}
+
+		pr.EnumNonArticulatedData(func(data pulse.Data) bool {
+			p.pdm.putPulseData(data) // add to the recent cache
+			return false
+		})
+
 		p.pdm.unsetPreparingPulse()
+
 		ctx.Migrate(func() {
-			p._promotePulseSlots(ctx, pr)
+			p._migratePulseSlots(ctx, pr, prevPresentPN, prevFuturePN)
 		})
 	})
 }
 
-func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr pulse.Range) {
-	pd := pr.RightBoundData()
-	pd.EnsurePulsarData()
-	prevPresentPN, prevFuturePN := p.pdm.GetPresentPulse()
-
-	if p.presentMachine == nil {
-		switch {
-		case prevFuturePN != uninitializedFuture:
-			panic("illegal state")
-		case p.getPulseSlotMachine(prevPresentPN) != nil:
-			panic("illegal state")
-		}
-	} else {
-		switch {
-		case p.getPulseSlotMachine(prevPresentPN) != p.presentMachine:
-			panic("illegal state")
-		case pr.LeftBoundNumber() != prevFuturePN:
-			panic("illegal state")
-		case prevPresentPN.Next(pr.LeftPrevDelta()) != pr.LeftBoundNumber():
-			panic("illegal state")
-		}
-		p.presentMachine.setPast()
-	}
-	pr.EnumNonArticulatedData(func(data pulse.Data) bool {
-		p.pdm.putPulseData(data) // add to the recent cache
-		return false
-	})
-
+func (p *PulseConveyor) _migratePulseSlots(ctx smachine.MachineCallContext, pr pulse.Range, prevPresentPN, prevFuturePN pulse.Number) {
 	if p.unpublishPulse.IsTimePulse() {
 		// we know what we do - right!?
 		p.slotMachine.TryUnsafeUnpublish(p.unpublishPulse)
@@ -364,6 +367,8 @@ func (p *PulseConveyor) _promotePulseSlots(ctx smachine.MachineCallContext, pr p
 
 	republishPresent := false
 	activatePresent := false
+
+	pd := pr.RightBoundData()
 
 	if prevFuture != nil {
 		prevFuture.setPresent(pr)
