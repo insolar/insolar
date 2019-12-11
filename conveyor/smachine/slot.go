@@ -79,6 +79,7 @@ type slotData struct {
 	asyncCallCount uint16 // pending calls, overflow panics
 	migrationCount uint32 // can be wrapped by overflow
 
+	boost    *boostPermit
 	step     SlotStep
 	stepDecl *StepDeclaration
 
@@ -93,6 +94,7 @@ const (
 	slotHasAliases
 	slotHadAsync
 	slotIsTracing
+	slotIsBoosted
 )
 
 type SlotDependency interface {
@@ -601,4 +603,15 @@ func (s *Slot) getTracerId() TracerId {
 		return ""
 	}
 	return s.stepLogger.GetTracerId()
+}
+
+func (s *Slot) updateBoostFlag() {
+	if s.slotFlags&slotIsBoosted != 0 && !s.boost.isActive() {
+		s.slotFlags &^= slotIsBoosted
+		s.boost = nil
+	}
+}
+
+func (s *Slot) isBoosted() bool {
+	return s.slotFlags&slotIsBoosted != 0
 }

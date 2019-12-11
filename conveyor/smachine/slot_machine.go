@@ -33,6 +33,7 @@ type MigrationFunc func(migrationCount uint32)
 type SlotMachineConfig struct {
 	PollingPeriod        time.Duration
 	PollingTruncate      time.Duration
+	BoostNewSlotDuration time.Duration
 	SlotPageSize         uint16
 	ScanCountLimit       int
 	CleanupWeakOnMigrate bool
@@ -70,8 +71,11 @@ func NewSlotMachine(config SlotMachineConfig,
 	}
 
 	m.slotPool.initSlotPool()
+
 	m.activeSlots.initSlotQueue(ActiveSlots)
+	m.boostedSlots.initSlotQueue(ActiveSlots)
 	m.prioritySlots.initSlotQueue(ActiveSlots)
+
 	m.workingSlots.initSlotQueue(WorkingSlots)
 
 	return m
@@ -90,6 +94,9 @@ type SlotMachine struct {
 	machineStartedAt time.Time
 	scanStartedAt    time.Time
 
+	boostPermitLatest   *chainedBoostPermit
+	boostPermitEarliest *chainedBoostPermit
+
 	scanAndMigrateCounts uint64 // atomic
 
 	migrators []MigrationFunc
@@ -97,8 +104,8 @@ type SlotMachine struct {
 	hotWaitOnly  bool      // true when activeSlots & prioritySlots have only slots added by "hot wait"
 	scanWakeUpAt time.Time // when all slots are waiting, this is the earliest time requested for wakeup
 
-	prioritySlots SlotQueue //they are are moved to workingSlots every time when enough non-priority slots are processed
-	//boostedSlots	 SlotQueue
+	prioritySlots    SlotQueue //they are are moved to workingSlots every time when enough non-priority slots are processed
+	boostedSlots     SlotQueue
 	activeSlots      SlotQueue    //they are are moved to workingSlots on every full Scan
 	pollingSlots     PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
 	workingSlots     SlotQueue    //slots are currently in processing
@@ -234,6 +241,24 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 	currentScanNo := uint32(0)
 
 	switch {
+	case m.config.BoostNewSlotDuration > 0:
+		m.boostPermitLatest = m.boostPermitLatest.reuseOrNew(scanTime)
+		switch m.boostPermitEarliest {
+		case nil:
+			m.boostPermitEarliest = m.boostPermitLatest
+		case m.boostPermitLatest:
+			// reuse, no need to check
+		default:
+			m.boostPermitEarliest = m.boostPermitEarliest.discardOlderThan(scanTime.Add(-m.config.BoostNewSlotDuration))
+			if m.boostPermitEarliest == nil {
+				panic("unexpected")
+			}
+		}
+	case m.boostPermitLatest != nil:
+		panic("unexpected")
+	}
+
+	switch {
 	case m.machineStartedAt.IsZero():
 		m.machineStartedAt = scanTime
 		fallthrough
@@ -247,7 +272,11 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 		if m.nonPriorityCount >= uint32(m.config.ScanCountLimit) {
 			m.nonPriorityCount = 0
 			m.workingSlots.AppendAll(&m.prioritySlots)
+			if scanMode != ScanPriorityOnly {
+				m.workingSlots.AppendAll(&m.boostedSlots)
+			}
 		}
+
 	default:
 		currentScanNo = m.incScanCount()
 
@@ -256,6 +285,7 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 		m.workingSlots.AppendAll(&m.prioritySlots)
 
 		if scanMode != ScanPriorityOnly {
+			m.workingSlots.AppendAll(&m.boostedSlots)
 			m.workingSlots.AppendAll(&m.activeSlots)
 		}
 		m.pollingSlots.FilterOut(scanTime, m.workingSlots.AppendAll)
@@ -315,11 +345,17 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 
 		switch {
 		case currentSlot.step.Flags&StepPriority != 0:
-			break
+			// break
 		case priorityOnly:
-			m.activeSlots.AddLast(currentSlot)
+			if currentSlot.isBoosted() {
+				m.boostedSlots.AddLast(currentSlot)
+			} else {
+				m.activeSlots.AddLast(currentSlot)
+			}
 			currentSlot.stopWorking()
 			continue
+		case currentSlot.isBoosted():
+			// break
 		default:
 			m.nonPriorityCount++
 		}
@@ -383,18 +419,19 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 	return hasSignal, loopCount
 }
 
-func (m *SlotMachine) _executeSlotInitByCreator(currentSlot *Slot, worker DetachableSlotWorker) {
+func (m *SlotMachine) _executeSlotInitByCreator(slot *Slot, worker DetachableSlotWorker) {
 
-	currentSlot.ensureInitializing()
+	slot.ensureInitializing()
+	m._boostNewSlot(slot)
 
-	ec := executionContext{slotContext: slotContext{s: currentSlot, w: worker}}
+	ec := executionContext{slotContext: slotContext{s: slot, w: worker}}
 	stateUpdate, _, asyncCnt := ec.executeNextStep()
 
-	currentSlot.addAsyncCount(asyncCnt)
+	slot.addAsyncCount(asyncCnt)
 	if !worker.NonDetachableCall(func(worker FixedSlotWorker) {
-		m.slotPostExecution(currentSlot, stateUpdate, worker, 0, false)
+		m.slotPostExecution(slot, stateUpdate, worker, 0, false)
 	}) {
-		m.asyncPostSlotExecution(currentSlot, stateUpdate, 0)
+		m.asyncPostSlotExecution(slot, stateUpdate, 0)
 	}
 }
 
@@ -402,6 +439,8 @@ func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, wor
 	prevStepNo uint32, wasAsync bool) (hasAsync bool) {
 
 	slot.logStepUpdate(prevStepNo, stateUpdate, wasAsync)
+
+	slot.updateBoostFlag()
 
 	if !stateUpdate.IsZero() && !m.applyStateUpdate(slot, stateUpdate, worker) {
 		return false
@@ -1077,8 +1116,19 @@ func (m *SlotMachine) prepareInjects(creator *Slot, link SlotLink, sm StateMachi
 	return dResolver.Flush(), addedInjects
 }
 
+func (m *SlotMachine) _boostNewSlot(slot *Slot) {
+	if bp := m.boostPermitLatest; bp != nil && slot.boost == nil {
+		bp.use()
+		slot.boost = &bp.boostPermit
+		if slot.boost.isActive() {
+			slot.slotFlags |= slotIsBoosted
+		}
+	}
+}
+
 func (m *SlotMachine) startNewSlot(slot *Slot, worker FixedSlotWorker) {
 	slot.ensureInitializing()
+	m._boostNewSlot(slot)
 	m.stopSlotWorking(slot, 0, worker)
 	m.updateSlotQueue(slot, worker, activateSlot)
 }
@@ -1091,6 +1141,7 @@ func (m *SlotMachine) startNewSlotByDetachable(slot *Slot, runInit bool, w Detac
 
 	slot.ensureInitializing()
 	if !w.NonDetachableCall(func(worker FixedSlotWorker) {
+		m._boostNewSlot(slot)
 		m.stopSlotWorking(slot, 0, worker)
 		m.updateSlotQueue(slot, worker, activateSlot)
 	}) {
@@ -1104,6 +1155,7 @@ func (m *SlotMachine) _startAddedSlot(link SlotLink, worker FixedSlotWorker) {
 	}
 	slot := link.s
 	slot.ensureInitializing()
+	m._boostNewSlot(slot)
 	m.stopSlotWorking(slot, 0, worker)
 	list := m._updateSlotQueue(slot, false, activateSlot)
 	if list != nil {
@@ -1175,28 +1227,32 @@ func (m *SlotMachine) _updateSlotQueue(slot *Slot, inplaceUpdate bool, activatio
 func (m *SlotMachine) _activateSlot(slot *Slot, mode slotActivationMode) {
 	switch {
 	case mode == activateHotWaitSlot:
-		m._addSlotToActiveQueue(slot)
+		// hot wait ignores boosted to reduce interference
+		switch {
+		case slot.isPriority():
+			m.prioritySlots.AddLast(slot)
+		//case slot.isBoosted():
+		//	m.boostedSlots.AddLast(slot)
+		default:
+			m.activeSlots.AddLast(slot)
+		}
 	case slot.isLastScan(m.getScanCount()):
 		m.hotWaitOnly = false
-		m._addSlotToActiveQueue(slot)
+		switch {
+		case slot.isPriority():
+			m.prioritySlots.AddLast(slot)
+		case slot.isBoosted():
+			m.boostedSlots.AddLast(slot)
+		default:
+			m.activeSlots.AddLast(slot)
+		}
 	default:
-		m._addSlotToWorkingQueue(slot)
-	}
-}
-
-func (m *SlotMachine) _addSlotToActiveQueue(slot *Slot) {
-	if slot.isPriority() {
-		m.prioritySlots.AddLast(slot)
-	} else {
-		m.activeSlots.AddLast(slot)
-	}
-}
-
-func (m *SlotMachine) _addSlotToWorkingQueue(slot *Slot) {
-	if slot.isPriority() {
-		m.workingSlots.AddFirst(slot)
-	} else {
-		m.workingSlots.AddLast(slot)
+		// addSlotToWorkingQueue
+		if slot.isPriority() {
+			m.workingSlots.AddFirst(slot)
+		} else {
+			m.workingSlots.AddLast(slot)
+		}
 	}
 }
 

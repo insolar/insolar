@@ -53,6 +53,10 @@ func (p *chainedBoostPermit) discardOlderThan(t time.Time) *chainedBoostPermit {
 	return n
 }
 
+func (p *chainedBoostPermit) canReuse() bool {
+	return p._get() == 1
+}
+
 func (p *chainedBoostPermit) use() {
 	if atomic.CompareAndSwapUint32(&p.active, 1, 2) {
 		return
@@ -64,15 +68,18 @@ func (p *chainedBoostPermit) use() {
 
 // nil-safe
 func (p *chainedBoostPermit) reuseOrNew(t time.Time) *chainedBoostPermit {
-	if p == nil || !p.canReuse() {
-		n := &chainedBoostPermit{boostPermit{1}, t.UnixNano(), nil}
-		p.next = n // TODO work in progress
-		panic("work in progress")
+	switch {
+	case p == nil:
+		//
+	case p.canReuse():
+		p.timeMark = t.UnixNano()
+		return p
+	case p.next != nil:
+		panic("illegal state")
 	}
-	p.timeMark = t.UnixNano()
-	return p
-}
-
-func (p *chainedBoostPermit) canReuse() bool {
-	return p._get() == 1
+	n := &chainedBoostPermit{boostPermit{1}, t.UnixNano(), nil}
+	if p != nil {
+		p.next = n
+	}
+	return n
 }

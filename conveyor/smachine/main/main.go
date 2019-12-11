@@ -32,10 +32,11 @@ func main() {
 
 	signal := tools.NewVersionedSignal()
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
-		SlotPageSize:    1000,
-		PollingPeriod:   10 * time.Millisecond,
-		PollingTruncate: 1 * time.Microsecond,
-		ScanCountLimit:  scanCountLimit,
+		SlotPageSize:         1000,
+		PollingPeriod:        10 * time.Millisecond,
+		PollingTruncate:      1 * time.Microsecond,
+		BoostNewSlotDuration: 1 * time.Second,
+		ScanCountLimit:       scanCountLimit,
 	}, signal.NextBroadcast, signal.NextBroadcast, nil)
 
 	sm.PutDependency("example.ServiceAdapterA", example.CreateServiceAdapterA())
