@@ -83,7 +83,6 @@ func (p *queueControllerTemplate) enum(qId int, fn EnumQueueFunc) bool {
 type DependencyQueueHead struct {
 	controller DependencyQueueController
 	head       dependencyQueueEntry
-	priority   *DependencyPrioritizer
 	count      int
 }
 
@@ -92,11 +91,11 @@ func (p *DependencyQueueHead) AddSlot(link SlotLink, flags SlotDependencyFlags) 
 		panic("illegal value")
 	}
 	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsShift)}
-	if p.priority != nil && p.priority.IsPriority(entry, p) {
-		p.AddFirst(entry)
-	} else {
-		p.AddLast(entry)
-	}
+	//if p.priority != nil && p.priority.IsPriority(entry, p) {
+	//	p.AddFirst(entry)
+	//} else {
+	p.AddLast(entry)
+	//}
 	return entry
 }
 

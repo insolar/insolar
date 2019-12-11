@@ -97,8 +97,9 @@ type SlotMachine struct {
 	hotWaitOnly  bool      // true when activeSlots & prioritySlots have only slots added by "hot wait"
 	scanWakeUpAt time.Time // when all slots are waiting, this is the earliest time requested for wakeup
 
+	prioritySlots SlotQueue //they are are moved to workingSlots every time when enough non-priority slots are processed
+	//boostedSlots	 SlotQueue
 	activeSlots      SlotQueue    //they are are moved to workingSlots on every full Scan
-	prioritySlots    SlotQueue    //they are are moved to workingSlots on every full Scan (placed first)
 	pollingSlots     PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
 	workingSlots     SlotQueue    //slots are currently in processing
 	nonPriorityCount uint32       // number of non-priority slots processed since the last replenishment of workingSlots
