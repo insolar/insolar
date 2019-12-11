@@ -27,7 +27,11 @@ func newSemaphoreChild(parent *semaphoreSync, value int, name string) Dependency
 	}
 	//panic("not implemented")
 	sema := &hierarchySync{parentCtl: parent}
-	sema.controller.parent = &parent.controller.awaiters.queue
+
+	parentQueue := &parent.controller.awaiters.queue
+	sema.controller.parent = parentQueue
+	sema.controller.queue.flags = parentQueue.flags
+
 	sema.controller.workerLimit = value
 	sema.controller.Init(name, &parent.mutex, &sema.controller)
 	return sema

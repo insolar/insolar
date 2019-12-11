@@ -80,41 +80,67 @@ func (p *queueControllerTemplate) enum(qId int, fn EnumQueueFunc) bool {
 	return false
 }
 
+type DependencyQueueFlags uint8
+
+const (
+	QueueAllowsPriority DependencyQueueFlags = 1 << iota
+)
+
 type DependencyQueueHead struct {
 	controller DependencyQueueController
 	head       dependencyQueueEntry
 	count      int
+	flags      DependencyQueueFlags
 }
 
 func (p *DependencyQueueHead) AddSlot(link SlotLink, flags SlotDependencyFlags) *dependencyQueueEntry {
+	return p._addSlot(link, flags, p.First)
+}
+
+func (p *DependencyQueueHead) addSlotForExclusive(link SlotLink, flags SlotDependencyFlags) *dependencyQueueEntry {
+	return p._addSlot(link, flags, func() *dependencyQueueEntry {
+		if first := p.First(); first != nil {
+			return first.QueueNext()
+		}
+		return nil
+	})
+}
+
+func (p *DependencyQueueHead) _addSlot(link SlotLink, flags SlotDependencyFlags, firstFn func() *dependencyQueueEntry) *dependencyQueueEntry {
 	if !link.IsValid() {
 		panic("illegal value")
 	}
 	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsShift)}
-	//if p.priority != nil && p.priority.IsPriority(entry, p) {
-	//	p.AddFirst(entry)
-	//} else {
+
+	if p.flags&QueueAllowsPriority != 0 && flags&syncPriorityMask != 0 {
+		if check := firstFn(); check != nil {
+			_, f := check.getFlags()
+			if f.hasLessPriorityThan(flags) {
+				p._addBefore(check, entry)
+				return entry
+			}
+		}
+	}
+
 	p.AddLast(entry)
-	//}
 	return entry
 }
 
-func (p *DependencyQueueHead) AddFirst(entry *dependencyQueueEntry) {
+func (p *DependencyQueueHead) _addBefore(position, entry *dependencyQueueEntry) {
 	p.initEmpty() // TODO move to controller's Init
 	entry.ensureNotInQueue()
 
-	p.head.nextInQueue._addQueuePrev(entry, entry)
+	position._addQueuePrev(entry, entry)
 	entry.setQueue(p)
 	p.count++
 }
 
-func (p *DependencyQueueHead) AddLast(entry *dependencyQueueEntry) {
-	p.initEmpty()
-	entry.ensureNotInQueue()
+func (p *DependencyQueueHead) AddFirst(entry *dependencyQueueEntry) {
+	p._addBefore(p.head.nextInQueue, entry)
+}
 
-	p.head._addQueuePrev(entry, entry)
-	entry.setQueue(p)
-	p.count++
+func (p *DependencyQueueHead) AddLast(entry *dependencyQueueEntry) {
+	p._addBefore(&p.head, entry)
 }
 
 func (p *DependencyQueueHead) Count() int {
@@ -351,7 +377,7 @@ func (p *dependencyQueueEntry) setQueue(head *DependencyQueueHead) {
 	}
 }
 
-func (p *dependencyQueueEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
+func (p *dependencyQueueEntry) IsCompatibleWith(requiredFlags SlotDependencyFlags) bool {
 	_, f := p.getFlags()
-	return f&flags == flags
+	return f.isCompatibleWith(requiredFlags)
 }

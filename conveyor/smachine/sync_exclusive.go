@@ -19,7 +19,12 @@ package smachine
 import "sync"
 
 func NewExclusive(name string) SyncLink {
+	return NewExclusiveWithFlags(name, 0)
+}
+
+func NewExclusiveWithFlags(name string, flags DependencyQueueFlags) SyncLink {
 	ctl := &exclusiveSync{}
+	ctl.awaiters.queue.flags = flags
 	ctl.awaiters.Init(name, &ctl.mutex, &ctl.awaiters)
 	return NewSyncLink(ctl)
 }
@@ -80,7 +85,7 @@ func (p *exclusiveSync) CreateDependency(holder SlotLink, flags SlotDependencyFl
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	sd := p.awaiters.queue.AddSlot(holder, flags)
+	sd := p.awaiters.queue.addSlotForExclusive(holder, flags)
 	if f, _ := p.awaiters.queue.FirstValid(); f == sd {
 		return true, sd
 	}

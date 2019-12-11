@@ -35,7 +35,7 @@ func main() {
 		SlotPageSize:         1000,
 		PollingPeriod:        10 * time.Millisecond,
 		PollingTruncate:      1 * time.Microsecond,
-		BoostNewSlotDuration: 1 * time.Second,
+		BoostNewSlotDuration: 10 * time.Millisecond,
 		ScanCountLimit:       scanCountLimit,
 	}, signal.NextBroadcast, signal.NextBroadcast, nil)
 

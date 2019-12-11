@@ -165,8 +165,23 @@ func (v SyncAdjustment) IsEmpty() bool {
 type SlotDependencyFlags uint8
 
 const (
-	syncForOneStep SlotDependencyFlags = 1 << iota
+	syncPriorityBoosted SlotDependencyFlags = 1 << iota
+	syncPriorityHigh
+	syncForOneStep
 )
+
+const syncPriorityMask = syncPriorityBoosted | syncPriorityHigh
+
+func (v SlotDependencyFlags) hasLessPriorityThan(o SlotDependencyFlags) bool {
+	return v&syncPriorityMask < o&syncPriorityMask
+}
+
+func (v SlotDependencyFlags) isCompatibleWith(requiredFlags SlotDependencyFlags) bool {
+	if v&requiredFlags&^syncPriorityMask != requiredFlags&^syncPriorityMask {
+		return false
+	}
+	return !v.hasLessPriorityThan(requiredFlags)
+}
 
 type EnumQueueFunc func(qId int, link SlotLink, flags SlotDependencyFlags) bool
 

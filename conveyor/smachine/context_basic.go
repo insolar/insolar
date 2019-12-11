@@ -383,6 +383,13 @@ func (p *slotContext) AcquireForThisStepAndRelease(link SyncLink) BoolDecision {
 func (p *slotContext) acquire(link SyncLink, autoRelease bool, flags SlotDependencyFlags) (d BoolDecision) {
 	p.ensureAtLeast(updCtxInit)
 
+	switch {
+	case p.s.isPriority():
+		flags |= syncPriorityHigh
+	case p.s.isBoosted():
+		flags |= syncPriorityBoosted
+	}
+
 	dep := p.s.dependency
 	if dep == nil {
 		d, p.s.dependency = link.controller.CreateDependency(p.s.NewLink(), flags)

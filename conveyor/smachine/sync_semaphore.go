@@ -23,6 +23,10 @@ import (
 
 // Semaphore allows Acquire() call to pass through for a number of workers within the limit.
 func NewFixedSemaphore(limit int, name string) SyncLink {
+	return NewFixedSemaphoreWithFlags(limit, name, 0)
+}
+
+func NewFixedSemaphoreWithFlags(limit int, name string, flags DependencyQueueFlags) SyncLink {
 	if limit < 0 {
 		panic("illegal value")
 	}
@@ -30,9 +34,9 @@ func NewFixedSemaphore(limit int, name string) SyncLink {
 	case 0:
 		return NewInfiniteLock(name)
 	case 1:
-		return NewExclusive(name)
+		return NewExclusiveWithFlags(name, flags)
 	default:
-		return NewSyncLink(newSemaphore(limit, false, name))
+		return NewSyncLink(newSemaphore(limit, false, name, flags))
 	}
 }
 
@@ -40,7 +44,11 @@ func NewFixedSemaphore(limit int, name string) SyncLink {
 // Negative and zero values are not passable.
 // The limit can be changed with adjustments. Overflows are capped by min/max int.
 func NewSemaphore(initialValue int, name string) SemaphoreLink {
-	return SemaphoreLink{newSemaphore(initialValue, true, name)}
+	return NewSemaphoreWithFlags(initialValue, name, 0)
+}
+
+func NewSemaphoreWithFlags(initialValue int, name string, flags DependencyQueueFlags) SemaphoreLink {
+	return SemaphoreLink{newSemaphore(initialValue, true, name, flags)}
 }
 
 type SemaphoreLink struct {
@@ -76,8 +84,9 @@ func (v SemaphoreLink) SyncLink() SyncLink {
 	return NewSyncLink(v.ctl)
 }
 
-func newSemaphore(initialLimit int, isAdjustable bool, name string) *semaphoreSync {
+func newSemaphore(initialLimit int, isAdjustable bool, name string, flags DependencyQueueFlags) *semaphoreSync {
 	ctl := &semaphoreSync{isAdjustable: true}
+	ctl.controller.awaiters.queue.flags = flags
 	ctl.controller.Init(name, &ctl.mutex, &ctl.controller)
 
 	deps, _ := ctl.AdjustLimit(initialLimit, false)
