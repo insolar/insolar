@@ -107,12 +107,16 @@ func (p *DependencyQueueHead) addSlotForExclusive(link SlotLink, flags SlotDepen
 }
 
 func (p *DependencyQueueHead) _addSlot(link SlotLink, flags SlotDependencyFlags, firstFn func() *dependencyQueueEntry) *dependencyQueueEntry {
-	if !link.IsValid() {
+	switch {
+	case !link.IsValid():
 		panic("illegal value")
+	case p.flags&QueueAllowsPriority == 0:
+		flags &^= syncPriorityMask
 	}
+
 	entry := &dependencyQueueEntry{link: link, slotFlags: uint32(flags << flagsShift)}
 
-	if p.flags&QueueAllowsPriority != 0 && flags&syncPriorityMask != 0 {
+	if flags&syncPriorityMask != 0 {
 		if check := firstFn(); check != nil {
 			_, f := check.getFlags()
 			if f.hasLessPriorityThan(flags) {
@@ -378,6 +382,12 @@ func (p *dependencyQueueEntry) setQueue(head *DependencyQueueHead) {
 }
 
 func (p *dependencyQueueEntry) IsCompatibleWith(requiredFlags SlotDependencyFlags) bool {
+	switch {
+	case requiredFlags&syncPriorityMask == 0:
+		// break
+	case p.queue.flags&QueueAllowsPriority == 0:
+		requiredFlags &^= syncPriorityMask
+	}
 	_, f := p.getFlags()
 	return f.isCompatibleWith(requiredFlags)
 }
