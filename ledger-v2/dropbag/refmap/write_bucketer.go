@@ -14,7 +14,7 @@
 //    limitations under the License.
 //
 
-package filaments
+package refmap
 
 import (
 	"math/bits"
@@ -28,13 +28,13 @@ type KeyResolveFunc func(id uint32) *reference.Local
 type KeyBucketFunc func(count int, writeFn func(KeyWriterFunc) error) error
 type KeyBucketFactoryFunc func(resolveFn KeyResolveFunc, bucketCount, bucketSize uint32) KeyBucketFunc
 
-type RefSemiMapBucketer struct {
+type WriteBucketer struct {
 	MaxPerBucket int
 	KeySorter    func(i, j *reference.Local) bool
 	Output       KeyBucketFactoryFunc
 }
 
-func (p RefSemiMapBucketer) ProcessMap(m *RefSemiMap) error {
+func (p WriteBucketer) ProcessMap(m *UpdateableKeyMap) error {
 	if p.MaxPerBucket < 16 {
 		panic("illegal argument")
 	}
@@ -84,7 +84,7 @@ func (p RefSemiMapBucketer) ProcessMap(m *RefSemiMap) error {
 
 	writeFn := p.Output(m.GetInterned, bucketCount, bucketSize)
 	if p.KeySorter != nil {
-		sorter := semiMapKeySorter{p.KeySorter, writeFn, nil}
+		sorter := refMapKeySorter{p.KeySorter, writeFn, nil}
 		writeFn = sorter.WriteSorted
 	}
 
@@ -133,7 +133,7 @@ func (p RefSemiMapBucketer) ProcessMap(m *RefSemiMap) error {
 	return nil
 }
 
-type semiMapKeySorter struct {
+type refMapKeySorter struct {
 	keySorter func(i, j *reference.Local) bool
 	output    KeyBucketFunc
 	items     []keyBucketItem
@@ -144,7 +144,7 @@ type keyBucketItem struct {
 	BucketState
 }
 
-func (p semiMapKeySorter) WriteSorted(count int, fn func(KeyWriterFunc) error) error {
+func (p refMapKeySorter) WriteSorted(count int, fn func(KeyWriterFunc) error) error {
 
 	items := make([]keyBucketItem, 0, count)
 
@@ -169,14 +169,14 @@ func (p semiMapKeySorter) WriteSorted(count int, fn func(KeyWriterFunc) error) e
 	})
 }
 
-func (p semiMapKeySorter) Len() int {
+func (p refMapKeySorter) Len() int {
 	return len(p.items)
 }
 
-func (p semiMapKeySorter) Less(i, j int) bool {
+func (p refMapKeySorter) Less(i, j int) bool {
 	return p.keySorter(p.items[i].Local, p.items[j].Local)
 }
 
-func (p semiMapKeySorter) Swap(i, j int) {
+func (p refMapKeySorter) Swap(i, j int) {
 	p.items[i], p.items[j] = p.items[j], p.items[i]
 }

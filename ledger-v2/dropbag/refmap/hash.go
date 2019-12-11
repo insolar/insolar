@@ -14,27 +14,14 @@
 //    limitations under the License.
 //
 
-package filaments
+package refmap
 
 import (
 	"hash/fnv"
 
 	"github.com/insolar/insolar/ledger-v2/unsafekit"
 	"github.com/insolar/insolar/longbits"
-	"github.com/insolar/insolar/reference"
 )
-
-type ReadRefMap struct {
-	pagedSequence [][]*WriteEntry // TODO sequence must tolerate skips - in case of key collision on map
-
-	localMap map[reference.Local]uint32 // index in buckets
-	buckets  []bucketWriteMap
-}
-
-type bucketWriteMap struct {
-	local   *reference.Local
-	baseMap map[reference.Local]uint32
-}
 
 func Hash32(v longbits.ByteString, seed uint32) uint32 {
 	h := fnv.New32a() // FNV-1a has a better avalanche property

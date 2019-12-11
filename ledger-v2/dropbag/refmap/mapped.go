@@ -14,7 +14,7 @@
 //    limitations under the License.
 //
 
-package filaments
+package refmap
 
 import (
 	"math"
@@ -34,7 +34,7 @@ const MinKeyBucketBatchSize = 8 // min batch size for multi-batch buckets (excep
 const tooBigUnsortedBucketSize = 32 // default size limit to force use of hashmap on an unsorted bucket. Excess impacts GC performance.
 const tooBigSortedBucketSize = 1024 // default size limit to force use of hashmap on a sorted bucket. Excess impacts GC performance.
 
-func NewMappedRefMap(expectedKeyCount int, bucketCount int) MappedRefMap {
+func NewMappedRefMap(expectedKeyCount int, bucketCount int) ReadOnlyMap {
 	switch {
 	case expectedKeyCount < 0:
 		panic("illegal state")
@@ -43,11 +43,11 @@ func NewMappedRefMap(expectedKeyCount int, bucketCount int) MappedRefMap {
 	case expectedKeyCount > 0:
 		panic("illegal state")
 	}
-	return MappedRefMap{expectedKeyCount: expectedKeyCount, buckets: make([]mappedBucket, bucketCount)}
+	return ReadOnlyMap{expectedKeyCount: expectedKeyCount, buckets: make([]mappedBucket, bucketCount)}
 }
 
-// implements map[Holder]uint63 with external lazy load support
-type MappedRefMap struct {
+// implements READ-ONLY map[Holder]uint63 with external lazy load & memory-mapping support
+type ReadOnlyMap struct {
 	hashSeed         uint32
 	expectedKeyCount int
 	loadedKeyCount   int
@@ -64,7 +64,7 @@ type MappedRefMap struct {
 
 type bigBucketMap map[ /* keyL0*/ longbits.ByteString]bucketValueSelector
 
-func (p *MappedRefMap) SetBigBucketMinSize(bigBucketSize int) {
+func (p *ReadOnlyMap) SetBigBucketMinSize(bigBucketSize int) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -76,7 +76,7 @@ func (p *MappedRefMap) SetBigBucketMinSize(bigBucketSize int) {
 	p.bigBucketMinSize = bigBucketSize
 }
 
-func (p *MappedRefMap) SetHashSeed(hashSeed uint32) {
+func (p *ReadOnlyMap) SetHashSeed(hashSeed uint32) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -86,7 +86,11 @@ func (p *MappedRefMap) SetHashSeed(hashSeed uint32) {
 	p.hashSeed = hashSeed
 }
 
-func (p *MappedRefMap) SetSortedBuckets(sortedBuckets bool) {
+func (p *ReadOnlyMap) GetHashSeed() uint32 {
+	return p.hashSeed
+}
+
+func (p *ReadOnlyMap) SetSortedBuckets(sortedBuckets bool) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -96,14 +100,14 @@ func (p *MappedRefMap) SetSortedBuckets(sortedBuckets bool) {
 	p.sortedBuckets = sortedBuckets
 }
 
-func (p *MappedRefMap) SetLocator(bucketIndex int, locator int64) {
+func (p *ReadOnlyMap) SetLocator(bucketIndex int, locator int64) {
 	if locator < 0 {
 		panic("illegal value")
 	}
 	p.buckets[bucketIndex].locator = locator
 }
 
-func (p *MappedRefMap) GetLocator(bucketIndex int) int64 {
+func (p *ReadOnlyMap) GetLocator(bucketIndex int) int64 {
 	return p.buckets[bucketIndex].locator
 }
 
@@ -111,7 +115,7 @@ func (p *MappedRefMap) GetLocator(bucketIndex int) int64 {
 // result = ( <0, false ) - item was not found
 // result = ( B>=0, false) - item presence is unknown, bucket is missing, B is bucket number
 //
-func (p *MappedRefMap) GetValueOrBucket(ref reference.Holder) ( /* map value or missing bucket index */ int64, bool) {
+func (p *ReadOnlyMap) GetValueOrBucket(ref reference.Holder) ( /* map value or missing bucket index */ int64, bool) {
 	localRef := ref.GetLocal()
 	s := unsafekit.WrapLocalRef(localRef)
 	hashLocal := Hash32(s, p.hashSeed) // localRef must be kept alive
@@ -156,7 +160,7 @@ func (p *MappedRefMap) GetValueOrBucket(ref reference.Holder) ( /* map value or 
 
 var emptyBucketMarker = make([][]bucketKey, 0, 0)
 
-func (p *MappedRefMap) LoadBucket(bucketIndex, bucketKeyL0Count, bucketKeyL1Count int, chunks []longbits.ByteString) error {
+func (p *ReadOnlyMap) LoadBucket(bucketIndex, bucketKeyL0Count, bucketKeyL1Count int, chunks []longbits.ByteString) error {
 	if bucketIndex < 0 || bucketIndex >= len(p.buckets) {
 		panic("illegal value") // TODO error
 	}

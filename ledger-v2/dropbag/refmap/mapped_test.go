@@ -14,7 +14,7 @@
 //    limitations under the License.
 //
 
-package filaments
+package refmap
 
 import (
 	"fmt"
