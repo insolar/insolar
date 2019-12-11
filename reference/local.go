@@ -210,12 +210,13 @@ func (v Local) Compare(other Local) int {
 	return v.hash.Compare(other.hash)
 }
 
-// Pulse returns a copy of Pulse part of ID.
+// returns a copy of Pulse part of ID.
 func (v Local) Pulse() pulse.Number {
 	return v.GetPulseNumber()
 }
 
-// Hash returns a copy of Hash part of ID
+// TODO rename to IdentityHash()
+// returns a copy of Hash part of ID
 func (v Local) Hash() []byte {
 	rv := make([]byte, len(v.hash))
 	copy(rv, v.hash[:])

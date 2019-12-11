@@ -18,9 +18,8 @@ package reference
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type IdentityEncoder func(ref Holder) (domain, object string)
@@ -107,7 +106,7 @@ func (v encoder) EncodeToBuilder(ref Holder, b *strings.Builder) error {
 
 	if objectName != "" {
 		if IsReservedName(objectName) || !IsValidObjectName(objectName) {
-			return errors.Errorf("illegal object name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
+			return fmt.Errorf("illegal object name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
 		}
 		b.WriteString(objectName)
 	} else {
@@ -120,7 +119,7 @@ func (v encoder) EncodeToBuilder(ref Holder, b *strings.Builder) error {
 	switch {
 	case domainName != "":
 		if IsReservedName(domainName) || !IsValidDomainName(domainName) {
-			return errors.Errorf("illegal domain name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
+			return fmt.Errorf("illegal domain name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
 		}
 		b.WriteByte('.')
 		b.WriteString(domainName)

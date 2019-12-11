@@ -125,7 +125,7 @@ func (v decoder) parseLegacyAddress(ref string, domainPos int) (resultLocal Loca
 	default:
 		return resultLocal, nil
 	}
-	return resultLocal, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
+	return resultLocal, fmt.Errorf("unable to parse legacy reference: ref=%v err=%v", ref, err)
 }
 
 func (v decoder) parseSchema(schema, refFull string) (ByteDecodeFunc, error) {
@@ -142,14 +142,14 @@ func (v decoder) parseSchema(schema, refFull string) (ByteDecodeFunc, error) {
 		case parts[1] == SchemaV1:
 			//
 		default:
-			return nil, fmt.Errorf("unsupported schema: schema=%s, ref=%s", schema, refFull)
+			return nil, fmt.Errorf("unsupported schema: schema=%s, ref=%v", schema, refFull)
 		}
 	default:
 		return nil, fmt.Errorf("invalid schema: schema=%s", schema)
 	}
 	decoder := v.byteDecoderFactory.GetByteDecoder(parts[0])
 	if decoder == nil {
-		return nil, fmt.Errorf("unknown decoder: schema=%s, decoder=%s, ref=%s", schema, parts[0], refFull)
+		return nil, fmt.Errorf("unknown decoder: schema=%s, decoder=%s, ref=%v", schema, parts[0], refFull)
 	}
 	return decoder, nil
 }
@@ -172,23 +172,23 @@ func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (res
 	if err := func() error {
 		_, ref := v.parseAuthority(refFull)
 		if len(ref) == 0 {
-			return fmt.Errorf("empty reference body: ref=%s", refFull)
+			return fmt.Errorf("empty reference body: ref=%v", refFull)
 		}
 
 		parityPos := strings.IndexRune(ref, '/')
 		var parity []byte
 		switch {
 		case parityPos == 0:
-			return fmt.Errorf("empty reference body: ref=%s", refFull)
+			return fmt.Errorf("empty reference body: ref=%v", refFull)
 		case parityPos > 0:
 			encodedParity := ref[parityPos+1:]
 			if encodedParity[0] != '2' {
-				return fmt.Errorf("invalid parity prefix: ref=%s, parity=%s", refFull, encodedParity)
+				return fmt.Errorf("invalid parity prefix: ref=%v, parity=%s", refFull, encodedParity)
 			}
 			buf := bytes.NewBuffer(make([]byte, 0, LocalBinaryPulseAndScopeSize))
 			_, err := byteDecoder(encodedParity[1:], buf)
 			if err != nil {
-				return fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
+				return fmt.Errorf("unable to decode parity: ref=%v, err=%v", refFull, err)
 			}
 			ref = ref[:parityPos]
 			if v.options&IgnoreParity == 0 {
@@ -202,7 +202,7 @@ func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (res
 			err = CheckParity(&result, parity)
 		}
 		if err != nil {
-			return fmt.Errorf("invalid reference, %s: ref=%s", err.Error(), refFull)
+			return fmt.Errorf("invalid reference: ref=%v err=%v", refFull, err)
 		}
 		return nil
 	}(); err != nil {
