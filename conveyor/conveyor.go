@@ -275,6 +275,21 @@ func (p *PulseConveyor) _publishPulseSlotMachine(pn pulse.Number, psm *PulseSlot
 	return psm
 }
 
+func (p *PulseConveyor) _publishUninitializedPulseSlotMachine(pn pulse.Number) (*PulseSlotMachine, bool) {
+	if psm := p.getPulseSlotMachine(pn); psm != nil {
+		return psm, false
+	}
+	psm := p.newPulseSlotMachine()
+	if psv, ok := p.slotMachine.TryPublish(pn, psm); !ok {
+		psm = psv.(*PulseSlotMachine)
+		if psm == nil {
+			panic("illegal state")
+		}
+		return psm, false
+	}
+	return psm, true
+}
+
 func (p *PulseConveyor) newPulseSlotMachine() *PulseSlotMachine {
 	return NewPulseSlotMachine(p.slotConfig, &p.pdm)
 }
@@ -299,6 +314,8 @@ func (p *PulseConveyor) PreparePulseChange(out PreparePulseChangeChannel) error 
 		}
 		p.pdm.setPreparingPulse(out)
 		if !ctx.BargeInNow(p.presentMachine.SlotLink(), out, p.presentMachine.preparePulseChange) {
+			//p.pdm.unsetPreparingPulse()
+			//close(out)
 			panic("present slot is busy")
 		}
 	})
@@ -366,35 +383,20 @@ func (p *PulseConveyor) _migratePulseSlots(ctx smachine.MachineCallContext, pr p
 		p.unpublishPulse = pulse.Unknown
 	}
 
-	prevFuture := p.getPulseSlotMachine(prevFuturePN)
-
-	republishPresent := false
-	activatePresent := false
-
 	pd := pr.RightBoundData()
 
-	if prevFuture != nil {
-		prevFuture.setPresent(pr)
-		p.presentMachine = prevFuture
+	prevFuture, activatePresent := p._publishUninitializedPulseSlotMachine(prevFuturePN)
+	prevFuture.setPresent(pr)
+	p.presentMachine = prevFuture
 
-		if prevFuturePN != pd.PulseNumber {
-			// new pulse is different than expected at the previous cycle, so we have to remove the pulse number alias
-			// to avoids unnecessary synchronization - the previous alias will be unpublished on commit of a next pulse
-			p.unpublishPulse = prevFuturePN
-			republishPresent = true
-		}
-	} else {
-		psm := p.newPulseSlotMachine()
-		psm.setPresent(pr)
-		p.presentMachine = psm
-		activatePresent = true
-	}
-
-	if republishPresent || activatePresent {
+	if prevFuturePN != pd.PulseNumber {
+		// new pulse is different than expected at the previous cycle, so we have to remove the pulse number alias
+		// to avoids unnecessary synchronization - the previous alias will be unpublished on commit of a next pulse
+		p.unpublishPulse = prevFuturePN
 		p.presentMachine.setPulseForUnpublish(p.slotMachine, pd.PulseNumber)
 
-		if _, ok := p.slotMachine.TryPublish(pd.PulseNumber, p.presentMachine); !ok {
-			panic("illegal state")
+		if conflict, ok := p.slotMachine.TryPublish(pd.PulseNumber, p.presentMachine); !ok {
+			panic(fmt.Sprintf("illegal state - conflict: key=%v existing=%v", pd.PulseNumber, conflict))
 		}
 	}
 
