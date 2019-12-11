@@ -17,10 +17,13 @@
 package logadapter
 
 import (
+	"os"
+	"path/filepath"
+
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/inssyslog"
-	"github.com/pkg/errors"
-	"os"
 )
 
 func OpenLogBareOutput(output insolar.LogOutput, param string) (BareOutput, error) {
@@ -33,7 +36,8 @@ func OpenLogBareOutput(output insolar.LogOutput, param string) (BareOutput, erro
 			ProtectedClose: true,
 		}, nil
 	case insolar.SysLogOutput:
-		w, err := inssyslog.ConnectSyslogByParam(param, "insolar")
+		executableName := filepath.Base(os.Args[0])
+		w, err := inssyslog.ConnectSyslogByParam(param, executableName)
 		if err != nil {
 			return BareOutput{}, err
 		}
