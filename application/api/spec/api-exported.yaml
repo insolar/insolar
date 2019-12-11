@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  version: 1.0.3
+  version: 1.0.4
   title: Insolar API
   contact:
     name: Insolar dev team
@@ -1549,7 +1549,7 @@ components:
                   properties:
                     reference:
                       type: string
-                      pattern: '^insolar:[A-z0-9_.-]+$'
+                      pattern: '^insolar:1[a-zA-Z0-9_-]{42,43}$'
                       example: 'insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE'
                       x-json-schema-id: reference
                       description: Reference to the `member` object.
@@ -1600,7 +1600,7 @@ components:
       x-json-schema-id: responses/memberWithMigration.yaml
     reference:
       type: string
-      pattern: '^insolar:[A-z0-9_.-]+$'
+      pattern: '^insolar:1[a-zA-Z0-9_-]{42,43}$'
       example: 'insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE'
       x-json-schema-id: reference
     definitions-responses-transfer-yaml:
@@ -1642,7 +1642,7 @@ components:
                     Reference to a *transfer* request record. This reference is
                     equivalent to `txID` — transaction identificator.
                   example: 'insolar:1FUpUFSfNpmyX05nustQ7B8al0xj-_j3_ndqXfgLRra4.record'
-                  pattern: '^insolar:[A-z0-9_-]+\.record+$'
+                  pattern: '^insolar:1[a-zA-Z0-9_-]{42,43}\.record$'
                   x-json-schema-id: requestReference
                 traceID:
                   $ref: '#/components/schemas/traceID'
@@ -1862,7 +1862,7 @@ components:
                               properties:
                                 reference:
                                   type: string
-                                  pattern: '^insolar:[A-z0-9_.-]+$'
+                                  pattern: '^insolar:1[a-zA-Z0-9_-]{42,43}$'
                                   example: >-
                                     insolar:1GlDeBOnc7Ar5N34ShBdkx_SAVOfnZJKUCoQMi0_OcvE
                                   x-json-schema-id: reference
@@ -2213,7 +2213,7 @@ components:
         Reference to a request record initialized by the method's call. May be
         an empty string.
       example: 'insolar:1FUpUFSfNpmyX05nustQ7B8al0xj-_j3_ndqXfgLRra4.record'
-      pattern: '^insolar:[A-z0-9_-]+\.record+$'
+      pattern: '^insolar:1[a-zA-Z0-9_-]{42,43}\.record$'
       x-json-schema-id: requestReference
     definitions-nodeShort-yaml:
       title: Node
