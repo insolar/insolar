@@ -165,6 +165,15 @@ func (p *slotContext) GetDefaultTerminationResult() interface{} {
 	return p.s.defResult
 }
 
+func (p *slotContext) SetDynamicBoost(boosted bool) {
+	p.ensureAtLeast(updCtxInit)
+	if boosted {
+		p.s.boost = activeBoost
+	} else {
+		p.s.boost = inactiveBoost
+	}
+}
+
 func (p *slotContext) JumpExt(step SlotStep) StateUpdate {
 	return p.template(stateUpdNext).newStep(step, nil)
 }

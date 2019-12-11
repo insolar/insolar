@@ -38,6 +38,9 @@ func (p *boostPermit) discard() {
 	atomic.StoreUint32(&p.active, 0)
 }
 
+var activeBoost = &boostPermit{1}
+var inactiveBoost = &boostPermit{0}
+
 type chainedBoostPermit struct {
 	boostPermit
 	timeMark int64

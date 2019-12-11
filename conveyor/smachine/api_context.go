@@ -123,6 +123,9 @@ type InOrderStepContext interface {
 	// Gets a value from the last SetDefaultTerminationResult().
 	GetDefaultTerminationResult() interface{}
 
+	// Marks this slot for priority on scheduling and sync queues. Overrides automatic boost.
+	SetDynamicBoost(bool)
+
 	// Returns a slot logger for this context. It is only valid while this context is valid.
 	Log() Logger
 	// Sets tracing mode for the slot. Actual impact depends on implementation of a logger.
