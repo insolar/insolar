@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/rpc/v2"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/application/api/instrumenter"
 	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -65,7 +65,7 @@ func NewNodeService(runner *Runner) *NodeService {
 //		"id": str|int|null // same as in request
 //	}
 //
-func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs, _ *rpc.RequestBody, reply *requester.SeedReply) error {
+func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs, reply *requester.SeedReply) error {
 	traceID := instrumenter.GetTraceID(ctx)
 
 	seed, err := s.runner.SeedGenerator.Next()
@@ -73,11 +73,11 @@ func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs,
 		return err
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
+	p, err := s.runner.PulseAccessor.Latest(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "couldn't receive pulse")
 	}
-	s.runner.SeedManager.Add(*seed, pulse.PulseNumber)
+	s.runner.SeedManager.Add(*seed, p.PulseNumber)
 
 	reply.Seed = seed[:]
 	reply.TraceID = traceID
@@ -85,7 +85,7 @@ func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs,
 	return nil
 }
 
-func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.RequestBody, reply *requester.SeedReply) error {
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, _ *rpc.RequestBody, reply *requester.SeedReply) error {
 	ctx, instr := instrumenter.NewMethodInstrument("NodeService.getSeed")
 	defer instr.End()
 
@@ -108,7 +108,7 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 		}
 	}
 
-	err := s.getSeed(ctx, r, args, requestBody, reply)
+	err := s.getSeed(ctx, r, args, reply)
 	if err != nil {
 		if strings.Contains(err.Error(), pulse.ErrNotFound.Error()) {
 			logger.Warn("[ NodeService.getSeed ] failed to execute: ", err.Error())
