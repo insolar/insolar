@@ -67,8 +67,9 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			fmt.Println("failed to cast member to migration member")
 			os.Exit(1)
 		}
+		ethHash := testutils.RandomEthHash()
 		for i := 0; i < repetition; i++ {
-			_, err := s.insSDK.FullMigration(s.migrationDaemons, testutils.RandomEthHash(), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, ethHash, big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
 			}
