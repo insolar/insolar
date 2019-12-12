@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"go.opencensus.io/stats"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
