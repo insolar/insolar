@@ -68,7 +68,7 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			os.Exit(1)
 		}
 		for i := 0; i < repetition; i++ {
-			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, replaceLast(txHashPattern, strconv.Itoa(i)), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
 			}
@@ -87,7 +87,7 @@ func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)))
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
