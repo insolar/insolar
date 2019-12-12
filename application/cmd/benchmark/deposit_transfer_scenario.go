@@ -65,6 +65,10 @@ func (s *depositTransferScenario) prepare(repetition int) {
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 
+	for i := 0; i < repetition; i++ {
+		ethHashes[i] = testutils.RandomEthHash()
+	}
+
 	for _, m := range s.members {
 		mm, ok := m.(*sdk.MigrationMember)
 		if !ok {
@@ -72,7 +76,6 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			os.Exit(1)
 		}
 		for i := 0; i < repetition; i++ {
-			ethHashes[i] = testutils.RandomEthHash()
 			_, err := s.insSDK.FullMigration(s.migrationDaemons, ethHashes[i], big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
