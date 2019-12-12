@@ -35,6 +35,10 @@ type depositTransferScenario struct {
 	balanceCheckMembers []sdk.Member
 }
 
+var (
+	ethHashes = make(map[int]string)
+)
+
 func (s *depositTransferScenario) canBeStarted() error {
 	if len(s.members) < concurrent {
 		return fmt.Errorf("not enough members for start")
@@ -67,9 +71,9 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			fmt.Println("failed to cast member to migration member")
 			os.Exit(1)
 		}
-		ethHash := testutils.RandomEthHash()
 		for i := 0; i < repetition; i++ {
-			_, err := s.insSDK.FullMigration(s.migrationDaemons, ethHash, big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			ethHashes[i] = testutils.RandomEthHash()
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, ethHashes[i], big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
 			}
@@ -81,14 +85,14 @@ func (s *depositTransferScenario) prepare(repetition int) {
 
 }
 
-func (s *depositTransferScenario) start(concurrentIndex int, _ int) (string, error) {
+func (s *depositTransferScenario) start(concurrentIndex int, repetition int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, testutils.RandomEthHash())
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, ethHashes[repetition])
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
