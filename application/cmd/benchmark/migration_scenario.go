@@ -27,7 +27,7 @@ import (
 const (
 	migrationAmount = 101
 
-	txHashPrefix = "tx_hash_"
+	txHashPattern = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
 )
 
 type migrationScenario struct {
@@ -75,12 +75,19 @@ func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (str
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
 		return traceID, err
 	}
-	return s.insSDK.Migration(s.migrationDaemons[1], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.Migration(s.migrationDaemons[1], replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
 func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
 	return s.balanceCheckMembers
+}
+
+func replaceLast(str, replace string) string {
+	if len(replace) >= len(str) {
+		return replace
+	}
+	return str[:len(str)-len(replace)] + replace
 }
