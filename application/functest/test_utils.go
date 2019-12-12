@@ -49,7 +49,8 @@ import (
 )
 
 const (
-	countTwoActiveDaemon = iota + 2
+	countOneActiveDaemon = iota + 1
+	countTwoActiveDaemon
 	countThreeActiveDaemon
 )
 
@@ -344,7 +345,6 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 func signedRequest(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
-	var errMsg string
 	if err != nil {
 		var suffix string
 		requesterError, ok := err.(*requester.Error)
@@ -353,8 +353,8 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 		}
 		t.Error("[" + method + "]" + err.Error() + suffix)
 	}
-	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
-	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
+	require.NotEqual(t, "", refStr, "request ref is empty")
+	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero")
 
 	_, err = insolar.NewReferenceFromString(refStr)
 	require.Nil(t, err)
