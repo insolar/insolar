@@ -29,12 +29,12 @@ import (
 type conveyorSlotMachineLogger struct {
 }
 
-func (conveyorSlotMachineLogger) LogInternal(data smachine.SlotMachineData, msg string) {
+func (conveyorSlotMachineLogger) LogMachineInternal(data smachine.SlotMachineData, msg string) {
 	fmt.Printf("[MACHINE][LOG] %s[%3d]: %03d @ %03d: internal %s err=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(), msg, data.Error)
 }
 
-func (conveyorSlotMachineLogger) LogCritical(data smachine.SlotMachineData, msg string) {
+func (conveyorSlotMachineLogger) LogMachineCritical(data smachine.SlotMachineData, msg string) {
 	fmt.Printf("[MACHINE][ERR] %s[%3d]: %03d @ %03d: internal %s err=%v\n", data.StepNo.MachineId(), data.CycleNo,
 		data.StepNo.SlotID(), data.StepNo.StepNo(), msg, data.Error)
 }

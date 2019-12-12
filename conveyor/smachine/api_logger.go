@@ -70,8 +70,8 @@ type StepLoggerUpdateData struct {
 
 type SlotMachineLogger interface {
 	CreateStepLogger(context.Context, StateMachine, TracerId) StepLogger
-	LogInternal(data SlotMachineData, msg string)
-	LogCritical(data SlotMachineData, msg string)
+	LogMachineInternal(data SlotMachineData, msg string)
+	LogMachineCritical(data SlotMachineData, msg string)
 }
 
 type StepLoggerFactoryFunc func(context.Context, StateMachine, TracerId) StepLogger

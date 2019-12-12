@@ -309,8 +309,8 @@ func (p *slotContext) LogAsync() Logger {
 		return logger
 	}
 	logger.ctx, stepLogger = stepLogger.CreateAsyncLogger(logger.ctx, &logger.stepData)
-	if logger.ctx == nil {
-		panic("illegal state")
+	if stepLogger == nil || logger.ctx == nil {
+		panic("illegal state - logger doesnt support async")
 	}
 
 	logger.stepData.Flags |= StepLoggerDetached

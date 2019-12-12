@@ -1331,13 +1331,13 @@ func (m *SlotMachine) handleSlotUpdateError(slot *Slot, worker FixedSlotWorker, 
 
 func (m *SlotMachine) logCritical(link StepLink, msg string, err error) {
 	if sml := m.config.SlotMachineLogger; sml != nil {
-		sml.LogCritical(SlotMachineData{m.getScanCount(), link, err}, msg)
+		sml.LogMachineCritical(SlotMachineData{m.getScanCount(), link, err}, msg)
 	}
 }
 
 func (m *SlotMachine) logInternal(link StepLink, msg string, err error) {
 	if sml := m.config.SlotMachineLogger; sml != nil {
-		sml.LogInternal(SlotMachineData{m.getScanCount(), link, err}, msg)
+		sml.LogMachineInternal(SlotMachineData{m.getScanCount(), link, err}, msg)
 	}
 }
 
