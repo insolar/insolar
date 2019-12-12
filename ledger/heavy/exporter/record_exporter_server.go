@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"go.opencensus.io/stats"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
@@ -104,7 +102,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 
 		err = stream.Send(record)
 		if err != nil {
-			if err != status.Error(codes.Canceled, "code = Canceled desc = context canceled") {
+			if stream.Context().Err() != context.Canceled {
 				logger.Error(err)
 			}
 
