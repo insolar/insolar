@@ -600,7 +600,7 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 	defer func() {
 		atomic.AddInt32(&p.writerCounts, -(1 + 1<<16)) // worker
 		if p.bypassCond != nil {
-			defer p.bypassCond.Broadcast()
+			p.bypassCond.Broadcast()
 		}
 	}()
 
