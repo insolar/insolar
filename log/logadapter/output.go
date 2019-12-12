@@ -18,6 +18,7 @@ package logadapter
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
@@ -51,7 +52,8 @@ func OpenLogBareOutput(output LogOutput, param string) (BareOutput, error) {
 			ProtectedClose: true,
 		}, nil
 	case SysLogOutput:
-		w, err := inssyslog.ConnectSyslogByParam(param, "insolar")
+		executableName := filepath.Base(os.Args[0])
+		w, err := inssyslog.ConnectSyslogByParam(param, executableName)
 		if err != nil {
 			return BareOutput{}, err
 		}
