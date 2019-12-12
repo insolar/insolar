@@ -19,15 +19,13 @@ package main
 import (
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/testutils"
 )
 
 const (
 	migrationAmount = 101
-
-	txHashPrefix = "tx_hash_"
 )
 
 type migrationScenario struct {
@@ -68,17 +66,19 @@ func (s *migrationScenario) prepare(repetition int) {
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 
-func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
+func (s *migrationScenario) start(concurrentIndex int, _ int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+	ethHash := testutils.RandomEthHash()
+
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], ethHash, big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
 		return traceID, err
 	}
-	return s.insSDK.Migration(s.migrationDaemons[1], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.Migration(s.migrationDaemons[1], ethHash, big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
 func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {

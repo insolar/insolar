@@ -73,6 +73,9 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
+	if cfg.SwaggerPath == "" {
+		errors.New("[ checkConfig ] Swagger path must not be empty")
+	}
 
 	return nil
 }
@@ -178,11 +181,10 @@ func NewRunner(cfg *configuration.APIRunner,
 	var (
 		server http.Handler = ar.rpcServer
 	)
-	if cfg.SwaggerPath != "" {
-		server, err = NewRequestValidator(cfg.SwaggerPath, ar.rpcServer)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to prepare api validator")
-		}
+
+	server, err = NewRequestValidator(cfg.SwaggerPath, ar.rpcServer)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare api validator")
 	}
 
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
