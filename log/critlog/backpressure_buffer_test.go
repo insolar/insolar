@@ -35,6 +35,7 @@ import (
 )
 
 func TestBackpressureBuffer_stop(t *testing.T) {
+	t.SkipNow()
 
 	for _, c := range constructors {
 		t.Run(c.name, func(t *testing.T) {
