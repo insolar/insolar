@@ -57,6 +57,7 @@ func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
 	}
 
 	ticker := time.NewTicker(cleanPeriod)
+	defer ticker.Stop()
 
 	go func() {
 		var stop = false
