@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/testutils"
 )
 
 type depositTransferScenario struct {
@@ -68,7 +68,7 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			os.Exit(1)
 		}
 		for i := 0; i < repetition; i++ {
-			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, testutils.RandomEthHash(), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
 			}
@@ -80,14 +80,14 @@ func (s *depositTransferScenario) prepare(repetition int) {
 
 }
 
-func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
+func (s *depositTransferScenario) start(concurrentIndex int, _ int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, testutils.RandomEthHash())
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
