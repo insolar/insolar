@@ -99,7 +99,7 @@ func TestTransferMoneyToNotObjectRef(t *testing.T) {
 	require.Error(t, err)
 
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not object")
+	require.Contains(t, strings.Join(data.Trace, ": "), "OpenAPI schema validation")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
@@ -137,7 +137,7 @@ func TestTransferMoneyToNotSelfScopedRef(t *testing.T) {
 	require.Error(t, err)
 
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not self-scoped")
+	require.Contains(t, strings.Join(data.Trace, ": "), "OpenAPI schema validation")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)

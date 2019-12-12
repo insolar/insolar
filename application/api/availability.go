@@ -70,6 +70,8 @@ func (nc *NetworkChecker) Start(ctx context.Context) error {
 
 	go func(ctx context.Context) {
 		ticker := time.NewTicker(nc.checkPeriod)
+		defer ticker.Stop()
+
 		stop := false
 		for !stop {
 			select {
