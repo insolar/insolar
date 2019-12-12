@@ -104,7 +104,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 
 		err = stream.Send(record)
 		if err != nil {
-			if stream.Context().Err() == context.Canceled {
+			if stream.Context().Err() != context.Canceled {
 				logger.Error(err)
 			}
 
