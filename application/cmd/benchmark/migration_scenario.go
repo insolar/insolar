@@ -55,6 +55,10 @@ func (s *migrationScenario) prepare(repetition int) {
 		members = members[:len(members)-2]
 	}
 
+	for i := 0; i < repetition; i++ {
+		ethHashes[i] = testutils.RandomEthHash()
+	}
+
 	s.members = members
 
 	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
@@ -66,19 +70,17 @@ func (s *migrationScenario) prepare(repetition int) {
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 
-func (s *migrationScenario) start(concurrentIndex int, _ int) (string, error) {
+func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	ethHash := testutils.RandomEthHash()
-
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], ethHash, big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], ethHashes[repetitionIndex], big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
 		return traceID, err
 	}
-	return s.insSDK.Migration(s.migrationDaemons[1], ethHash, big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.Migration(s.migrationDaemons[1], ethHashes[repetitionIndex], big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
 func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
