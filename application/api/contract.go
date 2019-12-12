@@ -64,6 +64,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 		"uri":      req.RequestURI,
 		"service":  "ContractService",
 		"params":   args.CallParams,
+		"seed":     args.Seed,
 	}).Infof("Incoming request")
 
 	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
