@@ -51,19 +51,19 @@ func (parameters Parameters) Validate(c context.Context) error {
 // Parameter is specified by OpenAPI/Swagger 3.0 standard.
 type Parameter struct {
 	ExtensionProps
-	Name            string                 `json:"name,omitempty"`
-	In              string                 `json:"in,omitempty"`
-	Description     string                 `json:"description,omitempty"`
-	Style           string                 `json:"style,omitempty"`
-	Explode         *bool                  `json:"explode,omitempty"`
-	AllowEmptyValue bool                   `json:"allowEmptyValue,omitempty"`
-	AllowReserved   bool                   `json:"allowReserved,omitempty"`
-	Deprecated      bool                   `json:"deprecated,omitempty"`
-	Required        bool                   `json:"required,omitempty"`
-	Schema          *SchemaRef             `json:"schema,omitempty"`
-	Example         interface{}            `json:"example,omitempty"`
-	Examples        map[string]*ExampleRef `json:"examples,omitempty"`
-	Content         Content                `json:"content,omitempty"`
+	Name            string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	In              string                 `json:"in,omitempty" yaml:"in,omitempty"`
+	Description     string                 `json:"description,omitempty" yaml:"description,omitempty"`
+	Style           string                 `json:"style,omitempty" yaml:"style,omitempty"`
+	Explode         *bool                  `json:"explode,omitempty" yaml:"explode,omitempty"`
+	AllowEmptyValue bool                   `json:"allowEmptyValue,omitempty" yaml:"allowEmptyValue,omitempty"`
+	AllowReserved   bool                   `json:"allowReserved,omitempty" yaml:"allowReserved,omitempty"`
+	Deprecated      bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+	Required        bool                   `json:"required,omitempty" yaml:"required,omitempty"`
+	Schema          *SchemaRef             `json:"schema,omitempty" yaml:"schema,omitempty"`
+	Example         interface{}            `json:"example,omitempty" yaml:"example,omitempty"`
+	Examples        map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
+	Content         Content                `json:"content,omitempty" yaml:"content,omitempty"`
 }
 
 const (
@@ -206,8 +206,8 @@ func (parameter *Parameter) Validate(c context.Context) error {
 		smSupported = true
 	}
 	if !smSupported {
-		return fmt.Errorf("Parameter '%v' schema is invalid: %v", parameter.Name,
-			fmt.Errorf("Serialization method with style=%q and explode=%v is not supported by a %s parameter", sm.Style, sm.Explode, in))
+		e := fmt.Errorf("Serialization method with style=%q and explode=%v is not supported by a %s parameter", sm.Style, sm.Explode, in)
+		return fmt.Errorf("Parameter '%v' schema is invalid: %v", parameter.Name, e)
 	}
 
 	if parameter.Schema != nil && parameter.Content != nil {
