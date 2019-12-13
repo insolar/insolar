@@ -17,7 +17,6 @@
 package refmap
 
 import (
-	"math"
 	"math/bits"
 	"runtime"
 
@@ -28,26 +27,32 @@ import (
 	"github.com/insolar/insolar/reference"
 )
 
-const MinInterningPage = 16
-const MaxInterningPage = 65536
+const MinBucketPageSize = 16
+const MaxBucketPageSize = 65536
 
-func NewUpdateableKeyMap(pageSize int) *UpdateableKeyMap {
+func NewUpdateableKeyMap() UpdateableKeyMap {
+	return NewUpdateableKeyMapExt(128)
+}
+
+func NewUpdateableKeyMapExt(pageSize int) UpdateableKeyMap {
 	switch {
-	case pageSize < MinInterningPage:
+	case pageSize < MinBucketPageSize:
 		panic("illegal value")
-	case pageSize > MaxInterningPage:
+	case pageSize > MaxBucketPageSize:
 		panic("illegal value")
 	}
 
-	pageBits := uint8(bits.Len(uint(pageSize)))
+	pageBits := uint8(bits.Len(uint(pageSize - 1)))
+	alignedPageSize := uint32(1) << pageBits
 
-	buckets := [][]refMapBucket{make([]refMapBucket, 1, 1<<pageBits)}
+	buckets := [][]refMapBucket{make([]refMapBucket, 1, alignedPageSize)}
 	buckets[0][0] = refMapBucket{localRef: emptyLocalRef}
 
-	return &UpdateableKeyMap{
+	return UpdateableKeyMap{
 		map0:     map[longbits.ByteString]uint32{emptyLocalRefKey: 0},
 		buckets:  buckets,
 		pageBits: pageBits,
+		pageMask: alignedPageSize - 1,
 		hashSeed: fastrand.Uint32(),
 	}
 }
@@ -61,14 +66,20 @@ type UpdateableKeyMap struct {
 	map0    map[longbits.ByteString]uint32
 	buckets [][]refMapBucket
 
+	pageMask uint32
 	pageBits uint8
 }
 
 type BucketState uint32
+
+type BucketValueSelector struct {
+	ValueSelector
+	State BucketState
+}
+
 type ValueSelector struct {
-	BucketId uint32
-	ValueId  uint32
-	State    BucketState
+	LocalId uint32 // BucketId
+	BaseId  uint32
 }
 
 func (m *UpdateableKeyMap) GetHashSeed() uint32 {
@@ -99,12 +110,10 @@ func (m *UpdateableKeyMap) InternHolder(ref reference.Holder) reference.Holder {
 		p1i = m.Intern(p1)
 	}
 	if p0 != p0i || p1 != p1i {
-		return reference.NewNoCopy(p0, p1)
+		return reference.NewNoCopy(p0i, p1i)
 	}
 	return ref
 }
-
-const bucketIndexMask = math.MaxInt32
 
 func (m *UpdateableKeyMap) InternedKeyCount() int {
 	return len(m.map0)
@@ -119,12 +128,12 @@ func (m *UpdateableKeyMap) Intern(ref *reference.Local) *reference.Local {
 }
 
 func (m *UpdateableKeyMap) getBucket(bucketIndex uint32) *refMapBucket {
-	return &m.buckets[bucketIndex>>m.pageBits][bucketIndex&(1<<m.pageBits-1)]
+	return &m.buckets[bucketIndex>>m.pageBits][bucketIndex&m.pageMask]
 }
 
-func (m *UpdateableKeyMap) GetInterned(bucketIndex uint32) *reference.Local {
+func (m *UpdateableKeyMap) GetInterned(bucketIndex uint32) (*reference.Local, BucketState) {
 	bucket := m.getBucket(bucketIndex)
-	return bucket.localRef
+	return bucket.localRef, bucket.state
 }
 
 func (m *UpdateableKeyMap) intern(ref *reference.Local) (uint32, *reference.Local, longbits.ByteString) {
@@ -139,59 +148,61 @@ func (m *UpdateableKeyMap) intern(ref *reference.Local) (uint32, *reference.Loca
 	if bucketIndex, ok := m.getIndexWithKey(ref, key); ok {
 		return bucketIndex, m.getBucket(bucketIndex).localRef, key
 	}
-	bucketIndex := uint32(len(m.buckets))
-	if bucketIndex > bucketIndexMask {
-		panic("illegal state - overflow")
-	}
 
-	pageN := len(m.buckets)
-	page := &m.buckets[pageN-1]
-	if len(*page) == cap(*page) {
-		m.buckets = append(m.buckets, make([]refMapBucket, 0, 1<<m.pageBits))
-		page = &m.buckets[pageN]
-	}
+	pageIndex := len(m.buckets) - 1
+	lastPage := &m.buckets[pageIndex]
+	bucketIndex := uint32(pageIndex) << m.pageBits
 
-	*page = append(*page, refMapBucket{localRef: ref})
+	if pagePos := uint32(len(*lastPage)); pagePos > m.pageMask {
+		m.buckets = append(m.buckets, make([]refMapBucket, 0, m.pageMask+1))
+		pageIndex++
+		lastPage = &m.buckets[pageIndex]
+		bucketIndex += m.pageMask + 1
+	} else {
+		bucketIndex += pagePos
+	}
+	*lastPage = append(*lastPage, refMapBucket{localRef: ref})
 
 	m.map0[key] = bucketIndex
-	return bucketIndex, ref, key // (ref) stays, no need for KeepAlive()
+	runtime.KeepAlive(ref)
+	return bucketIndex, ref, key
 }
 
 func (m *UpdateableKeyMap) getIndexWithKey(ref *reference.Local, refKey longbits.ByteString) (uint32, bool) {
 	bucketIndex, ok := m.map0[refKey]
-	runtime.KeepAlive(ref) // make sure that (ref) stays while (key) is in use by mapaccess()
-	return bucketIndex & bucketIndexMask, ok
+	runtime.KeepAlive(ref) // make sure that (ref) stays while (refKey) is in use by mapaccess()
+	return bucketIndex, ok
 }
 
 func (m *UpdateableKeyMap) getIndex(ref *reference.Local) (uint32, bool) {
 	return m.getIndexWithKey(ref, unsafekit.WrapLocalRef(ref))
 }
 
-func (m *UpdateableKeyMap) Find(key reference.Holder) (ValueSelector, bool) {
+func (m *UpdateableKeyMap) Find(key reference.Holder) (BucketValueSelector, bool) {
 	switch {
 	case key.IsEmpty():
-		return ValueSelector{}, false
+		return BucketValueSelector{}, false
 	}
 
 	var bucket *refMapBucket
 	bucketIndex, ok := m.getIndex(key.GetLocal())
 	if !ok {
-		return ValueSelector{}, false
+		return BucketValueSelector{}, false
 	}
 	bucket = m.getBucket(bucketIndex)
 	if bucket.IsEmpty() {
-		return ValueSelector{}, false
+		return BucketValueSelector{}, false
 	}
 
 	if baseIndex, ok := m.getIndex(key.GetBase()); !ok {
-		return ValueSelector{}, false
+		return BucketValueSelector{}, false
 	} else {
-		return ValueSelector{bucketIndex, baseIndex, bucket.state}, true
+		return BucketValueSelector{ValueSelector{bucketIndex, baseIndex}, bucket.state}, true
 	}
 }
 
 func (m *UpdateableKeyMap) TryPut(key reference.Holder,
-	valueFn func(internedKey reference.Holder, selector ValueSelector) BucketState,
+	valueFn func(internedKey reference.Holder, selector BucketValueSelector) BucketState,
 ) bool {
 	switch {
 	case valueFn == nil:
@@ -210,13 +221,13 @@ func (m *UpdateableKeyMap) TryPut(key reference.Holder,
 
 	bucket := m.getBucket(bucket0)
 	prevState := bucket.state
-	switch newState := valueFn(key, ValueSelector{bucket0, bucket1, prevState}); {
+	switch newState := valueFn(key, BucketValueSelector{ValueSelector{bucket0, bucket1}, prevState}); {
 	case prevState == newState:
 		return false
 	case newState == 0:
 		panic("illegal value")
 	case prevState == 0 && bucket.refHash == 0:
-		bucket.refHash = Hash32(p0k, m.hashSeed)
+		bucket.refHash = hash32(p0k, m.hashSeed)
 		runtime.KeepAlive(p0) // ensures that (p0k) is ok
 		fallthrough
 	default:
@@ -226,7 +237,7 @@ func (m *UpdateableKeyMap) TryPut(key reference.Holder,
 }
 
 func (m *UpdateableKeyMap) TryTouch(key reference.Holder,
-	valueFn func(selector ValueSelector) BucketState,
+	valueFn func(selector BucketValueSelector) BucketState,
 ) bool {
 	if valueFn == nil {
 		panic("illegal value")
@@ -236,7 +247,7 @@ func (m *UpdateableKeyMap) TryTouch(key reference.Holder,
 		return false
 	}
 
-	bucket := m.getBucket(selector.BucketId)
+	bucket := m.getBucket(selector.LocalId)
 	prevState := bucket.state
 	switch newState := valueFn(selector); {
 	case prevState == newState:

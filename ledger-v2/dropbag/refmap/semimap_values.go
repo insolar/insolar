@@ -20,46 +20,48 @@ import (
 	"github.com/insolar/insolar/reference"
 )
 
-func NewValueSemiMap() ValueSemiMap {
-
+func NewRefLocatorMap() RefLocatorMap {
+	return RefLocatorMap{keys: NewUpdateableKeyMap()}
 }
 
-type Value struct{}
+type ValueLocator int64
 
-type ValueSemiMap struct {
+type RefLocatorMap struct {
 	keys   UpdateableKeyMap
-	values map[uint64]Value
+	values map[ValueSelector]ValueLocator
 }
 
-func (m *ValueSemiMap) Get(ref reference.Holder) (Value, bool) {
+func (m *RefLocatorMap) Intern(ref reference.Holder) reference.Holder {
+	return m.keys.InternHolder(ref)
+}
+
+func (m *RefLocatorMap) Get(ref reference.Holder) (ValueLocator, bool) {
 	if selector, ok := m.keys.Find(ref); !ok || selector.State == 0 {
-		return Value{}, false
+		return 0, false
 	} else {
-		vKey := uint64(selector.BucketId) | uint64(selector.ValueId)<<32
-		v, ok := m.values[vKey]
+		v, ok := m.values[selector.ValueSelector]
 		return v, ok
 	}
 }
 
-func (m *ValueSemiMap) Contains(ref reference.Holder) bool {
+func (m *RefLocatorMap) Contains(ref reference.Holder) bool {
 	_, ok := m.Get(ref)
 	return ok
 }
 
-func (m *ValueSemiMap) Len() int {
+func (m *RefLocatorMap) Len() int {
 	return len(m.values)
 }
 
-func (m *ValueSemiMap) Put(ref reference.Holder, v Value) (internedRef reference.Holder) {
-	m.keys.TryPut(ref, func(internedKey reference.Holder, selector ValueSelector) BucketState {
+func (m *RefLocatorMap) Put(ref reference.Holder, v ValueLocator) (internedRef reference.Holder) {
+	m.keys.TryPut(ref, func(internedKey reference.Holder, selector BucketValueSelector) BucketState {
 		internedRef = internedKey
 
-		vKey := uint64(selector.BucketId) | uint64(selector.ValueId)<<32
 		n := len(m.values)
 		if m.values == nil {
-			m.values = make(map[uint64]Value)
+			m.values = make(map[ValueSelector]ValueLocator)
 		}
-		m.values[vKey] = v
+		m.values[selector.ValueSelector] = v
 		switch {
 		case n != len(m.values):
 			return selector.State + 1
@@ -72,11 +74,10 @@ func (m *ValueSemiMap) Put(ref reference.Holder, v Value) (internedRef reference
 	return internedRef
 }
 
-func (m *ValueSemiMap) Delete(ref reference.Holder) {
-	m.keys.TryTouch(ref, func(selector ValueSelector) BucketState {
-		vKey := uint64(selector.BucketId) | uint64(selector.ValueId)<<32
+func (m *RefLocatorMap) Delete(ref reference.Holder) {
+	m.keys.TryTouch(ref, func(selector BucketValueSelector) BucketState {
 		n := len(m.values)
-		delete(m.values, vKey)
+		delete(m.values, selector.ValueSelector)
 		switch {
 		case n == len(m.values):
 			return selector.State
@@ -88,4 +89,12 @@ func (m *ValueSemiMap) Delete(ref reference.Holder) {
 			return selector.State - 1
 		}
 	})
+}
+
+func (m *RefLocatorMap) FillLocatorBuckets(config WriteBucketerConfig) WriteBucketer {
+	wb := NewWriteBucketer(&m.keys, m.Len(), config)
+	for k, v := range m.values {
+		wb.AddValue(k, v)
+	}
+	return wb
 }

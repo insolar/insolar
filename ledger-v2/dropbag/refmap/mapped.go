@@ -34,7 +34,7 @@ const MinKeyBucketBatchSize = 8 // min batch size for multi-batch buckets (excep
 const tooBigUnsortedBucketSize = 32 // default size limit to force use of hashmap on an unsorted bucket. Excess impacts GC performance.
 const tooBigSortedBucketSize = 1024 // default size limit to force use of hashmap on a sorted bucket. Excess impacts GC performance.
 
-func NewMappedRefMap(expectedKeyCount int, bucketCount int) ReadOnlyMap {
+func NewReadOnlyMapToInt63(expectedKeyCount int, bucketCount int) ReadOnlyMapToInt63 {
 	switch {
 	case expectedKeyCount < 0:
 		panic("illegal state")
@@ -43,11 +43,11 @@ func NewMappedRefMap(expectedKeyCount int, bucketCount int) ReadOnlyMap {
 	case expectedKeyCount > 0:
 		panic("illegal state")
 	}
-	return ReadOnlyMap{expectedKeyCount: expectedKeyCount, buckets: make([]mappedBucket, bucketCount)}
+	return ReadOnlyMapToInt63{expectedKeyCount: expectedKeyCount, buckets: make([]mappedBucket, bucketCount)}
 }
 
 // implements READ-ONLY map[Holder]uint63 with external lazy load & memory-mapping support
-type ReadOnlyMap struct {
+type ReadOnlyMapToInt63 struct {
 	hashSeed         uint32
 	expectedKeyCount int
 	loadedKeyCount   int
@@ -56,6 +56,7 @@ type ReadOnlyMap struct {
 	//	unsafekit.KeepAliveList
 
 	// must be rarely used as it impacts GC due references
+	// per-bucket maps are required to avoid copy of keys inside a map for a composite key
 	bigBuckets map[ /* bucketIndex */ uint32]bigBucketMap
 	buckets    []mappedBucket
 
@@ -64,7 +65,7 @@ type ReadOnlyMap struct {
 
 type bigBucketMap map[ /* keyL0*/ longbits.ByteString]bucketValueSelector
 
-func (p *ReadOnlyMap) SetBigBucketMinSize(bigBucketSize int) {
+func (p *ReadOnlyMapToInt63) SetBigBucketMinSize(bigBucketSize int) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -76,7 +77,7 @@ func (p *ReadOnlyMap) SetBigBucketMinSize(bigBucketSize int) {
 	p.bigBucketMinSize = bigBucketSize
 }
 
-func (p *ReadOnlyMap) SetHashSeed(hashSeed uint32) {
+func (p *ReadOnlyMapToInt63) SetHashSeed(hashSeed uint32) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -86,11 +87,11 @@ func (p *ReadOnlyMap) SetHashSeed(hashSeed uint32) {
 	p.hashSeed = hashSeed
 }
 
-func (p *ReadOnlyMap) GetHashSeed() uint32 {
+func (p *ReadOnlyMapToInt63) GetHashSeed() uint32 {
 	return p.hashSeed
 }
 
-func (p *ReadOnlyMap) SetSortedBuckets(sortedBuckets bool) {
+func (p *ReadOnlyMapToInt63) SetSortedBuckets(sortedBuckets bool) {
 	switch {
 	case p.loadedKeyCount > 0:
 		panic("illegal state")
@@ -100,14 +101,14 @@ func (p *ReadOnlyMap) SetSortedBuckets(sortedBuckets bool) {
 	p.sortedBuckets = sortedBuckets
 }
 
-func (p *ReadOnlyMap) SetLocator(bucketIndex int, locator int64) {
+func (p *ReadOnlyMapToInt63) SetLocator(bucketIndex int, locator int64) {
 	if locator < 0 {
 		panic("illegal value")
 	}
 	p.buckets[bucketIndex].locator = locator
 }
 
-func (p *ReadOnlyMap) GetLocator(bucketIndex int) int64 {
+func (p *ReadOnlyMapToInt63) GetLocator(bucketIndex int) int64 {
 	return p.buckets[bucketIndex].locator
 }
 
@@ -115,10 +116,10 @@ func (p *ReadOnlyMap) GetLocator(bucketIndex int) int64 {
 // result = ( <0, false ) - item was not found
 // result = ( B>=0, false) - item presence is unknown, bucket is missing, B is bucket number
 //
-func (p *ReadOnlyMap) GetValueOrBucket(ref reference.Holder) ( /* map value or missing bucket index */ int64, bool) {
+func (p *ReadOnlyMapToInt63) GetValueOrBucket(ref reference.Holder) ( /* map value or missing bucket index */ int64, bool) {
 	localRef := ref.GetLocal()
 	s := unsafekit.WrapLocalRef(localRef)
-	hashLocal := Hash32(s, p.hashSeed) // localRef must be kept alive
+	hashLocal := hash32(s, p.hashSeed) // localRef must be kept alive
 
 	indexL0 := hashLocal % uint32(len(p.buckets)) // TODO use bitmask
 	bucket := &p.buckets[indexL0]
@@ -160,7 +161,7 @@ func (p *ReadOnlyMap) GetValueOrBucket(ref reference.Holder) ( /* map value or m
 
 var emptyBucketMarker = make([][]bucketKey, 0, 0)
 
-func (p *ReadOnlyMap) LoadBucket(bucketIndex, bucketKeyL0Count, bucketKeyL1Count int, chunks []longbits.ByteString) error {
+func (p *ReadOnlyMapToInt63) LoadBucket(bucketIndex, bucketKeyL0Count, bucketKeyL1Count int, chunks []longbits.ByteString) error {
 	if bucketIndex < 0 || bucketIndex >= len(p.buckets) {
 		panic("illegal value") // TODO error
 	}
@@ -407,7 +408,7 @@ const countShift = 64 - countBits
 type bucketValueSelector int64 // positive values only
 
 func (v bucketValueSelector) isLeaf() bool {
-	return v&bucketKeySelectorFlag == 0
+	return uint64(v)&bucketKeySelectorFlag == 0
 }
 
 func (v bucketValueSelector) asPosAndCount() (int, int) {
