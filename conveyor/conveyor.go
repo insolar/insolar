@@ -102,6 +102,8 @@ type PulseConveyor struct {
 	// mutable, set under SlotMachine synchronization
 	presentMachine *PulseSlotMachine
 	unpublishPulse pulse.Number
+
+	stoppingChan <-chan struct{}
 }
 
 func (p *PulseConveyor) AddDependency(v interface{}) {
@@ -410,16 +412,25 @@ func (p *PulseConveyor) StopNoWait() {
 	p.slotMachine.Stop()
 }
 
-func (p *PulseConveyor) StartWorker(emergencyStop <-chan struct{}, completedFn func()) {
+func (p *PulseConveyor) Stop() {
+	if p.stoppingChan == nil {
+		panic("illegal state")
+	}
+	p.slotMachine.Stop()
+	<-p.stoppingChan
+}
 
+func (p *PulseConveyor) StartWorker(emergencyStop <-chan struct{}, completedFn func()) {
 	if p.machineWorker != nil {
 		panic("illegal state")
 	}
 	p.machineWorker = sworker.NewAttachableSimpleSlotWorker()
-	go p.runWorker(emergencyStop, completedFn)
+	ch := make(chan struct{})
+	p.stoppingChan = ch
+	go p.runWorker(emergencyStop, ch, completedFn)
 }
 
-func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, completedFn func()) {
+func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, closeOnStop chan<- struct{}, completedFn func()) {
 	if emergencyStop != nil {
 		go func() {
 			select {
@@ -431,6 +442,9 @@ func (p *PulseConveyor) runWorker(emergencyStop <-chan struct{}, completedFn fun
 		}()
 	}
 
+	if closeOnStop != nil {
+		defer close(closeOnStop)
+	}
 	if completedFn != nil {
 		defer completedFn()
 	}
