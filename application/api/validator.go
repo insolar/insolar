@@ -52,6 +52,12 @@ type jsonRPCErrorResponse struct {
 }
 
 func (rv *RequestValidator) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			inslogger.FromContext(httpReq.Context()).Error(errors.Errorf("panic in validator: %v", r))
+		}
+	}()
 	err := rv.Validate(httpReq.Context(), httpReq)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")

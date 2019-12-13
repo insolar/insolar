@@ -287,6 +287,7 @@ func getInfo(t testing.TB) infoResponse {
 		"jsonrpc": "2.0",
 		"method":  "network.getInfo",
 		"id":      1,
+		"params":  map[string]string{},
 	}
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
