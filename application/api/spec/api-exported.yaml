@@ -714,8 +714,7 @@ paths:
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
-                              example: >-
-                                0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df
+                              example: '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
                         reference:
                           allOf:
                             - $ref: '#/components/schemas/reference'
@@ -870,8 +869,7 @@ paths:
                       enum:
                         - network.getInfo
                     params:
-                      enum:
-                        - {}
+                      description: May be omitted as the method does not require any.
             example:
               jsonrpc: '2.0'
               method: network.getInfo
@@ -1453,8 +1451,7 @@ paths:
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
                               pattern: '^(0x[a-f0-9]{40}|genesis_deposit)$'
-                              example: >-
-                                0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df
+                              example: '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
                             migrationAddress:
                               $ref: '#/components/schemas/migrationAddress'
                         reference:
@@ -1879,8 +1876,7 @@ components:
                             description: >-
                               Ethereum transaction's hash associated with the
                               deposit.
-                            example: >-
-                              0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df
+                            example: '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
                           vestingType:
                             type: integer
                             enum:
