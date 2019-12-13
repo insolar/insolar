@@ -18,6 +18,7 @@ package migrationadmin
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
 
@@ -320,6 +321,11 @@ func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
 // ins:immutable
 func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	rndSrc, err := foundation.NewSource()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create random generator")
+	}
+	trimmedPublicKey += strconv.Itoa(int(rndSrc.Int63()))
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(mA.MigrationAddressShards))
 	if shardIndex >= len(mA.MigrationAddressShards) {
 		return "", fmt.Errorf("incorect migration address shard index")
