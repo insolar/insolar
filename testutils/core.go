@@ -60,7 +60,7 @@ func RandomHashWithLength(n int) string {
 }
 
 func RandomEthHash() string {
-	return "0x" + RandomHashWithLength(40)
+	return "0x" + RandomHashWithLength(64)
 }
 
 // RandomString generates random uuid and return it as a string.
