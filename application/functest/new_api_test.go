@@ -218,7 +218,7 @@ func TestIncorrectParams(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, `doesn't match the schema: Error at "/params/callParams":Field must be set to string or not be present`)
+	expectedError(t, data.Trace, `Error at "/params/callParams"`)
 }
 
 func TestNilParams(t *testing.T) {

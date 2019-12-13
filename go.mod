@@ -13,9 +13,8 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/getkin/kin-openapi v0.2.0
+	github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
 	github.com/gogo/protobuf v1.2.1
-	github.com/gojuno/minimock v1.9.2 // indirect
 	github.com/gojuno/minimock/v3 v3.0.5
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
@@ -62,7 +61,7 @@ require (
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.7
 )
 
 replace github.com/insolar/insolar => ./
