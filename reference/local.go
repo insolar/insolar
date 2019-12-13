@@ -194,10 +194,7 @@ func (v Local) Bytes() []byte {
 
 // Equal checks if reference points to the same record
 func (v *Local) Equal(other Local) bool {
-	if v == nil {
-		return false
-	}
-	return v.pulseAndScope == other.pulseAndScope && v.hash == other.hash
+	return v != nil && *v == other
 }
 
 func (v Local) Compare(other Local) int {
@@ -208,6 +205,10 @@ func (v Local) Compare(other Local) int {
 	}
 
 	return v.hash.Compare(other.hash)
+}
+
+func LessLocal(p0, p1 *Local) bool {
+	return p0.Compare(*p1) < 0
 }
 
 // returns a copy of Pulse part of ID.

@@ -52,7 +52,13 @@ func IsGlobalScope(ref Holder) bool {
 }
 
 func Equal(ref0, ref1 Holder) bool {
-	return ref0.GetLocal().Equal(*ref1.GetLocal()) && ref0.GetBase().Equal(*ref1.GetBase())
+	if p := ref1.GetLocal(); p == nil || !ref0.GetLocal().Equal(*p) {
+		return false
+	}
+	if p := ref1.GetBase(); p == nil || !ref0.GetBase().Equal(*p) {
+		return false
+	}
+	return true
 }
 
 func Compare(ref0, ref1 Holder) int {
