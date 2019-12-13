@@ -188,12 +188,13 @@ func main() {
 			getfreeMigrationCount([]string{adminURL}, []string{sendURL}, migrationAdminKeys, shardsCount, alertLevel)
 		},
 	}
+	addURLFlag(freeMigrationCountCmd.Flags())
 	freeMigrationCountCmd.Flags().StringVarP(
 		&migrationAdminKeys, "migration-admin-keys", "k", "",
 		"Config that contains public/private keys of root member",
 	)
 	freeMigrationCountCmd.Flags().IntVarP(
-		&alertLevel, "alert-level", "a", 0,
+		&alertLevel, "alert-level", "l", 0,
 		"If one of shard have less free addresses than this value, command will print alert message",
 	)
 	freeMigrationCountCmd.Flags().IntVarP(
@@ -211,12 +212,13 @@ func main() {
 			addMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesPath, shardsCount)
 		},
 	}
+	addURLFlag(addMigrationAddressesCmd.Flags())
 	addMigrationAddressesCmd.Flags().StringVarP(
 		&migrationAdminKeys, "migration-admin-keys", "k", "",
 		"Dir with config that contains public/private keys of admin member",
 	)
 	addMigrationAddressesCmd.Flags().StringVarP(
-		&addressesPath, "addresses", "a", "",
+		&addressesPath, "addresses", "g", "",
 		"Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
 	)
 	addMigrationAddressesCmd.Flags().IntVarP(
