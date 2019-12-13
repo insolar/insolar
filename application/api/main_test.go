@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
@@ -48,6 +49,10 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 
 	cfg.RPC = "test"
 	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	suite.Contains(err.Error(), "Missing openAPI spec file path")
+
+	cfg.SwaggerPath = "spec/api-exported.yaml"
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.NoError(err)
 }
 
@@ -55,7 +60,9 @@ func TestMainTestSuite(t *testing.T) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
-	api, _ := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	cfg.SwaggerPath = "spec/api-exported.yaml"
+	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	require.NoError(t, err, "new runner constructor")
 
 	cm := certificate.NewCertificateManager(&certificate.Certificate{})
 	api.CertificateManager = cm

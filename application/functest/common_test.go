@@ -33,8 +33,8 @@ import (
 
 func TestGetRequest(t *testing.T) {
 	postResp, err := http.Get(launchnet.TestRPCUrl)
-	defer postResp.Body.Close()
 	require.NoError(t, err)
+	defer postResp.Body.Close()
 	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
 }
 
