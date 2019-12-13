@@ -710,11 +710,12 @@ paths:
                               maxLength: 20
                             ethTxHash:
                               type: string
-                              pattern: '^(0x[a-f0-9]{40}|genesis_deposit)$'
+                              pattern: '^(0x[a-f0-9]{64}|genesis_deposit)$'
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
-                              example: '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+                              example: >-
+                                0x21145195deb606bd75eab41a7afe38d7c3ae60a091cadc201f0ba489cbec8f09
                         reference:
                           allOf:
                             - $ref: '#/components/schemas/reference'
@@ -1450,8 +1451,9 @@ paths:
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
-                              pattern: '^(0x[a-f0-9]{40}|genesis_deposit)$'
-                              example: '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+                              pattern: '^(0x[a-f0-9]{64}|genesis_deposit)$'
+                              example: >-
+                                0x89f2d6994e5d152bece9ec291f6098d236ab81f76f0d4d52fb69d0cd6b6fd70d
                             migrationAddress:
                               $ref: '#/components/schemas/migrationAddress'
                         reference:
