@@ -152,7 +152,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 				logger.Debugf("[Replicator][sync] Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
-		lr.cleaner.NotifyAboutPulse(ctx, pn)
+		go lr.cleaner.NotifyAboutPulse(ctx, pn)
 
 		stats.Record(ctx, statLastReplicatedPulse.M(int64(pn)))
 	}
