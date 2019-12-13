@@ -353,7 +353,7 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 		}
 		t.Error("[" + method + "]" + err.Error() + suffix)
 	}
-	require.NotEqual(t, "", refStr, "request ref is empty")
+	require.NotEmpty(t, refStr, "request ref is empty")
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero")
 
 	_, err = insolar.NewReferenceFromString(refStr)
