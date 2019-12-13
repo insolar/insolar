@@ -700,7 +700,7 @@ paths:
                               maxLength: 20
                             ethTxHash:
                               type: string
-                              pattern: '^(0x[a-fA-F0-9]{40}|genesis_deposit)$'
+                              pattern: '^(0x[a-f0-9]{40}|genesis_deposit)$'
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
@@ -1434,7 +1434,7 @@ paths:
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
-                              pattern: '^(0x[a-fA-F0-9]{40}|genesis_deposit)$'
+                              pattern: '^(0x[a-f0-9]{40}|genesis_deposit)$'
                               example: >-
                                 0xd1844c003fc2531625538800e2f7834b4913be73f34765472ad6fb547d0ce2df
                             migrationAddress:
