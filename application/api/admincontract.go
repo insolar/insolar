@@ -57,6 +57,7 @@ func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, 
 		"uri":      req.RequestURI,
 		"service":  "AdminContractService",
 		"params":   args.CallParams,
+		"seed":     args.Seed,
 	}).Infof("Incoming request")
 
 	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)

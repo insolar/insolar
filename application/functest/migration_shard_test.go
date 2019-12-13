@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func TestGetFreeAddressCount(t *testing.T) {
@@ -33,49 +32,6 @@ func TestGetFreeAddressCount(t *testing.T) {
 	for _, m := range migrationShardsMap {
 		require.True(t, m > 0)
 	}
-}
-
-func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
-
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-
-	trimmedPublicKey := foundation.TrimPublicKey(member.PubKey)
-	numShards, err := launchnet.GetNumShards()
-	require.NoError(t, err)
-	shardIndex := foundation.GetShardIndex(trimmedPublicKey, numShards)
-
-	var migrationShardsMapBefore = getAddressCount(t, shardIndex)
-
-	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
-	require.NoError(t, err)
-	output, ok := result.(map[string]interface{})
-	require.True(t, ok)
-	require.NotEqual(t, "", output["reference"])
-	require.NotEqual(t, "", output["migrationAddress"])
-
-	result, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithIndex": 0})
-	require.NoError(t, err)
-
-	var migrationShardsMapAfter = getAddressCount(t, shardIndex)
-
-	isFound := false
-	for i, countBefore := range migrationShardsMapBefore {
-		countAfter := migrationShardsMapAfter[i]
-		if countBefore == countAfter {
-			continue
-		}
-		if (countBefore-countAfter) == 1 && !isFound {
-			isFound = true
-			continue
-		}
-		t.Errorf("Wrong count of free migration addresses: for shard %d, "+
-			"count before one migration is %d, "+
-			"after %d (migration was already found - %t)", i, countBefore, countAfter, isFound)
-
-	}
-	require.True(t, isFound)
 }
 
 func TestGetFreeAddressCount_WithIndex_NotAllRange(t *testing.T) {

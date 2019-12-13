@@ -43,20 +43,26 @@ func NewRequestValidator(path string, next http.Handler) (*RequestValidator, err
 	}, nil
 }
 
-type jsonRpcErrorResponse struct {
+type jsonRPCErrorResponse struct {
 	Version string `json:"jsonrpc"`
 
 	Error *json2.Error `json:"error,omitempty"`
 
-	Id *json.RawMessage `json:"id"`
+	ID *json.RawMessage `json:"id"`
 }
 
 func (rv *RequestValidator) ServeHTTP(w http.ResponseWriter, httpReq *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			inslogger.FromContext(httpReq.Context()).Error(errors.Errorf("panic in validator: %v", r))
+		}
+	}()
 	err := rv.Validate(httpReq.Context(), httpReq)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		encoder := json.NewEncoder(w)
-		err = encoder.Encode(jsonRpcErrorResponse{
+		err = encoder.Encode(jsonRPCErrorResponse{
 			Version: "2.0",
 			Error: &json2.Error{
 				Code:    InvalidRequestError,
@@ -65,7 +71,7 @@ func (rv *RequestValidator) ServeHTTP(w http.ResponseWriter, httpReq *http.Reque
 					Trace: []string{err.Error()},
 				},
 			},
-			Id: nil,
+			ID: nil,
 		})
 		if err != nil {
 			inslogger.FromContext(httpReq.Context()).Panic(errors.Wrap(err, "failed to encode error message"))
@@ -106,7 +112,7 @@ func (rv *RequestValidator) Validate(ctx context.Context, httpReq *http.Request)
 
 	logger := inslogger.FromContext(ctx)
 
-	reqUrl, err := url.Parse(httpReq.URL.String())
+	reqURL, err := url.Parse(httpReq.URL.String())
 	if err != nil {
 		logger.Error(errors.Wrap(err, "couldn't clone URL"))
 		return errors.New("invalid URL")
@@ -131,9 +137,9 @@ func (rv *RequestValidator) Validate(ctx context.Context, httpReq *http.Request)
 		return nil
 	}
 
-	reqUrl.Path += "#" + string(match[1])
+	reqURL.Path += "#" + string(match[1])
 
-	route, pathParams, err := rv.router.FindRoute(httpReq.Method, reqUrl)
+	route, pathParams, err := rv.router.FindRoute(httpReq.Method, reqURL)
 	if err != nil {
 		return errors.New("unknown method")
 	}

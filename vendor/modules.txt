@@ -39,7 +39,7 @@ github.com/fatih/color
 github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
-# github.com/getkin/kin-openapi v0.2.0
+# github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
 github.com/getkin/kin-openapi/openapi3
 github.com/getkin/kin-openapi/openapi3filter
 github.com/getkin/kin-openapi/jsoninfo
@@ -360,5 +360,5 @@ google.golang.org/grpc/balancer/base
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.7
 gopkg.in/yaml.v2

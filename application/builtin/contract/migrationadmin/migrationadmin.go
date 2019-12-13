@@ -18,7 +18,7 @@ package migrationadmin
 
 import (
 	"fmt"
-	"strings"
+	"strconv"
 
 	"github.com/pkg/errors"
 
@@ -321,42 +321,23 @@ func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
 // ins:immutable
 func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	rndSrc, err := foundation.NewSource()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create random generator")
+	}
+	trimmedPublicKey += strconv.Itoa(int(rndSrc.Int63()))
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(mA.MigrationAddressShards))
 	if shardIndex >= len(mA.MigrationAddressShards) {
 		return "", fmt.Errorf("incorect migration address shard index")
 	}
 
-	for i := shardIndex; i < len(mA.MigrationAddressShards); i++ {
-		mas := migrationshard.GetObject(mA.MigrationAddressShards[i])
-		ma, err := mas.GetFreeMigrationAddress()
+	mas := migrationshard.GetObject(mA.MigrationAddressShards[shardIndex])
+	ma, err := mas.GetFreeMigrationAddress()
 
-		if err == nil {
-			return ma, nil
-		}
-
-		if err != nil {
-			if !strings.Contains(err.Error(), "no more migration address left") {
-				return "", errors.Wrap(err, "failed to set reference in migration address shard")
-			}
-		}
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get free migration address")
 	}
-
-	for i := 0; i < shardIndex; i++ {
-		mas := migrationshard.GetObject(mA.MigrationAddressShards[i])
-		ma, err := mas.GetFreeMigrationAddress()
-
-		if err == nil {
-			return ma, nil
-		}
-
-		if err != nil {
-			if !strings.Contains(err.Error(), "no more migration address left") {
-				return "", errors.Wrap(err, "failed to set reference in migration address shard")
-			}
-		}
-	}
-
-	return "", errors.New("no more migration addresses left in any shard")
+	return ma, nil
 }
 
 // AddNewMemberToMaps adds new member to MigrationAddressMap.

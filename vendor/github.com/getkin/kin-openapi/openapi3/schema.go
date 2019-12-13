@@ -49,56 +49,57 @@ func Uint64Ptr(value uint64) *uint64 {
 type Schema struct {
 	ExtensionProps
 
-	OneOf        []*SchemaRef  `json:"oneOf,omitempty"`
-	AnyOf        []*SchemaRef  `json:"anyOf,omitempty"`
-	AllOf        []*SchemaRef  `json:"allOf,omitempty"`
-	Not          *SchemaRef    `json:"not,omitempty"`
-	Type         string        `json:"type,omitempty"`
-	Format       string        `json:"format,omitempty"`
-	Description  string        `json:"description,omitempty"`
-	Enum         []interface{} `json:"enum,omitempty"`
-	Default      interface{}   `json:"default,omitempty"`
-	Example      interface{}   `json:"example,omitempty"`
-	ExternalDocs interface{}   `json:"externalDocs,omitempty"`
+	OneOf        []*SchemaRef  `json:"oneOf,omitempty" yaml:"oneOf,omitempty"`
+	AnyOf        []*SchemaRef  `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
+	AllOf        []*SchemaRef  `json:"allOf,omitempty" yaml:"allOf,omitempty"`
+	Not          *SchemaRef    `json:"not,omitempty" yaml:"not,omitempty"`
+	Type         string        `json:"type,omitempty" yaml:"type,omitempty"`
+	Title        string        `json:"title,omitempty" yaml:"title,omitempty"`
+	Format       string        `json:"format,omitempty" yaml:"format,omitempty"`
+	Description  string        `json:"description,omitempty" yaml:"description,omitempty"`
+	Enum         []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
+	Default      interface{}   `json:"default,omitempty" yaml:"default,omitempty"`
+	Example      interface{}   `json:"example,omitempty" yaml:"example,omitempty"`
+	ExternalDocs interface{}   `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 
 	// Object-related, here for struct compactness
-	AdditionalPropertiesAllowed *bool `json:"-" multijson:"additionalProperties,omitempty"`
+	AdditionalPropertiesAllowed *bool `json:"-" multijson:"additionalProperties,omitempty" yaml:"-"`
 	// Array-related, here for struct compactness
-	UniqueItems bool `json:"uniqueItems,omitempty"`
+	UniqueItems bool `json:"uniqueItems,omitempty" yaml:"uniqueItems,omitempty"`
 	// Number-related, here for struct compactness
-	ExclusiveMin bool `json:"exclusiveMinimum,omitempty"`
-	ExclusiveMax bool `json:"exclusiveMaximum,omitempty"`
+	ExclusiveMin bool `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
+	ExclusiveMax bool `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
 	// Properties
-	Nullable  bool        `json:"nullable,omitempty"`
-	ReadOnly  bool        `json:"readOnly,omitempty"`
-	WriteOnly bool        `json:"writeOnly,omitempty"`
-	XML       interface{} `json:"xml,omitempty"`
+	Nullable  bool        `json:"nullable,omitempty" yaml:"nullable,omitempty"`
+	ReadOnly  bool        `json:"readOnly,omitempty" yaml:"readOnly,omitempty"`
+	WriteOnly bool        `json:"writeOnly,omitempty" yaml:"writeOnly,omitempty"`
+	XML       interface{} `json:"xml,omitempty" yaml:"xml,omitempty"`
 
 	// Number
-	Min        *float64 `json:"minimum,omitempty"`
-	Max        *float64 `json:"maximum,omitempty"`
-	MultipleOf *float64 `json:"multipleOf,omitempty"`
+	Min        *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+	Max        *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+	MultipleOf *float64 `json:"multipleOf,omitempty" yaml:"multipleOf,omitempty"`
 
 	// String
-	MinLength       uint64  `json:"minLength,omitempty"`
-	MaxLength       *uint64 `json:"maxLength,omitempty"`
-	Pattern         string  `json:"pattern,omitempty"`
+	MinLength       uint64  `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+	MaxLength       *uint64 `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+	Pattern         string  `json:"pattern,omitempty" yaml:"pattern,omitempty"`
 	compiledPattern *compiledPattern
 
 	// Array
-	MinItems uint64     `json:"minItems,omitempty"`
-	MaxItems *uint64    `json:"maxItems,omitempty"`
-	Items    *SchemaRef `json:"items,omitempty"`
+	MinItems uint64     `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+	MaxItems *uint64    `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
+	Items    *SchemaRef `json:"items,omitempty" yaml:"items,omitempty"`
 
 	// Object
-	Required             []string              `json:"required,omitempty"`
-	Properties           map[string]*SchemaRef `json:"properties,omitempty"`
-	MinProps             uint64                `json:"minProperties,omitempty"`
-	MaxProps             *uint64               `json:"maxProperties,omitempty"`
-	AdditionalProperties *SchemaRef            `json:"-" multijson:"additionalProperties,omitempty"`
-	Discriminator        *Discriminator        `json:"discriminator,omitempty"`
+	Required             []string              `json:"required,omitempty" yaml:"required,omitempty"`
+	Properties           map[string]*SchemaRef `json:"properties,omitempty" yaml:"properties,omitempty"`
+	MinProps             uint64                `json:"minProperties,omitempty" yaml:"minProperties,omitempty"`
+	MaxProps             *uint64               `json:"maxProperties,omitempty" yaml:"maxProperties,omitempty"`
+	AdditionalProperties *SchemaRef            `json:"-" multijson:"additionalProperties,omitempty" yaml:"-"`
+	Discriminator        *Discriminator        `json:"discriminator,omitempty" yaml:"discriminator,omitempty"`
 
-	PatternProperties         string `json:"patternProperties,omitempty"`
+	PatternProperties         string `json:"patternProperties,omitempty" yaml:"patternProperties,omitempty"`
 	compiledPatternProperties *compiledPattern
 }
 
@@ -192,6 +193,13 @@ func NewDateTimeSchema() *Schema {
 	return &Schema{
 		Type:   "string",
 		Format: "date-time",
+	}
+}
+
+func NewUUIDSchema() *Schema {
+	return &Schema{
+		Type:   "string",
+		Format: "uuid",
 	}
 }
 
@@ -509,7 +517,10 @@ func (schema *Schema) validate(c context.Context, stack []*Schema) (err error) {
 			case "uri", "uri-reference", "iri", "iri-reference", "uri-template":
 			case "json-pointer", "relative-json-pointer":
 			default:
-				return unsupportedFormat(format)
+				// Try to check for custom defined formats
+				if _, ok := SchemaStringFormats[format]; !ok {
+					return unsupportedFormat(format)
+				}
 			}
 		}
 	case "array":
@@ -971,7 +982,7 @@ func (schema *Schema) visitJSONArray(value []interface{}, fast bool) (err error)
 	}
 
 	// "uniqueItems"
-	if v := schema.UniqueItems; v && !isSliceOfUniqueItems(value) {
+	if v := schema.UniqueItems; v && !sliceUniqueItemsChecker(value) {
 		if fast {
 			return errSchema
 		}
@@ -1129,10 +1140,10 @@ func (schema *Schema) expectedType(typ string, fast bool) error {
 		return errSchema
 	}
 	return &SchemaError{
-		Value:       schema.Type,
+		Value:       typ,
 		Schema:      schema,
 		SchemaField: "type",
-		Reason:      "Field must be set to " + typ + " or not be present",
+		Reason:      "Field must be set to " + schema.Type + " or not be present",
 	}
 }
 
@@ -1210,11 +1221,29 @@ func (err *SchemaError) Error() string {
 
 func isSliceOfUniqueItems(xs []interface{}) bool {
 	s := len(xs)
-	m := make(map[interface{}]struct{}, s)
+	m := make(map[string]struct{}, s)
 	for _, x := range xs {
-		m[x] = struct{}{}
+		// The input slice is coverted from a JSON string, there shall
+		// have no error when covert it back.
+		key, _ := json.Marshal(&x)
+		m[string(key)] = struct{}{}
 	}
 	return s == len(m)
+}
+
+// SliceUniqueItemsChecker is an function used to check if an given slice
+// have unique items.
+type SliceUniqueItemsChecker func(items []interface{}) bool
+
+// By default using predefined func isSliceOfUniqueItems which make use of
+// json.Marshal to generate a key for map used to check if a given slice
+// have unique items.
+var sliceUniqueItemsChecker SliceUniqueItemsChecker = isSliceOfUniqueItems
+
+// RegisterArrayUniqueItemsChecker is used to register a customized function
+// used to check if JSON array have unique items.
+func RegisterArrayUniqueItemsChecker(fn SliceUniqueItemsChecker) {
+	sliceUniqueItemsChecker = fn
 }
 
 func unsupportedFormat(format string) error {

@@ -40,9 +40,9 @@ Help on any command: `./bin/insolar help COMMAND`
 
 ### Options
 
-        -a adminurl
+        -a admin-url
                 API url for requests (default - http://localhost:19001/admin-api/rpc).
-        -u publicurl
+        -u url
                 API url for requests (default - http://localhost:19101/api/rpc).
 
 
@@ -91,7 +91,7 @@ Help on any command: `./bin/insolar help COMMAND`
 
         -k migration-admin-keys
                 Path to dir with config that contains public/private keys of migration admin.
-        -a alert-level
+        -l alert-level
                 If one of shard have less free addresses than this value, command will print alert message.
         -s shards-count
                 Count of shards at platform (must be a multiple of ten).
@@ -104,7 +104,7 @@ Help on any command: `./bin/insolar help COMMAND`
 
         -k migration-admin-keys
                 Dir with config that contains public/private keys of admin member.
-        -a addresses
+        -g addresses
                 Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator).
         -s shards-count
                 Count of shards at platform (must be a multiple of ten).

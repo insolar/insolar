@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-const letterBytes = "abcdefABCDEF0123456789"
+const letterBytes = "abcdef0123456789"
 const (
 	letterIdxBits = 6                    // 6 bits to represent a letter index
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
@@ -60,7 +60,7 @@ func RandomHashWithLength(n int) string {
 }
 
 func RandomEthHash() string {
-	return "0x" + RandomHashWithLength(40)
+	return "0x" + RandomHashWithLength(64)
 }
 
 // RandomString generates random uuid and return it as a string.
