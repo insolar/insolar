@@ -17,20 +17,114 @@
 package refmap
 
 import (
+	"fmt"
 	"math"
-	"runtime"
 	"sort"
 
 	"github.com/insolar/insolar/reference"
 )
 
-func writeLocatorBuckets(wb *WriteBucketer) error {
+const headerBinarySize = 3 * 4
+const entryL0BinarySize = 32 + 8
+const entryL1BinarySize = 32 + 8
+
+func writeLocatorBuckets(wb *WriteBucketer, maxChapterBinarySize int) error {
 	for bucketNo, max := 0, wb.BucketCount(); bucketNo < max; bucketNo++ {
 		bucketContent := wb.GetBucketed(bucketNo)
+
+		fmt.Println("=== Bucket", bucketNo, " ============================================= ")
+
+		if len(bucketContent) == 0 {
+			fmt.Println("Len	0")
+			// TODO writeHeader(bucketNo, 0, 0)
+			continue
+		}
+
 		entriesL0, entriesL1 := splitL0andL1(bucketContent, wb.keyMap.GetInterned)
-		runtime.KeepAlive(entriesL0)
-		runtime.KeepAlive(entriesL1)
+		// TODO writeHeader(bucketNo, len(entriesL0), len(entriesL1))
+		fmt.Println("Len	", len(bucketContent), "L0	", len(entriesL0), "L1	", len(entriesL1))
+
+		chapterNo, indexL0, indexL1 := 0, 0, 0
+		_ = writeChapters(entriesL0, entriesL1, maxChapterBinarySize-headerBinarySize,
+			func(entriesL0, entriesL1 []resolvedEntry) error {
+				chapterNo++
+				fmt.Println("=== Bucket", bucketNo, " / Chapter", chapterNo, "L0", len(entriesL0), "L1", len(entriesL1), "============================= ")
+				for _, entry := range entriesL0 {
+					entry.localRef.GetPulseNumber()
+					fmt.Println("	L0[", indexL0, "]	", entry.localRef.GetPulseNumber(), "[", entry.countL1, "] =>", entry.locator)
+					indexL0++
+				}
+
+				for _, entry := range entriesL1 {
+					entry.localRef.GetPulseNumber()
+					fmt.Println("	L1[", indexL1, "]	", entry.baseRef.GetPulseNumber(), "=>", entry.locator)
+					indexL1++
+				}
+				return nil
+			},
+		)
+		fmt.Println()
 	}
+	return nil
+}
+
+func writeChapters(entriesL0, entriesL1 []resolvedEntry, maxChapterBinarySize int, writeFn func(entriesL0, entriesL1 []resolvedEntry) error) error {
+
+	batchL0 := maxChapterBinarySize / entryL0BinarySize
+	batchL1 := maxChapterBinarySize / entryL1BinarySize
+
+	if len(entriesL0) > 0 {
+		for {
+			n := len(entriesL0)
+			if n > batchL0 {
+				if err := writeFn(entriesL0[:batchL0], nil); err != nil {
+					return err
+				}
+				entriesL0 = entriesL0[batchL0:]
+				continue
+			}
+
+			entriesL1portion := entriesL1
+			switch remainingForL1 := (maxChapterBinarySize - n*entryL0BinarySize) / entryL1BinarySize; {
+			case remainingForL1 >= len(entriesL1):
+				entriesL1 = nil
+			case remainingForL1 < MinBucketPageSize || remainingForL1 < batchL1>>2:
+				entriesL1portion = nil
+			default:
+				subBatch := batchL1 >> 2
+
+				batchL1 -= batchL1 % subBatch
+				remainingForL1 -= remainingForL1 % subBatch
+
+				entriesL1portion = entriesL1[:remainingForL1]
+				entriesL1 = entriesL1[remainingForL1:]
+			}
+
+			if err := writeFn(entriesL0, entriesL1portion); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
+	if len(entriesL1) > 0 {
+		for {
+			n := len(entriesL1)
+			if n > batchL1 {
+				if err := writeFn(nil, entriesL1[:batchL1]); err != nil {
+					return err
+				}
+				entriesL1 = entriesL1[batchL1:]
+				continue
+			}
+
+			if err := writeFn(nil, entriesL1); err != nil {
+				return err
+			}
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -72,7 +166,6 @@ func splitL0andL1(selectors []ValueSelectorLocator, resolveFn BucketResolveFunc)
 			entries[nextL0idx] = entries[i]
 		}
 		if countL1 == 0 {
-			entries[nextL0idx].locator = 0
 			nextL0idx++
 			continue
 		}
@@ -124,10 +217,13 @@ type resolvedEntry struct {
 type resolvedEntrySorter []resolvedEntry
 
 func (v resolvedEntrySorter) Less(i, j int) bool {
-	if !reference.LessLocal(v[i].localRef, v[j].localRef) {
+	switch cmp := v[i].localRef.Compare(*v[j].localRef); {
+	case cmp < 0:
+		return true
+	case cmp > 0:
 		return false
 	}
-	return reference.LessLocal(v[i].baseRef, v[j].baseRef)
+	return v[i].baseRef.Compare(*v[j].baseRef) < 0
 }
 
 func (v resolvedEntrySorter) Swap(i, j int) {

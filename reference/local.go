@@ -207,10 +207,6 @@ func (v Local) Compare(other Local) int {
 	return v.hash.Compare(other.hash)
 }
 
-func LessLocal(p0, p1 *Local) bool {
-	return p0.Compare(*p1) < 0
-}
-
 // returns a copy of Pulse part of ID.
 func (v Local) Pulse() pulse.Number {
 	return v.GetPulseNumber()

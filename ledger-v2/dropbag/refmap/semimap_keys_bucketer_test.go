@@ -26,20 +26,22 @@ import (
 
 func TestBucketing(t *testing.T) {
 	m := NewRefLocatorMap()
-	//m.keys.SetHashSeed(0)
+	m.keys.SetHashSeed(0)
 
-	const keyCount = int(1e6)
+	const keyCount = int(1e2)
 	for i := keyCount; i > 0; i-- {
 		refLocal := makeLocal(i)
-		for j := 1; j > 0; j-- {
+		for j := i & 3; j >= 0; j-- {
 			refBase := makeLocal(i + j*1e6)
 			ref := reference.NewNoCopy(&refLocal, &refBase)
-			m.Put(ref, ValueLocator(i))
+			locator := ValueLocator(i*100 + 99)
+			m.Put(ref, locator)
+			//fmt.Println("	REF[", i, "]	", refLocal.GetPulseNumber(), refBase.GetPulseNumber(), "=>", locator)
 		}
 	}
 
 	wb := m.FillLocatorBuckets(WriteBucketerConfig{
-		ExpectedPerBucket: 128,
+		ExpectedPerBucket: 100,
 		UsePrimes:         false,
 	})
 
@@ -61,5 +63,5 @@ func TestBucketing(t *testing.T) {
 		fmt.Println("Overflown", len(wb.overflowEntries), minOverflow, maxOverflow)
 	}
 
-	_ = writeLocatorBuckets(&wb)
+	_ = writeLocatorBuckets(&wb, math.MaxUint32)
 }
