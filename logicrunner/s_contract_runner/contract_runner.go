@@ -444,6 +444,14 @@ func (c *contractRunnerService) RouteCall(in rpctypes.UpRouteReq, out *rpctypes.
 
 	rawValue := <-executionContext.input
 
+	if in.Saga {
+		if rawValue == nil {
+			return nil
+		}
+
+		panic(fmt.Sprintf("RouteCall result unexpected type '%T' for saga call", rawValue))
+	}
+
 	switch val := rawValue.(type) {
 	case insolar.Arguments:
 		out.Result = val
@@ -453,7 +461,6 @@ func (c *contractRunnerService) RouteCall(in rpctypes.UpRouteReq, out *rpctypes.
 		return val
 	default:
 		panic(fmt.Sprintf("RouteCall result unexpected type %T", val))
-
 	}
 
 	return nil

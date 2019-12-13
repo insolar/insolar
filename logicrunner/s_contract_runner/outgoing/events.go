@@ -17,12 +17,9 @@
 package outgoing
 
 import (
-	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 type RPCEvent interface{}
@@ -32,6 +29,10 @@ type RPCRouteCallEvent interface {
 
 	SetSaga(isSaga bool) RPCRouteCallEvent
 	SetImmutable(isImmutable bool) RPCRouteCallEvent
+}
+
+type RPCOutgoingConstructor interface {
+	ConstructOutgoing(transcript common.Transcript) record.OutgoingRequest
 }
 
 type RPCEventParentFunc func(parentRequest insolar.Reference, parentObject insolar.Reference) RPCEventBuilder
@@ -52,7 +53,7 @@ type SaveAsChildEvent struct {
 	Prototype   insolar.Reference
 }
 
-func (e *SaveAsChildEvent) ConstructOutgoing(transcript common.Transcript) record.OutgoingRequest {
+func (e SaveAsChildEvent) ConstructOutgoing(transcript common.Transcript) record.OutgoingRequest {
 	return record.OutgoingRequest{
 		Caller: *transcript.Request.Object,
 		Nonce:  0,
@@ -85,7 +86,7 @@ type RouteCallEvent struct {
 	Saga      bool
 }
 
-func (e *RouteCallEvent) ConstructOutgoing(transcript common.Transcript) record.OutgoingRequest {
+func (e RouteCallEvent) ConstructOutgoing(transcript common.Transcript) record.OutgoingRequest {
 	returnMode := record.ReturnResult
 	if e.Saga {
 		returnMode = record.ReturnSaga
@@ -109,14 +110,14 @@ func (e *RouteCallEvent) ConstructOutgoing(transcript common.Transcript) record.
 	}
 }
 
-func (r RouteCallEvent) SetSaga(isSaga bool) RPCRouteCallEvent {
-	r.Saga = isSaga
-	return r
+func (e RouteCallEvent) SetSaga(isSaga bool) RPCRouteCallEvent {
+	e.Saga = isSaga
+	return e
 }
 
-func (r RouteCallEvent) SetImmutable(isImmutable bool) RPCRouteCallEvent {
-	r.Immutable = isImmutable
-	return r
+func (e RouteCallEvent) SetImmutable(isImmutable bool) RPCRouteCallEvent {
+	e.Immutable = isImmutable
+	return e
 }
 
 type GetCodeEvent struct {
@@ -173,25 +174,4 @@ func (r rpcBuilder) GetCode(code insolar.Reference) RPCEvent {
 
 func NewRPCBuilder(request insolar.Reference, object insolar.Reference) RPCEventBuilder {
 	return &rpcBuilder{request: request, object: object}
-}
-
-func RPCMessageToEvent(rawMessage interface{}) RPCEvent {
-	switch msg := rawMessage.(type) {
-	case rpctypes.UpDeactivateObjectReq:
-		return NewRPCBuilder(msg.Request, msg.Callee).
-			Deactivate()
-	case rpctypes.UpSaveAsChildReq:
-		return NewRPCBuilder(msg.Request, msg.Callee).
-			SaveAsChild(msg.Prototype, msg.ConstructorName, msg.ArgsSerialized)
-	case rpctypes.UpGetCodeReq:
-		return NewRPCBuilder(msg.Request, msg.Callee).
-			GetCode(msg.Code)
-	case rpctypes.UpRouteReq:
-		return NewRPCBuilder(msg.Request, msg.Callee).
-			RouteCall(msg.Object, msg.Prototype, msg.Method, msg.Arguments).
-			SetImmutable(msg.Immutable).
-			SetSaga(msg.Saga)
-	default:
-		panic(fmt.Sprintf("unknown message type: %T", rawMessage))
-	}
 }

@@ -25,6 +25,10 @@ func (c ConveyorLogger) CanLogEvent(eventType smachine.StepLoggerEvent, stepLeve
 	return true
 }
 
+func (c ConveyorLogger) CreateAsyncLogger(ctx context.Context, _ *smachine.StepLoggerData) (context.Context, smachine.StepLogger) {
+	return ctx, c
+}
+
 type LogStepMessage struct {
 	*logcommon.LogObjectTemplate
 
@@ -62,6 +66,7 @@ func prepareStepName(sd *smachine.StepDeclaration) {
 }
 
 func (c ConveyorLogger) LogEvent(data smachine.StepLoggerData, msg interface{}) {
+	fmt.Printf("123 %T\n", msg)
 	c.logger.Error(msg)
 }
 
@@ -98,6 +103,7 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 		}
 		err = stepLoggerData.Error.Error()
 	}
+
 	c.logger.Error(LogStepMessage{
 		Message: special + stepLoggerUpdateData.UpdateType + suffix,
 

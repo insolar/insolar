@@ -52,3 +52,7 @@ func (s *StateMachineAbandonedRequests) GetStateMachineDeclaration() smachine.St
 func (s *StateMachineAbandonedRequests) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	return ctx.Stop()
 }
+
+func (s *StateMachineAbandonedRequests) stepExecute(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	return ctx.Stop()
+}
