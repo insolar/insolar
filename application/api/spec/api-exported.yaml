@@ -312,6 +312,8 @@ paths:
                     - params
                   properties:
                     params:
+                      required:
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -404,6 +406,8 @@ paths:
                     - params
                   properties:
                     params:
+                      required:
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -493,6 +497,8 @@ paths:
                     - params
                   properties:
                     params:
+                      required:
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -572,6 +578,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -681,6 +689,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -903,6 +913,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -984,6 +996,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -1064,6 +1078,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
@@ -1145,6 +1161,8 @@ paths:
                     params:
                       required:
                         - callParams
+                        - reference
+                        - publicKey
                       properties:
                         callSite:
                           enum:
