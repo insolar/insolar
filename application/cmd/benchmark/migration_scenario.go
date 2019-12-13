@@ -27,7 +27,7 @@ import (
 const (
 	migrationAmount = 101
 
-	txHashPattern = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+	txHashPattern = "0x89f2d6994e5d152bece9ec291f6098d236ab81f76f0d4d52fb69d0cd6b6fd70d"
 )
 
 type migrationScenario struct {
