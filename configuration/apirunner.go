@@ -33,15 +33,17 @@ type APIRunner struct {
 func NewAPIRunner(admin bool) APIRunner {
 	if admin {
 		return APIRunner{
-			Address: "localhost:19001",
-			RPC:     "/admin-api/rpc",
-			IsAdmin: true,
+			Address:     "localhost:19001",
+			RPC:         "/admin-api/rpc",
+			SwaggerPath: "application/api/spec/api-exported.yaml",
+			IsAdmin:     true,
 		}
 	}
 	return APIRunner{
-		Address: "localhost:19101",
-		RPC:     "/api/rpc",
-		IsAdmin: false,
+		Address:     "localhost:19101",
+		RPC:         "/api/rpc",
+		SwaggerPath: "application/api/spec/api-exported.yaml",
+		IsAdmin:     false,
 	}
 }
 
