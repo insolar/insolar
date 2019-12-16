@@ -16,7 +16,10 @@
 
 package smachine
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type StepLoggerEvent uint8
 
@@ -66,6 +69,9 @@ type StepLoggerUpdateData struct {
 	UpdateType string
 	PrevStepNo uint32
 	NextStep   StepDeclaration
+
+	InactivityNano time.Duration
+	ActivityNano   time.Duration
 }
 
 type SlotMachineLogger interface {

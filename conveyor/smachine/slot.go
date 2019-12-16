@@ -19,6 +19,7 @@ package smachine
 import (
 	"context"
 	"sync/atomic"
+	"time"
 )
 
 type Slot struct {
@@ -78,6 +79,8 @@ type slotData struct {
 	lastWorkScan   uint8  // to check if a slot was executed in this cycle
 	asyncCallCount uint16 // pending calls, overflow panics
 	migrationCount uint32 // can be wrapped by overflow
+
+	lastTouchNano int64
 
 	boost    *boostPermit
 	step     SlotStep
@@ -512,22 +515,22 @@ func (s *Slot) logStepError(action ErrorHandlerAction, stateUpdate StateUpdate, 
 	if wasAsync {
 		flags |= StepLoggerDetached
 	}
-	s._logStepUpdate(StepLoggerUpdate, 0, stateUpdate, flags, err)
+	s._logStepUpdate(StepLoggerUpdate, 0, durationUnknownNano, durationUnknownNano, stateUpdate, flags, err)
 }
 
-func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool) {
+func (s *Slot) logStepUpdate(prevStepNo uint32, stateUpdate StateUpdate, wasAsync bool, inactivityNano, activityNano time.Duration) {
 	flags := StepLoggerFlags(0)
 	if wasAsync {
 		flags |= StepLoggerDetached
 	}
-	s._logStepUpdate(StepLoggerUpdate, prevStepNo, stateUpdate, flags, nil)
+	s._logStepUpdate(StepLoggerUpdate, prevStepNo, inactivityNano, activityNano, stateUpdate, flags, nil)
 }
 
-func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate) {
-	s._logStepUpdate(StepLoggerMigrate, prevStepNo, stateUpdate, 0, nil)
+func (s *Slot) logStepMigrate(prevStepNo uint32, stateUpdate StateUpdate, inactivityNano, activityNano time.Duration) {
+	s._logStepUpdate(StepLoggerMigrate, prevStepNo, inactivityNano, activityNano, stateUpdate, 0, nil)
 }
 
-func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32,
+func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32, inactivityNano, activityNano time.Duration,
 	stateUpdate StateUpdate, flags StepLoggerFlags, err error) {
 	if s.stepLogger == nil {
 		return
@@ -549,7 +552,11 @@ func (s *Slot) _logStepUpdate(eventType StepLoggerEvent, prevStepNo uint32,
 	stepData.Flags = flags
 	stepData.Error = err
 
-	updData := StepLoggerUpdateData{PrevStepNo: prevStepNo}
+	updData := StepLoggerUpdateData{
+		PrevStepNo:     prevStepNo,
+		InactivityNano: inactivityNano,
+		ActivityNano:   activityNano,
+	}
 
 	if nextStep := stateUpdate.step.Transition; nextStep != nil {
 		nextDecl := s.declaration.GetStepDeclaration(nextStep)
@@ -614,4 +621,19 @@ func (s *Slot) updateBoostFlag() {
 
 func (s *Slot) isBoosted() bool {
 	return s.slotFlags&slotIsBoosted != 0
+}
+
+func (s *Slot) touch(touchAt int64) time.Duration {
+	if s.lastTouchNano == 0 {
+		s.lastTouchNano = touchAt
+		return durationUnknownNano
+	}
+
+	inactivityNano := time.Duration(touchAt - s.lastTouchNano)
+	s.lastTouchNano = touchAt
+
+	if inactivityNano <= durationUnknownNano {
+		return durationUnknownNano
+	}
+	return inactivityNano
 }

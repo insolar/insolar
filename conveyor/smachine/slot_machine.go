@@ -370,6 +370,8 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 
 func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker AttachedSlotWorker, loopLimit int) (hasSignal bool, loopCount int) {
 
+	inactivityNano := slot.touch(time.Now().UnixNano())
+
 	if dep := slot.dependency; dep != nil && dep.IsReleaseOnWorking() {
 		released := slot._releaseDependency()
 		m.activateDependants(released, slot.NewLink(), worker)
@@ -407,11 +409,11 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 
 	if wasDetached {
 		// MUST NOT apply any changes in the current routine, as it is no more safe to update queues
-		m.asyncPostSlotExecution(slot, stateUpdate, prevStepNo)
+		m.asyncPostSlotExecution(slot, stateUpdate, prevStepNo, inactivityNano)
 		return true, loopCount
 	}
 
-	hasAsync := m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, false)
+	hasAsync := m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, false, inactivityNano)
 	if hasAsync && !hasSignal {
 		_, hasSignal, wasDetached = m.syncQueue.ProcessCallbacks(worker)
 		return hasSignal || wasDetached, loopCount
@@ -419,26 +421,36 @@ func (m *SlotMachine) _executeSlot(slot *Slot, prevStepNo uint32, worker Attache
 	return hasSignal, loopCount
 }
 
+const durationUnknownNano = time.Duration(1)
+const durationNotApplicableNano = time.Duration(0)
+
 func (m *SlotMachine) _executeSlotInitByCreator(slot *Slot, worker DetachableSlotWorker) {
 
 	slot.ensureInitializing()
 	m._boostNewSlot(slot)
+
+	slot.touch(time.Now().UnixNano())
 
 	ec := executionContext{slotContext: slotContext{s: slot, w: worker}}
 	stateUpdate, _, asyncCnt := ec.executeNextStep()
 
 	slot.addAsyncCount(asyncCnt)
 	if !worker.NonDetachableCall(func(worker FixedSlotWorker) {
-		m.slotPostExecution(slot, stateUpdate, worker, 0, false)
+		m.slotPostExecution(slot, stateUpdate, worker, 0, false, durationUnknownNano)
 	}) {
-		m.asyncPostSlotExecution(slot, stateUpdate, 0)
+		m.asyncPostSlotExecution(slot, stateUpdate, 0, durationUnknownNano)
 	}
 }
 
 func (m *SlotMachine) slotPostExecution(slot *Slot, stateUpdate StateUpdate, worker FixedSlotWorker,
-	prevStepNo uint32, wasAsync bool) (hasAsync bool) {
+	prevStepNo uint32, wasAsync bool, inactivityNano time.Duration) (hasAsync bool) {
 
-	slot.logStepUpdate(prevStepNo, stateUpdate, wasAsync)
+	activityNano := durationNotApplicableNano
+	if !wasAsync && inactivityNano > durationNotApplicableNano {
+		activityNano = slot.touch(time.Now().UnixNano())
+	}
+
+	slot.logStepUpdate(prevStepNo, stateUpdate, wasAsync, inactivityNano, activityNano)
 
 	slot.updateBoostFlag()
 
@@ -490,11 +502,11 @@ func (m *SlotMachine) queueAsyncCallback(link SlotLink,
 		}()
 
 		if worker.NonDetachableCall(func(worker FixedSlotWorker) {
-			m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true)
+			m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true, durationNotApplicableNano)
 		}) {
 			m.syncQueue.ProcessDetachQueue(link, worker)
 		} else {
-			m.asyncPostSlotExecution(slot, stateUpdate, prevStepNo)
+			m.asyncPostSlotExecution(slot, stateUpdate, prevStepNo, durationNotApplicableNano)
 		}
 
 		return true
@@ -511,13 +523,13 @@ func (m *SlotMachine) _canCallback(link SlotLink) bool {
 	return false
 }
 
-func (m *SlotMachine) asyncPostSlotExecution(s *Slot, stateUpdate StateUpdate, prevStepNo uint32) {
+func (m *SlotMachine) asyncPostSlotExecution(s *Slot, stateUpdate StateUpdate, prevStepNo uint32, inactivityNano time.Duration) {
 	m.syncQueue.AddAsyncUpdate(s.NewLink(), func(link SlotLink, worker FixedSlotWorker) {
 		if !link.IsValid() {
 			return
 		}
 		slot := link.s
-		if m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true) {
+		if m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true, inactivityNano) {
 			m.syncQueue.FlushSlotDetachQueue(link)
 		}
 	})
@@ -594,6 +606,8 @@ func (m *SlotMachine) migrateSlot(migrateCount uint32, slot *Slot, w FixedSlotWo
 
 func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, prevStepNo uint32, worker FixedSlotWorker) (isEmptyOrWeak, isAvailable bool) {
 
+	inactivityNano := slot.touch(time.Now().UnixNano())
+
 	for delta := migrateCount - slot.migrationCount; delta > 0; {
 		migrateFn := slot.getMigration()
 
@@ -609,7 +623,9 @@ func (m *SlotMachine) _migrateSlot(migrateCount uint32, slot *Slot, prevStepNo u
 
 			stateUpdate, skipMultiple := mc.executeMigration(migrateFn)
 
-			slot.logStepMigrate(prevStepNo, stateUpdate)
+			activityNano := slot.touch(time.Now().UnixNano())
+			slot.logStepMigrate(prevStepNo, stateUpdate, inactivityNano, activityNano)
+			inactivityNano = durationUnknownNano
 
 			if !m.applyStateUpdate(slot, stateUpdate, worker) {
 				return true, false
@@ -1379,7 +1395,7 @@ func (m *SlotMachine) bargeInNow(link SlotLink, param interface{}, applyFn Barge
 	stateUpdate := bc.executeBargeInNow(applyFn)
 
 	releaseOnPanic = false
-	m.slotPostExecution(slot, stateUpdate, worker, 0, false)
+	m.slotPostExecution(slot, stateUpdate, worker, 0, false, durationNotApplicableNano)
 	return true
 }
 
@@ -1396,7 +1412,7 @@ func (m *SlotMachine) createLightBargeIn(link StepLink, stateUpdate StateUpdate)
 			}
 			// Plan A - faster one
 			if slot, isStarted, prevStepNo := link.tryStartWorking(); isStarted {
-				m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true)
+				m.slotPostExecution(slot, stateUpdate, worker, prevStepNo, true, durationNotApplicableNano)
 				return
 			}
 			// Plan B
