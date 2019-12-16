@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/log/logcommon"
 
 	"github.com/stretchr/testify/require"
@@ -192,17 +193,17 @@ var _ logcommon.LogObject = SomeLogObjectWithTemplate{}
 var _ logcommon.LogObject = &SomeLogObjectWithTemplate{}
 
 type SomeLogObjectWithTemplate struct {
-	*logcommon.LogObjectTemplate
+	*log.LogObjectTemplate
 	IntVal int
 }
 
 type SomeLogObjectWithTemplateAndMsg struct {
-	*logcommon.LogObjectTemplate `txt:"TemplateAndMsg"`
-	IntVal                       int
+	*log.LogObjectTemplate `txt:"TemplateAndMsg"`
+	IntVal                 int
 }
 
 type SomeLogObjectWithTemplateAndMsg2 struct {
-	*logcommon.LogObjectTemplate
+	*log.LogObjectTemplate
 	IntVal int
 	_      struct{} `txt:"TemplateAndMsg"`
 }
@@ -240,7 +241,7 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 }
 
 type SomeLogObjectWithMsg struct {
-	*logcommon.LogObjectTemplate
+	*log.LogObjectTemplate
 	IntVal int    `opt:""`
 	Msg    string `txt:"fixedObjectMessage"`
 }

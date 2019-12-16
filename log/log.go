@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/logadapter"
+	"github.com/insolar/insolar/log/logcommon"
 	"github.com/insolar/insolar/log/zlogadapter"
 )
 
@@ -60,4 +61,12 @@ func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar
 		}
 	}
 	return nil, errors.Wrap(err, "invalid logger config")
+}
+
+var _ logcommon.LogObject = &LogObjectTemplate{}
+
+type LogObjectTemplate struct{}
+
+func (*LogObjectTemplate) GetLogObjectMarshaller() logcommon.LogObjectMarshaller {
+	return nil
 }

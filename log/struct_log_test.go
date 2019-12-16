@@ -49,7 +49,7 @@ func (m mar) MarshalLogObject(lw logcommon.LogObjectWriter, lmc logcommon.LogObj
 }
 
 type LogObject struct {
-	logcommon.LogObjectTemplate
+	LogObjectTemplate
 	s string
 }
 
