@@ -17,7 +17,6 @@
 package foundation
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"math/rand"
@@ -45,13 +44,9 @@ func GetRequestReference() (*insolar.Reference, error) {
 }
 
 // NewSource returns source initialized with entropy from pulse.
-func NewSource() (rand.Source, error) {
-	entr := GetLogicalContext().Pulse.Entropy[:9]
-	randNum, err := binary.ReadVarint(bytes.NewReader(entr))
-	if err != nil {
-		return nil, err
-	}
-	return rand.NewSource(randNum), nil
+func NewSource() rand.Source {
+	randNum := binary.LittleEndian.Uint64(GetLogicalContext().Pulse.Entropy[:])
+	return rand.NewSource(int64(randNum))
 }
 
 // GetObject creates proxy by address
