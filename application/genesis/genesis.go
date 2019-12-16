@@ -63,15 +63,15 @@ const (
 	XNS                        = "XNS"
 	MigrationDaemonUnholdDate  = 1610668800 // 15.01.2021
 	MigrationDaemonVesting     = 31536000   // 365 days
-	MigrationDaemonVestingStep = 2629746    // 1 month
+	MigrationDaemonVestingStep = 2628000    // 365d / 12 ~ 1 month
 
 	NetworkIncentivesUnholdDate  = 1602720000 // 15.10.2020
-	NetworkIncentivesVesting     = 315569520  // 10 years
-	NetworkIncentivesVestingStep = 2629746    // 1 month
+	NetworkIncentivesVesting     = 315532800  // 15.10.2020 - 15.10.2030, 10 years
+	NetworkIncentivesVestingStep = 2629440    // 10y / 120 ~ 1 month
 
 	ApplicationIncentivesUnholdDate  = 1602720000 // 15.10.2020
-	ApplicationIncentivesVesting     = 315569520  // 10 years
-	ApplicationIncentivesVestingStep = 2629746    // 1 month
+	ApplicationIncentivesVesting     = 315532800  // 15.10.2020 - 15.10.2030, 10 years
+	ApplicationIncentivesVestingStep = 2629440    // 10y / 120 ~ 1 month
 
 	FoundationUnholdDate  = 1673740800 // 15.01.2023
 	FoundationVesting     = 10

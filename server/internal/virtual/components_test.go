@@ -37,6 +37,9 @@ func TestComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
+	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
+	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
 	cert := initCertificateManager(
