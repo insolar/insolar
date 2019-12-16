@@ -70,8 +70,8 @@ type StepLoggerUpdateData struct {
 	PrevStepNo uint32
 	NextStep   StepDeclaration
 
-	InactivityNano time.Duration
-	ActivityNano   time.Duration
+	InactivityNano time.Duration // zero or negative - means that value is not applicable / not valid
+	ActivityNano   time.Duration // zero or negative - means that value is not applicable / not valid
 }
 
 type SlotMachineLogger interface {
