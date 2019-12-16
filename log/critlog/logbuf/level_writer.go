@@ -20,12 +20,14 @@ package logbuf
 
 import (
 	"encoding/binary"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/logcommon"
 	"io"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger-v2/pgbuf"
+	"github.com/insolar/insolar/log/logcommon"
 )
 
-func NewJoiningLevelBuffer(buffer PlainBuffer, filler []byte) LevelBuffer {
+func NewJoiningLevelBuffer(buffer pgbuf.PlainBuffer, filler []byte) LevelBuffer {
 	if len(filler) < serviceHeaderSizeMin {
 		panic("illegal value")
 	}
@@ -37,7 +39,7 @@ func NewJoiningLevelBuffer(buffer PlainBuffer, filler []byte) LevelBuffer {
 	}
 }
 
-func NewChunkingLevelBuffer(buffer PlainBuffer) LevelBuffer {
+func NewChunkingLevelBuffer(buffer pgbuf.PlainBuffer) LevelBuffer {
 	return LevelBuffer{
 		buffer:            buffer,
 		serviceHeaderSize: serviceHeaderSizeMin,
@@ -47,7 +49,7 @@ func NewChunkingLevelBuffer(buffer PlainBuffer) LevelBuffer {
 //var _ insolar.LogLevelWriter = &LevelBuffer{}
 
 type LevelBuffer struct {
-	buffer PlainBuffer
+	buffer pgbuf.PlainBuffer
 
 	serviceHeaderFiller []byte
 	serviceHeaderSize   uint32

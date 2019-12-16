@@ -1,4 +1,4 @@
-//
+///
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,16 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-//
+///
 
 // +build ignore
 
-package logbuf
+package pgbuf
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gonum/gonum/stat"
-	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"runtime"
 	"strconv"
@@ -33,6 +29,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/gonum/gonum/stat"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
 func Test_LongBuffer_Deviations(t *testing.T) {

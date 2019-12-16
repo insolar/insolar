@@ -14,9 +14,7 @@
 //    limitations under the License.
 //
 
-// +build ignore
-
-package logbuf
+package pgbuf
 
 import (
 	"math"
