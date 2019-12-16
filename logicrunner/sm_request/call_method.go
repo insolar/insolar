@@ -88,6 +88,7 @@ func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionCont
 
 	goCtx := ctx.GetContext()
 	return s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		defer func() {}()
 		info, err := svc.RegisterIncomingRequest(goCtx, incoming)
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -186,7 +187,7 @@ func (s *StateMachineCallMethod) stepPulseChanged(ctx smachine.ExecutionContext)
 	s.sender.PrepareNotify(ctx, func(svc s_sender.SenderService) {
 		msg := bus.ReplyAsMessage(goCtx, response)
 		svc.Reply(goCtx, *messageMeta, msg)
-	}).DelayedSend()
+	}).Send()
 
 	return ctx.Jump(s.stepDone)
 }

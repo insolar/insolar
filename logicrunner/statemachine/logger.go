@@ -66,7 +66,6 @@ func prepareStepName(sd *smachine.StepDeclaration) {
 }
 
 func (c ConveyorLogger) LogEvent(data smachine.StepLoggerData, msg interface{}) {
-	fmt.Printf("123 %T\n", msg)
 	c.logger.Error(msg)
 }
 

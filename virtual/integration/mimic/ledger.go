@@ -25,6 +25,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -32,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -771,7 +772,7 @@ func (p *mimicLedger) LoadGenesis(ctx context.Context, dirPath string) error {
 			RecordModifier: &recordModifierMock{},
 			IndexModifier:  &indexModifierMock{},
 		},
-		DiscoveryNodes:  []insolar.DiscoveryNodeRegister{},
+		DiscoveryNodes:  []application.DiscoveryNodeRegister{},
 		ContractsConfig: *genesisContractsConfig,
 	}
 

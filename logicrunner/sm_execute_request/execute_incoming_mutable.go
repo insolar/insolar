@@ -18,6 +18,7 @@ package sm_execute_request
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log/logcommon"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
 	"github.com/insolar/insolar/logicrunner/s_contract_requester"
 	"github.com/insolar/insolar/logicrunner/s_contract_runner"
@@ -113,11 +115,15 @@ func (s *ExecuteIncomingMutableRequest) stepOrderingCheck(ctx smachine.Execution
 }
 
 func (s *ExecuteIncomingMutableRequest) stepStartExecution(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	transcript := s.contractTranscript
-
-	goCtx := ctx.GetContext()
+	var (
+		transcript  = s.contractTranscript
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+	)
 
 	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "ExecuteContract")
+
 		nextStep, err := svc.ExecutionStart(goCtx, transcript)
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -128,11 +134,12 @@ func (s *ExecuteIncomingMutableRequest) stepStartExecution(ctx smachine.Executio
 }
 
 func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	transcript := s.contractTranscript
-
-	goCtx := ctx.GetContext()
-
-	var result interface{}
+	var (
+		transcript  = s.contractTranscript
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+		result      interface{}
+	)
 
 	switch s.nextStep.Outgoing.(type) {
 	case outgoing.DeactivateEvent:
@@ -165,6 +172,8 @@ func (s *ExecuteIncomingMutableRequest) stepContinueExecution(ctx smachine.Execu
 	s.outgoingCallProcessing.Reset()
 
 	return s.ContractRunner.PrepareAsync(ctx, func(svc s_contract_runner.ContractRunnerService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "ExecuteContract")
+
 		nextStep, err := svc.ExecutionContinue(goCtx, transcript.RequestRef, result)
 
 		return func(ctx smachine.AsyncResultContext) {

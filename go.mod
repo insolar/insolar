@@ -14,12 +14,11 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/gogo/protobuf v1.2.1
-	github.com/gojuno/minimock v1.9.2
+	github.com/gojuno/minimock v1.9.2 // indirect
 	github.com/gojuno/minimock/v3 v3.0.5
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
-	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
@@ -34,7 +33,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/onrik/gomerkle v1.0.0
 	github.com/opentracing/opentracing-go v1.1.0
-	github.com/pelletier/go-toml v1.4.0
+	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
@@ -56,7 +55,8 @@ require (
 	go.opencensus.io v0.22.0
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
-	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
+	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
 	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0

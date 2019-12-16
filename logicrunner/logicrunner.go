@@ -37,11 +37,10 @@ import (
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/s_artifact"
@@ -52,7 +51,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/sm_object"
 	"github.com/insolar/insolar/logicrunner/statemachine"
-	"github.com/insolar/insolar/logicrunner_old/requestexecutor"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -62,14 +60,11 @@ type LogicRunner struct {
 	ArtifactManager   artifacts.Client          `inject:""`
 	JetStorage        jet.Storage               `inject:""`
 
-	LogicExecutor    logicexecutor.LogicExecutor
-	DescriptorsCache artifacts.DescriptorsCache
-	RequestsExecutor requestexecutor.RequestExecutor
-	MachinesManager  machinesmanager.MachinesManager
-	Sender           bus.Sender
-	FlowDispatcher   dispatcher.Dispatcher
-	ShutdownFlag     shutdown.Flag
-	ContractRunner   s_contract_runner.ContractRunnerService
+	MachinesManager machinesmanager.MachinesManager
+	Sender          bus.Sender
+	FlowDispatcher  dispatcher.Dispatcher
+	ShutdownFlag    shutdown.Flag
+	ContractRunner  s_contract_runner.ContractRunnerService
 
 	Conveyor       *conveyor.PulseConveyor
 	ConveyorWorker lrCommon.ConveyorWorker
@@ -103,11 +98,12 @@ func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
-	lr.MachinesManager = machinesmanager.NewMachinesManager()
-	lr.DescriptorsCache = artifacts.NewDescriptorsCache(lr.ArtifactManager)
-	lr.LogicExecutor = logicexecutor.NewLogicExecutor(lr.MachinesManager, lr.DescriptorsCache)
-	lr.RequestsExecutor = requestexecutor.NewRequestsExecutor(lr.Sender, lr.LogicExecutor, lr.ArtifactManager, lr.PulseAccessor)
-	lr.ContractRunner = s_contract_runner.CreateContractRunner(lr.LogicExecutor, lr.MachinesManager, lr.ArtifactManager)
+	log.Error("MachinesManager: %v", lr.MachinesManager)
+	if lr.MachinesManager == machinesmanager.MachinesManager(nil) {
+		log.Error("New MachinesManager")
+		lr.MachinesManager = machinesmanager.NewMachinesManager()
+	}
+	lr.ContractRunner = s_contract_runner.CreateContractRunner(lr.MachinesManager, lr.ArtifactManager)
 	lr.rpc = lrCommon.NewRPC(lr.ContractRunner, lr.Cfg)
 
 	// configuration steps for slot machine
@@ -166,14 +162,14 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 		}
 	}
 
-	if lr.Cfg.GoPlugin != nil {
-		gp := goplugin.NewGoPlugin(lr.Cfg)
-
-		err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp)
-		if err != nil {
-			return err
-		}
-	}
+	// if lr.Cfg.GoPlugin != nil {
+	// 	gp := goplugin.NewGoPlugin(lr.Cfg)
+	//
+	// 	err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	lr.ArtifactManager.InjectFinish()
 

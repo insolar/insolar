@@ -29,6 +29,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/drop"
@@ -77,7 +78,7 @@ func GenerateBootstrap(skipBuild bool) (func(), string, error) {
 	return cleanupFunc, artifactsDir, nil
 }
 
-func ReadGenesisContractsConfig(dirPath string) (*insolar.GenesisContractsConfig, error) {
+func ReadGenesisContractsConfig(dirPath string) (*application.GenesisContractsConfig, error) {
 	genesisConfigPath := path.Join(dirPath, GenesisRelativePath)
 
 	fh, err := os.Open(genesisConfigPath)
@@ -85,7 +86,7 @@ func ReadGenesisContractsConfig(dirPath string) (*insolar.GenesisContractsConfig
 		return nil, errors.Wrap(err, "failed to open genesis config for reading")
 	}
 
-	rv := insolar.GenesisHeavyConfig{}
+	rv := application.GenesisHeavyConfig{}
 	if err := json.NewDecoder(fh).Decode(&rv); err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis config")
 	}

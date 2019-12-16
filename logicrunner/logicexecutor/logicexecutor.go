@@ -46,7 +46,7 @@ type logicExecutor struct {
 	DescriptorsCache artifacts.DescriptorsCache
 }
 
-func NewLogicExecutor(manager machinesmanager.MachinesManager, cache artifacts.DescriptorsCache) LogicExecutor {
+func NewLogicExecutor(manager machinesmanager.MachinesManager, cache artifacts.DescriptorsCache) *logicExecutor {
 	return &logicExecutor{
 		MachinesManager:  manager,
 		DescriptorsCache: cache,

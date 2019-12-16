@@ -15,17 +15,23 @@ import (
 type DataSignerMock struct {
 	t minimock.Tester
 
+	funcDigestData          func(reader io.Reader) (d1 Digest)
+	inspectFuncDigestData   func(reader io.Reader)
+	afterDigestDataCounter  uint64
+	beforeDigestDataCounter uint64
+	DigestDataMock          mDataSignerMockDigestData
+
 	funcGetDigestMethod          func() (d1 DigestMethod)
 	inspectFuncGetDigestMethod   func()
 	afterGetDigestMethodCounter  uint64
 	beforeGetDigestMethodCounter uint64
 	GetDigestMethodMock          mDataSignerMockGetDigestMethod
 
-	funcGetDigestOf          func(reader io.Reader) (d1 Digest)
-	inspectFuncGetDigestOf   func(reader io.Reader)
-	afterGetDigestOfCounter  uint64
-	beforeGetDigestOfCounter uint64
-	GetDigestOfMock          mDataSignerMockGetDigestOf
+	funcGetDigestSize          func() (i1 int)
+	inspectFuncGetDigestSize   func()
+	afterGetDigestSizeCounter  uint64
+	beforeGetDigestSizeCounter uint64
+	GetDigestSizeMock          mDataSignerMockGetDigestSize
 
 	funcGetSignMethod          func() (s1 SignMethod)
 	inspectFuncGetSignMethod   func()
@@ -59,10 +65,12 @@ func NewDataSignerMock(t minimock.Tester) *DataSignerMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.DigestDataMock = mDataSignerMockDigestData{mock: m}
+	m.DigestDataMock.callArgs = []*DataSignerMockDigestDataParams{}
+
 	m.GetDigestMethodMock = mDataSignerMockGetDigestMethod{mock: m}
 
-	m.GetDigestOfMock = mDataSignerMockGetDigestOf{mock: m}
-	m.GetDigestOfMock.callArgs = []*DataSignerMockGetDigestOfParams{}
+	m.GetDigestSizeMock = mDataSignerMockGetDigestSize{mock: m}
 
 	m.GetSignMethodMock = mDataSignerMockGetSignMethod{mock: m}
 
@@ -75,6 +83,221 @@ func NewDataSignerMock(t minimock.Tester) *DataSignerMock {
 	m.SignDigestMock.callArgs = []*DataSignerMockSignDigestParams{}
 
 	return m
+}
+
+type mDataSignerMockDigestData struct {
+	mock               *DataSignerMock
+	defaultExpectation *DataSignerMockDigestDataExpectation
+	expectations       []*DataSignerMockDigestDataExpectation
+
+	callArgs []*DataSignerMockDigestDataParams
+	mutex    sync.RWMutex
+}
+
+// DataSignerMockDigestDataExpectation specifies expectation struct of the DataSigner.DigestData
+type DataSignerMockDigestDataExpectation struct {
+	mock    *DataSignerMock
+	params  *DataSignerMockDigestDataParams
+	results *DataSignerMockDigestDataResults
+	Counter uint64
+}
+
+// DataSignerMockDigestDataParams contains parameters of the DataSigner.DigestData
+type DataSignerMockDigestDataParams struct {
+	reader io.Reader
+}
+
+// DataSignerMockDigestDataResults contains results of the DataSigner.DigestData
+type DataSignerMockDigestDataResults struct {
+	d1 Digest
+}
+
+// Expect sets up expected params for DataSigner.DigestData
+func (mmDigestData *mDataSignerMockDigestData) Expect(reader io.Reader) *mDataSignerMockDigestData {
+	if mmDigestData.mock.funcDigestData != nil {
+		mmDigestData.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
+	}
+
+	if mmDigestData.defaultExpectation == nil {
+		mmDigestData.defaultExpectation = &DataSignerMockDigestDataExpectation{}
+	}
+
+	mmDigestData.defaultExpectation.params = &DataSignerMockDigestDataParams{reader}
+	for _, e := range mmDigestData.expectations {
+		if minimock.Equal(e.params, mmDigestData.defaultExpectation.params) {
+			mmDigestData.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDigestData.defaultExpectation.params)
+		}
+	}
+
+	return mmDigestData
+}
+
+// Inspect accepts an inspector function that has same arguments as the DataSigner.DigestData
+func (mmDigestData *mDataSignerMockDigestData) Inspect(f func(reader io.Reader)) *mDataSignerMockDigestData {
+	if mmDigestData.mock.inspectFuncDigestData != nil {
+		mmDigestData.mock.t.Fatalf("Inspect function is already set for DataSignerMock.DigestData")
+	}
+
+	mmDigestData.mock.inspectFuncDigestData = f
+
+	return mmDigestData
+}
+
+// Return sets up results that will be returned by DataSigner.DigestData
+func (mmDigestData *mDataSignerMockDigestData) Return(d1 Digest) *DataSignerMock {
+	if mmDigestData.mock.funcDigestData != nil {
+		mmDigestData.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
+	}
+
+	if mmDigestData.defaultExpectation == nil {
+		mmDigestData.defaultExpectation = &DataSignerMockDigestDataExpectation{mock: mmDigestData.mock}
+	}
+	mmDigestData.defaultExpectation.results = &DataSignerMockDigestDataResults{d1}
+	return mmDigestData.mock
+}
+
+//Set uses given function f to mock the DataSigner.DigestData method
+func (mmDigestData *mDataSignerMockDigestData) Set(f func(reader io.Reader) (d1 Digest)) *DataSignerMock {
+	if mmDigestData.defaultExpectation != nil {
+		mmDigestData.mock.t.Fatalf("Default expectation is already set for the DataSigner.DigestData method")
+	}
+
+	if len(mmDigestData.expectations) > 0 {
+		mmDigestData.mock.t.Fatalf("Some expectations are already set for the DataSigner.DigestData method")
+	}
+
+	mmDigestData.mock.funcDigestData = f
+	return mmDigestData.mock
+}
+
+// When sets expectation for the DataSigner.DigestData which will trigger the result defined by the following
+// Then helper
+func (mmDigestData *mDataSignerMockDigestData) When(reader io.Reader) *DataSignerMockDigestDataExpectation {
+	if mmDigestData.mock.funcDigestData != nil {
+		mmDigestData.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
+	}
+
+	expectation := &DataSignerMockDigestDataExpectation{
+		mock:   mmDigestData.mock,
+		params: &DataSignerMockDigestDataParams{reader},
+	}
+	mmDigestData.expectations = append(mmDigestData.expectations, expectation)
+	return expectation
+}
+
+// Then sets up DataSigner.DigestData return parameters for the expectation previously defined by the When method
+func (e *DataSignerMockDigestDataExpectation) Then(d1 Digest) *DataSignerMock {
+	e.results = &DataSignerMockDigestDataResults{d1}
+	return e.mock
+}
+
+// DigestData implements DataSigner
+func (mmDigestData *DataSignerMock) DigestData(reader io.Reader) (d1 Digest) {
+	mm_atomic.AddUint64(&mmDigestData.beforeDigestDataCounter, 1)
+	defer mm_atomic.AddUint64(&mmDigestData.afterDigestDataCounter, 1)
+
+	if mmDigestData.inspectFuncDigestData != nil {
+		mmDigestData.inspectFuncDigestData(reader)
+	}
+
+	mm_params := &DataSignerMockDigestDataParams{reader}
+
+	// Record call args
+	mmDigestData.DigestDataMock.mutex.Lock()
+	mmDigestData.DigestDataMock.callArgs = append(mmDigestData.DigestDataMock.callArgs, mm_params)
+	mmDigestData.DigestDataMock.mutex.Unlock()
+
+	for _, e := range mmDigestData.DigestDataMock.expectations {
+		if minimock.Equal(e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.d1
+		}
+	}
+
+	if mmDigestData.DigestDataMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmDigestData.DigestDataMock.defaultExpectation.Counter, 1)
+		mm_want := mmDigestData.DigestDataMock.defaultExpectation.params
+		mm_got := DataSignerMockDigestDataParams{reader}
+		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmDigestData.t.Errorf("DataSignerMock.DigestData got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmDigestData.DigestDataMock.defaultExpectation.results
+		if mm_results == nil {
+			mmDigestData.t.Fatal("No results are set for the DataSignerMock.DigestData")
+		}
+		return (*mm_results).d1
+	}
+	if mmDigestData.funcDigestData != nil {
+		return mmDigestData.funcDigestData(reader)
+	}
+	mmDigestData.t.Fatalf("Unexpected call to DataSignerMock.DigestData. %v", reader)
+	return
+}
+
+// DigestDataAfterCounter returns a count of finished DataSignerMock.DigestData invocations
+func (mmDigestData *DataSignerMock) DigestDataAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDigestData.afterDigestDataCounter)
+}
+
+// DigestDataBeforeCounter returns a count of DataSignerMock.DigestData invocations
+func (mmDigestData *DataSignerMock) DigestDataBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmDigestData.beforeDigestDataCounter)
+}
+
+// Calls returns a list of arguments used in each call to DataSignerMock.DigestData.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmDigestData *mDataSignerMockDigestData) Calls() []*DataSignerMockDigestDataParams {
+	mmDigestData.mutex.RLock()
+
+	argCopy := make([]*DataSignerMockDigestDataParams, len(mmDigestData.callArgs))
+	copy(argCopy, mmDigestData.callArgs)
+
+	mmDigestData.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockDigestDataDone returns true if the count of the DigestData invocations corresponds
+// the number of defined expectations
+func (m *DataSignerMock) MinimockDigestDataDone() bool {
+	for _, e := range m.DigestDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DigestDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDigestDataCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDigestData != nil && mm_atomic.LoadUint64(&m.afterDigestDataCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockDigestDataInspect logs each unmet expectation
+func (m *DataSignerMock) MinimockDigestDataInspect() {
+	for _, e := range m.DigestDataMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to DataSignerMock.DigestData with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.DigestDataMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDigestDataCounter) < 1 {
+		if m.DigestDataMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to DataSignerMock.DigestData")
+		} else {
+			m.t.Errorf("Expected call to DataSignerMock.DigestData with params: %#v", *m.DigestDataMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcDigestData != nil && mm_atomic.LoadUint64(&m.afterDigestDataCounter) < 1 {
+		m.t.Error("Expected call to DataSignerMock.DigestData")
+	}
 }
 
 type mDataSignerMockGetDigestMethod struct {
@@ -148,11 +371,6 @@ func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Set(f func() (d1 Digest
 }
 
 // GetDigestMethod implements DataSigner
-
-func (mmGetDigestMethod *DataSignerMock) GetDigestSize() int {
-	return 8
-}
-
 func (mmGetDigestMethod *DataSignerMock) GetDigestMethod() (d1 DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
@@ -225,218 +443,146 @@ func (m *DataSignerMock) MinimockGetDigestMethodInspect() {
 	}
 }
 
-type mDataSignerMockGetDigestOf struct {
+type mDataSignerMockGetDigestSize struct {
 	mock               *DataSignerMock
-	defaultExpectation *DataSignerMockGetDigestOfExpectation
-	expectations       []*DataSignerMockGetDigestOfExpectation
-
-	callArgs []*DataSignerMockGetDigestOfParams
-	mutex    sync.RWMutex
+	defaultExpectation *DataSignerMockGetDigestSizeExpectation
+	expectations       []*DataSignerMockGetDigestSizeExpectation
 }
 
-// DataSignerMockGetDigestOfExpectation specifies expectation struct of the DataSigner.DigestData
-type DataSignerMockGetDigestOfExpectation struct {
-	mock    *DataSignerMock
-	params  *DataSignerMockGetDigestOfParams
-	results *DataSignerMockGetDigestOfResults
+// DataSignerMockGetDigestSizeExpectation specifies expectation struct of the DataSigner.GetDigestSize
+type DataSignerMockGetDigestSizeExpectation struct {
+	mock *DataSignerMock
+
+	results *DataSignerMockGetDigestSizeResults
 	Counter uint64
 }
 
-// DataSignerMockGetDigestOfParams contains parameters of the DataSigner.DigestData
-type DataSignerMockGetDigestOfParams struct {
-	reader io.Reader
+// DataSignerMockGetDigestSizeResults contains results of the DataSigner.GetDigestSize
+type DataSignerMockGetDigestSizeResults struct {
+	i1 int
 }
 
-// DataSignerMockGetDigestOfResults contains results of the DataSigner.DigestData
-type DataSignerMockGetDigestOfResults struct {
-	d1 Digest
+// Expect sets up expected params for DataSigner.GetDigestSize
+func (mmGetDigestSize *mDataSignerMockGetDigestSize) Expect() *mDataSignerMockGetDigestSize {
+	if mmGetDigestSize.mock.funcGetDigestSize != nil {
+		mmGetDigestSize.mock.t.Fatalf("DataSignerMock.GetDigestSize mock is already set by Set")
+	}
+
+	if mmGetDigestSize.defaultExpectation == nil {
+		mmGetDigestSize.defaultExpectation = &DataSignerMockGetDigestSizeExpectation{}
+	}
+
+	return mmGetDigestSize
 }
 
-// Expect sets up expected params for DataSigner.DigestData
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Expect(reader io.Reader) *mDataSignerMockGetDigestOf {
-	if mmGetDigestOf.mock.funcGetDigestOf != nil {
-		mmGetDigestOf.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
+// Inspect accepts an inspector function that has same arguments as the DataSigner.GetDigestSize
+func (mmGetDigestSize *mDataSignerMockGetDigestSize) Inspect(f func()) *mDataSignerMockGetDigestSize {
+	if mmGetDigestSize.mock.inspectFuncGetDigestSize != nil {
+		mmGetDigestSize.mock.t.Fatalf("Inspect function is already set for DataSignerMock.GetDigestSize")
 	}
 
-	if mmGetDigestOf.defaultExpectation == nil {
-		mmGetDigestOf.defaultExpectation = &DataSignerMockGetDigestOfExpectation{}
-	}
+	mmGetDigestSize.mock.inspectFuncGetDigestSize = f
 
-	mmGetDigestOf.defaultExpectation.params = &DataSignerMockGetDigestOfParams{reader}
-	for _, e := range mmGetDigestOf.expectations {
-		if minimock.Equal(e.params, mmGetDigestOf.defaultExpectation.params) {
-			mmGetDigestOf.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetDigestOf.defaultExpectation.params)
-		}
-	}
-
-	return mmGetDigestOf
+	return mmGetDigestSize
 }
 
-// Inspect accepts an inspector function that has same arguments as the DataSigner.DigestData
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Inspect(f func(reader io.Reader)) *mDataSignerMockGetDigestOf {
-	if mmGetDigestOf.mock.inspectFuncGetDigestOf != nil {
-		mmGetDigestOf.mock.t.Fatalf("Inspect function is already set for DataSignerMock.DigestData")
+// Return sets up results that will be returned by DataSigner.GetDigestSize
+func (mmGetDigestSize *mDataSignerMockGetDigestSize) Return(i1 int) *DataSignerMock {
+	if mmGetDigestSize.mock.funcGetDigestSize != nil {
+		mmGetDigestSize.mock.t.Fatalf("DataSignerMock.GetDigestSize mock is already set by Set")
 	}
 
-	mmGetDigestOf.mock.inspectFuncGetDigestOf = f
-
-	return mmGetDigestOf
+	if mmGetDigestSize.defaultExpectation == nil {
+		mmGetDigestSize.defaultExpectation = &DataSignerMockGetDigestSizeExpectation{mock: mmGetDigestSize.mock}
+	}
+	mmGetDigestSize.defaultExpectation.results = &DataSignerMockGetDigestSizeResults{i1}
+	return mmGetDigestSize.mock
 }
 
-// Return sets up results that will be returned by DataSigner.DigestData
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Return(d1 Digest) *DataSignerMock {
-	if mmGetDigestOf.mock.funcGetDigestOf != nil {
-		mmGetDigestOf.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
+//Set uses given function f to mock the DataSigner.GetDigestSize method
+func (mmGetDigestSize *mDataSignerMockGetDigestSize) Set(f func() (i1 int)) *DataSignerMock {
+	if mmGetDigestSize.defaultExpectation != nil {
+		mmGetDigestSize.mock.t.Fatalf("Default expectation is already set for the DataSigner.GetDigestSize method")
 	}
 
-	if mmGetDigestOf.defaultExpectation == nil {
-		mmGetDigestOf.defaultExpectation = &DataSignerMockGetDigestOfExpectation{mock: mmGetDigestOf.mock}
+	if len(mmGetDigestSize.expectations) > 0 {
+		mmGetDigestSize.mock.t.Fatalf("Some expectations are already set for the DataSigner.GetDigestSize method")
 	}
-	mmGetDigestOf.defaultExpectation.results = &DataSignerMockGetDigestOfResults{d1}
-	return mmGetDigestOf.mock
+
+	mmGetDigestSize.mock.funcGetDigestSize = f
+	return mmGetDigestSize.mock
 }
 
-//Set uses given function f to mock the DataSigner.DigestData method
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Set(f func(reader io.Reader) (d1 Digest)) *DataSignerMock {
-	if mmGetDigestOf.defaultExpectation != nil {
-		mmGetDigestOf.mock.t.Fatalf("Default expectation is already set for the DataSigner.DigestData method")
+// GetDigestSize implements DataSigner
+func (mmGetDigestSize *DataSignerMock) GetDigestSize() (i1 int) {
+	mm_atomic.AddUint64(&mmGetDigestSize.beforeGetDigestSizeCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetDigestSize.afterGetDigestSizeCounter, 1)
+
+	if mmGetDigestSize.inspectFuncGetDigestSize != nil {
+		mmGetDigestSize.inspectFuncGetDigestSize()
 	}
 
-	if len(mmGetDigestOf.expectations) > 0 {
-		mmGetDigestOf.mock.t.Fatalf("Some expectations are already set for the DataSigner.DigestData method")
-	}
+	if mmGetDigestSize.GetDigestSizeMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetDigestSize.GetDigestSizeMock.defaultExpectation.Counter, 1)
 
-	mmGetDigestOf.mock.funcGetDigestOf = f
-	return mmGetDigestOf.mock
-}
-
-// When sets expectation for the DataSigner.DigestData which will trigger the result defined by the following
-// Then helper
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) When(reader io.Reader) *DataSignerMockGetDigestOfExpectation {
-	if mmGetDigestOf.mock.funcGetDigestOf != nil {
-		mmGetDigestOf.mock.t.Fatalf("DataSignerMock.DigestData mock is already set by Set")
-	}
-
-	expectation := &DataSignerMockGetDigestOfExpectation{
-		mock:   mmGetDigestOf.mock,
-		params: &DataSignerMockGetDigestOfParams{reader},
-	}
-	mmGetDigestOf.expectations = append(mmGetDigestOf.expectations, expectation)
-	return expectation
-}
-
-// Then sets up DataSigner.DigestData return parameters for the expectation previously defined by the When method
-func (e *DataSignerMockGetDigestOfExpectation) Then(d1 Digest) *DataSignerMock {
-	e.results = &DataSignerMockGetDigestOfResults{d1}
-	return e.mock
-}
-
-// DigestData implements DataSigner
-func (mmGetDigestOf *DataSignerMock) DigestData(reader io.Reader) (d1 Digest) {
-	mm_atomic.AddUint64(&mmGetDigestOf.beforeGetDigestOfCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetDigestOf.afterGetDigestOfCounter, 1)
-
-	if mmGetDigestOf.inspectFuncGetDigestOf != nil {
-		mmGetDigestOf.inspectFuncGetDigestOf(reader)
-	}
-
-	mm_params := &DataSignerMockGetDigestOfParams{reader}
-
-	// Record call args
-	mmGetDigestOf.GetDigestOfMock.mutex.Lock()
-	mmGetDigestOf.GetDigestOfMock.callArgs = append(mmGetDigestOf.GetDigestOfMock.callArgs, mm_params)
-	mmGetDigestOf.GetDigestOfMock.mutex.Unlock()
-
-	for _, e := range mmGetDigestOf.GetDigestOfMock.expectations {
-		if minimock.Equal(e.params, mm_params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.d1
-		}
-	}
-
-	if mmGetDigestOf.GetDigestOfMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetDigestOf.GetDigestOfMock.defaultExpectation.Counter, 1)
-		mm_want := mmGetDigestOf.GetDigestOfMock.defaultExpectation.params
-		mm_got := DataSignerMockGetDigestOfParams{reader}
-		if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
-			mmGetDigestOf.t.Errorf("DataSignerMock.DigestData got unexpected parameters, want: %#v, got: %#v%s\n", *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
-		}
-
-		mm_results := mmGetDigestOf.GetDigestOfMock.defaultExpectation.results
+		mm_results := mmGetDigestSize.GetDigestSizeMock.defaultExpectation.results
 		if mm_results == nil {
-			mmGetDigestOf.t.Fatal("No results are set for the DataSignerMock.DigestData")
+			mmGetDigestSize.t.Fatal("No results are set for the DataSignerMock.GetDigestSize")
 		}
-		return (*mm_results).d1
+		return (*mm_results).i1
 	}
-	if mmGetDigestOf.funcGetDigestOf != nil {
-		return mmGetDigestOf.funcGetDigestOf(reader)
+	if mmGetDigestSize.funcGetDigestSize != nil {
+		return mmGetDigestSize.funcGetDigestSize()
 	}
-	mmGetDigestOf.t.Fatalf("Unexpected call to DataSignerMock.DigestData. %v", reader)
+	mmGetDigestSize.t.Fatalf("Unexpected call to DataSignerMock.GetDigestSize.")
 	return
 }
 
-// GetDigestOfAfterCounter returns a count of finished DataSignerMock.DigestData invocations
-func (mmGetDigestOf *DataSignerMock) GetDigestOfAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetDigestOf.afterGetDigestOfCounter)
+// GetDigestSizeAfterCounter returns a count of finished DataSignerMock.GetDigestSize invocations
+func (mmGetDigestSize *DataSignerMock) GetDigestSizeAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetDigestSize.afterGetDigestSizeCounter)
 }
 
-// GetDigestOfBeforeCounter returns a count of DataSignerMock.DigestData invocations
-func (mmGetDigestOf *DataSignerMock) GetDigestOfBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetDigestOf.beforeGetDigestOfCounter)
+// GetDigestSizeBeforeCounter returns a count of DataSignerMock.GetDigestSize invocations
+func (mmGetDigestSize *DataSignerMock) GetDigestSizeBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetDigestSize.beforeGetDigestSizeCounter)
 }
 
-// Calls returns a list of arguments used in each call to DataSignerMock.DigestData.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Calls() []*DataSignerMockGetDigestOfParams {
-	mmGetDigestOf.mutex.RLock()
-
-	argCopy := make([]*DataSignerMockGetDigestOfParams, len(mmGetDigestOf.callArgs))
-	copy(argCopy, mmGetDigestOf.callArgs)
-
-	mmGetDigestOf.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetDigestOfDone returns true if the count of the DigestData invocations corresponds
+// MinimockGetDigestSizeDone returns true if the count of the GetDigestSize invocations corresponds
 // the number of defined expectations
-func (m *DataSignerMock) MinimockGetDigestOfDone() bool {
-	for _, e := range m.GetDigestOfMock.expectations {
+func (m *DataSignerMock) MinimockGetDigestSizeDone() bool {
+	for _, e := range m.GetDigestSizeMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.GetDigestOfMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetDigestOfCounter) < 1 {
+	if m.GetDigestSizeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetDigestSizeCounter) < 1 {
 		return false
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcGetDigestOf != nil && mm_atomic.LoadUint64(&m.afterGetDigestOfCounter) < 1 {
+	if m.funcGetDigestSize != nil && mm_atomic.LoadUint64(&m.afterGetDigestSizeCounter) < 1 {
 		return false
 	}
 	return true
 }
 
-// MinimockGetDigestOfInspect logs each unmet expectation
-func (m *DataSignerMock) MinimockGetDigestOfInspect() {
-	for _, e := range m.GetDigestOfMock.expectations {
+// MinimockGetDigestSizeInspect logs each unmet expectation
+func (m *DataSignerMock) MinimockGetDigestSizeInspect() {
+	for _, e := range m.GetDigestSizeMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to DataSignerMock.DigestData with params: %#v", *e.params)
+			m.t.Error("Expected call to DataSignerMock.GetDigestSize")
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.GetDigestOfMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetDigestOfCounter) < 1 {
-		if m.GetDigestOfMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to DataSignerMock.DigestData")
-		} else {
-			m.t.Errorf("Expected call to DataSignerMock.DigestData with params: %#v", *m.GetDigestOfMock.defaultExpectation.params)
-		}
+	if m.GetDigestSizeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetDigestSizeCounter) < 1 {
+		m.t.Error("Expected call to DataSignerMock.GetDigestSize")
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcGetDigestOf != nil && mm_atomic.LoadUint64(&m.afterGetDigestOfCounter) < 1 {
-		m.t.Error("Expected call to DataSignerMock.DigestData")
+	if m.funcGetDigestSize != nil && mm_atomic.LoadUint64(&m.afterGetDigestSizeCounter) < 1 {
+		m.t.Error("Expected call to DataSignerMock.GetDigestSize")
 	}
 }
 
@@ -1159,9 +1305,11 @@ func (m *DataSignerMock) MinimockSignDigestInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *DataSignerMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockDigestDataInspect()
+
 		m.MinimockGetDigestMethodInspect()
 
-		m.MinimockGetDigestOfInspect()
+		m.MinimockGetDigestSizeInspect()
 
 		m.MinimockGetSignMethodInspect()
 
@@ -1193,8 +1341,9 @@ func (m *DataSignerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *DataSignerMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockDigestDataDone() &&
 		m.MinimockGetDigestMethodDone() &&
-		m.MinimockGetDigestOfDone() &&
+		m.MinimockGetDigestSizeDone() &&
 		m.MinimockGetSignMethodDone() &&
 		m.MinimockGetSignatureMethodDone() &&
 		m.MinimockSignDataDone() &&

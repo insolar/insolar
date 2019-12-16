@@ -36,7 +36,7 @@ type Registry interface {
 	Register(transcript *common.Transcript)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
+///go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
 type ExecutionRegistry interface {
 	Register(ctx context.Context, transcript *common.Transcript) error
 	Done(transcript *common.Transcript) bool

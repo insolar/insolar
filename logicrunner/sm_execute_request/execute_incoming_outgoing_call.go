@@ -2,6 +2,7 @@ package sm_execute_request
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -81,11 +82,15 @@ func (s *ESMOutgoingCallProcess) stepFinishDeactivate(ctx smachine.ExecutionCont
 
 func (s *ESMOutgoingCallProcess) stepGetCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	var (
-		goCtx = ctx.GetContext()
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+
 		event = s.outgoingEvent.Outgoing.(outgoing.GetCodeEvent)
 	)
 
 	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "GetCode")
+
 		desc, err := svc.GetCode(goCtx, event.CodeReference)
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -109,11 +114,15 @@ func (s *ESMOutgoingCallProcess) stepOutgoingRegister(ctx smachine.ExecutionCont
 	s.outgoing = s.outgoingEvent.Outgoing.(outgoing.RPCOutgoingConstructor).ConstructOutgoing(s.contractTranscript)
 
 	var (
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+
 		outgoingRequest = &s.outgoing
-		goCtx           = ctx.GetContext()
 	)
 
 	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterOutgoing")
+
 		info, err := svc.RegisterOutgoingRequest(goCtx, outgoingRequest)
 
 		return func(ctx smachine.AsyncResultContext) {
@@ -154,7 +163,7 @@ type ContractCallBefore struct {
 type ContractCallAfter struct {
 	*logcommon.LogObjectTemplate `txt:"after contract call"`
 
-	CallResultType   insolar.Reply `fmte:"%T"`
+	CallResultType   insolar.Reply `fmt:"%T"`
 	RequestReference string
 	Method           string
 	Error            error
@@ -176,6 +185,8 @@ func (s *ESMOutgoingCallProcess) stepOutgoingExecute(ctx smachine.ExecutionConte
 
 	var (
 		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+
 		incoming    = outgoing.BuildIncomingRequestFromOutgoing(&s.outgoing)
 		pulseNumber = s.pulseSlot.PulseData().PulseNumber
 		pl          = &payload.CallMethod{Request: incoming, PulseNumber: pulseNumber}
@@ -220,7 +231,9 @@ func (s *ESMOutgoingCallProcess) stepOutgoingExecute(ctx smachine.ExecutionConte
 
 func (s *ESMOutgoingCallProcess) stepOutgoingSaveResult(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	var (
-		goCtx            = ctx.GetContext()
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
+
 		requestReference = s.outgoingRequestInfo.RequestReference
 		caller           = s.outgoingRequestInfo.Request.(*record.OutgoingRequest).Caller
 		result           []byte
@@ -250,6 +263,8 @@ func (s *ESMOutgoingCallProcess) stepOutgoingSaveResult(ctx smachine.ExecutionCo
 
 	ctx.Log().Trace("Saving request result")
 	return s.ArtifactManager.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterOutgoingResult")
+
 		err := svc.RegisterResult(goCtx, requestReference, requestResult)
 
 		return func(ctx smachine.AsyncResultContext) {

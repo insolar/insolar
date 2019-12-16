@@ -30,7 +30,7 @@ var (
 	ErrWriteClosed = errors.New("requested pulse is closed for writing")
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Accessor -o ./ -s _mock.go -g
+///go:generate minimock -i github.com/insolar/insolar/logicrunner/writecontroller.Accessor -o ./ -s _mock.go -g
 type Accessor interface {
 	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
 	// The caller must call returned "done" function when finished writing.

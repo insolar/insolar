@@ -17,6 +17,8 @@
 package sm_execute_request
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
@@ -101,7 +103,8 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 
 func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
 	var (
-		goCtx = ctx.GetContext()
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
 
 		objectReference  = s.RequestInfo.RequestObjectReference
 		requestReference = s.RequestInfo.RequestReference
@@ -109,6 +112,8 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 	)
 
 	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterResult")
+
 		var objectDescriptor artifacts.ObjectDescriptor
 
 		err := svc.RegisterResult(goCtx, requestReference, executionResult)

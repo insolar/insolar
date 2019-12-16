@@ -71,7 +71,7 @@ func NodeLight() insolar.Reference {
 const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
-	t    *testing.T
+	t    testing.TB
 	ctx  context.Context
 	lock sync.RWMutex
 	cfg  configuration.Configuration
@@ -88,9 +88,9 @@ type Server struct {
 	logicRunner       *logicrunner.LogicRunner
 	contractRequester *contractrequester.ContractRequester
 
-	pulse        insolar.Pulse
-	pulseStorage *pulse.StorageMem
-	pulseManager insolar.PulseManager
+	pulseGenerator *mimic.PulseGenerator
+	pulseStorage   *pulse.StorageMem
+	pulseManager   insolar.PulseManager
 
 	mimic mimic.Ledger
 
@@ -123,7 +123,7 @@ func init() {
 	flag.BoolVar(&verboseWM, "verbose-wm", false, "flag to enable watermill logging")
 }
 
-func NewVirtualServer(t *testing.T, ctx context.Context, cfg configuration.Configuration) *Server {
+func NewVirtualServer(t testing.TB, ctx context.Context, cfg configuration.Configuration) *Server {
 	return &Server{
 		t:   t,
 		ctx: ctx,
@@ -296,6 +296,8 @@ func (s *Server) PrepareAndStart() (*Server, error) {
 		NodeNetwork,
 		PulseManager)
 
+	logicRunner.MachinesManager = machinesManager
+
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
@@ -392,7 +394,8 @@ func (s *Server) PrepareAndStart() (*Server, error) {
 
 	s.pulseManager = PulseManager
 	s.pulseStorage = Pulses
-	s.pulse = *insolar.GenesisPulse
+	s.pulseGenerator = mimic.NewPulseGenerator(10)
+	// s.pulse = *insolar.GenesisPulse
 
 	if s.withGenesis {
 		if err := s.LoadGenesis(ctx, ""); err != nil {
@@ -416,11 +419,9 @@ func (s *Server) Stop(ctx context.Context) {
 }
 
 func (s *Server) incrementPulse(ctx context.Context) {
-	s.pulse = insolar.Pulse{
-		PulseNumber: s.pulse.PulseNumber + PulseStep,
-	}
+	s.pulseGenerator.Generate()
 
-	if err := s.pulseManager.Set(ctx, s.pulse); err != nil {
+	if err := s.pulseManager.Set(ctx, s.pulseGenerator.GetLastPulseAsPulse()); err != nil {
 		panic(err)
 	}
 }
@@ -526,6 +527,7 @@ func (s *Server) BasicAPICall(
 	*insolar.Reference,
 	error,
 ) {
+
 	seed, err := (&seedmanager.SeedGenerator{}).Next()
 	if err != nil {
 		panic(err.Error())

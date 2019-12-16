@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/requestexecutor.RequestExecutor -o ./ -s _mock.go -g
+///go:generate minimock -i github.com/insolar/insolar/logicrunner/requestexecutor.RequestExecutor -o ./ -s _mock.go -g
 
 type RequestExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)

@@ -142,12 +142,10 @@ type contractRunnerService struct {
 }
 
 func CreateContractRunner(
-	executor logicexecutor.LogicExecutor,
 	manager machinesmanager.MachinesManager,
 	artifactManager artifacts.Client,
 ) ContractRunnerService {
 	return &contractRunnerService{
-		LogicExecutor:    executor,
 		MachinesManager:  manager,
 		DescriptorsCache: artifacts.NewDescriptorsCache(artifactManager),
 
