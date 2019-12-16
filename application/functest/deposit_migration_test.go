@@ -65,6 +65,22 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, "10000", dif.String())
 }
 
+func TestMigrationTokenOneActiveDaemon(t *testing.T) {
+	// one daemon confirmation can't change balance
+	activateDaemons(t, countOneActiveDaemon)
+	daemonIndex := 0
+	member := createMigrationMemberForMA(t)
+
+	ethHash := testutils.RandomEthHash()
+
+	deposit := migrate(t, member.Ref, "1000", ethHash, member.MigrationAddress, daemonIndex)
+	balance := deposit["balance"].(string)
+	require.Equal(t, "0", balance)
+
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
+	require.Equal(t, "10000", confirmations[launchnet.MigrationDaemons[daemonIndex].Ref])
+}
+
 func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
