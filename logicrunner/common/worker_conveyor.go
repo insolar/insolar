@@ -57,12 +57,12 @@ type AsyncTimeMessage struct {
 	*logcommon.LogObjectTemplate `txt:"async time"`
 
 	AsyncComponent     string `opt:""`
-	AsyncExecutionTime string
+	AsyncExecutionTime int64
 }
 
 func LogAsyncTime(log smachine.Logger, timeBefore time.Time, component string) {
 	log.Trace(AsyncTimeMessage{
 		AsyncComponent:     component,
-		AsyncExecutionTime: time.Now().Sub(timeBefore).String(),
+		AsyncExecutionTime: time.Now().Sub(timeBefore).Nanoseconds(),
 	})
 }

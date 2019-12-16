@@ -184,8 +184,7 @@ func (s *ESMOutgoingCallProcess) stepOutgoingExecute(ctx smachine.ExecutionConte
 	}
 
 	var (
-		goCtx       = ctx.GetContext()
-		asyncLogger = ctx.LogAsync()
+		goCtx = ctx.GetContext()
 
 		incoming    = outgoing.BuildIncomingRequestFromOutgoing(&s.outgoing)
 		pulseNumber = s.pulseSlot.PulseData().PulseNumber

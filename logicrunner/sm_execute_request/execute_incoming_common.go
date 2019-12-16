@@ -112,7 +112,7 @@ func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionCon
 	)
 
 	return s.ArtifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterResult")
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterIncomingResult")
 
 		var objectDescriptor artifacts.ObjectDescriptor
 

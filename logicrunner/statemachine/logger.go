@@ -44,6 +44,9 @@ type LogStepMessage struct {
 
 	Error     string `opt:""`
 	Backtrace string `opt:""`
+
+	ExecutionTime  int64 `opt:""`
+	InactivityTime int64 `opt:""`
 }
 
 func getStepName(step interface{}) string {
@@ -103,7 +106,7 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 		err = stepLoggerData.Error.Error()
 	}
 
-	c.logger.Error(LogStepMessage{
+	msg := LogStepMessage{
 		Message: special + stepLoggerUpdateData.UpdateType + suffix,
 
 		MachineName: stepLoggerData.Declaration,
@@ -115,10 +118,20 @@ func (c ConveyorLogger) LogUpdate(stepLoggerData smachine.StepLoggerData, stepLo
 
 		Error:     err,
 		Backtrace: backtrace,
-	})
+	}
+
+	if stepLoggerUpdateData.ActivityNano > 0 {
+		msg.ExecutionTime = stepLoggerUpdateData.ActivityNano.Nanoseconds()
+	}
+	if stepLoggerUpdateData.InactivityNano > 0 {
+		msg.InactivityTime = stepLoggerUpdateData.InactivityNano.Nanoseconds()
+	}
+
+	c.logger.Error(msg)
 }
 
-type ConveyorLoggerFactory struct{}
+type ConveyorLoggerFactory struct {
+}
 
 func (c ConveyorLoggerFactory) CreateStepLogger(ctx context.Context, _ smachine.StateMachine, traceID smachine.TracerId) smachine.StepLogger {
 	_, logger := inslogger.WithTraceField(context.Background(), traceID)
@@ -140,7 +153,7 @@ type LogInternal struct {
 	Backtrace string `opt:""`
 }
 
-func (ConveyorLoggerFactory) LogInternal(slotMachineData smachine.SlotMachineData, msg string) {
+func (ConveyorLoggerFactory) LogMachineInternal(slotMachineData smachine.SlotMachineData, msg string) {
 	backtrace := ""
 	if slotMachineData.Error != nil {
 		if slotPanicError, ok := slotMachineData.Error.(smachine.SlotPanicError); ok {
@@ -169,7 +182,7 @@ type LogCritical struct {
 	Backtrace string `opt:""`
 }
 
-func (ConveyorLoggerFactory) LogCritical(slotMachineData smachine.SlotMachineData, msg string) {
+func (ConveyorLoggerFactory) LogMachineCritical(slotMachineData smachine.SlotMachineData, msg string) {
 	backtrace := ""
 	if slotMachineData.Error != nil {
 		if slotPanicError, ok := slotMachineData.Error.(smachine.SlotPanicError); ok {

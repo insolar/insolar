@@ -312,7 +312,7 @@ func (h *ServerHelper) transferMoney(ctx context.Context, from User, to User, am
 		"amount":            amount,
 		"toMemberReference": to.Reference.String(),
 	}
-	callMethodReply, _, err := h.s.BasicAPICall(ctx, "member.transfer", callParams, from.Reference, from)
+	callMethodReply, _, err := h.s.BasicAPICall(ctx, "member.transfer", callParams, from.Reference, &from)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to call member.transfer")
 	}
@@ -351,9 +351,9 @@ func (h *ServerHelper) transferMoney(ctx context.Context, from User, to User, am
 
 func (h *ServerHelper) getBalance(ctx context.Context, user User) (string, error) {
 	callParams := map[string]interface{}{
-		"reference": FeeWalletUser.Reference.String(),
+		"reference": user.Reference.String(),
 	}
-	callMethodReply, _, err := h.s.BasicAPICall(ctx, "member.getBalance", callParams, FeeWalletUser.Reference, FeeWalletUser)
+	callMethodReply, _, err := h.s.BasicAPICall(ctx, "member.getBalance", callParams, user.Reference, &user)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to call member.getBalance")
 	}
@@ -413,7 +413,7 @@ func BenchmarkSimple(b *testing.B) {
 		go func() {
 			defer wg.Done()
 
-			ctx, _ = inslogger.WithTraceField(ctx, uuid.New().String())
+			ctx, _ := inslogger.WithTraceField(ctx, uuid.New().String())
 
 			err := sema.Acquire(ctx, 1)
 			if err == nil {

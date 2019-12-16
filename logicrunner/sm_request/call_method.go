@@ -17,6 +17,8 @@
 package sm_request
 
 import (
+	"time"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor"
@@ -84,11 +86,16 @@ func (s *StateMachineCallMethod) Init(ctx smachine.InitializationContext) smachi
 }
 
 func (s *StateMachineCallMethod) stepRegisterIncoming(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	incoming := s.Payload.Request
+	var (
+		goCtx       = ctx.GetContext()
+		asyncLogger = ctx.LogAsync()
 
-	goCtx := ctx.GetContext()
+		incoming = s.Payload.Request
+	)
+
 	return s.artifactClient.PrepareAsync(ctx, func(svc s_artifact.ArtifactClientService) smachine.AsyncResultFunc {
-		defer func() {}()
+		defer common.LogAsyncTime(asyncLogger, time.Now(), "RegisterIncoming")
+
 		info, err := svc.RegisterIncomingRequest(goCtx, incoming)
 
 		return func(ctx smachine.AsyncResultContext) {
