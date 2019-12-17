@@ -585,6 +585,18 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, secondRec, resRecord.Record)
 	})
 
+	t.Run("context.Canceled error", func(t *testing.T) {
+		streamMock := &streamMock{checker: func(i *Record) error {
+			return context.Canceled
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  firstPN,
+			RecordNumber: 1,
+			Count:        1,
+		}, streamMock)
+		require.Error(t, err)
+	})
 }
 
 func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
