@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  version: 1.0.4
+  version: 1.0.5
   title: Insolar API
   contact:
     name: Insolar dev team
@@ -1987,7 +1987,8 @@ components:
       x-json-schema-id: response/daemon-status.yaml
     migrationAddress:
       type: string
-      example: '0xF4e1507486dFE411785B00d7D00A1f1a484f00E6'
+      pattern: '^0x[a-fA-F0-9]{40}$'
+      example: '0x12eB9bce34341D1163814843f8DcA44DFebe913c'
       description: >-
         Special address in the Ethereum network — transfer destination for INS
         tokens during the migration period.
