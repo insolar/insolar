@@ -69,13 +69,13 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
-		return errors.New("count can't be 0")
+		return ErrNilCount
 	}
 
 	if getRecords.PulseNumber != 0 {
 		topPulse := r.jetKeeper.TopSyncPulse()
 		if topPulse < getRecords.PulseNumber {
-			return errors.New("trying to get a non-finalized pulse data")
+			return ErrNotFinalPulseData
 		}
 	} else {
 		getRecords.PulseNumber = pulse.MinTimePulse

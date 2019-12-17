@@ -29,8 +29,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
-
-	"github.com/pkg/errors"
 )
 
 type PulseServer struct {
@@ -61,7 +59,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 	logger := inslogger.FromContext(ctx)
 
 	if getPulses.Count == 0 {
-		return errors.New("count can't be 0")
+		return ErrNilCount
 	}
 
 	read := uint32(0)

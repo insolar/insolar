@@ -69,7 +69,7 @@ func TestPulseServer_Export(t *testing.T) {
 
 		err := server.Export(&GetPulses{Count: 0}, &pulseStreamMock{})
 
-		require.Error(t, err)
+		require.Equal(t, err, ErrNilCount)
 	})
 
 	t.Run("exporter works well. passed pulse is 0.", func(t *testing.T) {
