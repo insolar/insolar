@@ -63,6 +63,10 @@ func RandomEthHash() string {
 	return "0x" + RandomHashWithLength(64)
 }
 
+func RandomEthMigrationAddress() string {
+	return "0x" + RandomHashWithLength(40)
+}
+
 // RandomString generates random uuid and return it as a string.
 func RandomString() string {
 	newUUID, err := uuid.NewV4()
