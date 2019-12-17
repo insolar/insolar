@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  version: 1.0.4
+  version: 1.0.5
   title: Insolar API
   contact:
     name: Insolar dev team
@@ -1451,7 +1451,7 @@ paths:
                               description: >-
                                 Ethereum transaction's hash. Used for deposit
                                 identification.
-                              pattern: '^(0x[a-f0-9]{64}|genesis_deposit)$'
+                              pattern: '^(0x[a-f0-9]{64})$'
                               example: >-
                                 0x89f2d6994e5d152bece9ec291f6098d236ab81f76f0d4d52fb69d0cd6b6fd70d
                             migrationAddress:
