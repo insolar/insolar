@@ -166,6 +166,7 @@ type Request interface {
 	// IsTemporaryUploadCode tells us that that request is temporary hack
 	// for uploading code.
 	IsTemporaryUploadCode() bool
+	// IsDetachedCall returns whether call is detached or not
 	IsDetachedCall() bool
 	// Take method name that was called
 	GetMethod() string
@@ -173,6 +174,8 @@ type Request interface {
 	GetReturnMode() ReturnMode
 	// Take Object Reference
 	GetObject() *insolar.Reference
+	// Returns immutable flag
+	GetImmutable() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {

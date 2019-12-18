@@ -68,7 +68,7 @@ func (s *ExecuteIncomingRequest) stepWaitObjectReady(ctx smachine.ExecutionConte
 			logger.Error("useSharedObjectInfo after")
 
 			readyToWork = state.IsReadyToWork
-			semaphoreReadyToWork = state.SemaphoreReadyToWork
+			semaphoreReadyToWork = state.ReadyToWork
 
 			s.objectInfo = state.ObjectInfo // it may need to be re-fetched
 		})
@@ -112,14 +112,18 @@ func (s *ExecuteIncomingRequest) stepClassifyCall(ctx smachine.ExecutionContext)
 		return ctx.Replace(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 			ctx.SetContext(goCtx)
 			ctx.SetTracerId(traceID)
-			return &ExecuteIncomingMutableRequest{ExecuteIncomingCommon: common}
+
+			return &SMPreExecuteMutable{ExecuteIncomingCommon: common}
 		})
+
 	case s_contract_runner.ContractCallImmutable:
 		return ctx.Replace(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 			ctx.SetContext(goCtx)
 			ctx.SetTracerId(traceID)
-			return &ExecuteIncomingImmutableRequest{ExecuteIncomingCommon: common}
+
+			return &SMPreExecuteImmutable{ExecuteIncomingCommon: common}
 		})
+
 	default:
 		panic("unreachable")
 	}

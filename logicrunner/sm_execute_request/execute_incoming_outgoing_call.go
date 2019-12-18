@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/injector"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
@@ -21,12 +22,36 @@ import (
 	"github.com/insolar/insolar/logicrunner/s_contract_runner/outgoing"
 )
 
+type OutgoingResult struct {
+	OutgoingEvent outgoing.RPCEvent
+	Result        interface{}
+	Error         error
+}
+
+func (r OutgoingResult) GetResult() interface{} {
+	switch r.OutgoingEvent.(type) {
+	case outgoing.DeactivateEvent:
+		return nil
+
+	case outgoing.GetCodeEvent, outgoing.RouteCallEvent, outgoing.SaveAsChildEvent:
+		if r.Error != nil {
+			return r.Error
+		}
+		return r.Result
+
+	default:
+		panic(fmt.Sprintf("unknown type of event %T", r.OutgoingEvent))
+	}
+}
+
+type ExecutionContinueFunction func(result OutgoingResult) smachine.StateFunc
+
 // Embedded StateMachine for processing Outgoing Calls
 type ESMOutgoingCallProcess struct {
 	// dependencies
 	ContractRequester *s_contract_requester.ContractRequesterServiceAdapter
 	ArtifactManager   *s_artifact.ArtifactClientServiceAdapter
-	pulseSlot         *conveyor.PulseSlot
+	PulseSlot         *conveyor.PulseSlot
 
 	// input
 	contractTranscript common.Transcript
@@ -42,7 +67,13 @@ type ESMOutgoingCallProcess struct {
 	outgoingReply       insolar.Reply
 	outgoingRequestInfo *common.ParsedRequestInfo
 
-	continueExecutionStepCallback func(map[string]interface{}) smachine.StateFunc
+	continueExecutionStepCallback ExecutionContinueFunction
+}
+
+func (s *ESMOutgoingCallProcess) Inject(injector *injector.DependencyInjector) {
+	injector.MustInject(&s.ArtifactManager)
+	injector.MustInject(&s.ContractRequester)
+	injector.MustInject(&s.PulseSlot)
 }
 
 func (s *ESMOutgoingCallProcess) Prepare(transcript common.Transcript, object insolar.Reference) {
@@ -50,10 +81,18 @@ func (s *ESMOutgoingCallProcess) Prepare(transcript common.Transcript, object in
 	s.object = object
 }
 
+func (s *ESMOutgoingCallProcess) getReturnStep(value interface{}, err error) smachine.StateFunc {
+	return s.continueExecutionStepCallback(OutgoingResult{
+		OutgoingEvent: s.outgoingEvent.Outgoing,
+		Result:        value,
+		Error:         err,
+	})
+}
+
 func (s *ESMOutgoingCallProcess) ProcessOutgoing(
 	ctx smachine.ExecutionContext,
 	outgoingExecutionType *s_contract_runner.ContractExecutionStateUpdate,
-	continueExecutionStepCallback func(map[string]interface{}) smachine.StateFunc,
+	continueExecutionStepCallback ExecutionContinueFunction,
 ) smachine.StateUpdate {
 	s.outgoingEvent = outgoingExecutionType
 	s.continueExecutionStepCallback = continueExecutionStepCallback
@@ -74,10 +113,7 @@ func (s *ESMOutgoingCallProcess) ProcessOutgoing(
 }
 
 func (s *ESMOutgoingCallProcess) stepFinishDeactivate(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	nextStep := s.continueExecutionStepCallback(map[string]interface{}{
-		"deactivate": true,
-	})
-	return ctx.Jump(nextStep)
+	return ctx.Jump(s.getReturnStep(nil, nil))
 }
 
 func (s *ESMOutgoingCallProcess) stepGetCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -103,11 +139,7 @@ func (s *ESMOutgoingCallProcess) stepGetCode(ctx smachine.ExecutionContext) smac
 }
 
 func (s *ESMOutgoingCallProcess) stepFinishGetCode(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	nextStep := s.continueExecutionStepCallback(map[string]interface{}{
-		"error": s.externalError,
-		"code":  s.code,
-	})
-	return ctx.Jump(nextStep)
+	return ctx.Jump(s.getReturnStep(s.code, s.externalError))
 }
 
 func (s *ESMOutgoingCallProcess) stepOutgoingRegister(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -187,7 +219,7 @@ func (s *ESMOutgoingCallProcess) stepOutgoingExecute(ctx smachine.ExecutionConte
 		goCtx = ctx.GetContext()
 
 		incoming    = outgoing.BuildIncomingRequestFromOutgoing(&s.outgoing)
-		pulseNumber = s.pulseSlot.PulseData().PulseNumber
+		pulseNumber = s.PulseSlot.PulseData().PulseNumber
 		pl          = &payload.CallMethod{Request: incoming, PulseNumber: pulseNumber}
 	)
 
@@ -250,11 +282,6 @@ func (s *ESMOutgoingCallProcess) stepOutgoingSaveResult(ctx smachine.ExecutionCo
 	default:
 		s.externalError = errors.Errorf("contractRequester.Call returned unexpected type %T", s.outgoingReply)
 		return ctx.Jump(s.stepFinishOutgoing)
-		// nextStep := s.continueExecutionStepCallback(map[string]interface{}{
-		// 	"result": (*record.Result)(nil),
-		// 	"error":
-		// })
-		// return ctx.Jump(nextStep)
 	}
 
 	// Register result of the outgoing method
@@ -275,11 +302,11 @@ func (s *ESMOutgoingCallProcess) stepOutgoingSaveResult(ctx smachine.ExecutionCo
 }
 
 func (s *ESMOutgoingCallProcess) stepFinishOutgoing(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	nextStep := s.continueExecutionStepCallback(map[string]interface{}{
-		"result": s.outgoingResult,
-		"error":  s.externalError,
-	})
-	return ctx.Jump(nextStep)
+	var result interface{} = nil
+	if s.outgoingResult != nil {
+		result = s.outgoingResult.Payload
+	}
+	return ctx.Jump(s.getReturnStep(result, s.externalError))
 }
 
 func (s *ESMOutgoingCallProcess) Reset() {

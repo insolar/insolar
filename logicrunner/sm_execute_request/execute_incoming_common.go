@@ -101,7 +101,7 @@ func (s *ExecuteIncomingCommon) useSharedObjectInfo(ctx smachine.ExecutionContex
 	return smachine.StateUpdate{}
 }
 
-func (s *ExecuteIncomingCommon) internalStepSaveResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
+func (s *ExecuteIncomingCommon) internalStepRegisterResult(ctx smachine.ExecutionContext, fetchNew bool) smachine.ConditionalBuilder {
 	var (
 		goCtx       = ctx.GetContext()
 		asyncLogger = ctx.LogAsync()
@@ -203,8 +203,6 @@ func (s *ExecuteIncomingCommon) internalSendResult(ctx smachine.ExecutionContext
 }
 
 func (s *ExecuteIncomingCommon) stepStop(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	ctx.Log().Trace(describeTakeLockStep{Message: "freed", Object: s.objectInfo.ObjectReference})
-
 	if s.externalError != nil {
 		return ctx.Jump(s.stepError)
 	}

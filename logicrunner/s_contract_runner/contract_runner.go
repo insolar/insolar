@@ -169,14 +169,14 @@ func CreateContractRunnerService(
 
 func (c contractRunnerService) ClassifyCall(request *record.IncomingRequest) ContractCallType {
 	switch {
-	// case request.ReturnMode == recornd.ReturnSaga && false:
-	// 	if !request.Immutable && request.CallType == record.CTMethod {
-	// 		return ContractCallSaga
-	// 	} else {
-	// 		return ContractCallUnknown
-	// 	}
-	// case request.Immutable:
-	// 	return ContractCallImmutable
+	case request.ReturnMode == record.ReturnSaga && false:
+		if !request.Immutable && request.CallType == record.CTMethod {
+			return ContractCallSaga
+		} else {
+			return ContractCallUnknown
+		}
+	case request.Immutable:
+		return ContractCallImmutable
 	default:
 		return ContractCallMutable
 	}
