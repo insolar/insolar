@@ -156,6 +156,14 @@ func (sdk *SDK) GetFeeMember() Member {
 	}
 }
 
+func (sdk *SDK) GetRootMember() Member {
+	return &CommonMember{
+		Reference:  sdk.rootMember.Caller,
+		PrivateKey: sdk.rootMember.PrivateKey,
+		PublicKey:  sdk.rootMember.PublicKey,
+	}
+}
+
 func (sdk *SDK) GetMigrationAdminMember() Member {
 	return &CommonMember{
 		Reference:  sdk.migrationAdminMember.Caller,
