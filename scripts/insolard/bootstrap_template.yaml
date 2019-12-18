@@ -8,7 +8,7 @@ heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins/"
 contracts:
   insgocc: "bin/insgocc"
   outdir: "{{ .BaseDir }}/plugins/"
-root_balance: "0"
+root_balance: "5000000000000000000"
 md_balance: "5000000000000000000"
 lockup_pulse_period: 20
 pk_shard_count: 10000

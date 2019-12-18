@@ -48,6 +48,15 @@ func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expe
 func TestTransferMoney(t *testing.T) {
 	firstMember := createMember(t)
 	secondMember := createMember(t)
+
+	// init money on members
+	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "2000000000", "toMemberReference": firstMember.Ref})
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "2000000000", "toMemberReference": secondMember.Ref})
+	require.NoError(t, err)
+
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 
@@ -262,9 +271,17 @@ func TestTransferTwoTimes(t *testing.T) {
 	// oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	// oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 
+	// init money on members
+	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "5000000000", "toMemberReference": firstMember.Ref})
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "5000000000", "toMemberReference": secondMember.Ref})
+	require.NoError(t, err)
+
 	amount := "10"
 
-	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
