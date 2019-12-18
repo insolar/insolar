@@ -133,40 +133,52 @@ func (p Logger) GetTracerId() TracerId {
 	return ""
 }
 
-func (p Logger) _logCustom(eventType StepLoggerEvent, msg interface{}, err error) {
+func (p Logger) _checkLog(eventType StepLoggerEvent) (StepLogger, uint32, StepLoggerEvent) {
 	if stepLogger, stepLevel, stepUpdate := p.getStepLogger(); stepLogger != nil {
-		if !stepLogger.CanLogEvent(eventType, stepLevel) {
-			return
+		if stepLogger.CanLogEvent(eventType, stepLevel) {
+			if stepLevel == StepLogLevelTracing && eventType == StepLoggerTrace {
+				eventType = StepLoggerActiveTrace
+			}
+			return stepLogger, stepUpdate, eventType
 		}
+	}
+	return nil, 0, 0
+}
 
-		if stepLevel == StepLogLevelTracing && eventType == StepLoggerTrace {
-			eventType = StepLoggerActiveTrace
-		}
+func (p Logger) _doLog(stepLogger StepLogger, stepUpdate uint32, eventType StepLoggerEvent, msg interface{}, err error) {
+	stepData := p.stepData
+	stepData.EventType = eventType
+	stepData.Error = err
+	if stepUpdate != 0 {
+		stepData.StepNo.step = stepUpdate
+	}
+	stepLogger.LogEvent(stepData, msg)
+}
 
-		stepData := p.stepData
-		stepData.EventType = eventType
-		stepData.Error = err
-
-		if stepUpdate != 0 {
-			stepData.StepNo.step = stepUpdate
-		}
-
-		stepLogger.LogEvent(stepData, msg)
+// NB! keep method simple to ensure inlining
+func (p Logger) Trace(msg interface{}) {
+	if stepLogger, stepUpdate, eventType := p._checkLog(StepLoggerTrace); stepLogger != nil {
+		p._doLog(stepLogger, stepUpdate, eventType, msg, nil)
 	}
 }
 
-func (p Logger) Trace(msg interface{}) {
-	p._logCustom(StepLoggerTrace, msg, nil)
-}
-
+// NB! keep method simple to ensure inlining
 func (p Logger) Warn(msg interface{}) {
-	p._logCustom(StepLoggerWarn, msg, nil)
+	if stepLogger, stepUpdate, eventType := p._checkLog(StepLoggerWarn); stepLogger != nil {
+		p._doLog(stepLogger, stepUpdate, eventType, msg, nil)
+	}
 }
 
+// NB! keep method simple to ensure inlining
 func (p Logger) Error(msg interface{}, err error) {
-	p._logCustom(StepLoggerError, msg, err)
+	if stepLogger, stepUpdate, eventType := p._checkLog(StepLoggerError); stepLogger != nil {
+		p._doLog(stepLogger, stepUpdate, eventType, msg, err)
+	}
 }
 
+// NB! keep method simple to ensure inlining
 func (p Logger) Fatal(msg interface{}) {
-	p._logCustom(StepLoggerFatal, msg, nil)
+	if stepLogger, stepUpdate, eventType := p._checkLog(StepLoggerFatal); stepLogger != nil {
+		p._doLog(stepLogger, stepUpdate, eventType, msg, nil)
+	}
 }
