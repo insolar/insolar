@@ -20,8 +20,6 @@ package functest
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -148,14 +146,6 @@ func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 	member.MigrationAddress = ma
 	return member
 
-}
-
-func generateMigrationAddress() (string, error) {
-	bytes := make([]byte, 20)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
 }
 
 func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
