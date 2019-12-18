@@ -482,8 +482,10 @@ func (m *SlotMachine) queueAsyncCallback(link SlotLink,
 			return true
 		}
 		if worker == nil {
-			step, _ := link.GetStepLink()
-			m.logInternal(step, "async detachment retry limit exceeded", nil)
+			if m.IsActive() {
+				step, _ := link.GetStepLink()
+				m.logInternal(step, "async detachment retry limit exceeded", nil)
+			}
 			return true
 		}
 

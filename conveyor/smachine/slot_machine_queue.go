@@ -113,7 +113,11 @@ func (m *SlotMachineSync) AddAsyncSignal(link SlotLink, fn func(link SlotLink, w
 	}
 
 	m.signalQueue.Add(func(w interface{}) {
-		fn(link, w.(FixedSlotWorker))
+		if w == nil {
+			fn(link, nil)
+		} else {
+			fn(link, w.(FixedSlotWorker))
+		}
 	})
 	return true
 }
@@ -128,7 +132,11 @@ func (m *SlotMachineSync) AddAsyncUpdate(link SlotLink, fn func(link SlotLink, w
 	}
 
 	m.updateQueue.Add(func(w interface{}) {
-		fn(link, w.(FixedSlotWorker))
+		if w == nil {
+			fn(link, nil)
+		} else {
+			fn(link, w.(FixedSlotWorker))
+		}
 	})
 	return true
 }
@@ -180,16 +188,17 @@ func (m *SlotMachineSync) AddAsyncCallback(link SlotLink, fn AsyncCallbackFunc) 
 }
 
 func (m *SlotMachineSync) _addAsyncCallback(q *tools.SyncQueue, link SlotLink, fn AsyncCallbackFunc, repeatCount int) {
-	q.Add(func(v interface{}) {
-		w := v.(DetachableSlotWorker)
-		if fn(link, w) {
+	q.Add(func(w interface{}) {
+		switch {
+		case w == nil:
+			//
+		case fn(link, w.(DetachableSlotWorker)):
+			return
+		case repeatCount < maxDetachRetries:
+			m._addDetachedCallback(link, fn, repeatCount+1)
 			return
 		}
-		if repeatCount >= maxDetachRetries || w == nil {
-			fn(link, nil)
-			return
-		}
-		m._addDetachedCallback(link, fn, repeatCount+1)
+		fn(link, nil)
 	})
 }
 
@@ -208,7 +217,7 @@ func (m *SlotMachineSync) ProcessCallbacks(worker AttachedSlotWorker) (hasUpdate
 
 	if !m.CanProcessCallbacks() {
 		// cancel all callbacks
-		return true, m.processCallbacks(tasks, nil), false
+		return true, m.cancelCallbacks(tasks, worker), false
 	}
 
 	wasCalled := false
@@ -243,6 +252,9 @@ func (m *SlotMachineSync) ProcessSlotCallbacksByDetachable(link SlotLink, worker
 }
 
 func (m *SlotMachineSync) cancelCallbacks(tasks tools.SyncFuncList, worker SlotWorker) (hasSignal bool) {
+	if worker == nil {
+		panic("illegal value")
+	}
 	for i, fn := range tasks {
 		fn(nil)
 		if worker.HasSignal() {
@@ -254,6 +266,9 @@ func (m *SlotMachineSync) cancelCallbacks(tasks tools.SyncFuncList, worker SlotW
 }
 
 func (m *SlotMachineSync) processCallbacks(tasks tools.SyncFuncList, worker DetachableSlotWorker) (hasSignal bool) {
+	if worker == nil {
+		panic("illegal value")
+	}
 	for i, fn := range tasks {
 		fn(worker)
 		if worker.HasSignal() {
