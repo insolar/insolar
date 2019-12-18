@@ -370,12 +370,12 @@ func (s streamMock) RecvMsg(m interface{}) error {
 func TestRecordServer_Export(t *testing.T) {
 	t.Parallel()
 
-	t.Run("count can't be 0", func(t *testing.T) {
+	t.Run("count is 0", func(t *testing.T) {
 		server := &RecordServer{}
 
 		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
-		require.Error(t, err)
+		require.Equal(t, err, ErrNilCount)
 	})
 
 	t.Run("PulseNumber can't be more than TopSyncPulseNumber", func(t *testing.T) {
@@ -387,7 +387,7 @@ func TestRecordServer_Export(t *testing.T) {
 
 		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
 
-		require.Error(t, err)
+		require.Equal(t, err, ErrNotFinalPulseData)
 	})
 }
 
@@ -585,6 +585,19 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, secondRec, resRecord.Record)
 	})
 
+	t.Run("context.Canceled error", func(t *testing.T) {
+		stream := &streamMock{checker: func(i *Record) error {
+			return context.Canceled
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  firstPN,
+			RecordNumber: 1,
+			Count:        1,
+		}, stream)
+
+		require.Equal(t, err, context.Canceled)
+	})
 }
 
 func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
