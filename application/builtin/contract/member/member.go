@@ -37,7 +37,7 @@ import (
 const (
 	XNS = "XNS"
 	// 10 ^ 14
-	ACCOUNT_START_VALUE = "100000000000000"
+	ACCOUNT_START_VALUE = "0"
 )
 
 // Member - basic member contract.
