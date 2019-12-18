@@ -31,11 +31,7 @@ func (s *createMemberScenario) canBeStarted() error {
 func (s *createMemberScenario) prepare(repetition int) {}
 
 func (s *createMemberScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
-	member, traceID, err := s.insSDK.CreateMember()
-	if err != nil {
-		return traceID, err
-	}
-	traceID, err = s.insSDK.Transfer("100000000000000", s.insSDK.GetRootMember(), member)
+	_, traceID, err := s.insSDK.CreateMember()
 	return traceID, err
 }
 
