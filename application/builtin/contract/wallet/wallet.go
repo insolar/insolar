@@ -84,15 +84,6 @@ func (w *Wallet) GetBalance(assetName string) (string, error) {
 	return acc.GetBalance()
 }
 
-// AddDeposit method stores deposit reference in member it belongs to
-func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
-	if _, ok := w.Deposits[txId]; ok {
-		return fmt.Errorf("deposit for this transaction already exist")
-	}
-	w.Deposits[txId] = deposit.String()
-	return nil
-}
-
 // GetDeposits get all deposits for this wallet
 // ins:immutable
 func (w *Wallet) GetDeposits() ([]interface{}, error) {
@@ -123,4 +114,27 @@ func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		return true, depositReference, nil
 	}
 	return false, nil, nil
+}
+
+// FindOrCreateDeposit finds deposit for this wallet with this transaction hash or creates new one with link in this wallet.
+func (w *Wallet) FindOrCreateDeposit(transactionHash string, lockup int64, vesting int64, vestingStep int64) (*insolar.Reference, error) {
+	found, dRef, err := w.FindDeposit(transactionHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
+	}
+
+	if found {
+		return dRef, nil
+	}
+
+	dHolder := deposit.New(transactionHash, lockup, vesting, vestingStep)
+	txDeposit, err := dHolder.AsChild(w.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("failed to save deposit as child: %s", err.Error())
+	}
+
+	ref := txDeposit.GetReference()
+	w.Deposits[transactionHash] = ref.String()
+
+	return &ref, err
 }
