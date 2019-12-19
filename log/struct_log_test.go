@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/log/logadapter"
 	"github.com/insolar/insolar/log/logcommon"
 
 	"github.com/rs/zerolog"
@@ -49,7 +50,7 @@ func (m mar) MarshalLogObject(lw logcommon.LogObjectWriter, lmc logcommon.LogObj
 }
 
 type LogObject struct {
-	LogObjectTemplate
+	logadapter.Msg
 	s string
 }
 

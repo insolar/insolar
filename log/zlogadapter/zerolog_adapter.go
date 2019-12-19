@@ -234,7 +234,7 @@ var _ logcommon.EmbeddedLoggerAssistant = &zerologAdapter{}
 
 type zerologAdapter struct {
 	logger    zerolog.Logger
-	dynFields logadapter.DynFieldMap
+	dynFields logcommon.DynFieldMap
 	config    *logadapter.Config
 }
 
@@ -607,12 +607,12 @@ func (z zerologAdapterLLOutput) Write(b []byte) (int, error) {
 
 /* ========================================= */
 
-func newDynFieldsHook(dynFields logadapter.DynFieldMap) zerolog.Hook {
+func newDynFieldsHook(dynFields logcommon.DynFieldMap) zerolog.Hook {
 	return dynamicFieldsHook{dynFields}
 }
 
 type dynamicFieldsHook struct {
-	dynFields logadapter.DynFieldMap
+	dynFields logcommon.DynFieldMap
 }
 
 func (v dynamicFieldsHook) Run(e *zerolog.Event, level zerolog.Level, message string) {

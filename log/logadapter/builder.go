@@ -38,9 +38,10 @@ type Config struct {
 
 	Metrics   *logmetrics.MetricsHelper
 	MsgFormat MsgFormatConfig
-}
 
-type DynFieldMap map[string]logcommon.DynFieldFunc
+	LevelFn func(logcommon.LogLevel) bool
+	ErrorFn func(error)
+}
 
 type BareOutput struct {
 	Writer         io.Writer
@@ -100,14 +101,14 @@ type CopyLoggerParams struct {
 	Reqs            FactoryRequirementFlags
 	Level           logcommon.LogLevel
 	AppendFields    map[string]interface{}
-	AppendDynFields DynFieldMap
+	AppendDynFields logcommon.DynFieldMap
 }
 
 type NewLoggerParams struct {
 	Reqs      FactoryRequirementFlags
 	Level     logcommon.LogLevel
 	Fields    map[string]interface{}
-	DynFields DynFieldMap
+	DynFields logcommon.DynFieldMap
 
 	Config Config
 }
@@ -155,7 +156,7 @@ type LoggerBuilder struct {
 	noDynFields bool
 
 	fields    map[string]interface{}
-	dynFields DynFieldMap
+	dynFields logcommon.DynFieldMap
 
 	Config
 }
@@ -286,7 +287,7 @@ func (z LoggerBuilder) WithDynamicField(k string, fn logcommon.DynFieldFunc) log
 		panic("illegal value")
 	}
 	if z.dynFields == nil {
-		z.dynFields = make(DynFieldMap)
+		z.dynFields = make(logcommon.DynFieldMap)
 	}
 	delete(z.fields, k)
 	z.dynFields[k] = fn
@@ -457,4 +458,12 @@ func (z LoggerBuilder) loggerMissedEvent(level logcommon.LogLevel, metrics *logm
 		return level, ([]byte)(
 			fmt.Sprintf(`{"level":"%v","message":"logger dropped %d messages"}`, level.String(), missed))
 	}
+}
+
+var _ logcommon.LogObject = &Msg{}
+
+type Msg struct{}
+
+func (*Msg) GetLogObjectMarshaller() logcommon.LogObjectMarshaller {
+	return nil
 }

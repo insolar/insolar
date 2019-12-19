@@ -16,5 +16,22 @@
 
 package logcommon
 
-type Binder struct {
+type EncoderManager interface {
+	CreatePartEncoder([]byte) LogObjectWriter
+	FlushPartEncoder(LogObjectWriter) []byte
+	WriteParts(level LogLevel, parts [][]byte, writer LogLevelWriter) error
+}
+
+type TextBinder struct {
+	prefix []byte
+
+	parentCtx []byte
+
+	context []byte
+
+	dynCtx []byte
+
+	msgFields []byte
+
+	msgText []byte
 }

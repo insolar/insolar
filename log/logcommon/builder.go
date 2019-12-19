@@ -22,6 +22,7 @@ import (
 )
 
 type DynFieldFunc func() interface{}
+type DynFieldMap map[string]DynFieldFunc
 
 type LoggerBuilder interface {
 	// Returns the current output

@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package logcommon
 
@@ -27,20 +27,12 @@ type LogObject interface {
 	GetLogObjectMarshaller() LogObjectMarshaller
 }
 
-type LogObjectFields struct {
-	Msg    string
-	Fields map[string]interface{}
-}
-
-func (v LogObjectFields) MarshalLogObject(w LogObjectWriter, _ LogObjectMetricCollector) string {
-	for k, v := range v.Fields {
-		w.AddIntfField(k, v, LogFieldFormat{})
-	}
-	return v.Msg
-}
-
 type LogObjectMarshaller interface {
 	MarshalLogObject(LogObjectWriter, LogObjectMetricCollector) string
+}
+
+type LogFieldMarshaller interface {
+	MarshalLogFields(LogObjectWriter)
 }
 
 type MutedLogObjectMarshaller interface {
@@ -73,6 +65,7 @@ func (f LogFieldFormat) ToString(v interface{}, defFmt string) string {
 	return fmt.Sprintf(defFmt, v)
 }
 
+type LogObjectMarshallerFunc func(LogObjectWriter)
 type LogObjectWriter interface {
 	AddIntField(key string, v int64, fmt LogFieldFormat)
 	AddUintField(key string, v uint64, fmt LogFieldFormat)
@@ -82,4 +75,28 @@ type LogObjectWriter interface {
 	AddStrField(key string, v string, fmt LogFieldFormat)
 	AddIntfField(key string, v interface{}, fmt LogFieldFormat)
 	AddRawJSONField(key string, v interface{}, fmt LogFieldFormat)
+}
+
+type LogObjectFields struct {
+	Msg    string
+	Fields map[string]interface{}
+}
+
+func (v LogObjectFields) MarshalLogObject(w LogObjectWriter, _ LogObjectMetricCollector) string {
+	for k, v := range v.Fields {
+		w.AddIntfField(k, v, LogFieldFormat{})
+	}
+	return v.Msg
+}
+
+func (v LogObjectFields) MarshalLogFields(w LogObjectWriter) {
+	FieldMapMarshaller(v.Fields).MarshalLogFields(w)
+}
+
+type FieldMapMarshaller map[string]interface{}
+
+func (v FieldMapMarshaller) MarshalLogFields(w LogObjectWriter) {
+	for k, v := range v {
+		w.AddIntfField(k, v, LogFieldFormat{})
+	}
 }
