@@ -118,7 +118,7 @@ func (md *MigrationDaemon) depositMigration(
 	vestingParams, _ := migrationAdminContract.GetDepositParameters()
 	depositRef, err := w.FindOrCreateDeposit(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
+		return nil, fmt.Errorf("failed to get or create deposit: %s", err.Error())
 	}
 
 	return addConfirmToDeposit(*tokenHolderRef, *depositRef, txHash, amount.String(), caller, request)
