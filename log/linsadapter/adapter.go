@@ -33,6 +33,7 @@ type logInsAdapter struct {
 	config  *logadapter.Config
 	encoder logcommon.EncoderManager
 	writer  logcommon.LogLevelWriter
+	levelFn func(logcommon.LogLevel) bool
 
 	parentStatic  *[]byte
 	staticFields  []byte
@@ -164,7 +165,7 @@ func (v logInsAdapter) EmbeddedFlush(msg string) {
 }
 
 func (v logInsAdapter) Is(level logcommon.LogLevel) bool {
-	return v.config.LevelFn(level)
+	return v.levelFn(level)
 }
 
 func (v logInsAdapter) Copy() logcommon.LoggerBuilder {

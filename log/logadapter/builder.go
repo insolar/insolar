@@ -39,7 +39,6 @@ type Config struct {
 	Metrics   *logmetrics.MetricsHelper
 	MsgFormat MsgFormatConfig
 
-	LevelFn func(logcommon.LogLevel) bool
 	ErrorFn func(error)
 }
 
