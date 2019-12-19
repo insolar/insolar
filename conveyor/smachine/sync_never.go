@@ -102,7 +102,6 @@ func (v infiniteLockEntry) ReleaseAll() ([]PostponedDependency, []StepLink) {
 	return nil, nil
 }
 
-func (v infiniteLockEntry) IsCompatibleWith(flags SlotDependencyFlags) bool {
-	f := v.slotFlags
-	return f&flags == flags
+func (v infiniteLockEntry) IsCompatibleWith(requiredFlags SlotDependencyFlags) bool {
+	return v.slotFlags.isCompatibleWith(requiredFlags)
 }
