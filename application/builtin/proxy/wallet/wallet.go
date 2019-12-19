@@ -409,84 +409,6 @@ func (r *Wallet) GetBalance(assetName string) (string, error) {
 	return ret0, nil
 }
 
-// AddDeposit is proxy generated method
-func (r *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = txId
-	args[1] = deposit
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 1)
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return err
-	}
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
-// AddDepositAsImmutable is proxy generated method
-func (r *Wallet) AddDepositAsImmutable(txId string, deposit insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = txId
-	args[1] = deposit
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 1)
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddDeposit", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return err
-	}
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
 // GetDeposits is proxy generated method
 func (r *Wallet) GetDepositsAsMutable() ([]interface{}, error) {
 	var args [0]interface{}
@@ -647,4 +569,90 @@ func (r *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		return ret0, ret1, ret2
 	}
 	return ret0, ret1, nil
+}
+
+// FindOrCreateDeposit is proxy generated method
+func (r *Wallet) FindOrCreateDeposit(transactionHash string, lockup int64, vesting int64, vestingStep int64) (*insolar.Reference, error) {
+	var args [4]interface{}
+	args[0] = transactionHash
+	args[1] = lockup
+	args[2] = vesting
+	args[3] = vestingStep
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "FindOrCreateDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// FindOrCreateDepositAsImmutable is proxy generated method
+func (r *Wallet) FindOrCreateDepositAsImmutable(transactionHash string, lockup int64, vesting int64, vestingStep int64) (*insolar.Reference, error) {
+	var args [4]interface{}
+	args[0] = transactionHash
+	args[1] = lockup
+	args[2] = vesting
+	args[3] = vestingStep
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "FindOrCreateDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }

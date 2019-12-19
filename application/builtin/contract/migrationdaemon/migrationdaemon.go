@@ -113,28 +113,15 @@ func (md *MigrationDaemon) depositMigration(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %s", err.Error())
 	}
+
 	w := wallet.GetObject(*tokenHolderWallet)
-	isFound, txDepositRef, err := w.FindDeposit(txHash)
+	vestingParams, _ := migrationAdminContract.GetDepositParameters()
+	depositRef, err := w.FindOrCreateDeposit(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
+		return nil, fmt.Errorf("failed to get or create deposit: %s", err.Error())
 	}
 
-	// If deposit doesn't exist - create new deposit
-	if !isFound {
-		var err error
-		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
-		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-		}
-		err = w.AddDeposit(txHash, txDeposit.GetReference())
-		if err != nil {
-			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
-		}
-		txDepositRef = &txDeposit.Reference
-	}
-	return addConfirmToDeposit(*tokenHolderRef, *txDepositRef, txHash, amount.String(), caller, request)
+	return addConfirmToDeposit(*tokenHolderRef, *depositRef, txHash, amount.String(), caller, request)
 }
 
 func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {

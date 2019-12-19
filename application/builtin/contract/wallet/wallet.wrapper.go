@@ -343,90 +343,6 @@ func INSMETHOD_GetBalance(object []byte, data []byte) (newState []byte, result [
 	return
 }
 
-func INSMETHOD_AddDeposit(object []byte, data []byte) (newState []byte, result []byte, err error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-
-	self := new(Wallet)
-
-	if len(object) == 0 {
-		err = &foundation.Error{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-		return
-	}
-
-	err = ph.Deserialize(object, self)
-	if err != nil {
-		err = &foundation.Error{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return
-	}
-
-	args := make([]interface{}, 2)
-	var args0 string
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		err = &foundation.Error{S: "[ FakeAddDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return
-	}
-
-	var ret0 error
-
-	serializeResults := func() error {
-		return ph.Serialize(
-			foundation.Result{Returns: []interface{}{ret0}},
-			&result,
-		)
-	}
-
-	needRecover := true
-	defer func() {
-		if !needRecover {
-			return
-		}
-		if r := recover(); r != nil {
-			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
-			recoveredError = ph.MakeErrorSerializable(recoveredError)
-
-			if PanicIsLogicalError {
-				ret0 = recoveredError
-
-				newState = object
-				err = serializeResults()
-				if err == nil {
-					newState = object
-				}
-			} else {
-				err = recoveredError
-			}
-		}
-	}()
-
-	ret0 = self.AddDeposit(args0, args1)
-
-	needRecover = false
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	err = ph.Serialize(self, &newState)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	err = serializeResults()
-	if err != nil {
-		return
-	}
-
-	return
-}
-
 func INSMETHOD_GetDeposits(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -592,6 +508,95 @@ func INSMETHOD_FindDeposit(object []byte, data []byte) (newState []byte, result 
 	return
 }
 
+func INSMETHOD_FindOrCreateDeposit(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(Wallet)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeFindOrCreateDeposit ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeFindOrCreateDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := make([]interface{}, 4)
+	var args0 string
+	args[0] = &args0
+	var args1 int64
+	args[1] = &args1
+	var args2 int64
+	args[2] = &args2
+	var args3 int64
+	args[3] = &args3
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeFindOrCreateDeposit ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 *insolar.Reference
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0, ret1 = self.FindOrCreateDeposit(args0, args1, args2, args3)
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -676,12 +681,12 @@ func Initialize() insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
-			"GetAccount":  INSMETHOD_GetAccount,
-			"Transfer":    INSMETHOD_Transfer,
-			"GetBalance":  INSMETHOD_GetBalance,
-			"AddDeposit":  INSMETHOD_AddDeposit,
-			"GetDeposits": INSMETHOD_GetDeposits,
-			"FindDeposit": INSMETHOD_FindDeposit,
+			"GetAccount":          INSMETHOD_GetAccount,
+			"Transfer":            INSMETHOD_Transfer,
+			"GetBalance":          INSMETHOD_GetBalance,
+			"GetDeposits":         INSMETHOD_GetDeposits,
+			"FindDeposit":         INSMETHOD_FindDeposit,
+			"FindOrCreateDeposit": INSMETHOD_FindOrCreateDeposit,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
