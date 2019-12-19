@@ -110,6 +110,7 @@ type SlotMachine struct {
 	pollingSlots     PollingQueue //they are are moved to workingSlots on every full Scan when time has passed
 	workingSlots     SlotQueue    //slots are currently in processing
 	nonPriorityCount uint32       // number of non-priority slots processed since the last replenishment of workingSlots
+	nonBoostedCount  uint32       // number of non-priority slots processed since the last replenishment of workingSlots
 
 	syncQueue SlotMachineSync
 }
@@ -269,12 +270,15 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 	case !m.workingSlots.IsEmpty():
 		// we were interrupted
 		currentScanNo = m.getScanCount()
+
+		if scanMode != ScanPriorityOnly && m.nonBoostedCount >= uint32(m.config.ScanCountLimit) {
+			m.nonBoostedCount = 0
+			m.workingSlots.PrependAll(&m.boostedSlots)
+		}
+
 		if m.nonPriorityCount >= uint32(m.config.ScanCountLimit) {
 			m.nonPriorityCount = 0
-			m.workingSlots.AppendAll(&m.prioritySlots)
-			if scanMode != ScanPriorityOnly {
-				m.workingSlots.AppendAll(&m.boostedSlots)
-			}
+			m.workingSlots.PrependAll(&m.prioritySlots)
 		}
 
 	default:
@@ -282,12 +286,14 @@ func (m *SlotMachine) ScanOnce(scanMode ScanMode, worker AttachedSlotWorker) (re
 
 		m.hotWaitOnly = true
 		m.nonPriorityCount = 0
+		m.nonBoostedCount = 0
 		m.workingSlots.AppendAll(&m.prioritySlots)
 
 		if scanMode != ScanPriorityOnly {
 			m.workingSlots.AppendAll(&m.boostedSlots)
 			m.workingSlots.AppendAll(&m.activeSlots)
 		}
+
 		m.pollingSlots.FilterOut(scanTime, m.workingSlots.AppendAll)
 	}
 	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod).Truncate(m.config.PollingTruncate))
@@ -344,9 +350,10 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 		currentSlot.removeFromQueue()
 
 		switch {
-		case currentSlot.step.Flags&StepPriority != 0:
-			// break
+		case currentSlot.isPriority():
+			// execute anyway
 		case priorityOnly:
+			// skip non-priority by putting them back to queues
 			if currentSlot.isBoosted() {
 				m.boostedSlots.AddLast(currentSlot)
 			} else {
@@ -354,16 +361,18 @@ func (m *SlotMachine) executeWorkingSlots(currentScanNo uint32, priorityOnly boo
 			}
 			currentSlot.stopWorking()
 			continue
-		case currentSlot.isBoosted():
-			// break
+
+		case !currentSlot.isBoosted():
+			m.nonBoostedCount++
+			fallthrough
 		default:
 			m.nonPriorityCount++
 		}
 
-		if stopNow, loopExtraIncrement := m._executeSlot(currentSlot, prevStepNo, worker, loopLimit); stopNow {
+		if stopNow, loopIncrement := m._executeSlot(currentSlot, prevStepNo, worker, loopLimit); stopNow {
 			return
 		} else {
-			i += loopExtraIncrement
+			i += loopIncrement
 		}
 	}
 }
