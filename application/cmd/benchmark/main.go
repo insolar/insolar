@@ -226,8 +226,11 @@ func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
 				member, traceID, err = insSDK.CreateMember()
 			}
 			if err == nil {
-				members = append(members, member)
-				break
+				_, err := insSDK.Transfer("100000000000000", insSDK.GetRootMember(), member)
+				if err == nil {
+					members = append(members, member)
+					break
+				}
 			}
 			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
 			retries--
