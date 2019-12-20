@@ -22,53 +22,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
-func NewExecutionAdapter(adapterID AdapterId, executor AdapterExecutor) ExecutionAdapter {
-	if adapterID.IsEmpty() {
-		panic("illegal value")
-	}
-	if executor == nil {
-		panic("illegal value")
-	}
-	return adapterExecHelper{adapterID, executor}
-}
-
-var _ ExecutionAdapter = &adapterExecHelper{}
-
-type adapterExecHelper struct {
-	adapterID AdapterId
-	executor  AdapterExecutor
-}
-
-func (p adapterExecHelper) IsEmpty() bool {
-	return p.adapterID.IsEmpty()
-}
-
-func (p adapterExecHelper) GetAdapterID() AdapterId {
-	return p.adapterID
-}
-
-func (p adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester {
-	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, adapterId: p.adapterID,
-		executor: p.executor, mode: adapterSyncCallContext}
-}
-
-func (p adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester {
-	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, adapterId: p.adapterID,
-		executor: p.executor, mode: adapterAsyncCallContext, flags: AutoWakeUp}
-}
-
-func (p adapterExecHelper) PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester {
-	return &adapterNotifyRequest{ctx: ctx.(*executionContext), fn: fn,
-		executor: p.executor, mode: adapterAsyncCallContext}
-}
-
 const (
 	adapterSyncCallContext     = 1
 	adapterAsyncCallContext    = 2
 	adapterCallContextDisposed = 3
 )
-
-/* ============================================================== */
 
 type adapterCallRequest struct {
 	ctx       *executionContext
@@ -77,9 +35,10 @@ type adapterCallRequest struct {
 	executor  AdapterExecutor
 	mode      uint8
 
-	flags    AsyncCallFlags
-	nestedFn CreateFactoryFunc
-	cancel   *syncrun.ChainedCancel
+	flags     AsyncCallFlags
+	nestedFn  CreateFactoryFunc
+	cancel    *syncrun.ChainedCancel
+	isLogging bool
 }
 
 func (c *adapterCallRequest) discard() {
@@ -90,9 +49,20 @@ func (c *adapterCallRequest) ensureMode(mode uint8) {
 	if c.mode != mode {
 		panic("illegal state")
 	}
+	c.ctx.ensureValid()
+}
+
+func (c *adapterCallRequest) ensureValid() {
+	if c.mode > 0 && c.mode < adapterCallContextDisposed {
+		c.ctx.ensureValid()
+		return
+	}
+	panic("illegal state")
 }
 
 func (c *adapterCallRequest) WithCancel(fn *context.CancelFunc) AsyncCallRequester {
+	c.ensureValid()
+
 	if c.cancel != nil {
 		*fn = c.cancel.Cancel
 		return c
@@ -104,13 +74,24 @@ func (c *adapterCallRequest) WithCancel(fn *context.CancelFunc) AsyncCallRequest
 	return &r
 }
 
+func (c *adapterCallRequest) WithLog(isLogging bool) AsyncCallRequester {
+	c.ensureValid()
+	r := *c
+	r.isLogging = isLogging
+	return &r
+}
+
 func (c *adapterCallRequest) WithNested(nestedFn CreateFactoryFunc) AsyncCallRequester {
+	c.ensureValid()
+
 	r := *c
 	r.nestedFn = nestedFn
 	return &r
 }
 
 func (c *adapterCallRequest) WithFlags(flags AsyncCallFlags) AsyncCallRequester {
+	c.ensureValid()
+
 	r := *c
 	r.flags = flags
 	return &r
@@ -130,14 +111,76 @@ func (c *adapterCallRequest) DelayedStart() CallConditionalBuilder {
 	return callConditionalBuilder{c.ctx, c._startAsync}
 }
 
-func (c *adapterCallRequest) TryCall() bool {
+// WARNING! can be called OUTSIDE of context validity (for DelayedStart)
+func (c *adapterCallRequest) _startAsync() {
+	if c.cancel != nil && c.cancel.IsCancelled() {
+		return
+	}
+
+	var localCallId uint16 // to explicitly control type
+	localCallId = c.ctx.countAsyncCalls
+
+	c.ctx.countAsyncCalls++
+	if c.ctx.countAsyncCalls == 0 {
+		panic("overflow")
+	}
+
+	var overrideFn AdapterCallbackFunc
+	if c.isLogging {
+		logger, stepNo := c.ctx._newLoggerAsync()
+		callId := uint64(stepNo)<<16 | uint64(localCallId)
+
+		overrideFn = func(resultFunc AsyncResultFunc, err error) bool {
+			switch {
+			case err != nil:
+				logger.adapterCall(StepLoggerAdapterAsyncResult, c.adapterId, callId, err)
+			case resultFunc == nil:
+				logger.adapterCall(StepLoggerAdapterAsyncCancel, c.adapterId, callId, nil)
+			default:
+				logger.adapterCall(StepLoggerAdapterAsyncResult, c.adapterId, callId, nil)
+			}
+			return false // don't stop callback
+		}
+		logger.adapterCall(StepLoggerAdapterAsyncCall, c.adapterId, callId, nil)
+	}
+
+	stepLink := c.ctx.s.NewStepLink()
+	callback := NewAdapterCallback(c.adapterId, stepLink, overrideFn, c.flags, c.nestedFn)
+	cancelFn := c.executor.StartCall(c.fn, callback, c.cancel != nil)
+
+	if c.cancel != nil {
+		c.cancel.SetChain(cancelFn)
+	}
+}
+
+/* ============================================================== */
+
+type adapterSyncCallRequest struct {
+	adapterCallRequest
+}
+
+func (c *adapterSyncCallRequest) WithLog(isLogging bool) SyncCallRequester {
+	c.ensureValid()
+	r := *c
+	r.isLogging = isLogging
+	return &r
+}
+
+func (c *adapterSyncCallRequest) WithNested(nestedFn CreateFactoryFunc) SyncCallRequester {
+	c.ensureValid()
+	r := *c
+	r.nestedFn = nestedFn
+	return &r
+}
+
+func (c *adapterSyncCallRequest) TryCall() bool {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
 	return c._startSync(true)
 }
 
-func (c *adapterCallRequest) Call() {
+func (c *adapterSyncCallRequest) Call() {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
@@ -146,26 +189,7 @@ func (c *adapterCallRequest) Call() {
 	}
 }
 
-func (c *adapterCallRequest) _startAsync() {
-	if c.cancel != nil && c.cancel.IsCancelled() {
-		return
-	}
-
-	c.ctx.countAsyncCalls++
-	if c.ctx.countAsyncCalls == 0 {
-		panic("overflow")
-	}
-
-	stepLink := c.ctx.s.NewStepLink()
-	callback := NewAdapterCallback(c.adapterId, stepLink, nil, c.flags, c.nestedFn)
-	cancelFn := c.executor.StartCall(c.fn, callback, c.cancel != nil)
-
-	if c.cancel != nil {
-		c.cancel.SetChain(cancelFn)
-	}
-}
-
-func (c *adapterCallRequest) _startSync(isTry bool) bool {
+func (c *adapterSyncCallRequest) _startSync(isTry bool) bool {
 	resultFn := c._startSyncWithResult(isTry)
 
 	if resultFn == nil {
@@ -177,7 +201,13 @@ func (c *adapterCallRequest) _startSync(isTry bool) bool {
 	return true
 }
 
-func (c *adapterCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
+func (c *adapterSyncCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
+	c.ctx.ensureValid()
+
+	if c.isLogging {
+		logger := c.ctx._newLogger()
+		logger.adapterCall(StepLoggerAdapterSyncCall, c.adapterId, 0, nil)
+	}
 
 	if ok, result := c.executor.TrySyncCall(c.fn); ok {
 		return result
@@ -194,9 +224,10 @@ func (c *adapterCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
 	}
 	resultCh := make(chan resultType, 1)
 
-	callback := NewAdapterCallback(c.adapterId, c.ctx.s.NewStepLink(), func(fn AsyncResultFunc, err error) {
+	callback := NewAdapterCallback(c.adapterId, c.ctx.s.NewStepLink(), func(fn AsyncResultFunc, err error) bool {
 		resultCh <- resultType{fn, err}
 		close(resultCh) // prevent repeated callbacks
+		return true
 	}, 0, c.nestedFn)
 
 	cancelFn := c.executor.StartCall(c.fn, callback, false)
@@ -228,10 +259,12 @@ func (c *adapterCallRequest) _startSyncWithResult(isTry bool) AsyncResultFunc {
 /* ============================================================== */
 
 type adapterNotifyRequest struct {
-	ctx      *executionContext
-	fn       AdapterNotifyFunc
-	executor AdapterExecutor
-	mode     uint8
+	ctx       *executionContext
+	fn        AdapterNotifyFunc
+	adapterId AdapterId
+	executor  AdapterExecutor
+	isLogging bool
+	mode      uint8
 }
 
 func (c *adapterNotifyRequest) discard() {
@@ -242,6 +275,7 @@ func (c *adapterNotifyRequest) ensure() {
 	if c.mode != adapterAsyncCallContext {
 		panic("illegal state")
 	}
+	c.ctx.ensureValid()
 }
 
 func (c *adapterNotifyRequest) Send() {
@@ -251,12 +285,24 @@ func (c *adapterNotifyRequest) Send() {
 	c._startAsync()
 }
 
+func (c *adapterNotifyRequest) WithLog(isLogging bool) NotifyRequester {
+	c.ensure()
+	r := *c
+	r.isLogging = isLogging
+	return &r
+}
+
 func (c *adapterNotifyRequest) DelayedSend() CallConditionalBuilder {
 	c.ensure()
 	return callConditionalBuilder{c.ctx, c._startAsync}
 }
 
+// WARNING! can be called OUTSIDE of context validity (for DelayedSend)
 func (c *adapterNotifyRequest) _startAsync() {
+	if c.isLogging {
+		logger, _ := c.ctx._newLoggerAsync()
+		logger.adapterCall(StepLoggerAdapterNotifyCall, c.adapterId, 0, nil)
+	}
 	c.executor.SendNotify(c.fn)
 }
 

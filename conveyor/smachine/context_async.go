@@ -119,12 +119,16 @@ func (p *asyncResultContext) GetContext() context.Context {
 
 func (p *asyncResultContext) Log() Logger {
 	p.ensure(updCtxAsyncCallback)
-	return Logger{p.s.ctx, p, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
+	return Logger{p.s.ctx, p}
 }
 
 func (p *asyncResultContext) getStepLogger() (StepLogger, StepLogLevel, uint32) {
 	p.ensureAtLeast(updCtxAsyncCallback)
 	return p.s.stepLogger, p.s.getStepLogLevel(), 0
+}
+
+func (p *asyncResultContext) getStepLoggerData() StepLoggerData {
+	return p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())
 }
 
 func (p *asyncResultContext) WakeUp() {

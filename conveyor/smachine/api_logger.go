@@ -27,6 +27,7 @@ const (
 	StepLoggerUpdate StepLoggerEvent = iota
 	StepLoggerMigrate
 	StepLoggerInternal
+	StepLoggerAdapterCall
 
 	StepLoggerTrace
 	StepLoggerActiveTrace
@@ -35,19 +36,33 @@ const (
 	StepLoggerFatal
 )
 
-type StepLoggerFlags uint8
+type StepLoggerFlags uint32
 
 const (
-	StepLoggerUpdateErrorDefault StepLoggerFlags = iota
-	StepLoggerUpdateErrorMuted
-	StepLoggerUpdateErrorRecovered
-	StepLoggerUpdateErrorRecoveryDenied
+	stepLoggerUpdateErrorBit0 StepLoggerFlags = 1 << iota
+	stepLoggerUpdateErrorBit1
+	stepLoggerUpdateAdapterBit0
+	stepLoggerUpdateAdapterBit1
+	stepLoggerUpdateAdapterBit2
+	StepLoggerDetached
 )
-const StepLoggerErrorMask StepLoggerFlags = 3
 
 const (
-	StepLoggerDetached StepLoggerFlags = 1 << (2 + iota)
+	StepLoggerUpdateErrorDefault        StepLoggerFlags = 0
+	StepLoggerUpdateErrorMuted                          = stepLoggerUpdateErrorBit0
+	StepLoggerUpdateErrorRecovered                      = stepLoggerUpdateErrorBit1
+	StepLoggerUpdateErrorRecoveryDenied                 = stepLoggerUpdateErrorBit0 | stepLoggerUpdateErrorBit1
 )
+const StepLoggerErrorMask = stepLoggerUpdateErrorBit0 | stepLoggerUpdateErrorBit1
+
+const (
+	StepLoggerAdapterSyncCall    StepLoggerFlags = 0
+	StepLoggerAdapterNotifyCall                  = stepLoggerUpdateAdapterBit0
+	StepLoggerAdapterAsyncCall                   = stepLoggerUpdateAdapterBit2
+	StepLoggerAdapterAsyncResult                 = stepLoggerUpdateAdapterBit2 | stepLoggerUpdateAdapterBit1
+	StepLoggerAdapterAsyncCancel                 = stepLoggerUpdateAdapterBit2 | stepLoggerUpdateAdapterBit1 | stepLoggerUpdateAdapterBit0
+)
+const StepLoggerAdapterMask = stepLoggerUpdateAdapterBit0 | stepLoggerUpdateAdapterBit1 | stepLoggerUpdateAdapterBit2
 
 type SlotMachineData struct {
 	CycleNo uint32
@@ -97,6 +112,11 @@ type StepLogger interface {
 	LogInternal(data StepLoggerData, updateType string)
 	LogEvent(data StepLoggerData, customEvent interface{})
 
+	// (callId) is guaranteed to be unique per Slot for async calls.
+	// For notify and sync calls there is no guarantees on (callId).
+	// Type of call can be identified by (data.Flags).
+	LogAdapter(data StepLoggerData, adapterId AdapterId, callId uint64)
+
 	GetTracerId() TracerId
 
 	CreateAsyncLogger(context.Context, *StepLoggerData) (context.Context, StepLogger)
@@ -110,8 +130,8 @@ type Logger struct { // we use an explicit struct here to enable compiler optimi
 	ctx      context.Context
 	loggerFn interface {
 		getStepLogger() (StepLogger, StepLogLevel, uint32)
+		getStepLoggerData() StepLoggerData
 	}
-	stepData StepLoggerData
 }
 
 func (p Logger) getStepLogger() (StepLogger, StepLogLevel, uint32) {
@@ -145,14 +165,30 @@ func (p Logger) _checkLog(eventType StepLoggerEvent) (StepLogger, uint32, StepLo
 	return nil, 0, 0
 }
 
-func (p Logger) _doLog(stepLogger StepLogger, stepUpdate uint32, eventType StepLoggerEvent, msg interface{}, err error) {
-	stepData := p.stepData
+func (p Logger) getStepLoggerData(eventType StepLoggerEvent, stepUpdate uint32, err error) StepLoggerData {
+	stepData := p.loggerFn.getStepLoggerData()
 	stepData.EventType = eventType
 	stepData.Error = err
 	if stepUpdate != 0 {
 		stepData.StepNo.step = stepUpdate
 	}
-	stepLogger.LogEvent(stepData, msg)
+	return stepData
+}
+
+func (p Logger) _doLog(stepLogger StepLogger, stepUpdate uint32, eventType StepLoggerEvent, msg interface{}, err error) {
+	stepLogger.LogEvent(p.getStepLoggerData(eventType, stepUpdate, err), msg)
+}
+
+func (p Logger) _doAdapterLog(stepLogger StepLogger, stepUpdate uint32, extraFlags StepLoggerFlags, adapterId AdapterId, callId uint64, err error) {
+	stepData := p.getStepLoggerData(StepLoggerAdapterCall, stepUpdate, err)
+	stepData.Flags |= extraFlags
+	stepLogger.LogAdapter(stepData, adapterId, callId)
+}
+
+func (p Logger) adapterCall(flags StepLoggerFlags, adapterId AdapterId, callId uint64, err error) {
+	if stepLogger, stepUpdate, _ := p._checkLog(StepLoggerAdapterCall); stepLogger != nil {
+		p._doAdapterLog(stepLogger, stepUpdate, flags, adapterId, callId, err)
+	}
 }
 
 // NB! keep method simple to ensure inlining

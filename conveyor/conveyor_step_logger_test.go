@@ -171,3 +171,21 @@ func (v conveyorStepLogger) LogEvent(data smachine.StepLoggerData, customEvent i
 		panic("os.Exit(1)")
 	}
 }
+
+func (v conveyorStepLogger) LogAdapter(data smachine.StepLoggerData, adapterId smachine.AdapterId, callId uint64) {
+	//case smachine.StepLoggerAdapterCall:
+	s := "?"
+	switch data.Flags & smachine.StepLoggerAdapterMask {
+	case smachine.StepLoggerAdapterSyncCall:
+		s = "sync-call"
+	case smachine.StepLoggerAdapterAsyncCall:
+		s = "async-call"
+	case smachine.StepLoggerAdapterAsyncResult:
+		s = "async-result"
+	case smachine.StepLoggerAdapterAsyncCancel:
+		s = "async-cancel"
+	}
+	fmt.Printf("[ADP] %s %s[%3d]: %03d @ %03d: current=%v payload=%T tracer=%v adapter=%v/%v\n", s, data.StepNo.MachineId(), data.CycleNo,
+		data.StepNo.SlotID(), data.StepNo.StepNo(),
+		data.CurrentStep.GetStepName(), v.sm, v.tracer, adapterId, callId)
+}

@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 )
 
-type AdapterCallbackFunc func(AsyncResultFunc, error)
+type AdapterCallbackFunc func(AsyncResultFunc, error) bool
 
 func NewAdapterCallback(adapterId AdapterId, caller StepLink, callbackOverride AdapterCallbackFunc, flags AsyncCallFlags,
 	nestedFn CreateFactoryFunc) *AdapterCallback {
@@ -107,8 +107,9 @@ func (c *AdapterCallback) callback(isCancel bool, resultFn AsyncResultFunc, err 
 	case !c.canCall():
 		return
 	case c.callbackFn != nil:
-		c.callbackFn(resultFn, err)
-		return
+		if c.callbackFn(resultFn, err) {
+			return
+		}
 	}
 
 	c.caller.s.machine.queueAsyncCallback(c.caller.SlotLink, func(slot *Slot, worker DetachableSlotWorker, err error) StateUpdate {

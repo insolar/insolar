@@ -38,8 +38,11 @@ type SlotMachineConfig struct {
 	ScanCountLimit       int
 	CleanupWeakOnMigrate bool
 
-	SlotIdGenerateFn  func() SlotID
+	LogAdapterCalls   bool
 	SlotMachineLogger SlotMachineLogger
+
+	SlotIdGenerateFn func() SlotID
+
 	SlotAliasRegistry SlotAliasRegistry
 }
 
@@ -1646,6 +1649,10 @@ func (m *SlotMachine) GetStoppingSignal() <-chan struct{} {
 // Must support nil receiver
 func (m *SlotMachine) GetMachineId() string {
 	return fmt.Sprintf("%p", m)
+}
+
+func (m *SlotMachine) getAdapterLogging() bool {
+	return m.config.LogAdapterCalls
 }
 
 // UNSAFE!

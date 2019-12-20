@@ -292,10 +292,6 @@ func (p *slotContext) _newChild(fn CreateFunc, runInit bool, defValues CreateDef
 	return link
 }
 
-func (p *slotContext) _newLogger() Logger {
-	return Logger{p.s.ctx, p, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
-}
-
 func (p *slotContext) Log() Logger {
 	p.ensureAtLeast(updCtxInit)
 	return p._newLogger()
@@ -303,24 +299,39 @@ func (p *slotContext) Log() Logger {
 
 func (p *slotContext) LogAsync() Logger {
 	p.ensure(updCtxExec)
-	logger := Logger{p.s.ctx, nil, p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())}
-	stepLogger, level, _ := p.getStepLogger()
-	if stepLogger == nil {
-		return logger
-	}
-	logger.ctx, stepLogger = stepLogger.CreateAsyncLogger(logger.ctx, &logger.stepData)
-	if stepLogger == nil || logger.ctx == nil {
-		panic("illegal state - logger doesnt support async")
-	}
-
-	logger.stepData.Flags |= StepLoggerDetached
-	logger.loggerFn = fixedSlotLogger{logger: stepLogger, level: level, link: logger.stepData.StepNo.SlotLink}
+	logger, _ := p._newLoggerAsync()
 	return logger
 }
 
+func (p *slotContext) _newLogger() Logger {
+	// TODO make newStepLoggerData() call lazy
+	return Logger{p.s.ctx, p}
+}
+
+func (p *slotContext) _newLoggerAsync() (Logger, uint32) {
+	logger := Logger{p.s.ctx, nil}
+	stepLogger, level, _ := p.getStepLogger()
+	if stepLogger == nil {
+		return logger, 0
+	}
+
+	fsl := fixedSlotLogger{logger: stepLogger, level: level, data: p.getStepLoggerData()}
+	logger.ctx, fsl.logger = stepLogger.CreateAsyncLogger(logger.ctx, &fsl.data)
+	if fsl.logger == nil || logger.ctx == nil {
+		panic("illegal state - logger doesnt support async")
+	}
+	fsl.data.Flags |= StepLoggerDetached
+
+	logger.loggerFn = fsl
+	return logger, fsl.data.StepNo.step
+}
+
 func (p *slotContext) getStepLogger() (StepLogger, StepLogLevel, uint32) {
-	p.ensureValid()
 	return p.s.stepLogger, p.s.getStepLogLevel(), 0
+}
+
+func (p *slotContext) getStepLoggerData() StepLoggerData {
+	return p.s.newStepLoggerData(StepLoggerTrace, p.s.NewStepLink())
 }
 
 func (p *slotContext) SetLogTracing(b bool) {

@@ -31,9 +31,9 @@ const (
 
 	// A marker for logger to log this step without tracing
 	StepElevatedLog
+
 	//StepIgnoreAsyncWakeup
 	//StepForceAsyncWakeup
-	//StepIgnoreAsyncPanic
 )
 
 // Describes a step of a SM

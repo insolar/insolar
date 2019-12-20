@@ -39,6 +39,9 @@ type AsyncCallRequester interface {
 	WithNested(CreateFactoryFunc) AsyncCallRequester
 	// See AsyncCallFlags, set to AutoWakeUp by default.
 	WithFlags(flags AsyncCallFlags) AsyncCallRequester
+	// Sets internal logging for the call and its result.
+	// This mode is set automatically when tracing is active or StepElevatedLog is set.
+	WithLog(isLogging bool) AsyncCallRequester
 
 	// Starts async call
 	Start()
@@ -67,6 +70,8 @@ const (
 const AutoWakeUp = WakeUpOnResult | WakeUpOnCancel
 
 type NotifyRequester interface {
+	// Sets internal logging for the call. This mode is set automatically when tracing is active or StepElevatedLog is set.
+	WithLog(isLogging bool) NotifyRequester
 	// Sends notify
 	Send()
 	// Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state
@@ -76,7 +81,9 @@ type NotifyRequester interface {
 type SyncCallRequester interface {
 	// Sets a handler to map nested calls from the target adapter to new SMs.
 	// See AsyncCallRequester.WithNested() for details.
-	WithNested(CreateFactoryFunc) AsyncCallRequester
+	WithNested(CreateFactoryFunc) SyncCallRequester
+	// Sets internal logging for the call. This mode is set automatically when tracing is active or StepElevatedLog is set.
+	WithLog(isLogging bool) SyncCallRequester
 
 	// Returns true when the call was successful, or false if cancelled. May return false on a signal - depends on context mode.
 	TryCall() bool
@@ -97,16 +104,4 @@ type AdapterExecutor interface {
 	// Performs sync call ONLY if *natively* supported by the adapter, otherwise must return (false, nil)
 	// TODO pass in a cancellation object
 	TrySyncCall(AdapterCallFunc) (bool, AsyncResultFunc)
-}
-
-/* This is interface of a helper to facilitate implementation of service adapters. */
-type ExecutionAdapter interface {
-	GetAdapterID() AdapterId
-
-	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
-
-	// sets AutoWakeUp by default
-	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
-
-	PrepareNotify(ctx ExecutionContext, fn AdapterNotifyFunc) NotifyRequester
 }

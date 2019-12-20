@@ -62,7 +62,7 @@ type slotReplaceData struct {
 	parent SlotLink
 	ctx    context.Context
 
-	// DO NOT modify
+	// DO NOT modify content of this map
 	inheritable map[string]interface{}
 
 	defFlags StepFlags
@@ -591,6 +591,10 @@ func (s *Slot) getStepLogLevel() StepLogLevel {
 	default:
 		return StepLogLevelDefault
 	}
+}
+
+func (s *Slot) getAdapterLogging() bool {
+	return s.getStepLogLevel() != StepLogLevelDefault || s.machine.getAdapterLogging()
 }
 
 func (s *Slot) isTracing() bool {

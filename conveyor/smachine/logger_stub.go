@@ -26,14 +26,10 @@ func (StepLoggerStub) CanLogEvent(StepLoggerEvent, StepLogLevel) bool {
 	return false
 }
 
-func (StepLoggerStub) LogUpdate(StepLoggerData, StepLoggerUpdateData) {
-}
-
-func (StepLoggerStub) LogInternal(StepLoggerData, string) {
-}
-
-func (StepLoggerStub) LogEvent(StepLoggerData, interface{}) {
-}
+func (StepLoggerStub) LogUpdate(StepLoggerData, StepLoggerUpdateData) {}
+func (StepLoggerStub) LogInternal(StepLoggerData, string)             {}
+func (StepLoggerStub) LogEvent(StepLoggerData, interface{})           {}
+func (StepLoggerStub) LogAdapter(StepLoggerData, AdapterId, uint64)   {}
 
 func (StepLoggerStub) CreateAsyncLogger(ctx context.Context, data *StepLoggerData) (context.Context, StepLogger) {
 	return ctx, nil
@@ -46,12 +42,16 @@ func (v StepLoggerStub) GetTracerId() TracerId {
 type fixedSlotLogger struct {
 	logger StepLogger
 	level  StepLogLevel
-	link   SlotLink
+	data   StepLoggerData
 }
 
 func (v fixedSlotLogger) getStepLogger() (StepLogger, StepLogLevel, uint32) {
-	if step, ok := v.link.GetStepLink(); ok {
+	if step, ok := v.data.StepNo.SlotLink.GetStepLink(); ok {
 		return v.logger, v.level, step.StepNo()
 	}
 	return nil, 0, 0
+}
+
+func (v fixedSlotLogger) getStepLoggerData() StepLoggerData {
+	return v.data
 }
