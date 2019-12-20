@@ -67,6 +67,7 @@ func NewPulseConveyor(
 		factoryFn:      factoryFn,
 		eventlessSleep: config.EventlessSleep,
 	}
+	r.slotConfig.config.CleanupWeakOnMigrate = true
 	r.slotMachine = smachine.NewSlotMachine(config.ConveyorMachineConfig,
 		r.internalSignal.NextBroadcast,
 		combineCallbacks(r.externalSignal.NextBroadcast, r.internalSignal.NextBroadcast),
