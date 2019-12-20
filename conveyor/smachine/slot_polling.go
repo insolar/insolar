@@ -96,16 +96,10 @@ func (p *PollingQueue) growPollingSlots() {
 	}
 	p.polls = cp
 
-	if sizeInc == 1 {
-		addPoll := &poll{}
-		addPoll.initSlotQueue(PollingSlots)
-		p.polls = append(p.polls, addPoll)
-	} else {
-		bodies := make([]poll, sizeInc)
-		for i := range bodies {
-			bodies[i].initSlotQueue(PollingSlots)
-			p.polls = append(p.polls, &bodies[i])
-		}
+	bodies := make([]poll, sizeInc)
+	for i := range bodies {
+		bodies[i].initSlotQueue(PollingSlots)
+		p.polls = append(p.polls, &bodies[i])
 	}
 }
 
