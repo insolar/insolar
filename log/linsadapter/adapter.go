@@ -41,6 +41,8 @@ type logInsAdapter struct {
 	dynamicFields logcommon.DynFieldMap
 }
 
+// TODO event's adhoc fields
+
 func (v logInsAdapter) sendEvent(level logcommon.LogLevel, event logcommon.LogObjectWriter, msg string) {
 	var eventBuf, extraBuf []byte
 

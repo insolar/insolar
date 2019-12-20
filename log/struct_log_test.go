@@ -50,7 +50,7 @@ func (m mar) MarshalLogObject(lw logcommon.LogObjectWriter, lmc logcommon.LogObj
 }
 
 type LogObject struct {
-	logadapter.Msg
+	*logadapter.Msg
 	s string
 }
 
@@ -161,18 +161,18 @@ func TestLogOther(t *testing.T) {
 	buf.Reset()
 	lg.Warn(LogObject{s: logstring})
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &c))
-	require.Equal(t, fmt.Sprintf("{{} %s}", logstring), c["message"], "nil")
+	require.Equal(t, fmt.Sprintf("%s", logstring), c["s"], "nil")
 
 	buf.Reset()
 	lg.Warn(&LogObject{s: logstring})
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &c))
-	require.Equal(t, fmt.Sprintf("{{} %s}", logstring), c["message"], "nil")
+	require.Equal(t, fmt.Sprintf("%s", logstring), c["s"], "nil")
 
 	// ???
 	buf.Reset()
 	lg.Warn(struct{ s string }{logstring})
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &c))
-	require.Equal(t, fmt.Sprintf("{{} %s}", logstring), c["message"], "nil")
+	require.Equal(t, fmt.Sprintf("%s", logstring), c["s"], "nil")
 
 }
 
