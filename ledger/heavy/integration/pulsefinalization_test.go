@@ -40,11 +40,9 @@ func Test_FinalizePulse(t *testing.T) {
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
 	heavyConfig := application.GenesisHeavyConfig{
 		ContractsConfig: application.GenesisContractsConfig{
-			PKShardCount:          10,
-			MAShardCount:          10,
-			MigrationAddresses:    make([][]string, 10),
-			VestingStepInPulses:   10,
-			VestingPeriodInPulses: 10,
+			PKShardCount:       10,
+			MAShardCount:       10,
+			MigrationAddresses: make([][]string, 10),
 		},
 	}
 	s, err := NewServer(ctx, cfg, heavyConfig, nil)
