@@ -54,10 +54,7 @@ type Deposit struct {
 // New creates new deposit.
 func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
 
-	if (vesting == 0 && vestingStep != 0) || (vesting != 0 && vestingStep == 0) {
-		return nil, errors.New("vesting and vestingStep must both be zero or non-zero")
-	}
-	if vesting%vestingStep != 0 {
+	if vestingStep > 0 && vesting%vestingStep != 0 {
 		return nil, errors.New("vesting is not multiple of vestingStep")
 	}
 
