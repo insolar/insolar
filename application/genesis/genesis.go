@@ -19,8 +19,7 @@ package genesis
 import (
 	"context"
 	"fmt"
-
-	"github.com/pkg/errors"
+	"time"
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/appfoundation"
@@ -36,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/pulse"
+	"github.com/pkg/errors"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
@@ -73,9 +73,10 @@ const (
 	ApplicationIncentivesVesting     = 315532800  // 15.10.2020 - 15.10.2030, 10 years
 	ApplicationIncentivesVestingStep = 2629440    // 10y / 120 ~ 1 month
 
-	FoundationUnholdDate  = 1673740800 // 15.01.2023
-	FoundationVesting     = 10
-	FoundationVestingStep = 10
+	FoundationUnholdDate      = 1673740800 // 15.01.2023
+	FoundationUnholdStartDate = 1609459200 // 01.01.2021
+	FoundationVestingPeriod   = 10
+	FoundationVestingStep     = 10
 )
 
 // IsGenesisRequired checks if genesis record already exists.
@@ -254,7 +255,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		contracts.GetDepositGenesisContractState(
 			g.ContractsConfig.MDBalance,
-			int64(pulse.OfUnixTime(MigrationDaemonUnholdDate)-pulse.MinTimePulse), // Lockup
 			MigrationDaemonVesting,
 			MigrationDaemonVestingStep,
 			appfoundation.Vesting2,
@@ -278,7 +278,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(ApplicationIncentivesUnholdDate)-pulse.MinTimePulse),
 			ApplicationIncentivesVesting,
 			ApplicationIncentivesVestingStep,
 			appfoundation.Vesting2,
@@ -306,7 +305,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameNetworkIncentivesAccounts[i], application.GenesisNameRootDomain))
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(NetworkIncentivesUnholdDate)-pulse.MinTimePulse),
 			NetworkIncentivesVesting,
 			NetworkIncentivesVestingStep,
 			appfoundation.Vesting2,
@@ -332,13 +330,16 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i, key := range g.ContractsConfig.FoundationPublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameFoundationMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractFoundationWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFoundationAccounts[i], application.GenesisNameRootDomain))
+
+		// every FoundationDifferentMembers amount of iterations increase month by one
+		unholdWithMonth := time.Unix(FoundationUnholdStartDate, 0).AddDate(0, i/application.FoundationDifferentMembers, 0).UnixNano()
+
 		states = append(states, contracts.GetDepositGenesisContractState(
-			application.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FoundationUnholdDate)-pulse.MinTimePulse),
-			FoundationVesting,
+			application.FoundationDistributionAmount,
+			FoundationVestingPeriod,
 			FoundationVestingStep,
 			appfoundation.Vesting2,
-			pulse.OfUnixTime(FoundationUnholdDate),
+			pulse.OfUnixTime(unholdWithMonth),
 			application.GenesisNameFoundationDeposits[i],
 			application.GenesisNameRootDomain,
 		))
