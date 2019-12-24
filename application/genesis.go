@@ -77,9 +77,9 @@ const (
 	FoundationDistributionPeriods  = 40
 
 	DefaultDistributionAmount           = "1000000000000000000"
-	FoundationDistributionAmount        = "25000000000000000" // = 1kkk / FoundationDistributionPeriods
-	AppIncentivesDistributionAmount     = "25000000000000000" // = 1kkk / AppIncentivesDistributionPeriods
-	NetworkIncentivesDistributionAmount = "50000000000000000" // = 7kkk / NetworkIncentivesDistributionPeriods
+	FoundationDistributionAmount        = "250000000000000000" // = 1kkk / FoundationDistributionPeriods
+	AppIncentivesDistributionAmount     = "250000000000000000" // = 1kkk / AppIncentivesDistributionPeriods
+	NetworkIncentivesDistributionAmount = "500000000000000000" // = 7kkk / NetworkIncentivesDistributionPeriods
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
