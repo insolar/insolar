@@ -387,7 +387,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameEnterpriseMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractEnterpriseWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState(
-			application.DefaultDistributionAmount,
+			application.EnterpriseDistributionAmount,
 			application.GenesisNameEnterpriseAccounts[i],
 			application.GenesisNameRootDomain,
 		))
