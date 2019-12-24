@@ -54,7 +54,7 @@ type Deposit struct {
 // New creates new deposit.
 func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
 
-	if vesting%vestingStep != 0 {
+	if vestingStep > 0 && vesting%vestingStep != 0 {
 		return nil, errors.New("vesting is not multiple of vestingStep")
 	}
 
@@ -339,14 +339,11 @@ func (d *Deposit) availableAmount() (*big.Int, error) {
 	}
 
 	// Total number of vesting steps in vesting period
-	totalSteps := big.NewInt(d.Vesting / d.VestingStep)
+	totalSteps := uint64(d.Vesting / d.VestingStep)
 	// Vesting steps already passed by now
-	passedSteps := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
+	passedSteps := uint64(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
 	// Amount that has been vested by now
-	vestedByNow := new(big.Int).Div(
-		new(big.Int).Mul(amount, passedSteps),
-		totalSteps,
-	)
+	vestedByNow := VestedByNow(amount, passedSteps, totalSteps)
 	// Amount that is still locked on deposit
 	onHold := new(big.Int).Sub(amount, vestedByNow)
 	// Amount that is now available for withdrawal
