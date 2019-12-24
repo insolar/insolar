@@ -61,9 +61,9 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	MigrationDaemonUnholdDate  = 1610668800 // 15.01.2021
-	MigrationDaemonVesting     = 31536000   // 365 days
-	MigrationDaemonVestingStep = 2628000    // 365d / 12 ~ 1 month
+	MigrationDaemonUnholdDate  = 1594684800 // 14.07.2020
+	MigrationDaemonVesting     = 0
+	MigrationDaemonVestingStep = 0
 
 	NetworkIncentivesUnholdStartDate = 1583020800 // 01.03.2020
 	NetworkIncentivesVesting         = 0
