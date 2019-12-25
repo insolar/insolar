@@ -275,7 +275,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameApplicationIncentivesAccounts[i], application.GenesisNameRootDomain))
 
-		unholdWithMonth := time.Unix(ApplicationIncentivesUnholdStartDate, 0).AddDate(0, i/application.AppIncentivesDifferentMembers, 0).UnixNano()
+		unholdWithMonth := time.Unix(ApplicationIncentivesUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.AppIncentivesDistributionAmount,
@@ -305,8 +305,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameNetworkIncentivesMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractNetworkIncentivesWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameNetworkIncentivesAccounts[i], application.GenesisNameRootDomain))
 
-		// every FoundationDifferentMembers amount of iterations increase month by one
-		unholdWithMonth := time.Unix(NetworkIncentivesUnholdStartDate, 0).AddDate(0, i/application.NetworkIncentivesDifferentMembers, 0).UnixNano()
+		unholdWithMonth := time.Unix(NetworkIncentivesUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.NetworkIncentivesDistributionAmount,
@@ -336,8 +335,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameFoundationMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractFoundationWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFoundationAccounts[i], application.GenesisNameRootDomain))
 
-		// every FoundationDifferentMembers amount of iterations increase month by one
-		unholdWithMonth := time.Unix(FoundationUnholdStartDate, 0).AddDate(0, i/application.FoundationDifferentMembers, 0).UnixNano()
+		unholdWithMonth := time.Unix(FoundationUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.FoundationDistributionAmount,

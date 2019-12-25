@@ -61,20 +61,11 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 2
 
-	GenesisAmountFundsMembers      = 1
-	GenesisAmountEnterpriseMembers = 8
-
-	GenesisAmountNetworkIncentivesMembers = NetworkIncentivesDifferentMembers * NetworkIncentivesDistributionPeriods
-	NetworkIncentivesDifferentMembers     = 1
-	NetworkIncentivesDistributionPeriods  = 140
-
-	GenesisAmountApplicationIncentivesMembers = AppIncentivesDifferentMembers * AppIncentivesDistributionPeriods
-	AppIncentivesDifferentMembers             = 1
-	AppIncentivesDistributionPeriods          = 40
-
-	GenesisAmountFoundationMembers = FoundationDifferentMembers * FoundationDistributionPeriods
-	FoundationDifferentMembers     = 1
-	FoundationDistributionPeriods  = 40
+	GenesisAmountFundsMembers                 = 1
+	GenesisAmountEnterpriseMembers            = 8
+	GenesisAmountNetworkIncentivesMembers     = 140
+	GenesisAmountApplicationIncentivesMembers = 40
+	GenesisAmountFoundationMembers            = 40
 
 	DefaultDistributionAmount           = "1000000000000000000"
 	EnterpriseDistributionAmount        = "500000000000000000"
