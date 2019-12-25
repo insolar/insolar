@@ -655,7 +655,7 @@ func getAddressCount(t *testing.T, startWithIndex int) map[int]int {
 	return migrationShardsMap
 }
 
-func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
+func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User, expectedBalance string) error {
 	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err
@@ -670,16 +670,16 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
 		return errors.New("balance should be zero, current value: " + balance.String())
 	}
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != TestDepositAmount {
-		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", TestDepositAmount, deposit["amount"]))
+	if deposit["amount"] != expectedBalance {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", expectedBalance, deposit["amount"]))
 	}
-	if deposit["balance"] != TestDepositAmount {
-		return errors.New(fmt.Sprintf("deposit balance should be %s, current value: %s", TestDepositAmount, deposit["balance"]))
+	if deposit["balance"] != expectedBalance {
+		return errors.New(fmt.Sprintf("deposit balance should be %s, current value: %s", expectedBalance, deposit["balance"]))
 	}
 	return nil
 }
 
-func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
+func verifyFundsMembersExist(t *testing.T, m *launchnet.User, expectedBalance string) error {
 	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err
@@ -690,7 +690,7 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 		return errors.New(fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 	}
 	balance, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
-	require.Equal(t, TestDepositAmount, balance.String())
+	require.Equal(t, expectedBalance, balance.String())
 	require.Empty(t, deposits)
 	return nil
 }

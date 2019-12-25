@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/pulse"
 )
 
 func RootDomain(pkShardCount int) application.GenesisContractState {
@@ -179,7 +180,6 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 
 func GetDepositGenesisContractState(
 	amount string,
-	lockup int64,
 	vesting int64,
 	vestingStep int64,
 	vestingType appfoundation.VestingType,
@@ -196,7 +196,7 @@ func GetDepositGenesisContractState(
 			PulseDepositUnHold: pulseDepositUnHold,
 			VestingType:        vestingType,
 			TxHash:             genesisrefs.FundsDepositName,
-			Lockup:             lockup,
+			Lockup:             int64(pulseDepositUnHold - pulse.MinTimePulse),
 			Vesting:            vesting,
 			VestingStep:        vestingStep,
 			IsConfirmed:        true,

@@ -62,12 +62,16 @@ const (
 	GenesisAmountActiveMigrationDaemonMembers = 2
 
 	GenesisAmountFundsMembers                 = 1
-	GenesisAmountEnterpriseMembers            = 4
-	GenesisAmountNetworkIncentivesMembers     = 30
-	GenesisAmountApplicationIncentivesMembers = 30
-	GenesisAmountFoundationMembers            = 30
+	GenesisAmountEnterpriseMembers            = 8
+	GenesisAmountNetworkIncentivesMembers     = 140
+	GenesisAmountApplicationIncentivesMembers = 40
+	GenesisAmountFoundationMembers            = 40
 
-	DefaultDistributionAmount = "1000000000000000000"
+	DefaultDistributionAmount           = "1000000000000000000"
+	EnterpriseDistributionAmount        = "500000000000000000"
+	FoundationDistributionAmount        = "250000000000000000" // = 1kkk / FoundationDistributionPeriods
+	AppIncentivesDistributionAmount     = "250000000000000000" // = 1kkk / AppIncentivesDistributionPeriods
+	NetworkIncentivesDistributionAmount = "500000000000000000" // = 7kkk / NetworkIncentivesDistributionPeriods
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
