@@ -61,19 +61,19 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	MigrationDaemonUnholdDate  = 1594684800 // 14.07.2020
+	MigrationDaemonUnholdDate  = 1594771200 // 15.07.2020 00-00-00 // TODO will be changed after real release
 	MigrationDaemonVesting     = 0
 	MigrationDaemonVestingStep = 0
 
-	NetworkIncentivesUnholdStartDate = 1583020800 // 01.03.2020
+	NetworkIncentivesUnholdStartDate = 1583020800 // 01.03.2020 00-00-00
 	NetworkIncentivesVesting         = 0
 	NetworkIncentivesVestingStep     = 0
 
-	ApplicationIncentivesUnholdStartDate = 1609459200 // 01.01.2021
+	ApplicationIncentivesUnholdStartDate = 1609459200 // 01.01.2021 00-00-00
 	ApplicationIncentivesVesting         = 0
 	ApplicationIncentivesVestingStep     = 0
 
-	FoundationUnholdStartDate = 1609459200 // 01.01.2021
+	FoundationUnholdStartDate = 1609459200 // 01.01.2021 00-00-00
 	FoundationVestingPeriod   = 0
 	FoundationVestingStep     = 0
 )
@@ -275,7 +275,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameApplicationIncentivesAccounts[i], application.GenesisNameRootDomain))
 
-		unholdWithMonth := time.Unix(ApplicationIncentivesUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
+		unholdWithMonth := time.Unix(ApplicationIncentivesUnholdStartDate, 0).AddDate(0, i, 0).Unix()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.AppIncentivesDistributionAmount,
@@ -305,7 +305,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameNetworkIncentivesMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractNetworkIncentivesWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameNetworkIncentivesAccounts[i], application.GenesisNameRootDomain))
 
-		unholdWithMonth := time.Unix(NetworkIncentivesUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
+		unholdWithMonth := time.Unix(NetworkIncentivesUnholdStartDate, 0).AddDate(0, i, 0).Unix()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.NetworkIncentivesDistributionAmount,
@@ -335,7 +335,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameFoundationMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractFoundationWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState("0", application.GenesisNameFoundationAccounts[i], application.GenesisNameRootDomain))
 
-		unholdWithMonth := time.Unix(FoundationUnholdStartDate, 0).AddDate(0, i, 0).UnixNano()
+		unholdWithMonth := time.Unix(FoundationUnholdStartDate, 0).AddDate(0, i, 0).Unix()
 
 		states = append(states, contracts.GetDepositGenesisContractState(
 			application.FoundationDistributionAmount,

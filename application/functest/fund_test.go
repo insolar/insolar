@@ -93,7 +93,6 @@ func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.User, expectedBal
 }
 
 func TestNetworkIncentivesTransferDeposit(t *testing.T) {
-	t.Skip("fixing right now")
 	for _, m := range launchnet.NetworkIncentives {
 		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
@@ -104,15 +103,14 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
-		//data := checkConvertRequesterError(t, err).Data
-		//require.Contains(t, data.Trace, "hold period didn't end")
+		data := checkConvertRequesterError(t, err).Data
+		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", application.NetworkIncentivesDistributionAmount)
 	}
 }
 
 func TestApplicationIncentivesTransferDeposit(t *testing.T) {
-	t.Skip("fixing right now")
 	for _, m := range launchnet.ApplicationIncentives {
 		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
@@ -126,12 +124,11 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", application.AppIncentivesDistributionAmount)
 	}
 }
 
 func TestFoundationTransferDeposit(t *testing.T) {
-	t.Skip("fixing right now")
 	for _, m := range launchnet.Foundation {
 		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
@@ -145,7 +142,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 		data := checkConvertRequesterError(t, err).Data
 		require.Contains(t, data.Trace, "hold period didn't end")
 
-		checkBalanceAndDepositFewTimes(t, m, "0", TestDepositAmount)
+		checkBalanceAndDepositFewTimes(t, m, "0", application.FoundationDistributionAmount)
 	}
 }
 
