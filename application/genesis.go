@@ -65,15 +65,15 @@ const (
 	GenesisAmountEnterpriseMembers = 8
 
 	GenesisAmountNetworkIncentivesMembers = NetworkIncentivesDifferentMembers * NetworkIncentivesDistributionPeriods
-	NetworkIncentivesDifferentMembers     = 30
+	NetworkIncentivesDifferentMembers     = 1
 	NetworkIncentivesDistributionPeriods  = 140
 
 	GenesisAmountApplicationIncentivesMembers = AppIncentivesDifferentMembers * AppIncentivesDistributionPeriods
-	AppIncentivesDifferentMembers             = 30
+	AppIncentivesDifferentMembers             = 1
 	AppIncentivesDistributionPeriods          = 40
 
 	GenesisAmountFoundationMembers = FoundationDifferentMembers * FoundationDistributionPeriods
-	FoundationDifferentMembers     = 30
+	FoundationDifferentMembers     = 1
 	FoundationDistributionPeriods  = 40
 
 	DefaultDistributionAmount           = "1000000000000000000"

@@ -243,17 +243,17 @@ generate_root_member_keys()
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 4200; b++ ))
+    for (( b = 0; b < 140; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 1200; b++ ))
+    for (( b = 0; b < 40; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 1200; b++ ))
+    for (( b = 0; b < 40; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
