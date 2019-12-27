@@ -99,3 +99,12 @@ func TestVestingCoeffs_Table(t *testing.T) {
 
 	// fmt.Println(b.String())
 }
+
+func TestVestedByNow_min_amount(t *testing.T) {
+	amount := big.NewInt(1)
+	zero := big.NewInt(0)
+	for i := uint64(0); i <= 1825; i++ {
+		assert.Equal(t, zero, VestedByNow(amount, i, 1826))
+	}
+	assert.Equal(t, amount, VestedByNow(amount, 1826, 1826))
+}
