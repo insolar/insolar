@@ -63,7 +63,10 @@ func OpenAndCloseBadgerOnStart(doOpenCLose bool) BadgerOption {
 
 // we do it to correctly close badger, since every time heavy falls down it doesn't do close it gracefully
 func openAndCloseBadger(badgerDir string) error {
-	db, err := badger.Open(badger.DefaultOptions(badgerDir))
+	opts := badger.DefaultOptions(badgerDir)
+	opts.Truncate = true
+	db, err := badger.Open(opts)
+
 	if err != nil {
 		return err
 	}
