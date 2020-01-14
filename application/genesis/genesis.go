@@ -61,7 +61,7 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	MigrationDaemonUnholdDate  = 1594771200 // 15.07.2020 00-00-00 // TODO will be changed after real release
+	MigrationDaemonUnholdDate  = 1595980800 // 29.07.2020 00-00-00
 	MigrationDaemonVesting     = 0
 	MigrationDaemonVestingStep = 0
 
