@@ -45,6 +45,7 @@ const (
 	createMemberRetries = 5
 	balanceCheckRetries = 10
 	balanceCheckDelay   = 5 * time.Second
+	fee                 = 1000000000 // value from Fee const in costcenter contract
 )
 
 var (
@@ -217,6 +218,10 @@ func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
 	var traceID string
 	var err error
 
+	feeMember := insSDK.GetFeeMember()
+	balanceBefore, _, err := insSDK.GetBalance(feeMember)
+	check("Couldn't get balance of fee member before create any new members:", err)
+
 	for i := 0; i < count; i++ {
 		retries := createMemberRetries
 		for retries > 0 {
@@ -236,6 +241,24 @@ func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
 			retries--
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", createMemberRetries), err)
+	}
+
+	difference := fee * count
+	amount := new(big.Int).SetInt64(int64(difference))
+	expectedBalance := new(big.Int).Add(balanceBefore, amount)
+	for nretries := 0; nretries < balanceCheckRetries; nretries++ {
+		balanceAfter, _, err := insSDK.GetBalance(feeMember)
+		check("Couldn't get balance of fee member after creation of new members:", err)
+		if balanceAfter.Cmp(expectedBalance) == 0 {
+			break
+		}
+		fmt.Printf("Wait for fee from creation complite: %v vs %v (difference must be %d) - retrying in %s ...\n",
+			balanceBefore, balanceAfter, difference, balanceCheckDelay)
+		time.Sleep(balanceCheckDelay)
+		if nretries+1 == balanceCheckRetries {
+			fmt.Printf("Couldn't wait for expected fee member balance after retries: %d\n", createMemberRetries)
+			os.Exit(1)
+		}
 	}
 	return members
 }
