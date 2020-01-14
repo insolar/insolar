@@ -49,11 +49,12 @@ func TestEnterpriseMemberCreate(t *testing.T) {
 }
 
 func TestNetworkIncentivesMemberCreate(t *testing.T) {
-	for _, m := range launchnet.NetworkIncentives {
-		err := verifyFundsMembersAndDeposits(t, m, application.NetworkIncentivesDistributionAmount)
-		if err != nil {
-			require.NoError(t, err)
-		}
+	// for speed up test check only last member
+	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers - 1]
+
+	err := verifyFundsMembersAndDeposits(t, m, application.NetworkIncentivesDistributionAmount)
+	if err != nil {
+		require.NoError(t, err)
 	}
 }
 
@@ -93,21 +94,22 @@ func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.User, expectedBal
 }
 
 func TestNetworkIncentivesTransferDeposit(t *testing.T) {
-	for _, m := range launchnet.NetworkIncentives {
-		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
-		require.NoError(t, err)
-		decodedRes2, ok := res2.(map[string]interface{})
-		m.Ref = decodedRes2["reference"].(string)
-		require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
+	// for speed up test check only last member
+	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers - 1]
 
-		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
-			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
-		)
-		data := checkConvertRequesterError(t, err).Data
-		require.Contains(t, data.Trace, "hold period didn't end")
+	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+	require.NoError(t, err)
+	decodedRes2, ok := res2.(map[string]interface{})
+	m.Ref = decodedRes2["reference"].(string)
+	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 
-		checkBalanceAndDepositFewTimes(t, m, "0", application.NetworkIncentivesDistributionAmount)
-	}
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
+	)
+	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, data.Trace, "hold period didn't end")
+
+	checkBalanceAndDepositFewTimes(t, m, "0", application.NetworkIncentivesDistributionAmount)
 }
 
 func TestApplicationIncentivesTransferDeposit(t *testing.T) {
