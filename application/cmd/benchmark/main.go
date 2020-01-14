@@ -212,32 +212,50 @@ func printResults(b benchmark) {
 }
 
 func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
-	var members []sdk.Member
-	var member sdk.Member
-	var traceID string
-	var err error
+	var (
+		members []sdk.Member
+		member  sdk.Member
+		traceID string
+		err     error
+	)
 
 	for i := 0; i < count; i++ {
 		retries := createMemberRetries
 		for retries > 0 {
-			if migration {
-				member, traceID, err = insSDK.MigrationCreateMember()
-			} else {
-				member, traceID, err = insSDK.CreateMember()
+			member, traceID, err = createMember(insSDK, migration)
+			if err != nil {
+				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
+				retries--
+				continue
 			}
-			if err == nil {
-				_, err := insSDK.Transfer("100000000000000", insSDK.GetRootMember(), member)
-				if err == nil {
-					members = append(members, member)
-					break
-				}
-			}
-			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
-			retries--
+			members = append(members, member)
+			break
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", createMemberRetries), err)
 	}
 	return members
+}
+
+func createMember(insSDK *sdk.SDK, migration bool) (sdk.Member, string, error) {
+	var (
+		member  sdk.Member
+		traceID string
+		err     error
+	)
+
+	if migration {
+		member, traceID, err = insSDK.MigrationCreateMember()
+	} else {
+		member, traceID, err = insSDK.CreateMember()
+	}
+
+	if err != nil {
+		return nil, traceID, errors.Wrap(err, "Failed to create member")
+	}
+
+	traceID, err = insSDK.Transfer("100000000000000", insSDK.GetRootMember(), member)
+
+	return member, traceID, errors.Wrap(err, "Failed to transfer initial amount")
 }
 
 func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[string]*big.Int) {
