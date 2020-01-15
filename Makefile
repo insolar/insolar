@@ -260,7 +260,7 @@ ci-test-func-long: ## run functest with race and a little count
 ci-test-func-nightly: ## run functest with large count and race
 	CI_TEST_ARGS=" -p 10 -race " \
 	TEST_ARGS=" -timeout 1200m " \
-	FUNCTEST_COUNT=200 \
+	FUNCTEST_COUNT=100 \
 		$(MAKE) ci-test-func-base
 
 .PHONY: ci-test-integrtest
