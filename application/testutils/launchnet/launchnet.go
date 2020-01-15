@@ -587,20 +587,22 @@ func RotateLogs(verbose bool) {
 	cmd := exec.Command("sh", "-c", rmCmd)
 	out, err := cmd.Output()
 	if err != nil {
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
 	}
 	if verbose {
-		fmt.Println("RotateLogs removed files:\n", string(out))
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 	}
 
-	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	rotateCmd := "pkill -SIGUSR2 -l inslogrotator"
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
-		if verbose {
-			println("RotateLogs killall output:", string(out))
-		}
-		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
+		log.Fatal("RotateLogs: failed to execute command:", rotateCmd)
+	}
+	if verbose {
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
 	}
 }
 
