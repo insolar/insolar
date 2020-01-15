@@ -22,6 +22,7 @@ import (
 
 func LeakTester(t goleak.TestingT) {
 	goleak.VerifyNone(t,
+		goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"),
 		goleak.IgnoreTopFunction("github.com/insolar/insolar/vendor/go.opencensus.io/stats/view.(*worker).start"),
 		goleak.IgnoreTopFunction("github.com/insolar/insolar/log/critlog.(*internalBackpressureBuffer).worker"))
 }
