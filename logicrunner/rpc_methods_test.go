@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/insolar"
@@ -52,7 +51,7 @@ func TestRPCMethods_New(t *testing.T) {
 }
 
 func TestRPCMethods_DeactivateObject(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -150,7 +149,7 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 }
 
 func TestProxyImplementation_GetCode(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -230,7 +229,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -267,7 +266,7 @@ func TestValidationProxyImplementation_DeactivateObject(t *testing.T) {
 }
 
 func TestValidationProxyImplementation_RouteCall(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -324,7 +323,7 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 }
 func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -385,7 +384,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 
 func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -441,7 +440,7 @@ func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
 
 func TestRouteCallRegistersSaga(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -480,7 +479,7 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 
 func TestRouteCallFailedAfterReturningResultForSaga(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -517,7 +516,7 @@ func TestRouteCallFailedAfterReturningResultForSaga(t *testing.T) {
 
 func TestSaveAsChildRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}

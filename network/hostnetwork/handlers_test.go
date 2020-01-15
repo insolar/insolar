@@ -56,14 +56,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestNewStreamHandler(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	requestHandler := func(ctx context.Context, p *packet.ReceivedPacket) {
 		inslogger.FromContext(ctx).Info("requestHandler")

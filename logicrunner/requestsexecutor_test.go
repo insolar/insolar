@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -39,10 +38,11 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/requestresult"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -106,7 +106,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 }
 
 func TestRequestsExecutor_Execute(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -186,7 +186,7 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 }
 
 func TestRequestsExecutor_Save(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -320,7 +320,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 }
 
 func TestRequestsExecutor_SendReply(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	reqRef := gen.Reference()
 

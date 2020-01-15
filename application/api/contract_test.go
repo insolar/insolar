@@ -45,6 +45,7 @@ import (
 const CallUrl = "http://localhost:19192/api/rpc"
 
 func TestTimeoutSuite(t *testing.T) {
+	defer testutils.LeakTester(t)
 
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	mc := minimock.NewController(t)
@@ -98,6 +99,7 @@ func TestTimeoutSuite(t *testing.T) {
 		checker,
 	)
 	require.NoError(t, err)
+	defer api.Stop(ctx)
 	seed, err := api.SeedGenerator.Next()
 	require.NoError(t, err)
 

@@ -52,8 +52,9 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	suite.Contains(err.Error(), "Missing openAPI spec file path")
 
 	cfg.SwaggerPath = "spec/api-exported.yaml"
-	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.NoError(err)
+	suite.NoError(runner.Stop(context.Background()))
 }
 
 func TestMainTestSuite(t *testing.T) {

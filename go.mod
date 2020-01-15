@@ -54,10 +54,11 @@ require (
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
+	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
-	golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
+	golang.org/x/tools v0.0.0-20191108193012-7d206e10da11
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 	google.golang.org/grpc v1.21.0
