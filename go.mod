@@ -11,7 +11,6 @@ require (
 	github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd // indirect
 	github.com/dgraph-io/badger v1.6.0-rc1.0.20191024172150-efb9d9d15d7f
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fortytw2/leaktest v1.3.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
 	github.com/gogo/protobuf v1.2.1

@@ -17,13 +17,11 @@
 package testutils
 
 import (
-	"testing"
-
 	"go.uber.org/goleak"
 )
 
-func LeakTester(t *testing.T) {
+func LeakTester(t goleak.TestingT) {
 	goleak.VerifyNone(t,
-		goleak.IgnoreTopFunction("go.opencensus.io/stats/view.(*worker).start"),
+		goleak.IgnoreTopFunction("github.com/insolar/insolar/vendor/go.opencensus.io/stats/view.(*worker).start"),
 		goleak.IgnoreTopFunction("github.com/insolar/insolar/log/critlog.(*internalBackpressureBuffer).worker"))
 }
