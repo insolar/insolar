@@ -594,7 +594,7 @@ func RotateLogs(verbose bool) {
 		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 	}
 
-	rotateCmd := "pkill -SIGUSR2 -l inslogrotator"
+	rotateCmd := "pkill -SIGUSR2 -x inslogrotator"
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
