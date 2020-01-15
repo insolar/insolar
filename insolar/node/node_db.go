@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AALEKSEEV TODO use PostgreSQL + see node_db_test
+
 // StorageDB is a badger-based impl of a node storage.
 type StorageDB struct {
 	db *store.BadgerDB

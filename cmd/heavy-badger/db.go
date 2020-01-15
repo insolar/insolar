@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 )
 
+// AALEKSEEV TODO use PostgreSQL
+
 func openDB(dataDir string) (*store.BadgerDB, func()) {
 	if err := checkDirectory(dataDir); err != nil {
 		fatalf("Database directory '%v' open failed. Error: \"%v\"", dataDir, err)

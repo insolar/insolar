@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AALEKSEEV TODO use PostgreSQL + see db_test & pulse_cmp_test
+
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
 	db *badger.DB

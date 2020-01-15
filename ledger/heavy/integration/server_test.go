@@ -31,7 +31,7 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/component-manager"
+	component "github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/configuration"
@@ -60,6 +60,8 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulse"
 )
+
+// AALEKSEEV TODO rewrite
 
 var (
 	light = nodeMock{

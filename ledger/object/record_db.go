@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+// AALEKSEEV TODO use PostgreSQL
+
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
 	batchLock sync.Mutex

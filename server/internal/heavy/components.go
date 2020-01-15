@@ -26,11 +26,11 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger" // AALEKSEEV TODO
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/insolar/component-manager"
+	component "github.com/insolar/component-manager"
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"

@@ -16,6 +16,8 @@
 
 package main
 
+// AALEKSEEV TODO are we still using this? + see backupmanager_test
+
 import (
 	"context"
 	"math"

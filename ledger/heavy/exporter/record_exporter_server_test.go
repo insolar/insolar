@@ -38,6 +38,8 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
+// AALEKSEEV TODO rewrite
+
 func BadgerDefaultOptions(dir string) badger.Options {
 	ops := badger.DefaultOptions(dir)
 	ops.CompactL0OnClose = false

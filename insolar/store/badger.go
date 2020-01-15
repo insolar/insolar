@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AALEKSEEV TODO use PostgreSQL + see badger_test.go
+
 // BadgerDB is a badger DB implementation.
 type BadgerDB struct {
 	backend   *badger.DB

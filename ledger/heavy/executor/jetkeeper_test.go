@@ -35,6 +35,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+// AALEKSEEV TODO rewrite
+
 func BadgerDefaultOptions(dir string) badger.Options {
 	ops := badger.DefaultOptions(dir)
 	ops.CompactL0OnClose = false

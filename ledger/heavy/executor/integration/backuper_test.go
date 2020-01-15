@@ -45,6 +45,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// AALEKSEEV TODO rewrite
+
 type testKey struct {
 	id uint64
 }
