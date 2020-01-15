@@ -35,8 +35,6 @@ import (
 )
 
 func Test_BootstrapCalls(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -59,8 +57,6 @@ func Test_BootstrapCalls(t *testing.T) {
 }
 
 func Test_BasicOperations(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)

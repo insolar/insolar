@@ -39,8 +39,6 @@ import (
 // Note, that we can't cover all combinations here anyway. This should be done in unit tests.
 
 func Test_IncomingRequest_Check(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -116,8 +114,6 @@ func Test_IncomingRequest_Check(t *testing.T) {
 }
 
 func Test_IncomingRequest_Duplicate(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -263,8 +259,6 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 }
 
 func Test_OutgoingRequest_Duplicate(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -320,8 +314,6 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 }
 
 func Test_DetachedRequest_notification(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 
@@ -376,8 +368,6 @@ func Test_DetachedRequest_notification(t *testing.T) {
 }
 
 func Test_Result_Duplicate(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -411,8 +401,6 @@ func Test_Result_Duplicate(t *testing.T) {
 }
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -458,8 +446,6 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 }
 
 func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -508,8 +494,6 @@ func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
 }
 
 func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -609,8 +593,6 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 }
 
 func Test_OutgoingRequest_ClosedReason(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -657,8 +639,6 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 }
 
 func Test_Requests_OutgoingReason(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -716,8 +696,6 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 }
 
 func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -752,8 +730,6 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 }
 
 func Test_OutgoingDetached_InPendings(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -818,8 +794,6 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 }
 
 func Test_IncomingRequest_DifferentResults(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
@@ -867,8 +841,6 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 }
 
 func Test_SetRequest_NoObjectReturnsError(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
@@ -903,8 +875,6 @@ func Test_SetRequest_NoObjectReturnsError(t *testing.T) {
 }
 
 func Test_SetRequest_LoopDetected(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	s, err := NewServer(ctx, DefaultLightConfig(), nil)
 	require.NoError(t, err)
