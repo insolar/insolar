@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/testutils"
 )
 
 func genAPIRequestID() string {
@@ -70,7 +70,7 @@ func genIncomingRequest() *record.IncomingRequest {
 }
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	table := []struct {
 		name                      string
@@ -133,7 +133,7 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 
 	t.Run("Proceed without pending", func(t *testing.T) {
 		if useLeakTest {
-			defer leaktest.Check(t)()
+			defer testutils.LeakTester(t)
 		} else {
 			t.Parallel()
 		}
@@ -167,7 +167,7 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 
 	t.Run("Proceed with pending", func(t *testing.T) {
 		if useLeakTest {
-			defer leaktest.Check(t)()
+			defer testutils.LeakTester(t)
 		} else {
 			t.Parallel()
 		}

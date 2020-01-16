@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
@@ -16,10 +15,11 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleUpdateJet_Present(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string

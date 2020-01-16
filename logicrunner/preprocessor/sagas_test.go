@@ -24,12 +24,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/testutils"
 )
 
 type SagasSuite struct {
@@ -600,7 +600,7 @@ func (s *SagasSuite) TestExtractSagaInfoFromComment() {
 
 func TestSagas(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}

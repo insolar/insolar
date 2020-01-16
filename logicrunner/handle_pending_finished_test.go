@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -31,10 +30,11 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandlePendingFinished_Present(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string

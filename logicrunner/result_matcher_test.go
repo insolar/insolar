@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 
 	"github.com/insolar/insolar/insolar"
@@ -32,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func replyMessage(msg *message.Message) *message.Message {
@@ -53,7 +53,7 @@ func sendTargetHelper(
 }
 
 func TestResultsMatcher_AddStillExecution(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string
@@ -111,7 +111,7 @@ func TestResultsMatcher_AddStillExecution(t *testing.T) {
 }
 
 func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string
@@ -192,7 +192,7 @@ func TestResultsMatcher_AddUnwantedResponse(t *testing.T) {
 }
 
 func TestResultsMatcher_Clear(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string
