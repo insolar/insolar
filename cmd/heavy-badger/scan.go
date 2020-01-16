@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
 	"github.com/insolar/insolar/insolar"
@@ -177,7 +177,7 @@ func (dbs *dbScanner) getAllPulses() (pulses []insolar.Pulse) {
 	}
 	ctx := context.Background()
 
-	var pulseStore = pulsedb.NewDB(dbs.db)
+	var pulseStore = pulsedb.NewDB(dbs.db) // AALEKSEEV TODO fix this
 	p, err := pulseStore.Latest(ctx)
 	pulses = append(pulses, p)
 	if err == pulsedb.ErrNotFound {

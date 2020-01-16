@@ -19,6 +19,8 @@ package pulse
 import (
 	"context"
 
+	"github.com/jackc/pgx/v4/pgxpool"
+
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +33,8 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db *badger.DB
+	db   *badger.DB
+	pool *pgxpool.Pool
 }
 
 type pulseKey insolar.PulseNumber
@@ -55,8 +58,8 @@ type dbNode struct {
 }
 
 // NewDB creates new DB storage instance.
-func NewDB(db *store.BadgerDB) *DB {
-	return &DB{db: db.Backend()}
+func NewDB(db *store.BadgerDB, pool *pgxpool.Pool) *DB {
+	return &DB{db: db.Backend(), pool: pool}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.

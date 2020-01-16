@@ -27,6 +27,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger" // AALEKSEEV TODO
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
@@ -198,8 +199,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
+
+		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.ConnectionString)
+		if err != nil {
+			panic(errors.Wrap(err, "Unable to connection to PostgreSQL: %v"))
+		}
+		// AALEKSEEV TODO fix this
+		Pulses = insolarPulse.NewDB(DB, pool)
 		Nodes = node.NewStorageDB(DB)
-		Pulses = insolarPulse.NewDB(DB)
+
 		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
@@ -288,6 +296,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		JetKeeper    *executor.DBJetKeeper
 	)
 	{
+		// AALEKSEEV TODO fix this
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
@@ -390,7 +399,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	c.cmp.Inject(
-		DB,
+		DB, // AALEKSEEV TODO fix this
 		WmBus,
 		Handler,
 		PulseManager,

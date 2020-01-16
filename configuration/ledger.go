@@ -28,6 +28,10 @@ type Storage struct {
 	GCRunFrequency uint
 }
 
+type PostgreSQL struct {
+	ConnectionString string
+}
+
 // JetSplit holds configuration for jet split.
 type JetSplit struct {
 	// RecordsCountThreshold is a drop threshold in records to perform split for jet.
@@ -42,6 +46,10 @@ type JetSplit struct {
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
+
+	// PostgreSQL defines configuration related to PostgreSQL.
+	PostgreSQL PostgreSQL
+
 	// JetSplit holds jet split configuration.
 	JetSplit JetSplit
 
