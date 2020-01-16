@@ -26,7 +26,7 @@ type appCtx struct {
 	dataDir string
 }
 
-func main() {
+func main() { // AALEKSEEV TODO get rid of heavy-badger
 	arg0 := os.Args[0]
 
 	app := appCtx{}
@@ -46,7 +46,6 @@ func main() {
 		scopesListCommand(),
 		app.fixCommand(),
 		app.valueHexDumpCommand(),
-		app.scanCommand(),
 	)
 
 	err := rootCmd.Execute()

@@ -20,7 +20,6 @@ package main
 
 import (
 	"context"
-	"math"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -28,11 +27,8 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
 )
 
@@ -103,40 +99,8 @@ func isDBEmpty(bdb *badger.DB) error {
 	return nil
 }
 
-func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
-	pulsesDB := pulse.NewDB(bdb)
-
-	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
-	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
-
-	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
-	if !it.Next() {
-		return 0, errors.New("no backup start keys")
-	}
-
-	pulseNumber := insolar.NewPulseNumber(it.Key())
-	log.Info("Found last backup start key: ", pulseNumber.String())
-
-	if pulseNumber < jetKeeper.TopSyncPulse() {
-		return 0, errors.New("Found last backup start key must be grater or equal to top sync pulse")
-	}
-
-	if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
-		return 0, errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must have all confirms")
-	}
-
-	log.Info("All jets confirmed for pulse: ", pulseNumber.String())
-	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to add backup confirmation for pulse "+pulseNumber.String())
-	}
-
-	if jetKeeper.TopSyncPulse() != pulseNumber {
-		return 0, errors.New("new top sync pulse must be equal to last backuped")
-
-	}
-
-	return jetKeeper.TopSyncPulse(), nil
+func finalizeLastPulse(_ context.Context, _ *store.BadgerDB) (insolar.PulseNumber, error) {
+	return 0, errors.New("BACKUPMANAGER IS DEPRECATED")
 }
 
 // prepareBackup does:

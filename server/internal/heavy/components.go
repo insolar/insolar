@@ -202,7 +202,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.ConnectionString)
 		if err != nil {
-			panic(errors.Wrap(err, "Unable to connection to PostgreSQL: %v"))
+			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
 		// AALEKSEEV TODO fix this
 		Pulses = insolarPulse.NewDB(DB, pool)
