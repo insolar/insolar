@@ -1,7 +1,10 @@
 .artifacts
-data
-testdata
+.github
 bin
+ci
+data
+docker
 Dockerfile
-vendor
+docker-compose
+testdata
 .*
