@@ -172,7 +172,6 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 }
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
-	t.Parallel()
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()

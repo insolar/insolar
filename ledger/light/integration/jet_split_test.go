@@ -62,8 +62,6 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 		},
 	}
 
-	t.Parallel()
-
 	testCase := func(t *testing.T, sc splitCase) {
 
 		var hotObjects = make(chan insolar.JetID)
@@ -167,8 +165,6 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 }
 
 func Test_JetSplitsWhenOverflows(t *testing.T) {
-	t.Parallel()
-
 	var hotObjects = make(chan insolar.JetID)
 	var replication = make(chan insolar.JetID)
 	var hotObjectConfirm = make(chan insolar.JetID)
@@ -284,8 +280,6 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 }
 
 func Test_LightStartsFromInitialState(t *testing.T) {
-	t.Parallel()
-
 	var hotObjects = make(chan insolar.JetID)
 	var replication = make(chan insolar.JetID)
 	var hotObjectConfirm = make(chan insolar.JetID)
