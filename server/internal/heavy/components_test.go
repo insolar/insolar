@@ -15,41 +15,29 @@
 //
 // +build slowtest
 
+// TODO AALEKSEEV re-implement test using dockertest
+
 package heavy
 
-import (
-	"context"
-	"io/ioutil"
-	"os"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-)
-
-func TestComponents(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "heavy-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
-		return logger.Copy().WithBuffer(100, false).Build()
-	})
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
-	cfg.Metrics.ListenAddress = "0.0.0.0:0"
-	cfg.APIRunner.Address = "0.0.0.0:0"
-	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
-	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
-	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
-	cfg.Ledger.Storage.DataDirectory = tmpdir
-	cfg.Exporter.Addr = ":0"
-
-	_, err = newComponents(ctx, cfg, application.GenesisHeavyConfig{Skip: true})
-	require.NoError(t, err)
-}
+//func TestComponents(t *testing.T) {
+//	tmpdir, err := ioutil.TempDir("", "heavy-")
+//	defer os.RemoveAll(tmpdir)
+//	require.NoError(t, err)
+//
+//	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
+//		return logger.Copy().WithBuffer(100, false).Build()
+//	})
+//	cfg := configuration.NewConfiguration()
+//	cfg.KeysPath = "testdata/bootstrap_keys.json"
+//	cfg.CertificatePath = "testdata/certificate.json"
+//	cfg.Metrics.ListenAddress = "0.0.0.0:0"
+//	cfg.APIRunner.Address = "0.0.0.0:0"
+//	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
+//	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+//	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+//	cfg.Ledger.Storage.DataDirectory = tmpdir
+//	cfg.Exporter.Addr = ":0"
+//
+//	_, err = newComponents(ctx, cfg, application.GenesisHeavyConfig{Skip: true})
+//	require.NoError(t, err)
+//}

@@ -84,17 +84,17 @@ func invokeExpectFailure(t testing.TB, args ...string) string {
 	return output
 }
 
-// prepare
-func TestNoPrepareBackupToEmptyDb(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-
-	for i := 0; i < 3; i++ {
-		output := invokeExpectFailure(t, "prepare_backup", "-d", tmpdir)
-		require.Contains(t, output, "no backup start keys")
-	}
-}
+// AALEKSEEV TODO backupmanager is deprecated, rewrite the test
+//func TestNoPrepareBackupToEmptyDb(t *testing.T) {
+//	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+//	require.NoError(t, err)
+//	defer os.RemoveAll(tmpdir)
+//
+//	for i := 0; i < 3; i++ {
+//		output := invokeExpectFailure(t, "prepare_backup", "-d", tmpdir)
+//		require.Contains(t, output, "no backup start keys")
+//	}
+//}
 
 func TestPrepareBackupToEmptyDb(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")

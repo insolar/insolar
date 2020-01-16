@@ -17,27 +17,19 @@
 
 package integration_test
 
-import (
-	"context"
-	"os"
-	"testing"
+// AALEKSEEV TODO re-implement using dockertest
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/insolar/insolar/application"
-)
-
-func TestStartStop(t *testing.T) {
-	cfg := DefaultHeavyConfig()
-	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	heavyConfig := application.GenesisHeavyConfig{
-		ContractsConfig: application.GenesisContractsConfig{
-			PKShardCount:       10,
-			MAShardCount:       10,
-			MigrationAddresses: make([][]string, 10),
-		},
-	}
-	s, err := NewServer(context.Background(), cfg, heavyConfig, nil)
-	assert.NoError(t, err)
-	s.Stop()
-}
+//func TestStartStop(t *testing.T) {
+//	cfg := DefaultHeavyConfig()
+//	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
+//	heavyConfig := application.GenesisHeavyConfig{
+//		ContractsConfig: application.GenesisContractsConfig{
+//			PKShardCount:       10,
+//			MAShardCount:       10,
+//			MigrationAddresses: make([][]string, 10),
+//		},
+//	}
+//	s, err := NewServer(context.Background(), cfg, heavyConfig, nil)
+//	assert.NoError(t, err)
+//	s.Stop()
+//}
