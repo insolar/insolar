@@ -166,6 +166,13 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	var retErr error
+
+	for _, s := range pulse.Signs {
+		if s.PulseNumber != pulse.PulseNumber {
+			return errors.New("Signatures check failed for pulse.")
+		}
+	}
+
 	for {
 		err := s.db.Update(func(txn *badger.Txn) error {
 			var insertWithHead = func(head insolar.PulseNumber) error {
