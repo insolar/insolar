@@ -200,7 +200,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 
-		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.ConnectionString)
+		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}

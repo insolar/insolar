@@ -29,7 +29,7 @@ type Storage struct {
 }
 
 type PostgreSQL struct {
-	ConnectionString string
+	URL string
 }
 
 // JetSplit holds configuration for jet split.

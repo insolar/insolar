@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -em
-# requires: lsof, awk, sed, grep, pgrep
+# requires: lsof, awk, sed, grep, pgrep, docker
 
 export GO111MODULE=on
 
@@ -465,16 +465,28 @@ else
     echo "insgorund launch skip"
 fi
 
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  echo "prepare logger"
+  build_logger
+fi
+
+# Terminate running PostgreSQL container if there is one
+docker stop insolar-postgresql || true
+docker rm insolar-postgresql || true
+# Start a new PostgreSQL container
+docker run -d --name insolar-postgresql -e POSTGRES_DB=insolar -e POSTGRES_PASSWORD=s3cr3t -p 5432:5432 postgres:11
+# Make sure PostgreSQL is up
+until bash -c "PGPASSWORD=s3cr3t docker exec -t insolar-postgresql psql -h localhost -U postgres insolar -c 'SELECT 1;'"
+do
+  echo "PostgreSQL is not up yet, retrying..."
+  sleep 1
+done
+
 handle_sigchld()
 {
   jobs -pn
   echo "someone left the network"
 }
-
-if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
-  echo "prepare logger"
-  build_logger
-fi
 
 trap 'handle_sigchld' SIGCHLD
 
