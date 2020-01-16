@@ -167,9 +167,13 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	var retErr error
 
-	for _, s := range pulse.Signs {
+	for k, s := range pulse.Signs {
 		if s.PulseNumber != pulse.PulseNumber {
-			return errors.New("Signatures check failed for pulse.")
+			return errors.New("Signatures check failed for pulse: pulse numbers mismatch")
+		}
+
+		if k != s.ChosenPublicKey {
+			return errors.New("Signatures check failed for pulse: public keys mismatch")
 		}
 	}
 
