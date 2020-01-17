@@ -17,6 +17,8 @@ jobs:
           path: go/src/github.com/insolar/insolar
       - name: Make
         run: |
+          export PATH=$PATH:/home/runner/go/bin
+          make vendor
           make install-build-tools
           make install-deps
           make pre-build
