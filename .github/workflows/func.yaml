@@ -17,4 +17,6 @@ jobs:
           path: go/src/github.com/insolar/insolar
       - name: Make
         run: |
-          make
+          make install-build-tools
+          make install-deps
+          make pre-build
