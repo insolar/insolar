@@ -230,7 +230,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 			INSERT INTO pulses(pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
 		`, pulse.PulseNumber, pulse.PrevPulseNumber, pulse.NextPulseNumber, pulse.PulseTimestamp,
-			pulse.EpochPulseNumber, pulse.OriginID, pulse.Entropy)
+			pulse.EpochPulseNumber, pulse.OriginID[:], pulse.Entropy[:])
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to INSERT pulse")
@@ -245,7 +245,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 			_, err = tx.Exec(ctx, `
 				INSERT INTO pulse_signs (pulse_number, chosen_public_key, entropy, signature)
 				VALUES ($1, $2, $3, $4)
-			`, s.PulseNumber, s.ChosenPublicKey, s.Entropy, s.Signature)
+			`, s.PulseNumber, s.ChosenPublicKey, s.Entropy[:], s.Signature)
 			if err != nil {
 				_ = tx.Rollback(ctx)
 				return errors.Wrap(err, "Unable to INSERT pulse_sign")
