@@ -16,4 +16,6 @@ jobs:
           fetch-depth: 1
           path: go/src/github.com/insolar/insolar
       - name: Make
-        run: make functest
+        run: |
+          pwd
+          echo $GOPATH
