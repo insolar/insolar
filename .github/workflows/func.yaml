@@ -21,10 +21,4 @@ jobs:
           export GOPATH=/home/runner/work/insolar/go
           echo $GOPATH
           go env
-#          export PATH=$PATH:/home/runner/go/bin
-#          go env
-#          pwd
-#          cd /home/runner/go/src/github.com/insolar/insolar
-#          /home/runner/work/insolar/go/src/github.com/insolar/insolar:
-#          ls -la
-         make functest
+          make functest
