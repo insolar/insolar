@@ -17,5 +17,5 @@ jobs:
           path: go/src/github.com/insolar/insolar
       - name: Make
         run: |
-          pwd
-          echo $GOPATH
+          make build
+          make functest
