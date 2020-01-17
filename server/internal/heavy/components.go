@@ -20,8 +20,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/insolar/insolar/server/internal/heavy/migration"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -207,6 +210,20 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(errors.Wrap(err, "os.Getwd failed"))
+		}
+		path := cfg.Ledger.PostgreSQL.MigrationPath
+		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
+
+		ver, err := migration.MigrateDatabase(ctx, pool, path)
+		if err != nil {
+			panic(errors.Wrap(err, "Unable to migrate database"))
+		}
+		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
+
 		// AALEKSEEV TODO fix this
 		Pulses = insolarPulse.NewDB(DB, pool)
 		Nodes = node.NewStorageDB(DB)

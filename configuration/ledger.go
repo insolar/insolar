@@ -29,7 +29,8 @@ type Storage struct {
 }
 
 type PostgreSQL struct {
-	URL string
+	URL           string // postgresql:// connection string
+	MigrationPath string // path to the directory with migration scripts
 }
 
 // JetSplit holds configuration for jet split.

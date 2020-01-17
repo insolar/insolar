@@ -4,3 +4,4 @@ ledger:
   lightchainlimit: 15
   postgresql:
     url: postgres://postgres:s3cr3t@localhost/insolar?sslmode=disable&pool_max_conns=10
+    migrationpath: ./migration
