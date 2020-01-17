@@ -19,5 +19,5 @@ jobs:
         run: |
           pwd
           ls -la
-#          make build
+          make build
 #          make functest
