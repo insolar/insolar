@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,17 +31,18 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
 	require.NotNil(t, rf)
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	tests := []struct {
 		name  string

@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {
@@ -48,11 +48,11 @@ func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {
 }
 
 func TestAvailabilityChecker_UpdateStatus(t *testing.T) {
+	defer testutils.LeakTester(t)
+
 	cfg := configuration.NewLog()
 	cfg.Level = "Debug"
 	ctx, _ := inslogger.InitNodeLogger(context.Background(), cfg, "", "")
-
-	defer leaktest.Check(t)()
 
 	counter := 0
 

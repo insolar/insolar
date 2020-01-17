@@ -35,8 +35,6 @@ github.com/dgryski/go-farm
 github.com/dustin/go-humanize
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
-# github.com/fortytw2/leaktest v1.3.0
-github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
@@ -288,11 +286,17 @@ go.opencensus.io/zpages/internal
 go.opencensus.io/resource
 go.opencensus.io
 go.opencensus.io/trace/propagation
+# go.uber.org/goleak v1.0.0
+go.uber.org/goleak
+go.uber.org/goleak/internal/stack
 # golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
 golang.org/x/crypto/sha3
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/pbkdf2
+# golang.org/x/lint v0.0.0-20190930215403-16217165b5de
+golang.org/x/lint/golint
+golang.org/x/lint
 # golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 golang.org/x/net/http2
 golang.org/x/net/http2/h2c
@@ -309,9 +313,9 @@ golang.org/x/sys/cpu
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+golang.org/x/text/secure/precis
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
-golang.org/x/text/secure/precis
 golang.org/x/text/cases
 golang.org/x/text/language
 golang.org/x/text/runes
@@ -320,7 +324,7 @@ golang.org/x/text/internal
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# golang.org/x/tools v0.0.0-20190827205025-b29f5f60c37a
+# golang.org/x/tools v0.0.0-20191108193012-7d206e10da11
 golang.org/x/tools/cmd/stringer
 golang.org/x/tools/go/packages
 golang.org/x/tools/imports
@@ -328,6 +332,7 @@ golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/semver
+golang.org/x/tools/internal/span
 golang.org/x/tools/internal/imports
 golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/internal/fastwalk

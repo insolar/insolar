@@ -23,7 +23,6 @@ import (
 	"time"
 
 	message2 "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -98,7 +97,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.cr = testutils.NewContractRequesterMock(suite.mc)
 	suite.pub = &publisherMock{}
 
-	suite.lt = leaktest.Check(&testutils.SyncT{T: suite.T()})
+	suite.lt = func() { testutils.LeakTester(&testutils.SyncT{T: suite.T()}) }
 	suite.SetupLogicRunner()
 }
 

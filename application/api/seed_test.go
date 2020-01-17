@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/insolar/rpc/v2"
 	"github.com/insolar/rpc/v2/json2"
@@ -36,7 +35,7 @@ import (
 )
 
 func TestNodeService_GetSeed(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	availableFlag := false
 	mc := minimock.NewController(t)

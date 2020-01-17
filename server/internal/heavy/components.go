@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -29,6 +30,7 @@ import (
 	"github.com/dgraph-io/badger" // AALEKSEEV TODO
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
 	component "github.com/insolar/component-manager"
@@ -187,6 +189,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		var err error
+		startTime := time.Now()
 		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
@@ -209,6 +212,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Nodes = node.NewStorageDB(DB)
 
 		Jets = jet.NewDBStore(DB)
+
+		timeBadgerStarted := time.Since(startTime)
+		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
+		logger.Info("badger starts in ", timeBadgerStarted)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses

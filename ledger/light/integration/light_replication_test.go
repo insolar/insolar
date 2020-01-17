@@ -32,8 +32,6 @@ import (
 )
 
 func Test_LightReplication(t *testing.T) {
-	t.Parallel()
-
 	var secondPulseNumber = pulse.MinTimePulse + (PulseStep * 2)
 	var expectedLifeline record.Lifeline
 	var expectedObjectID insolar.ID

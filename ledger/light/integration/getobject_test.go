@@ -28,8 +28,6 @@ import (
 )
 
 func Test_GetObject_PassingRequestID(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
