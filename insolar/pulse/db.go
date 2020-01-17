@@ -166,7 +166,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
-	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) FROM pulse_signs")
+	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) FROM pulses")
 	return
 }
 
