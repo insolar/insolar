@@ -19,68 +19,94 @@ package pulse
 import (
 	"context"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v4"
 
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 )
 
-// AALEKSEEV TODO use PostgreSQL + see db_test & pulse_cmp_test
-
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db   *badger.DB
 	pool *pgxpool.Pool
 }
 
-type pulseKey insolar.PulseNumber
-
-func (k pulseKey) Scope() store.Scope {
-	return store.ScopePulse
-}
-
-func (k pulseKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
-}
-
-func newPulseKey(raw []byte) pulseKey {
-	key := pulseKey(insolar.NewPulseNumber(raw))
-	return key
-}
-
-type dbNode struct {
-	Pulse      insolar.Pulse
-	Prev, Next *insolar.PulseNumber
-}
+//type pulseKey insolar.PulseNumber
+//
+//func (k pulseKey) Scope() store.Scope {
+//	return store.ScopePulse
+//}
+//
+//func (k pulseKey) ID() []byte {
+//	return insolar.PulseNumber(k).Bytes()
+//}
+//
+//func newPulseKey(raw []byte) pulseKey {
+//	key := pulseKey(insolar.NewPulseNumber(raw))
+//	return key
+//}
+//
+//type dbNode struct {
+//	Pulse      insolar.Pulse
+//	Prev, Next *insolar.PulseNumber
+//}
 
 // NewDB creates new DB storage instance.
-func NewDB(db *store.BadgerDB, pool *pgxpool.Pool) *DB {
-	return &DB{db: db.Backend(), pool: pool}
+func NewDB(pool *pgxpool.Pool) *DB {
+	return &DB{pool: pool}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
 func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
-	for {
-		err := s.db.View(func(txn *badger.Txn) error {
-			node, err := get(txn, pulseKey(pn))
-			if err != nil {
-				retErr = err
-				return nil
-			}
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
 
-			retPulse = node.Pulse
-			return nil
-		})
+	pulseRow := conn.QueryRow(ctx,
+		"SELECT pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy FROM pulses WHERE pulse_number = $1",
+		pn)
 
-		if err == nil {
-			break
+	err = pulseRow.Scan(
+		&retPulse.PulseNumber,
+		&retPulse.PrevPulseNumber,
+		&retPulse.NextPulseNumber,
+		&retPulse.PulseTimestamp, // TODO: some sort of cast is required?
+		&retPulse.EpochPulseNumber,
+		&retPulse.OriginID,
+		&retPulse.Entropy)
+
+	if err == pgx.ErrNoRows {
+		retErr = ErrNotFound
+		return
+	}
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to SELECT ... FROM pulses")
+		return
+	}
+
+	signRows, err := conn.Query(ctx,
+		"SELECT pulse_number, choses_public_key, entropy, signature FROM pulse_signs WHERE pulse_number = $1",
+		pn)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to SELECT ... FROM pulse_signs")
+		return
+	}
+	defer signRows.Close()
+
+	for signRows.Next() {
+		var conf insolar.PulseSenderConfirmation
+		err = signRows.Scan(&conf.PulseNumber, &conf.ChosenPublicKey, &conf.Entropy, &conf.Signature)
+		if err != nil {
+			retErr = errors.Wrap(err, "Unable to scan another pulse_signs row")
+			return
 		}
-
-		inslogger.FromContext(ctx).Debugf("DB.ForPulseNumber -  s.db.Backend().View returned an error, retrying: %s", err.Error())
+		retPulse.Signs[conf.ChosenPublicKey] = conf
 	}
 	return
 }
@@ -249,117 +275,117 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 	return s.traverse(ctx, pn, steps, true)
 }
 
-func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
-	if steps < 0 {
-		return *insolar.GenesisPulse, errors.New("DB.traverse - `steps` argument should be not negative")
-	}
-
-	var (
-		retPulse insolar.Pulse
-		retErr   error
-	)
-	for {
-		err := s.db.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			opts.Reverse = reverse
-			opts.PrefetchSize = steps + 1
-			it := txn.NewIterator(opts)
-			defer it.Close()
-
-			pivot := pulseKey(pn)
-			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
-			scope := pivot.Scope().Bytes()
-			it.Seek(prefix)
-			i := 0
-			for {
-				if !it.ValidForPrefix(scope) {
-					break
-				}
-
-				if i == steps {
-					buf, err := it.Item().ValueCopy(nil)
-					if err != nil {
-						retPulse = *insolar.GenesisPulse
-						retErr = err
-						return nil
-					}
-					node := deserialize(buf)
-					retPulse = node.Pulse
-					retErr = nil
-					return nil
-				}
-
-				it.Next()
-				i++
-			}
-
-			// not found
-			retPulse = *insolar.GenesisPulse
-			retErr = ErrNotFound
-			return nil
-		})
-
-		if err == nil {
-			break
-		}
-
-		inslogger.FromContext(ctx).Debugf("DB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
-	}
-
-	return retPulse, retErr
-}
-
-func head(txn *badger.Txn) (insolar.PulseNumber, error) {
-	opts := badger.DefaultIteratorOptions
-	opts.Reverse = true
-	// we need only one last key
-	opts.PrefetchSize = 1
-	it := txn.NewIterator(opts)
-	defer it.Close()
-
-	pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
-	scope := pivot.Scope().Bytes()
-	prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
-	it.Seek(prefix)
-	if !it.ValidForPrefix(scope) {
-		return insolar.GenesisPulse.PulseNumber, ErrNotFound
-	}
-
-	k := it.Item().KeyCopy(nil)
-	return insolar.NewPulseNumber(k[len(scope):]), nil
-}
-
-func get(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-	item, err := txn.Get(fullKey)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			err = ErrNotFound
-		}
-		retErr = err
-		return
-	}
-	buf, err := item.ValueCopy(nil)
-	if err != nil {
-		retErr = err
-		return
-	}
-
-	retNode = deserialize(buf)
-	return
-}
-
-func set(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
-	key := pulseKey(pn)
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-	return txn.Set(fullKey, serialize(node))
-}
-
-func serialize(nd dbNode) []byte {
-	return insolar.MustSerialize(nd)
-}
-
-func deserialize(buf []byte) (nd dbNode) {
-	insolar.MustDeserialize(buf, &nd)
-	return nd
-}
+//func (s *DB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
+//	if steps < 0 {
+//		return *insolar.GenesisPulse, errors.New("DB.traverse - `steps` argument should be not negative")
+//	}
+//
+//	var (
+//		retPulse insolar.Pulse
+//		retErr   error
+//	)
+//	for {
+//		err := s.db.View(func(txn *badger.Txn) error {
+//			opts := badger.DefaultIteratorOptions
+//			opts.Reverse = reverse
+//			opts.PrefetchSize = steps + 1
+//			it := txn.NewIterator(opts)
+//			defer it.Close()
+//
+//			pivot := pulseKey(pn)
+//			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+//			scope := pivot.Scope().Bytes()
+//			it.Seek(prefix)
+//			i := 0
+//			for {
+//				if !it.ValidForPrefix(scope) {
+//					break
+//				}
+//
+//				if i == steps {
+//					buf, err := it.Item().ValueCopy(nil)
+//					if err != nil {
+//						retPulse = *insolar.GenesisPulse
+//						retErr = err
+//						return nil
+//					}
+//					node := deserialize(buf)
+//					retPulse = node.Pulse
+//					retErr = nil
+//					return nil
+//				}
+//
+//				it.Next()
+//				i++
+//			}
+//
+//			// not found
+//			retPulse = *insolar.GenesisPulse
+//			retErr = ErrNotFound
+//			return nil
+//		})
+//
+//		if err == nil {
+//			break
+//		}
+//
+//		inslogger.FromContext(ctx).Debugf("DB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
+//	}
+//
+//	return retPulse, retErr
+//}
+//
+//func head(txn *badger.Txn) (insolar.PulseNumber, error) {
+//	opts := badger.DefaultIteratorOptions
+//	opts.Reverse = true
+//	// we need only one last key
+//	opts.PrefetchSize = 1
+//	it := txn.NewIterator(opts)
+//	defer it.Close()
+//
+//	pivot := pulseKey(insolar.PulseNumber(0xFFFFFFFF))
+//	scope := pivot.Scope().Bytes()
+//	prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+//	it.Seek(prefix)
+//	if !it.ValidForPrefix(scope) {
+//		return insolar.GenesisPulse.PulseNumber, ErrNotFound
+//	}
+//
+//	k := it.Item().KeyCopy(nil)
+//	return insolar.NewPulseNumber(k[len(scope):]), nil
+//}
+//
+//func get(txn *badger.Txn, key pulseKey) (retNode dbNode, retErr error) {
+//	fullKey := append(key.Scope().Bytes(), key.ID()...)
+//	item, err := txn.Get(fullKey)
+//	if err != nil {
+//		if err == badger.ErrKeyNotFound {
+//			err = ErrNotFound
+//		}
+//		retErr = err
+//		return
+//	}
+//	buf, err := item.ValueCopy(nil)
+//	if err != nil {
+//		retErr = err
+//		return
+//	}
+//
+//	retNode = deserialize(buf)
+//	return
+//}
+//
+//func set(txn *badger.Txn, pn insolar.PulseNumber, node dbNode) error {
+//	key := pulseKey(pn)
+//	fullKey := append(key.Scope().Bytes(), key.ID()...)
+//	return txn.Set(fullKey, serialize(node))
+//}
+//
+//func serialize(nd dbNode) []byte {
+//	return insolar.MustSerialize(nd)
+//}
+//
+//func deserialize(buf []byte) (nd dbNode) {
+//	insolar.MustDeserialize(buf, &nd)
+//	return nd
+//}
