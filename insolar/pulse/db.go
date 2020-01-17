@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DB is a DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
+// DB is a pulse.DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
 type DB struct {
 	pool *pgxpool.Pool
 }
