@@ -18,4 +18,4 @@ jobs:
       - name: Make
         run: |
           make build
-          make functest
+          make test
