@@ -17,10 +17,10 @@ jobs:
           path: go/src/github.com/insolar/insolar
       - name: Make
         run: |
-          export PATH=$PATH:/home/runner/go/bin
-          go env
           pwd
-          cd /home/runner/go/src/github.com/insolar/insolar
-          ls -la
-          pwd
+#          export PATH=$PATH:/home/runner/go/bin
+#          go env
+#          pwd
+#          cd /home/runner/go/src/github.com/insolar/insolar
+#          ls -la
 #          make functest
