@@ -19,8 +19,7 @@ jobs:
         run: |
           export PATH=$PATH:/home/runner/go/bin
           export GOPATH=$HOME/go
-          echo $GOPATH
-#          make vendor
-#          make install-build-tools
-#          make install-deps
-#          make pre-build
+          make vendor
+          make install-build-tools
+          make install-deps
+          make pre-build
