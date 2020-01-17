@@ -61,6 +61,14 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
+type badgerLogger struct {
+	insolar.Logger
+}
+
+func (b badgerLogger) Warningf(fmt string, args ...interface{}) {
+	b.Warnf(fmt, args...)
+}
+
 var (
 	light = nodeMock{
 		ref:     gen.Reference(),
@@ -167,7 +175,9 @@ func NewServer(
 	)
 	{
 		var err error
-		DB, err = store.NewBadgerDB(badger.DefaultOptions(cfg.Ledger.Storage.DataDirectory))
+		options := badger.DefaultOptions(cfg.Ledger.Storage.DataDirectory)
+		options.Logger = badgerLogger{Logger: inslogger.FromContext(ctx).WithField("component", "badger")}
+		DB, err = store.NewBadgerDB(options)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}

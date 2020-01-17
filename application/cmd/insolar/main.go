@@ -323,7 +323,7 @@ func randomHex(n int) (string, error) {
 }
 
 func generateMigrationAddresses() {
-	maLen := 20000
+	maLen := 40000
 	ma := make([]string, maLen)
 
 	for i := 0; i < maLen; i++ {

@@ -23,8 +23,9 @@ import (
 	"sync/atomic"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // BadgerDB is a badger DB implementation.

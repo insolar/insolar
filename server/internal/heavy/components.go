@@ -66,6 +66,14 @@ import (
 	"github.com/insolar/insolar/server/internal"
 )
 
+type badgerLogger struct {
+	insolar.Logger
+}
+
+func (b badgerLogger) Warningf(fmt string, args ...interface{}) {
+	b.Warnf(fmt, args...)
+}
+
 type components struct {
 	cmp         *component.Manager
 	NodeRef     string
@@ -193,8 +201,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
 		}
+		options := badger.DefaultOptions(fullDataDirectoryPath)
+		options.Logger = badgerLogger{Logger: logger.WithField("component", "badger")}
 		DB, err = store.NewBadgerDB(
-			badger.DefaultOptions(fullDataDirectoryPath),
+			options,
 			store.ValueLogDiscardRatio(cfg.Ledger.Storage.BadgerValueLogGCDiscardRatio),
 			store.OpenAndCloseBadgerOnStart(true),
 		)
