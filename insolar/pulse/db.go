@@ -21,8 +21,6 @@ import (
 
 	"github.com/jackc/pgx/v4"
 
-	"github.com/dgraph-io/badger"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -214,73 +212,55 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
-	var retErr error
-
-	for k, s := range pulse.Signs {
-		if s.PulseNumber != pulse.PulseNumber {
-			return errors.New("Signatures check failed for pulse: pulse numbers mismatch")
-		}
-
-		if k != s.ChosenPublicKey {
-			return errors.New("Signatures check failed for pulse: public keys mismatch")
-		}
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
+	defer conn.Release()
 
-	for {
-		err := s.db.Update(func(txn *badger.Txn) error {
-			var insertWithHead = func(head insolar.PulseNumber) error {
-				oldHead, err := get(txn, pulseKey(head))
-				if err != nil {
-					return err
-				}
-				oldHead.Next = &pulse.PulseNumber
+	log := inslogger.FromContext(ctx)
 
-				// Set new pulse.
-				err = set(txn, pulse.PulseNumber, dbNode{
-					Prev:  &oldHead.Pulse.PulseNumber,
-					Pulse: pulse,
-				})
-				if err != nil {
-					return err
-				}
-				// Set old updated tail.
-				return set(txn, oldHead.Pulse.PulseNumber, oldHead)
-			}
-			var insertWithoutHead = func() error {
-				// Set new pulse.
-				return set(txn, pulse.PulseNumber, dbNode{
-					Pulse: pulse,
-				})
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		_, err = tx.Exec(ctx, `
+			INSERT INTO pulses(pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+		`, pulse.PulseNumber, pulse.PrevPulseNumber, pulse.NextPulseNumber, pulse.PulseTimestamp,
+			pulse.EpochPulseNumber, pulse.OriginID, pulse.Entropy)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to INSERT pulse")
+		}
+
+		for k, s := range pulse.Signs {
+			if (s.PulseNumber != pulse.PulseNumber) || (k != s.ChosenPublicKey) {
+				_ = tx.Rollback(ctx)
+				return ErrBadPulse
 			}
 
-			head, err := head(txn)
-			if err == ErrNotFound {
-				err = insertWithoutHead()
-				if err != nil {
-					txn.Discard()
-				}
-				return err
-			}
-
-			if pulse.PulseNumber <= head {
-				retErr = ErrBadPulse
-				return nil
-			}
-
-			err = insertWithHead(head)
+			_, err = tx.Exec(ctx, `
+				INSERT INTO pulse_signs (pulse_number, chosen_public_key, entropy, signature)
+				VALUES ($1, $2, $3, $4)
+			`, s.PulseNumber, s.ChosenPublicKey, s.Entropy, s.Signature)
 			if err != nil {
-				txn.Discard()
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to INSERT pulse_sign")
 			}
-			return err
-		})
+		}
 
-		if err == nil {
+		err = tx.Commit(ctx)
+		if err == nil { // success
 			break
 		}
 
-		inslogger.FromContext(ctx).Debugf("DB.Append -  s.db.Backend().Update returned an error, retrying: %s", err.Error())
+		log.Infof("Append - commit failed: %v - retrying transaction", err)
 	}
-	return retErr
+
+	return nil
 }
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
