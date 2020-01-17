@@ -19,8 +19,4 @@ jobs:
         run: |
           export PATH=$PATH:/home/runner/go/bin
           go env
-#          export GOPATH=$HOME/go
-#          make vendor
-#          make install-build-tools
-#          make install-deps
-#          make pre-build
+          make functest
