@@ -100,10 +100,10 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 }
 
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) {
 	finPulse := &newPulse
 	for {
-		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse, gcRunner)
+		finPulse = finalizePulseStep(ctx, pulses, jetKeeper, indexes, *finPulse, gcRunner)
 		if finPulse == nil {
 			break
 		}
@@ -112,7 +112,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 
 var finalizationLock sync.Mutex
 
-func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
+func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"pulse_to_finalize": pulseToFinalize,
 	})
@@ -126,21 +126,6 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	// record all jets count
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, pulseToFinalize)))))
-
-	startedAt := time.Now().Second()
-	logger.Infof("finalizePulseStep: calling backuperr.MakeBackup()...")
-	bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
-	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
-		logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
-	}
-	logger.Infof("finalizePulseStep: MakeBackup() done!")
-
-	stats.Record(ctx, statBackupTime.M(int64(time.Now().Second()-startedAt)))
-
-	if bkpError == ErrAlreadyDone {
-		logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
-		return nil
-	}
 
 	logger.Info("finalizePulseStep: before getting lock")
 	finalizationLock.Lock()

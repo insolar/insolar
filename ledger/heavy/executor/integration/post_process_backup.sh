@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# AALEKSEEV TODO delete?
+
 badgerDir=$1
 recoverDB=$2
 

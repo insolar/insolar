@@ -59,7 +59,6 @@ type Handler struct {
 	JetModifier        jet.Modifier
 	JetAccessor        jet.Accessor
 	JetKeeper          executor.JetKeeper
-	BackupMaker        executor.BackupMaker
 	InitialStateReader executor.InitialStateAccessor
 
 	Sender          bus.Sender
@@ -315,6 +314,6 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse, h.gcRunner)
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.JetKeeper, h.IndexModifier, confirm.Pulse, h.gcRunner)
 	logger.Info("handleGotHotConfirmation finish. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 }

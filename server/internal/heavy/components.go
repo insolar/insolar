@@ -331,12 +331,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
-		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger, JetKeeper.TopSyncPulse(), DB)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed create backuper")
-		}
-
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes, backupMaker)
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := insolarPulse.NewStartPulse()
@@ -352,7 +347,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets, gcRunInfo)
 		c.replicator = replicator
 
 		h := handler.New(cfg.Ledger, gcRunInfo)
@@ -372,7 +367,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.InitialStateReader = c.stateKeeper
-		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 		h.Replicator = replicator
 

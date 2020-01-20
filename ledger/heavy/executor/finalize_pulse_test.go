@@ -98,9 +98,6 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
 
-	bkp := executor.NewBackupMakerMock(t)
-	bkp.MakeBackupMock.Return(nil)
-
 	jk := executor.NewJetKeeperMock(t)
 	var hasConfirmCount uint32
 	hasConfirm := func(ctx context.Context, pulse insolar.PulseNumber) bool {
@@ -140,7 +137,7 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	indexes := object.NewIndexModifierMock(t)
 	indexes.UpdateLastKnownPulseMock.Return(nil)
 
-	executor.FinalizePulse(ctx, pc, bkp, jk, indexes, targetPulse, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, pc, jk, indexes, targetPulse, testBadgerGCInfo())
 }
 
 func testBadgerGCInfo() *executor.BadgerGCRunInfo {
@@ -155,7 +152,7 @@ func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(false)
 
-	executor.FinalizePulse(ctx, nil, nil, jk, nil, testPulse, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, nil, jk, nil, testPulse, testBadgerGCInfo())
 }
 
 func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
@@ -170,30 +167,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{}, errors.New("Test"))
 
-	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse, testBadgerGCInfo())
-}
-
-func TestFinalizePulse_BackupError(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
-	targetPulse := testPulse + 1
-
-	jk := executor.NewJetKeeperMock(t)
-	jk.HasAllJetConfirmsMock.Return(true)
-	jk.TopSyncPulseMock.Return(targetPulse)
-
-	js := jet.NewStorageMock(t)
-	js.AllMock.Return(nil)
-	jk.StorageMock.Return(js)
-
-	pc := insolarPulse.NewCalculatorMock(t)
-	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)
-
-	bkp := executor.NewBackupMakerMock(t)
-	bkp.MakeBackupMock.Return(executor.ErrAlreadyDone)
-
-	executor.FinalizePulse(ctx, pc, bkp, jk, nil, targetPulse, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, pc, jk, nil, testPulse, testBadgerGCInfo())
 }
 
 func TestFinalizePulse_NotNextPulse(t *testing.T) {
@@ -208,5 +182,5 @@ func TestFinalizePulse_NotNextPulse(t *testing.T) {
 	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: testPulse}, nil)
 
-	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse+10, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, pc, jk, nil, testPulse+10, testBadgerGCInfo())
 }

@@ -12,12 +12,10 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
-BADGER = badger
-HEAVY_BADGER_TOOL= heavy-badger
+BADGER = badger # AALEKSEEV TODO get rid of this
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -53,7 +51,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
-SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
+SLOW_PKGS = ./logicrunner/... ./server/internal/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
 
 .PHONY: all
 all: clean submodule pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
@@ -110,7 +108,7 @@ vendor: ## update vendor dependencies
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
+build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -149,10 +147,6 @@ $(BENCHMARK):
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
-.PHONY: $(BACKUPMANAGER)
-$(BACKUPMANAGER):
-	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMANAGER) -ldflags "${LDFLAGS}" cmd/backupmanager/*.go
-
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	$(GOBUILD) -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
@@ -164,10 +158,6 @@ $(HEALTHCHECK):
 .PHONY: $(KEEPERD)
 $(KEEPERD):
 	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
-
-.PHONY: $(HEAVY_BADGER_TOOL)
-$(HEAVY_BADGER_TOOL):
-	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
