@@ -104,8 +104,6 @@ func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insola
 }
 
 func TestWriteReadAndLatest(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	pn := gen.PulseNumber()
 
@@ -130,8 +128,6 @@ func TestWriteReadAndLatest(t *testing.T) {
 }
 
 func TestForwardsBackwards(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
@@ -172,8 +168,6 @@ func TestForwardsBackwards(t *testing.T) {
 }
 
 func TestTruncateHead(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
