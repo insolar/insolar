@@ -21,4 +21,4 @@ jobs:
           export GOPATH=/home/admin/actions-runner/_work/insolar/go
           echo $GOPATH
           go env
-          make test_unit
+          make test_slow
