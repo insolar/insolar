@@ -1,4 +1,4 @@
-name: Funcs
+name: Funcs & slow
 on: [push]
 jobs:
   test:
