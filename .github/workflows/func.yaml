@@ -17,7 +17,7 @@ jobs:
           path: go/src/github.com/insolar/insolar
       - name: Slow
         run: |
-          echo $GOMAXPROCS
+          go env
 #          export GOPATH=/home/admin/actions-runner/_work/insolar/go
 #          make build
 #          make test_slow
