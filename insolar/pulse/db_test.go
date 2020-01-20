@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 
 	db = NewDB(pool)
 
-	// Run all testsg
+	// Run all tests
 	code := m.Run()
 
 	log.Info("[TestMain] Cleaning up...")
