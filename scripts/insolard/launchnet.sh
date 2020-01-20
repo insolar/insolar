@@ -228,44 +228,44 @@ rebuild_binaries()
 generate_pulsar_keys()
 {
     echo "generate pulsar keys: ${PULSAR_KEYS}"
-    bin/insolar gen-key-pair > ${PULSAR_KEYS}
+    bin/insolar gen-key-pair --elliptic=256 > ${PULSAR_KEYS}
 }
 
 generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}root_member_keys.json
 
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}fee_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
     done
 
     for (( b = 0; b < 140; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
 
     for (( b = 0; b < 1; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}funds_${b}_member_keys.json
     done
 
     for (( b = 0; b < 8; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
+    bin/insolar gen-key-pair --elliptic=256k > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
     done
 }
 

@@ -19,10 +19,11 @@ package api
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"net/http"
 	"strings"
+
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"

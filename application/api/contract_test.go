@@ -18,13 +18,15 @@ package api
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/insolar/secrets"
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
@@ -38,7 +40,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -52,13 +53,12 @@ func TestTimeoutSuite(t *testing.T) {
 	defer mc.Wait(17 * time.Second)
 	defer mc.Finish()
 
-	ks := platformpolicy.NewKeyProcessor()
-	sKey, err := ks.GeneratePrivateKey()
+	sKey, err := secrets.GeneratePrivateKey256k()
 	require.NoError(t, err)
-	sKeyString, err := ks.ExportPrivateKeyPEM(sKey)
+	sKeyString, err := secrets.ExportPrivateKeyPEM(sKey)
 	require.NoError(t, err)
-	pKey := ks.ExtractPublicKey(sKey)
-	pKeyString, err := ks.ExportPublicKeyPEM(pKey)
+	pKey := secrets.ExtractPublicKey(sKey)
+	pKeyString, err := secrets.ExportPublicKeyPEM(pKey)
 	require.NoError(t, err)
 
 	userRef := gen.Reference().String()

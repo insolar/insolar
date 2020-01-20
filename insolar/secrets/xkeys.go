@@ -26,6 +26,8 @@ import (
 
 	crypto "github.com/insolar/x-crypto"
 	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
+	"github.com/insolar/x-crypto/rand"
 	"github.com/insolar/x-crypto/x509"
 
 	"github.com/pkg/errors"
@@ -163,4 +165,8 @@ func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
 	ecdsaPrivateKey := MustConvertPrivateKeyToEcdsa(privateKey)
 	publicKey := ecdsaPrivateKey.PublicKey
 	return &publicKey
+}
+
+func GeneratePrivateKey256k() (crypto.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256K(), rand.Reader)
 }

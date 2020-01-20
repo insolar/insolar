@@ -17,7 +17,7 @@
 package seedmanager
 
 import (
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 
 	"github.com/pkg/errors"
 )
