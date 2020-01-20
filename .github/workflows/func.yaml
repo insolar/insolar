@@ -24,4 +24,4 @@ jobs:
         run: |
           export GOPATH=/home/admin/actions-runner/_work/insolar/go
           make build
-          GOMAXPROCS=4 make functest
+          make functest
