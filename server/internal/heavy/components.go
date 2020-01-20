@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,8 +32,7 @@ import (
 	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
-	"github.com/insolar/component-manager"
-
+	component "github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/genesis"
@@ -407,7 +406,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	c.cmp.Inject(
-		DB,
 		WmBus,
 		Handler,
 		PulseManager,
