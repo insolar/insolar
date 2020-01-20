@@ -18,7 +18,7 @@ jobs:
       - name: Make
         run: |
           pwd
-          export GOPATH=/home/runner/work/insolar/go
-          echo $GOPATH
-          go env
-          make functest
+#          export GOPATH=/home/runner/work/insolar/go
+#          echo $GOPATH
+#          go env
+#          make functest
