@@ -275,14 +275,15 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 // be returned.
 func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	retPulse, retErr = s.selectByCondition(ctx, `
-WITH RECURSIVE pulsechain AS (
-	SELECT pulse_number, next_pn
+WITH RECURSIVE tmp AS (
+	SELECT 1 as depth, pulse_number, next_pn
 	FROM pulses WHERE pulse_number = $1
-	UNION
-		SELECT p.pulse_number, p.next_pn
-		FROM pulses p
-		INNER JOIN pulsechain c ON c.next_pn = p.pulse_number
-) SELECT pulse_number FROM pulsechain OFFSET $2 LIMIT 1;
+		UNION
+	SELECT t."depth" + 1, p.pulse_number, p.next_pn
+	FROM t tmp
+	LEFT JOIN pulses p ON p.pulse_number = t.next_pn
+	WHERE t."depth" <= $2
+) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps) // AALEKSEEV TODO will `$2` work?
 	return
 }
@@ -291,14 +292,15 @@ WITH RECURSIVE pulsechain AS (
 // be returned.
 func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	retPulse, retErr = s.selectByCondition(ctx, `
-WITH RECURSIVE pulsechain AS (
-	SELECT pulse_number, prev_pn
+WITH RECURSIVE tmp AS (
+	SELECT 1 as depth, pulse_number, prev_pn
 	FROM pulses WHERE pulse_number = $1
-	UNION
-		SELECT p.pulse_number, p.prev_pn
-		FROM pulses p
-		INNER JOIN pulsechain c ON c.prev_pn = p.pulse_number
-) SELECT pulse_number FROM pulsechain OFFSET $2 LIMIT 1;
+		UNION
+	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
+	FROM t tmp
+	LEFT JOIN pulses p ON p.pulse_number = t.prev_pn
+	WHERE t."depth" <= $2
+) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps) // AALEKSEEV TODO will `$2` work?
 	return
 }

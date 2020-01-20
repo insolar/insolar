@@ -71,6 +71,34 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func testPulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insolar.PulseNumber) *insolar.Pulse {
+	conf1 := insolar.PulseSenderConfirmation{
+		PulseNumber:     pn,
+		ChosenPublicKey: "ololo",
+		Entropy:         [insolar.EntropySize]byte{3, 3, 2, 2, 1, 1},
+		Signature:       []byte{1, 1, 2, 2, 3, 3},
+	}
+	conf2 := insolar.PulseSenderConfirmation{
+		PulseNumber:     pn,
+		ChosenPublicKey: "trololo",
+		Entropy:         [insolar.EntropySize]byte{3, 3, 2, 2, 1, 1},
+		Signature:       []byte{1, 1, 2, 2, 3, 3},
+	}
+	signs := make(map[string]insolar.PulseSenderConfirmation, 1)
+	signs[conf1.ChosenPublicKey] = conf1
+	signs[conf2.ChosenPublicKey] = conf2
+	return &insolar.Pulse{
+		PulseNumber:      pn,
+		PrevPulseNumber:  prev,
+		NextPulseNumber:  next,
+		PulseTimestamp:   123456789,
+		EpochPulseNumber: pulse.Epoch(1234),
+		OriginID:         [insolar.OriginIDSize]byte{3, 2, 1},
+		Entropy:          [insolar.EntropySize]byte{1, 2, 3},
+		Signs:            signs,
+	}
+}
+
 func TestAppend(t *testing.T) {
 	ctx := context.Background()
 	pn := gen.PulseNumber()
@@ -79,35 +107,23 @@ func TestAppend(t *testing.T) {
 	_, err := db.ForPulseNumber(ctx, pn)
 	require.Error(t, err)
 
-	conf := insolar.PulseSenderConfirmation{
-		PulseNumber:     pn,
-		ChosenPublicKey: "lol",
-		Entropy:         [insolar.EntropySize]byte{3, 3, 2, 2, 1, 1},
-		Signature:       []byte{1, 1, 2, 2, 3, 3},
-	}
-	signs := make(map[string]insolar.PulseSenderConfirmation, 1)
-	signs[conf.ChosenPublicKey] = conf
-	writePulse := insolar.Pulse{
-		PulseNumber:      pn,
-		PrevPulseNumber:  gen.PulseNumber(),
-		NextPulseNumber:  gen.PulseNumber(),
-		PulseTimestamp:   123456789,
-		EpochPulseNumber: pulse.Epoch(1234),
-		OriginID:         [insolar.OriginIDSize]byte{3, 2, 1},
-		Entropy:          [insolar.EntropySize]byte{1, 2, 3},
-		Signs:            signs,
-	}
+	writePulse := testPulse(pn, gen.PulseNumber(), gen.PulseNumber())
 
 	// Write the pulse to the database
-	err = db.Append(ctx, writePulse)
+	err = db.Append(ctx, *writePulse)
 	require.NoError(t, err)
 
 	// Read the pulse from the database
 	readPulse, err := db.ForPulseNumber(ctx, pn)
 	require.NoError(t, err)
-	require.Equal(t, writePulse, readPulse)
+	require.Equal(t, *writePulse, readPulse)
 
 	// Make sure .Latest returns something now when we know there is data in the database
 	_, err = db.Latest(ctx)
 	require.NoError(t, err)
 }
+
+//func TestForwardsBackwards(t *testing.T) {
+//
+//
+//}
