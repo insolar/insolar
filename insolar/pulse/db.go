@@ -197,16 +197,16 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE pulse_signs WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM pulse_signs WHERE pulse_number > $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to DELETE pulse_signs")
+			return errors.Wrap(err, "Unable to DELETE FROM pulse_signs")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE pulses WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM pulses WHERE pulse_number > $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to DELETE pulses")
+			return errors.Wrap(err, "Unable to DELETE FROM pulses")
 		}
 
 		err = tx.Commit(ctx)

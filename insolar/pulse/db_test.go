@@ -21,6 +21,7 @@ package pulse
 import (
 	"context"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -102,7 +103,7 @@ func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insola
 	}
 }
 
-func TestAppend(t *testing.T) {
+func TestWriteReadAndLatest(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -138,6 +139,9 @@ func TestForwardsBackwards(t *testing.T) {
 	for i := 0; i < len(pulseNumbers); i++ {
 		pulseNumbers[i] = gen.PulseNumber()
 	}
+	sort.Slice(pulseNumbers, func(i, j int) bool {
+		return pulseNumbers[i] < pulseNumbers[j]
+	})
 
 	startPulseIdx := 1
 	endPulseIdx := len(pulseNumbers) - 1
@@ -165,4 +169,47 @@ func TestForwardsBackwards(t *testing.T) {
 
 	_, err = db.Backwards(ctx, pulseNumbers[startPulseIdx+6], 10)
 	require.Error(t, err)
+}
+
+func TestTruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pulsesNum := 10
+	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
+	pulses := make([]*insolar.Pulse, pulsesNum+2)
+	for i := 0; i < len(pulseNumbers); i++ {
+		pulseNumbers[i] = gen.PulseNumber()
+	}
+	sort.Slice(pulseNumbers, func(i, j int) bool {
+		return pulseNumbers[i] < pulseNumbers[j]
+	})
+
+	startPulseIdx := 1
+	endPulseIdx := len(pulseNumbers) - 1
+	for i := startPulseIdx; i < endPulseIdx; i++ {
+		pn := pulseNumbers[i]
+		prev := pulseNumbers[i-1]
+		next := pulseNumbers[i+1]
+		pulses[i] = generatePulse(pn, prev, next)
+		err := db.Append(ctx, *pulses[i])
+		require.NoError(t, err)
+	}
+
+	// Call TruncateHead
+	err := db.TruncateHead(ctx, pulseNumbers[startPulseIdx+pulsesNum/2])
+	require.NoError(t, err)
+
+	// Make sure half of the pulses are still in the database...
+	for i := startPulseIdx; i <= startPulseIdx+pulsesNum/2; i++ {
+		readPulse, err := db.ForPulseNumber(ctx, pulseNumbers[i])
+		require.NoError(t, err)
+		require.Equal(t, *pulses[i], readPulse)
+	}
+
+	// ...and another half is gone
+	for i := startPulseIdx + pulsesNum/2 + 1; i < endPulseIdx; i++ {
+		_, err := db.ForPulseNumber(ctx, pulseNumbers[i])
+		require.Error(t, err)
+	}
 }
