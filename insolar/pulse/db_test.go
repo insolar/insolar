@@ -72,7 +72,13 @@ func TestMain(m *testing.M) {
 }
 
 func TestAppend(t *testing.T) {
+	ctx := context.Background()
 	pn := gen.PulseNumber()
+
+	// Make sure there is no such pulse in DB yet
+	_, err := db.ForPulseNumber(ctx, pn)
+	require.Error(t, err)
+
 	conf := insolar.PulseSenderConfirmation{
 		PulseNumber:     pn,
 		ChosenPublicKey: "lol",
@@ -81,7 +87,7 @@ func TestAppend(t *testing.T) {
 	}
 	signs := make(map[string]insolar.PulseSenderConfirmation, 1)
 	signs[conf.ChosenPublicKey] = conf
-	pulse := insolar.Pulse{
+	writePulse := insolar.Pulse{
 		PulseNumber:      pn,
 		PrevPulseNumber:  gen.PulseNumber(),
 		NextPulseNumber:  gen.PulseNumber(),
@@ -92,6 +98,10 @@ func TestAppend(t *testing.T) {
 		Signs:            signs,
 	}
 
-	err := db.Append(context.Background(), pulse)
+	err = db.Append(ctx, writePulse)
 	require.NoError(t, err)
+
+	readPulse, err := db.ForPulseNumber(ctx, pn)
+	require.NoError(t, err)
+	require.Equal(t, writePulse, readPulse)
 }

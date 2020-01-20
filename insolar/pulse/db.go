@@ -54,25 +54,32 @@ func (s *DB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber)
 		"SELECT pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy FROM pulses WHERE pulse_number = $1",
 		pn)
 
+	retPulse.Signs = make(map[string]insolar.PulseSenderConfirmation)
+	var originSlice []byte
+	var entropySlice []byte
 	err := pulseRow.Scan(
 		&retPulse.PulseNumber,
 		&retPulse.PrevPulseNumber,
 		&retPulse.NextPulseNumber,
 		&retPulse.PulseTimestamp,
 		&retPulse.EpochPulseNumber,
-		&retPulse.OriginID,
-		&retPulse.Entropy)
+		&originSlice,
+		&entropySlice)
 
 	if err == pgx.ErrNoRows {
 		retErr = ErrNotFound
 		_ = tx.Rollback(ctx)
 		return
 	}
+
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to SELECT ... FROM pulses")
 		_ = tx.Rollback(ctx)
 		return
 	}
+
+	copy(retPulse.OriginID[:], originSlice)
+	copy(retPulse.Entropy[:], entropySlice)
 
 	signRows, err := tx.Query(ctx,
 		"SELECT pulse_number, chosen_public_key, entropy, signature FROM pulse_signs WHERE pulse_number = $1",
@@ -86,12 +93,13 @@ func (s *DB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber)
 
 	for signRows.Next() {
 		var conf insolar.PulseSenderConfirmation
-		err = signRows.Scan(&conf.PulseNumber, &conf.ChosenPublicKey, &conf.Entropy, &conf.Signature)
+		err = signRows.Scan(&conf.PulseNumber, &conf.ChosenPublicKey, &entropySlice, &conf.Signature)
 		if err != nil {
 			retErr = errors.Wrap(err, "Unable to scan another pulse_signs row")
 			_ = tx.Rollback(ctx)
 			return
 		}
+		copy(conf.Entropy[:], entropySlice)
 		retPulse.Signs[conf.ChosenPublicKey] = conf
 	}
 
