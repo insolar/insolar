@@ -89,7 +89,7 @@ func main() {
 	var ellipticValue string
 	var genKeysPairCmd = &cobra.Command{
 		Use:   "gen-key-pair",
-		Short: "generates public/private keys pair",
+		Short: "generates public/private keys pair (possible values: 256, 256k)",
 		Run: func(cmd *cobra.Command, args []string) {
 			generateKeysPair(ellipticValue)
 		},
@@ -348,7 +348,7 @@ func generateKeysPair(ellipticValue string) {
 		generateKeysPair256k()
 		return
 	default:
-		fmt.Fprintln(os.Stderr, "Unknown elliptic")
+		fmt.Fprintln(os.Stderr, "Unknown elliptic. Possible values: 256, 256k.")
 		os.Exit(1)
 	}
 }
