@@ -14,94 +14,84 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package pulse
 
 import (
-	"github.com/dgraph-io/badger"
+	"context"
+	"os"
+	"testing"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/tests/common"
+	"github.com/stretchr/testify/require"
 )
 
-// AALEKSEEV TODO re-implement tests
+var db *DB
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+	defer stopPostgreSQL()
 
-	return ops
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	db = NewDB(pool)
+
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	os.Exit(code)
 }
 
-//func TestPulseKey(t *testing.T) {
-//	t.Parallel()
-//
-//	expectedKey := pulseKey(insolar.GenesisPulse.PulseNumber)
-//
-//	rawID := expectedKey.ID()
-//
-//	actualKey := newPulseKey(rawID)
-//	require.Equal(t, expectedKey, actualKey)
-//}
+func TestAppend(t *testing.T) {
+	pn := gen.PulseNumber()
+	conf := insolar.PulseSenderConfirmation{
+		PulseNumber:     pn,
+		ChosenPublicKey: "lol",
+		Entropy:         [insolar.EntropySize]byte{3, 3, 2, 2, 1, 1},
+		Signature:       []byte{1, 1, 2, 2, 3, 3},
+	}
+	signs := make(map[string]insolar.PulseSenderConfirmation, 1)
+	signs[conf.ChosenPublicKey] = conf
+	pulse := insolar.Pulse{
+		PulseNumber:      pn,
+		PrevPulseNumber:  gen.PulseNumber(),
+		NextPulseNumber:  gen.PulseNumber(),
+		PulseTimestamp:   123456789,
+		EpochPulseNumber: pulse.Epoch(1234),
+		OriginID:         [insolar.OriginIDSize]byte{3, 2, 1},
+		Entropy:          [insolar.EntropySize]byte{1, 2, 3},
+		Signs:            signs,
+	}
 
-// AALEKSEEV TODO re-implement this test
-//func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
-//	t.Parallel()
-//
-//	ctx := inslogger.TestContext(t)
-//	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-//	defer os.RemoveAll(tmpdir)
-//	assert.NoError(t, err)
-//
-//	ops := BadgerDefaultOptions(tmpdir)
-//	dbMock, err := store.NewBadgerDB(ops)
-//	defer dbMock.Stop(ctx)
-//	require.NoError(t, err)
-//
-//	pulseStore := NewDB(dbMock)
-//
-//	err = pulseStore.TruncateHead(ctx, 77)
-//	require.NoError(t, err)
-//}
-
-//func TestDBStore_TruncateHead(t *testing.T) {
-//	t.Parallel()
-//
-//	ctx := inslogger.TestContext(t)
-//	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-//	defer os.RemoveAll(tmpdir)
-//	assert.NoError(t, err)
-//
-//	ops := BadgerDefaultOptions(tmpdir)
-//	dbMock, err := store.NewBadgerDB(ops)
-//	defer dbMock.Stop(ctx)
-//	require.NoError(t, err)
-//
-//	dbStore := NewDB(dbMock)
-//
-//	numElements := 10
-//
-//	startPulseNumber := insolar.GenesisPulse.PulseNumber
-//	for i := 0; i < numElements; i++ {
-//		pn := startPulseNumber + insolar.PulseNumber(i)
-//		pulse := *pulsar.NewPulse(0, pn, &entropygenerator.StandardEntropyGenerator{})
-//		err := dbStore.Append(ctx, pulse)
-//		require.NoError(t, err)
-//	}
-//
-//	for i := 0; i < numElements; i++ {
-//		_, err := dbStore.ForPulseNumber(ctx, startPulseNumber+insolar.PulseNumber(i))
-//		require.NoError(t, err)
-//	}
-//
-//	numLeftElements := numElements / 2
-//	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
-//	require.NoError(t, err)
-//
-//	for i := 0; i < numLeftElements; i++ {
-//		_, err := dbStore.ForPulseNumber(ctx, startPulseNumber+insolar.PulseNumber(i))
-//		require.NoError(t, err)
-//	}
-//
-//	for i := numElements - 1; i >= numLeftElements; i-- {
-//		_, err := dbStore.ForPulseNumber(ctx, startPulseNumber+insolar.PulseNumber(i))
-//		require.EqualError(t, err, ErrNotFound.Error())
-//	}
-//}
+	err := db.Append(context.Background(), pulse)
+	require.NoError(t, err)
+}

@@ -24,8 +24,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/insolar/insolar/server/internal/heavy/migration"
-
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -37,7 +35,6 @@ import (
 	"google.golang.org/grpc"
 
 	component "github.com/insolar/component-manager"
-
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/genesis"
@@ -59,6 +56,7 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"github.com/insolar/insolar/ledger/heavy/handler"
+	"github.com/insolar/insolar/ledger/heavy/migration"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log/logwatermill"
@@ -227,7 +225,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		path := cfg.Ledger.PostgreSQL.MigrationPath
 		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
-
 		ver, err := migration.MigrateDatabase(ctx, pool, path)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to migrate database"))

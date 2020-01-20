@@ -29,13 +29,13 @@ require (
 	github.com/jackc/pgx/v4 v4.2.1
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/onrik/gomerkle v1.0.0
 	github.com/opentracing/opentracing-go v1.1.0
+	github.com/ory/dockertest/v3 v3.5.2
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
@@ -60,7 +60,7 @@ require (
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
-	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
+	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
 	golang.org/x/tools v0.0.0-20191108193012-7d206e10da11
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
