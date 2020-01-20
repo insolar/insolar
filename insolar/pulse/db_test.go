@@ -98,10 +98,16 @@ func TestAppend(t *testing.T) {
 		Signs:            signs,
 	}
 
+	// Write the pulse to the database
 	err = db.Append(ctx, writePulse)
 	require.NoError(t, err)
 
+	// Read the pulse from the database
 	readPulse, err := db.ForPulseNumber(ctx, pn)
 	require.NoError(t, err)
 	require.Equal(t, writePulse, readPulse)
+
+	// Make sure .Latest returns something now when we know there is data in the database
+	_, err = db.Latest(ctx)
+	require.NoError(t, err)
 }

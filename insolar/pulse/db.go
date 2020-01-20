@@ -121,7 +121,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	}
 
 	var pn insolar.PulseNumber
-	row := tx.QueryRow(ctx, query, args)
+	row := tx.QueryRow(ctx, query, args...)
 	err = row.Scan(&pn)
 	if err != nil {
 		retErr = ErrNotFound
@@ -174,7 +174,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
-	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) FROM pulses")
+	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) as latest FROM pulses")
 	return
 }
 
