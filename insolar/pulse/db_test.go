@@ -43,35 +43,38 @@ func TestMain(m *testing.M) {
 	log.Info("[TestMain] About to start PostgreSQL...")
 	pgURL, stopPostgreSQL := common.StartPostgreSQL()
 	log.Info("[TestMain] PostgreSQL started!")
-	defer stopPostgreSQL()
 
 	pool, err := pgxpool.Connect(ctx, pgURL)
 	if err != nil {
+		stopPostgreSQL()
 		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
 	}
 
 	migrationPath := "../../migration"
 	cwd, err := os.Getwd()
 	if err != nil {
+		stopPostgreSQL()
 		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
 	}
 	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
 	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
 	if err != nil {
+		stopPostgreSQL()
 		panic(errors.Wrap(err, "Unable to migrate database"))
 	}
 	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
 
 	db = NewDB(pool)
 
-	// Run all tests
+	// Run all testsg
 	code := m.Run()
 
 	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
 	os.Exit(code)
 }
 
-func testPulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insolar.PulseNumber) *insolar.Pulse {
+func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insolar.PulseNumber) *insolar.Pulse {
 	conf1 := insolar.PulseSenderConfirmation{
 		PulseNumber:     pn,
 		ChosenPublicKey: "ololo",
@@ -100,6 +103,8 @@ func testPulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insolar.Pu
 }
 
 func TestAppend(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	pn := gen.PulseNumber()
 
@@ -107,7 +112,7 @@ func TestAppend(t *testing.T) {
 	_, err := db.ForPulseNumber(ctx, pn)
 	require.Error(t, err)
 
-	writePulse := testPulse(pn, gen.PulseNumber(), gen.PulseNumber())
+	writePulse := generatePulse(pn, gen.PulseNumber(), gen.PulseNumber())
 
 	// Write the pulse to the database
 	err = db.Append(ctx, *writePulse)
@@ -123,7 +128,41 @@ func TestAppend(t *testing.T) {
 	require.NoError(t, err)
 }
 
-//func TestForwardsBackwards(t *testing.T) {
-//
-//
-//}
+func TestForwardsBackwards(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	pulsesNum := 10
+	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
+	pulses := make([]*insolar.Pulse, pulsesNum+2)
+	for i := 0; i < len(pulseNumbers); i++ {
+		pulseNumbers[i] = gen.PulseNumber()
+	}
+
+	startPulseIdx := 1
+	endPulseIdx := len(pulseNumbers) - 1
+	for i := startPulseIdx; i < endPulseIdx; i++ {
+		pn := pulseNumbers[i]
+		prev := pulseNumbers[i-1]
+		next := pulseNumbers[i+1]
+		pulses[i] = generatePulse(pn, prev, next)
+		err := db.Append(ctx, *pulses[i])
+		require.NoError(t, err)
+	}
+
+	// Make sure Forwards/Backwards happy path
+	foundPulse, err := db.Forwards(ctx, pulseNumbers[startPulseIdx], 5)
+	require.NoError(t, err)
+	require.Equal(t, *pulses[startPulseIdx+5], foundPulse)
+
+	foundPulse, err = db.Backwards(ctx, pulseNumbers[startPulseIdx+9], 9)
+	require.NoError(t, err)
+	require.Equal(t, *pulses[startPulseIdx], foundPulse)
+
+	// Also check `not found` path
+	_, err = db.Forwards(ctx, pulseNumbers[endPulseIdx-4], 5)
+	require.Error(t, err)
+
+	_, err = db.Backwards(ctx, pulseNumbers[startPulseIdx+6], 10)
+	require.Error(t, err)
+}

@@ -19,6 +19,8 @@ package pulse
 import (
 	"context"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/jackc/pgx/v4"
 
 	"github.com/insolar/insolar/insolar"
@@ -124,6 +126,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	row := tx.QueryRow(ctx, query, args...)
 	err = row.Scan(&pn)
 	if err != nil {
+		log.Infof("selectByCondition: pulse not found - %v", err)
 		retErr = ErrNotFound
 		_ = tx.Rollback(ctx)
 		return
@@ -280,11 +283,11 @@ WITH RECURSIVE tmp AS (
 	FROM pulses WHERE pulse_number = $1
 		UNION
 	SELECT t."depth" + 1, p.pulse_number, p.next_pn
-	FROM t tmp
+	FROM tmp t
 	LEFT JOIN pulses p ON p.pulse_number = t.next_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
-	`, pn, steps) // AALEKSEEV TODO will `$2` work?
+	`, pn, steps)
 	return
 }
 
@@ -297,10 +300,10 @@ WITH RECURSIVE tmp AS (
 	FROM pulses WHERE pulse_number = $1
 		UNION
 	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
-	FROM t tmp
+	FROM tmp t
 	LEFT JOIN pulses p ON p.pulse_number = t.prev_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
-	`, pn, steps) // AALEKSEEV TODO will `$2` work?
+	`, pn, steps)
 	return
 }
