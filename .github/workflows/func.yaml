@@ -1,5 +1,6 @@
 name: Funcs
 on: [push]
+runs-on: self-hosted
 jobs:
   test:
     name: Func tests
