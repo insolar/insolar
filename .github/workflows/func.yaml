@@ -18,6 +18,7 @@ jobs:
       - name: Slow
         run: |
           export GOPATH=/home/admin/actions-runner/_work/insolar/go
+          make build
           make test_slow
 #      - name: Functests
 #        run: |
