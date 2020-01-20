@@ -98,23 +98,23 @@ func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
 	inslog.Info("[ bootstrap ] read keys files")
-	rootPublicKey, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + "root_member_keys.json")
+	rootPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "root_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
 
-	feePublicKey, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
+	feePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get fees keys")
 	}
 
-	migrationAdminPublicKey, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
+	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
 	migrationDaemonPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get migration daemon keys")
 		}
@@ -123,7 +123,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	networkIncentivesPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountNetworkIncentivesMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get network incentives keys")
 		}
@@ -132,7 +132,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	applicationIncentivesPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountApplicationIncentivesMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get application incentives keys")
 		}
@@ -141,7 +141,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	foundationPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountFoundationMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get foundation keys")
 		}
@@ -150,7 +150,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	fundsPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get funds keys")
 		}
@@ -159,7 +159,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	enterprisePublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
-		k, err := secrets.GetPublicXCryptoKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get enterprise keys")
 		}

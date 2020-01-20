@@ -24,7 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	crypto "github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto"
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/elliptic"
 	"github.com/insolar/x-crypto/rand"
@@ -39,8 +39,8 @@ type KeyPairXCrypto struct {
 	Public  crypto.PublicKey
 }
 
-// GetPublicXCryptoKeyFromFile reads private/public keys pair from json file and return public key
-func GetPublicXCryptoKeyFromFile(file string) (string, error) {
+// GetPublicKeyFromFile reads private/public keys pair from json file and return public key
+func GetPublicKeyFromFile(file string) (string, error) {
 	pair, err := ReadXCryptoKeysFile(file, true)
 	if err != nil {
 		return "", errors.Wrap(err, "couldn't get keys")

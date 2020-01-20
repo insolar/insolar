@@ -47,15 +47,6 @@ func GenerateKeyPair() (*KeyPair, error) {
 	}, nil
 }
 
-// GetPublicKeyFromFile reads private/public keys pair from json file and return public key
-func GetPublicKeyFromFile(file string) (string, error) {
-	pair, err := ReadKeysFile(file, true)
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't get keys")
-	}
-	return platformpolicy.MustPublicKeyToString(pair.Public), nil
-}
-
 // ReadKeysFile reads private/public keys pair from json file.
 func ReadKeysFile(file string, publicOnly bool) (*KeyPair, error) {
 	b, err := ioutil.ReadFile(file)
