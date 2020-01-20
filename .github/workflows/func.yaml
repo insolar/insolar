@@ -16,7 +16,9 @@ jobs:
           fetch-depth: 500
           path: go/src/github.com/insolar/insolar
       - name: Slow
-        run: make test_slow
+        run: |
+          make build
+          make test_slow
 #      - name: Functests
 #        run: |
 #          export GOPATH=/home/admin/actions-runner/_work/insolar/go
