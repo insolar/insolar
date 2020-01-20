@@ -53,7 +53,7 @@ func TestTimeoutSuite(t *testing.T) {
 	defer mc.Wait(17 * time.Second)
 	defer mc.Finish()
 
-	sKey, err := secrets.GeneratePrivateKey256k()
+	sKey, err := secrets.GeneratePrivateKeyEthereum()
 	require.NoError(t, err)
 	sKeyString, err := secrets.ExportPrivateKeyPEM(sKey)
 	require.NoError(t, err)

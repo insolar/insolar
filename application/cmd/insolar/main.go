@@ -86,16 +86,16 @@ func main() {
 	addURLFlag(createMemberCmd.Flags())
 	rootCmd.AddCommand(createMemberCmd)
 
-	var ellipticValue string
+	var targetValue string
 	var genKeysPairCmd = &cobra.Command{
 		Use:   "gen-key-pair",
-		Short: "generates public/private keys pair (possible values: 256, 256k)",
+		Short: "generates public/private keys pair",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateKeysPair(ellipticValue)
+			generateKeysPair(targetValue)
 		},
 	}
 	genKeysPairCmd.Flags().StringVarP(
-		&ellipticValue, "elliptic", "m", "", "elliptic to use for generation")
+		&targetValue, "target", "t", "", "target for whom need to generate keys (possible values: node, user)")
 	rootCmd.AddCommand(genKeysPairCmd)
 
 	var genMigrationAddressesCmd = &cobra.Command{
@@ -261,7 +261,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	logLevelInsolar, err := insolar.ParseLevel(serverLogLevel)
 	check("Failed to parse logging level", err)
 
-	privKey, err := secrets.GeneratePrivateKey256k()
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
 	check("Problems with generating of private key:", err)
 
 	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
@@ -339,21 +339,21 @@ func generateMigrationAddresses() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func generateKeysPair(ellipticValue string) {
-	switch ellipticValue {
-	case "256":
-		generateKeysPair256()
+func generateKeysPair(targetValue string) {
+	switch targetValue {
+	case "node":
+		generateKeysPairFast()
 		return
-	case "256k":
-		generateKeysPair256k()
+	case "user":
+		generateKeysPairEthereum()
 		return
 	default:
-		fmt.Fprintln(os.Stderr, "Unknown elliptic. Possible values: 256, 256k.")
+		fmt.Fprintln(os.Stderr, "Unknown target. Possible values: node, user.")
 		os.Exit(1)
 	}
 }
 
-func generateKeysPair256() {
+func generateKeysPairFast() {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privKey, err := ks.GeneratePrivateKey()
@@ -374,8 +374,8 @@ func generateKeysPair256() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func generateKeysPair256k() {
-	privKey, err := secrets.GeneratePrivateKey256k()
+func generateKeysPairEthereum() {
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
 	check("Problems with generating of private key:", err)
 
 	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)

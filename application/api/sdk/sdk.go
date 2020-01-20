@@ -227,7 +227,7 @@ func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
 }
 
 func createUserConfig(callerMemberReference string) (*requester.UserConfigJSON, error) {
-	privateKey, err := secrets.GeneratePrivateKey256k()
+	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate private key")
 	}

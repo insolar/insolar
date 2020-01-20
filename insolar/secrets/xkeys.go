@@ -167,6 +167,6 @@ func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
 	return &publicKey
 }
 
-func GeneratePrivateKey256k() (crypto.PrivateKey, error) {
+func GeneratePrivateKeyEthereum() (crypto.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256K(), rand.Reader)
 }

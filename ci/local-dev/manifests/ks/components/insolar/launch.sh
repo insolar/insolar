@@ -12,38 +12,38 @@ if [[ "$HOSTNAME" = "seed-0" && ! $(test -e /opt/insolar/config/finished) ]]
 then
 
     echo "generate members keys in dir: $CONFIG_DIR"
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/root_member_keys.json
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/fee_member_keys.json
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/migration_admin_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/root_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/fee_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/migration_admin_member_keys.json
 
     for (( b = 0; b < 10; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
     done
 
     for (( b = 0; b < 140; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/network_incentives_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/network_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/application_incentives_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/application_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/foundation_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/foundation_${b}_member_keys.json
     done
 
     for (( b = 0; b < 2; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/funds_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/funds_${b}_member_keys.json
     done
 
     for (( b = 0; b < 8; b++ ))
     do
-    insolar gen-key-pair --elliptic=256k > ${CONFIG_DIR}/enterprise_${b}_member_keys.json
+    insolar gen-key-pair --target=user > ${CONFIG_DIR}/enterprise_${b}_member_keys.json
     done
 
     echo "generate bootstrap files"

@@ -65,7 +65,7 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 	}
 
 	if cfgJSON.PrivateKey == "" {
-		privKey, err := secrets.GeneratePrivateKey256k()
+		privKey, err := secrets.GeneratePrivateKeyEthereum()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 		}
