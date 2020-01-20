@@ -17,11 +17,7 @@
 package pulse
 
 import (
-	"testing"
-
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/require"
 )
 
 // AALEKSEEV TODO re-implement tests
@@ -34,16 +30,16 @@ func BadgerDefaultOptions(dir string) badger.Options {
 	return ops
 }
 
-func TestPulseKey(t *testing.T) {
-	t.Parallel()
-
-	expectedKey := pulseKey(insolar.GenesisPulse.PulseNumber)
-
-	rawID := expectedKey.ID()
-
-	actualKey := newPulseKey(rawID)
-	require.Equal(t, expectedKey, actualKey)
-}
+//func TestPulseKey(t *testing.T) {
+//	t.Parallel()
+//
+//	expectedKey := pulseKey(insolar.GenesisPulse.PulseNumber)
+//
+//	rawID := expectedKey.ID()
+//
+//	actualKey := newPulseKey(rawID)
+//	require.Equal(t, expectedKey, actualKey)
+//}
 
 // AALEKSEEV TODO re-implement this test
 //func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
