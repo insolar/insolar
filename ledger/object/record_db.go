@@ -139,7 +139,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 		return nil
 	}
 
-	r.batchLock.Lock()
+	r.batchLock.Lock() // AALEKSEEV TODO consider removing this lock
 	defer r.batchLock.Unlock()
 
 	// It's possible, that in the batch can be records from different pulses

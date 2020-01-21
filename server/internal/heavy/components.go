@@ -326,10 +326,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		// AALEKSEEV TODO fix this
-		Records = object.NewRecordDB(DB)          // ALEKSANDER
-		indexes := object.NewIndexDB(DB, Records) // EGOR
-		drops := drop.NewDB(DB)                   // ILYA
-		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		Records = object.NewRecordDB(DB)
+		indexes := object.NewIndexDB(DB, Records)           // EGOR
+		drops := drop.NewDB(DB)                             // ILYA
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses) // ALEKSANDER
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
