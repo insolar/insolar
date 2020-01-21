@@ -259,14 +259,27 @@ func Test_AbandonsMetricValue(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Stop()
 
-	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", float64(expectAbandoned), time.Second*5)
+	expectAbandonedValue := atomic.LoadInt64(&expectAbandoned)
+
+	v := fetchMetricValue(
+		s.metrics.Handler(),
+		"insolar_requests_abandoned",
+		float64(expectAbandonedValue),
+		time.Second*5,
+	)
+
 	require.NoError(t, err, "fetch insolar_requests_abandoned metric value")
 	// other tests could increment counter, so we expect at least expect value
-	assert.GreaterOrEqualf(t, int64(v), expectAbandoned,
+	assert.GreaterOrEqualf(t, int64(v), expectAbandonedValue,
 		"fetched insolar_requests_abandoned value equals or greater than calculated value")
 }
 
-func fetchMetricValue(h http.Handler, metricName string, expect float64, maxDuration time.Duration) float64 {
+func fetchMetricValue(
+	h http.Handler,
+	metricName string,
+	expect float64,
+	maxDuration time.Duration,
+) float64 {
 	tries := int64(5)
 	var v float64
 	for i := 0; i < int(tries); i++ {
