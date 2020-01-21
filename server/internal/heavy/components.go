@@ -346,11 +346,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager.StartPulse = sp
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets, gcRunInfo)
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets)
 		c.replicator = replicator
 
-		h := handler.New(cfg.Ledger, gcRunInfo)
+		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator

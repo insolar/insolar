@@ -43,8 +43,7 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	cfg      configuration.Ledger
-	gcRunner *executor.BadgerGCRunInfo
+	cfg configuration.Ledger
 
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -73,10 +72,9 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New(cfg configuration.Ledger, gcRunner *executor.BadgerGCRunInfo) *Handler {
+func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
-		cfg:      cfg,
-		gcRunner: gcRunner,
+		cfg: cfg,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -314,6 +312,6 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	executor.FinalizePulse(ctx, h.PulseCalculator, h.JetKeeper, h.IndexModifier, confirm.Pulse, h.gcRunner)
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.JetKeeper, h.IndexModifier, confirm.Pulse)
 	logger.Info("handleGotHotConfirmation finish. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 }

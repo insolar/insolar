@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +18,9 @@ package executor_test
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -32,62 +30,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
 )
-
-type TestBadgerGCRunner struct {
-	lock  sync.RWMutex
-	count uint
-}
-
-func (t *TestBadgerGCRunner) RunValueGC(ctx context.Context) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	t.count++
-}
-
-func (t *TestBadgerGCRunner) getCount() uint {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-
-	return t.count
-}
-
-func TestBadgerGCRunInfo(t *testing.T) {
-
-	ctx := inslogger.TestContext(t)
-
-	t.Run("call every time if frequency equal 1", func(t *testing.T) {
-		t.Parallel()
-		runner := &TestBadgerGCRunner{}
-		info := executor.NewBadgerGCRunInfo(runner, 1)
-		for i := 1; i < 5; i++ {
-			done := info.RunGCIfNeeded(ctx)
-			<-done
-			require.Equal(t, uint(i), runner.getCount())
-		}
-	})
-
-	t.Run("no call if frequency equal 0", func(t *testing.T) {
-		t.Parallel()
-		runner := &TestBadgerGCRunner{}
-		info := executor.NewBadgerGCRunInfo(runner, 0)
-		for i := 1; i < 5; i++ {
-			done := info.RunGCIfNeeded(ctx)
-			<-done
-			require.Equal(t, uint(0), runner.getCount())
-		}
-	})
-
-	t.Run("even calls if frequency equal 2", func(t *testing.T) {
-		t.Parallel()
-		runner := &TestBadgerGCRunner{}
-		info := executor.NewBadgerGCRunInfo(runner, 2)
-		for i := 1; i < 5; i++ {
-			done := info.RunGCIfNeeded(ctx)
-			<-done
-			require.Equal(t, uint(i/2), runner.getCount())
-		}
-	})
-}
 
 func TestFinalizePulse_HappyPath(t *testing.T) {
 	ctx := inslogger.TestContext(t)
@@ -137,11 +79,7 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	indexes := object.NewIndexModifierMock(t)
 	indexes.UpdateLastKnownPulseMock.Return(nil)
 
-	executor.FinalizePulse(ctx, pc, jk, indexes, targetPulse, testBadgerGCInfo())
-}
-
-func testBadgerGCInfo() *executor.BadgerGCRunInfo {
-	return executor.NewBadgerGCRunInfo(&TestBadgerGCRunner{}, 1)
+	executor.FinalizePulse(ctx, pc, jk, indexes, targetPulse)
 }
 
 func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
@@ -152,7 +90,7 @@ func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(false)
 
-	executor.FinalizePulse(ctx, nil, jk, nil, testPulse, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, nil, jk, nil, testPulse)
 }
 
 func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
@@ -167,7 +105,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{}, errors.New("Test"))
 
-	executor.FinalizePulse(ctx, pc, jk, nil, testPulse, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, pc, jk, nil, testPulse)
 }
 
 func TestFinalizePulse_NotNextPulse(t *testing.T) {
@@ -182,5 +120,5 @@ func TestFinalizePulse_NotNextPulse(t *testing.T) {
 	pc := insolarPulse.NewCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: testPulse}, nil)
 
-	executor.FinalizePulse(ctx, pc, jk, nil, testPulse+10, testBadgerGCInfo())
+	executor.FinalizePulse(ctx, pc, jk, nil, testPulse+10)
 }
