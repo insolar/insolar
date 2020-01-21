@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package logicrunner
 
@@ -64,6 +62,7 @@ type ExecutionBrokerI interface {
 }
 
 type LedgerHasMore int
+
 const (
 	LedgerIsEmpty LedgerHasMore = iota + 1
 	LedgerHasMoreKnown
@@ -174,7 +173,6 @@ func (q *ExecutionBroker) noMoreRequestsOnLedger(ctx context.Context) {
 		q.ledgerHasMoreRequests = LedgerHasMoreKnown
 	}
 }
-
 
 // startProcessors starts one processing goroutine
 func (q *ExecutionBroker) startProcessor(ctx context.Context) {
