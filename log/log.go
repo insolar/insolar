@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package log
 
 import (
+	stdlog "log"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/critlog"
 	"github.com/insolar/insolar/log/logadapter"
 	"github.com/insolar/insolar/log/zlogadapter"
 	"github.com/pkg/errors"
-	stdlog "log"
-	"strings"
-	"sync"
-	"time"
 )
 
 // Creates and sets global logger. It has a different effect than SetGlobalLogger(NewLog(...)) as it sets a global filter also.
