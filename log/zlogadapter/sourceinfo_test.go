@@ -32,7 +32,7 @@ func stripPackageName(packageName string) string {
 
 // beware to adding lines in this test (test output depend on test code offset!)
 func TestLog_getCallInfo(t *testing.T) {
-	expectedLine := 38 // should be equal of line number where getCallInfo is called
+	expectedLine := 36 // should be equal of line number where getCallInfo is called
 	info := getCallInfo(1)
 
 	assert.Contains(t, info.fileName, "log/zlogadapter/sourceinfo_test.go:")
