@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -44,7 +45,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var pool *pgxpool.Pool
+var poolLock sync.Mutex
+var globalPgPool *pgxpool.Pool
+
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
+}
+
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
+}
 
 // TestMain does the before and after setup
 func TestMain(m *testing.M) {
@@ -73,6 +87,7 @@ func TestMain(m *testing.M) {
 	}
 	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
 
+	setPool(pool)
 	// Run all tests
 	code := m.Run()
 
@@ -94,7 +109,7 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	recordStore := NewRecordDB(dbMock, pool)
+	recordStore := NewRecordDB(dbMock, getPool())
 
 	numElements := 10
 
@@ -278,7 +293,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 
 		rec.ID = id
 		err = recordStorage.Set(ctx, rec)
@@ -299,7 +314,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 
 		rec.ID = id
 		err = recordStorage.BatchSet(ctx, []record.Material{rec})
@@ -329,7 +344,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 
 		rec.ID = id
 		err = recordStorage.BatchSet(ctx, []record.Material{rec, sRec, tRec})
@@ -371,7 +386,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 
 		rec.ID = id
 		err = recordStorage.Set(ctx, rec)
@@ -396,7 +411,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 
 		rec.ID = id
 
@@ -498,7 +513,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		position, err := recordStorage.LastKnownPosition(pn)
@@ -517,7 +532,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -540,7 +555,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -569,7 +584,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		id := *insolar.NewID(pn, []byte{1})
@@ -599,7 +614,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -634,7 +649,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db, pool)
+		recordStorage := NewRecordDB(db, getPool())
 		pn := gen.PulseNumber()
 
 		_, err = recordStorage.AtPosition(pn, 1)
