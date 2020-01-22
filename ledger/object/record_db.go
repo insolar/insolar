@@ -23,7 +23,6 @@ import (
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
-	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -172,7 +171,7 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 
 	tx, err := conn.BeginTx(ctx, ReadTxOptions)
 	if err != nil {
-		retErr = errors.Wrap(err, "Unable to start a write transaction")
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
 	}
 	recordIDBinary, err := id.MarshalBinary()
@@ -183,7 +182,7 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 	}
 	recRow := tx.QueryRow(ctx, `
 			SELECT object_id, jet_id, signature, polymorph, virtual
-			FROM records WHERE record_id = $?`,
+			FROM records WHERE record_id = $1`,
 		recordIDBinary)
 	var (
 		objIDSlice   []byte
@@ -230,117 +229,110 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 }
 
 // AtPosition returns record ID for a specific pulse and a position
-// TODO optimize this. Actually user uses ID to select the Record
-func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
-	var recID insolar.ID
-	err := r.db.Backend().View(func(txn *badger.Txn) error {
-		lastKnownPosition, err := getLastKnownPosition(txn, pn)
-		if err != nil {
-			return err
-		}
+// TODO optimize this. Actually user needs ID only to select the Record using .ForID method
+func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID insolar.ID, retErr error) {
+	ctx := context.Background()
+	conn, err := r.pool.Acquire(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
 
-		if position > lastKnownPosition {
-			return ErrNotFound
-		}
-		positionKey := newRecordPositionKey(pn, position)
-		fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		return
+	}
 
-		item, err := txn.Get(fullKey)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return err
-		}
-		rawID, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
+	recRow := tx.QueryRow(ctx, `SELECT record_id FROM records WHERE pulse_number = $1 AND position = $2`,
+		pn, position)
+	var recordIDSlice []byte
+	err = recRow.Scan(recordIDSlice)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "Unable to SELECT from records")
+		return
+	}
 
-		recID = *insolar.NewIDFromBytes(rawID)
-		return nil
-	})
-	return recID, err
+	err = tx.Commit(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+		return
+	}
+
+	err = retID.UnmarshalBinary(recordIDSlice)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to unmarshal recordIDSlice")
+		return
+	}
+	return
 }
 
 // LastKnownPosition returns last known position of record in Pulse.
-func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
-	var position uint32
-	var err error
+func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32, retErr error) {
+	ctx := context.Background()
+	conn, err := r.pool.Acquire(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
 
-	err = r.db.Backend().View(func(txn *badger.Txn) error {
-		position, err = getLastKnownPosition(txn, pn)
-		return err
-	})
-
-	return position, err
-}
-
-func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNumber) error {
-	keyFrom := recordKey(*insolar.NewID(from, nil))
-	it := store.NewReadIterator(r.db.Backend(), keyFrom, false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newRecordKey(it.Key())
-
-		err := r.db.Delete(key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %s", key.DebugString())
-		}
-
-		inslogger.FromContext(ctx).Debugf("Erased key: %s", key.DebugString())
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		return
 	}
 
-	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from.String())
+	recRow := tx.QueryRow(ctx, `SELECT position FROM records_last_position WHERE pulse_number = $1`, pn)
+	err = recRow.Scan(&retPosition)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "Unable to SELECT from records_last_position")
+		return
 	}
 
-	return nil
-}
-
-func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from store.Key, prefix byte) error {
-	it := store.NewReadIterator(r.db.Backend(), from, false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		if it.Key()[0] != prefix {
-			continue
-		}
-		key := makePositionKey(it.Key())
-
-		err := r.db.Delete(key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %s", key)
-		}
-
-		inslogger.FromContext(ctx).Debugf("Erased key: %s", key)
+	err = tx.Commit(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+		return
 	}
 
-	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from)
-	}
-
-	return nil
+	return
 }
 
 // TruncateHead remove all records after lastPulse
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-
-	if err := r.truncateRecordsHead(ctx, from); err != nil {
-		return errors.Wrap(err, "failed to truncate records head")
+	conn, err := r.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
+	defer conn.Release()
 
-	if err := r.truncatePositionRecordHead(ctx, recordPositionKey{pn: from}, recordPositionKeyPrefix); err != nil {
-		return errors.Wrap(err, "failed to truncate record positions head")
-	}
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
 
-	if err := r.truncatePositionRecordHead(ctx, lastKnownRecordPositionKey{pn: from}, lastKnownRecordPositionKeyPrefix); err != nil {
-		return errors.Wrap(err, "failed to truncate last known record positions head")
+		_, err = tx.Exec(ctx, `DELETE FROM records_last_position WHERE pulse_number > $1`, from)
+		if err != nil {
+			return errors.Wrap(err, "Unable to DELETE from records_last_position")
+		}
+
+		_, err = tx.Exec(ctx, `DELETE FROM records WHERE pulse_number > $1`, from)
+		if err != nil {
+			return errors.Wrap(err, "Unable to DELETE from records")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("RecordDB.TruncateHead - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
