@@ -17,15 +17,11 @@
 package object
 
 import (
-	"bytes"
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/pulse"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -33,8 +29,10 @@ import (
 	"go.opencensus.io/stats"
 )
 
-type IndexDBNew struct {
-	pool *pgxpool.Pool
+// IndexDB is a db-based storage, that stores a collection of IndexBuckets
+type IndexDB struct {
+	pool        *pgxpool.Pool
+	recordStore *RecordDB
 }
 
 var ReadTxOptions = pgx.TxOptions{
@@ -49,12 +47,13 @@ var WriteTxOptions = pgx.TxOptions{
 	DeferrableMode: pgx.NotDeferrable,
 }
 
-func NewIndexDBNew(pool *pgxpool.Pool) *IndexDBNew {
-	return &IndexDBNew{pool: pool}
+// NewIndexDB creates a new instance of IndexDB
+func NewIndexDBNew(pool *pgxpool.Pool) *IndexDB {
+	return &IndexDB{pool: pool}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexDBNew) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
+func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
 	conn, err := i.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -96,7 +95,8 @@ func (i *IndexDBNew) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucke
 	return nil
 }
 
-func (i *IndexDBNew) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error {
+// UpdateLastKnownPulse must be called after updating TopSyncPulse
+func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
 	conn, err := i.pool.Acquire(ctx)
@@ -144,10 +144,10 @@ func (i *IndexDBNew) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseN
 		}
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
-func (i *IndexDBNew) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
 	log := inslogger.FromContext(ctx)
 
 	conn, err := i.pool.Acquire(ctx)
@@ -183,10 +183,15 @@ func (i *IndexDBNew) ForID(ctx context.Context, pn insolar.PulseNumber, objID in
 		return record.Index{}, ErrNotFound
 	}
 
+	err = tx.Commit(ctx)
+	if err != nil {
+		return idx, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+	}
+
 	return idx, nil
 }
 
-func (i *IndexDBNew) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
 	log := inslogger.FromContext(ctx)
 
 	conn, err := i.pool.Acquire(ctx)
@@ -233,10 +238,16 @@ func (i *IndexDBNew) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]re
 		idxs = append(idxs, idx)
 	}
 
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+	}
+
 	return idxs, nil
 }
 
-func (i *IndexDBNew) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
+// LastKnownForID returns latest bucket for provided ID
+func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
 	log := inslogger.FromContext(ctx)
 
 	conn, err := i.pool.Acquire(ctx)
@@ -281,222 +292,80 @@ func (i *IndexDBNew) LastKnownForID(ctx context.Context, objID insolar.ID) (reco
 		return record.Index{}, ErrNotFound
 	}
 
-	return idx, nil
-}
-
-// IndexDB is a db-based storage, that stores a collection of IndexBuckets
-type IndexDB struct {
-	lock sync.RWMutex
-	db   store.DB
-
-	recordStore *RecordDB
-}
-
-type indexKey struct {
-	pn    insolar.PulseNumber
-	objID insolar.ID
-}
-
-func newIndexKey(raw []byte) indexKey {
-	ik := indexKey{}
-	ik.pn = insolar.NewPulseNumber(raw)
-	ik.objID = *insolar.NewIDFromBytes(raw[ik.pn.Size():])
-
-	return ik
-}
-
-func (k indexKey) Scope() store.Scope {
-	return store.ScopeIndex
-}
-
-func (k indexKey) ID() []byte {
-	return append(k.pn.Bytes(), k.objID.Bytes()...)
-}
-
-type lastKnownIndexPNKey struct {
-	objID insolar.ID
-}
-
-func (k lastKnownIndexPNKey) Scope() store.Scope {
-	return store.ScopeLastKnownIndexPN
-}
-
-func (k lastKnownIndexPNKey) ID() []byte {
-	id := k.objID
-	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
-}
-
-// NewIndexDB creates a new instance of IndexDB
-func NewIndexDB(db store.DB, recordStore *RecordDB) *IndexDB {
-	return &IndexDB{db: db, recordStore: recordStore}
-}
-
-// SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	err := i.setBucket(pn, bucket.ObjID, &bucket)
+	err = tx.Commit(ctx)
 	if err != nil {
-		return err
+		return record.Index{}, err
 	}
 
-	stats.Record(ctx, statIndexesAddedCount.M(1))
-
-	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully. Pulse: %d", bucket.ObjID.DebugString(), pn)
-
-	return nil
-}
-
-// UpdateLastKnownPulse must be called after updating TopSyncPulse
-func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	inslogger.FromContext(ctx).Info("UpdateLastKnownPulse starts. topSyncPulse: ", topSyncPulse)
-
-	indexes, err := i.ForPulse(ctx, topSyncPulse)
-	if err != nil && err != ErrIndexNotFound {
-		return errors.Wrapf(err, "failed to get indexes for pulse: %d", topSyncPulse)
-	}
-
-	for idx := range indexes {
-		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indexes[idx].ObjID.DebugString())
-		if err := i.setLastKnownPN(topSyncPulse, indexes[idx].ObjID); err != nil {
-			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indexes[idx].ObjID.DebugString(), topSyncPulse)
-		}
-	}
-
-	return nil
+	return idx, nil
 }
 
 // TruncateHead remove all records after lastPulse
 func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	log := inslogger.FromContext(ctx)
 
-	it := i.db.NewIterator(&indexKey{objID: *insolar.NewID(pulse.MinTimePulse, nil), pn: from}, false)
-	defer it.Close()
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
 
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newIndexKey(it.Key())
-		err := i.db.Delete(&key)
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		return errors.Wrap(err, "Unable to start a read transaction")
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM last_known_pulse_for_indexes WHERE pulse_number >= $1", from)
+	if err != nil {
+		log.Infof("TruncateHead: pulse not found - %v", err)
+		_ = tx.Rollback(ctx)
+		return ErrNotFound
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM indexes WHERE pulse_number >= $1", from)
+	if err != nil {
+		log.Infof("TruncateHead: pulse not found - %v", err)
+		_ = tx.Rollback(ctx)
+		return ErrNotFound
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	currentPN := readFrom
+	var res []record.CompositeFilamentRecord
+
+	if readUntil > readFrom {
+		return nil, errors.New("readUntil can't be more then readFrom")
+	}
+
+	hasFilamentBehind := true
+	for hasFilamentBehind && currentPN >= readUntil {
+		b, err := i.ForID(ctx, currentPN, objID)
 		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
+			return nil, err
+		}
+		if len(b.PendingRecords) == 0 {
+			return nil, errors.New("can't fetch pendings from index")
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
-	}
-
-	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
-	}
-
-	return nil
-}
-
-// ForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
-	var buck *record.Index
-	buck, err := i.getBucket(pn, objID)
-	if err == ErrIndexNotFound {
-		lastPN, err := i.getLastKnownPN(objID)
+		tempRes, err := i.filament(&b)
 		if err != nil {
-			return record.Index{}, ErrIndexNotFound
+			return nil, err
 		}
+		if len(tempRes) == 0 {
+			return nil, errors.New("can't fetch pendings from index")
+		}
+		res = append(tempRes, res...)
 
-		buck, err = i.getBucket(lastPN, objID)
+		hasFilamentBehind, currentPN, err = i.nextFilament(&b)
 		if err != nil {
-			return record.Index{}, err
+			return nil, err
 		}
-	} else if err != nil {
-		return record.Index{}, err
 	}
 
-	return *buck, nil
-}
-
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
-	indexes := make([]record.Index, 0)
-
-	key := &indexKey{objID: insolar.ID{}, pn: pn}
-	it := i.db.NewIterator(key, false)
-	defer it.Close()
-
-	for it.Next() {
-		rawKey := it.Key()
-		currentKey := newIndexKey(rawKey)
-		if currentKey.pn != pn {
-			break
-		}
-
-		index := record.Index{}
-		rawIndex, err := it.Value()
-		err = index.Unmarshal(rawIndex)
-		if err != nil {
-			return nil, errors.Wrap(err, "Can't unmarshal index")
-		}
-		indexes = append(indexes, index)
-	}
-
-	if len(indexes) == 0 {
-		return nil, ErrIndexNotFound
-	}
-
-	return indexes, nil
-}
-
-func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
-	lastPN, err := i.getLastKnownPN(objID)
-	if err != nil {
-		return record.Index{}, ErrIndexNotFound
-	}
-
-	idx, err := i.getBucket(lastPN, objID)
-	if err != nil {
-		return record.Index{}, err
-	}
-
-	return *idx, nil
-}
-
-func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
-	key := indexKey{pn: pn, objID: objID}
-
-	buff, err := bucket.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return i.db.Set(key, buff)
-}
-
-func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.Index, error) {
-	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
-	if err == store.ErrNotFound {
-		return nil, ErrIndexNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	bucket := record.Index{}
-	err = bucket.Unmarshal(buff)
-	return &bucket, err
-}
-
-func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error {
-	key := lastKnownIndexPNKey{objID: objID}
-	return i.db.Set(key, pn.Bytes())
-}
-
-func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
-	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
-	if err != nil {
-		return pulse.MinTimePulse, err
-	}
-	return insolar.NewPulseNumber(buff), err
+	return res, nil
 }
 
 func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, error) {
@@ -535,40 +404,4 @@ func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insola
 	}
 
 	return false, insolar.PulseNumber(0), nil
-}
-
-func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	currentPN := readFrom
-	var res []record.CompositeFilamentRecord
-
-	if readUntil > readFrom {
-		return nil, errors.New("readUntil can't be more then readFrom")
-	}
-
-	hasFilamentBehind := true
-	for hasFilamentBehind && currentPN >= readUntil {
-		b, err := i.getBucket(currentPN, objID)
-		if err != nil {
-			return nil, err
-		}
-		if len(b.PendingRecords) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-
-		tempRes, err := i.filament(b)
-		if err != nil {
-			return nil, err
-		}
-		if len(tempRes) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-		res = append(tempRes, res...)
-
-		hasFilamentBehind, currentPN, err = i.nextFilament(b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return res, nil
 }
