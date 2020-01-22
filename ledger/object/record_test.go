@@ -81,42 +81,6 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestRecordKey(t *testing.T) {
-	t.Parallel()
-
-	expectedKey := recordKey(gen.ID())
-
-	rawID := expectedKey.ID()
-
-	actualKey := newRecordKey(rawID)
-	require.Equal(t, expectedKey, actualKey)
-}
-
-func TestRecordPositionKey(t *testing.T) {
-	t.Parallel()
-
-	expectedKey := recordPositionKey{pn: insolar.GenesisPulse.PulseNumber, number: 42}
-
-	rawID := expectedKey.ID()
-
-	actualKey := newRecordPositionKey(insolar.GenesisPulse.PulseNumber, 42)
-
-	actualKeyFromBytes := newRecordPositionKeyFromBytes(rawID)
-	require.Equal(t, expectedKey, actualKeyFromBytes)
-	require.Equal(t, expectedKey, actualKey)
-}
-
-func TestLastKnownRecordPositionKey(t *testing.T) {
-	t.Parallel()
-
-	expectedKey := lastKnownRecordPositionKey{pn: insolar.GenesisPulse.PulseNumber}
-
-	rawID := expectedKey.ID()
-
-	actualKey := newLastKnownRecordPositionKey(rawID)
-	require.Equal(t, expectedKey, actualKey)
-}
-
 func TestRecordStorage_TruncateHead(t *testing.T) {
 	t.Parallel()
 
