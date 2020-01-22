@@ -18,7 +18,6 @@ package object
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/jackc/pgx/v4"
 
@@ -32,8 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
-
-// AALEKSEEV TODO use PostgreSQL
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
@@ -53,95 +50,49 @@ var WriteTxOptions = pgx.TxOptions{
 	DeferrableMode: pgx.NotDeferrable,
 }
 
-//type recordKey insolar.ID
-//
-//func (k recordKey) Scope() store.Scope {
-//	return store.ScopeRecord
-//}
-//
-//func (k recordKey) DebugString() string {
-//	id := insolar.ID(k)
-//	return "recordKey. " + id.DebugString()
-//}
-//
-//func (k recordKey) ID() []byte {
-//	id := insolar.ID(k)
-//	return id.AsBytes()
-//}
-//
-//func newRecordKey(raw []byte) recordKey {
-//	pulse := insolar.NewPulseNumber(raw)
-//	hash := raw[pulse.Size():]
-//
-//	return recordKey(*insolar.NewID(pulse, hash))
-//}
-//
-//const (
-//	recordPositionKeyPrefix          = 0x01
-//	lastKnownRecordPositionKeyPrefix = 0x02
-//)
-//
-//type recordPositionKey struct {
-//	pn     insolar.PulseNumber
-//	number uint32
-//}
-//
-//func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
-//	return recordPositionKey{pn: pn, number: number}
-//}
-//
-//func (k recordPositionKey) Scope() store.Scope {
-//	return store.ScopeRecordPosition
-//}
-//
-//func (k recordPositionKey) ID() []byte {
-//	parsedNum := make([]byte, 4)
-//	binary.BigEndian.PutUint32(parsedNum, k.number)
-//	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
-//}
-//
-//func newRecordPositionKeyFromBytes(raw []byte) recordPositionKey {
-//	k := recordPositionKey{}
-//
-//	k.pn = insolar.NewPulseNumber(raw[1:])
-//	k.number = binary.BigEndian.Uint32(raw[(k.pn.Size() + 1):])
-//
-//	return k
-//}
-//
-//func (k recordPositionKey) String() string {
-//	return fmt.Sprintf("recordPositionKey. pulse: %d, number: %d", k.pn, k.number)
-//}
-//
-//type lastKnownRecordPositionKey struct {
-//	pn insolar.PulseNumber
-//}
-//
-//func newLastKnownRecordPositionKey(raw []byte) lastKnownRecordPositionKey {
-//	k := lastKnownRecordPositionKey{}
-//	k.pn = insolar.NewPulseNumber(raw[1:])
-//	return k
-//}
-//
-//func (k lastKnownRecordPositionKey) String() string {
-//	return fmt.Sprintf("lastKnownRecordPositionKey. pulse: %d", k.pn)
-//}
-//
-//func (k lastKnownRecordPositionKey) Scope() store.Scope {
-//	return store.ScopeRecordPosition
-//}
-//
-//func (k lastKnownRecordPositionKey) ID() []byte {
-//	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
-//}
-
-
-//rec.ID.MarshalBinary()
-//rec.ID.UnmarshalBinary()
-
 // NewRecordDB creates new DB storage instance.
 func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
 	return &RecordDB{db: db, pool: pool}
+}
+
+func (r *RecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Material) error {
+	// Update the position for the pulse first
+	_, err := tx.Exec(ctx, `
+			INSERT INTO records_last_position (pulse_number, position)
+			VALUES ($1, 1)
+			ON CONFLICT(pulse_number) DO
+			UPDATE SET position = records_last_position.position + 1;
+		`, rec.ID.Pulse())
+	if err != nil {
+		return errors.Wrap(err, "Unable to INSERT into records_last_position")
+	}
+
+	// Insert the record
+	recordIDBinary, err := rec.ID.MarshalBinary()
+	if err != nil {
+		return errors.Wrap(err, "rec.ID.MarshalBinary failed")
+	}
+	objectIDBinary, err := rec.ObjectID.MarshalBinary()
+	if err != nil {
+		return errors.Wrap(err, "rec.ObjectID.MarshalBinary failed")
+	}
+	jetIDBinary, err := rec.JetID.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "rec.JetID.Marshal failed")
+	}
+	virtualBinary, err := rec.Virtual.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "rec.Virtual.Marshal failed")
+	}
+	_, err = tx.Exec(ctx, `
+			INSERT INTO records (pulse_number, position, record_id, object_id, jet_id, signature, polymorph, virtual)
+			VALUES ($1, (SELECT position FROM records_last_position LIMIT 1), $2, $3, $4, $5, $6, $7);
+		`, rec.ID.Pulse(), recordIDBinary, objectIDBinary, jetIDBinary, rec.Signature, rec.Polymorph, virtualBinary)
+	if err != nil {
+		return errors.Wrap(err, "Unable to INSERT into records")
+	}
+
+	return nil
 }
 
 // Set saves new record-value in storage.
@@ -153,33 +104,17 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
-
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, WriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		// Update the position for the pulse first
-		_, err = tx.Exec(ctx, `
-			INSERT INTO records_last_position (pulse_number, position)
-			VALUES ($1, 1)
-			ON CONFLICT(pulse_number) DO
-			UPDATE SET position = records_last_position.position + 1;
-		`, rec.ID.Pulse())
+		err = r.insertRecord(ctx, tx, rec)
 		if err != nil {
 			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to INSERT into records_last_position")
+			return err
 		}
-
-
-
-		// Insert the record
-		_, err = tx.Exec(ctx, `
-			INSERT INTO records (id, position, object_id, jet_id, signature, polymorph, virtual)
-			VALUES ( ($1, $2), (SELECT position FROM records_last_position WHERE pulse_number = $3), 
-				($4, $5), ($5, $6), $7, $8, $9);
-		`, rec.ID.Pulse(), rec.ID.))
 
 		err = tx.Commit(ctx)
 		if err == nil { // success
@@ -194,127 +129,150 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 
 // BatchSet saves a batch of records to storage with order-processing.
 func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
-	if len(recs) == 0 {
-		return nil
-	}
-
-	// It's possible, that in the batch can be records from different pulses
-	// because of that we need to track a current pulse and position
-	// for different pulses position is requested from db
-	// We can get position on every loop, but we SHOULDN'T do this
-	// Because it isn't efficient
-	lastKnowPulse := insolar.PulseNumber(0)
-	position := uint32(0)
-
-	err := r.db.Backend().Update(func(txn *badger.Txn) error {
-		for _, rec := range recs {
-			if rec.ID.IsEmpty() {
-				return errors.New("id is empty")
-			}
-
-			err := setRecord(txn, recordKey(rec.ID), rec)
-			if err != nil {
-				return err
-			}
-
-			// For cross-pulse batches
-			if lastKnowPulse != rec.ID.Pulse() {
-				// Set last known before changing pulse/position
-				err := setLastKnownPosition(txn, lastKnowPulse, position)
-				if err != nil {
-					return err
-				}
-
-				// fetch position for a new pulse
-				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
-				if err != nil && err != ErrNotFound {
-					return err
-				}
-				lastKnowPulse = rec.ID.Pulse()
-			}
-
-			position++
-
-			err = setPosition(txn, rec.ID, position)
-			if err != nil {
-				return err
-			}
-
-		}
-
-		// set position for last record
-		err := setLastKnownPosition(txn, lastKnowPulse, position)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		for _, rec := range recs {
+			err = r.insertRecord(ctx, tx, rec)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return err
+			}
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("RecordDB.BatchSet - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
 }
 
-// setRecord is a helper method for storaging record to db in scope of txn.
-func setRecord(txn *badger.Txn, key store.Key, record record.Material) error {
-	data, err := record.Marshal()
+// ForID returns record for provided id.
+func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
+	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
-		return err
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a write transaction")
+		return
+	}
+	recordIDBinary, err := id.MarshalBinary()
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "id.MarshalBinary failed")
+		return
+	}
+	recRow := tx.QueryRow(ctx, `
+			SELECT object_id, jet_id, signature, polymorph, virtual
+			FROM records WHERE record_id = $?`,
+		recordIDBinary)
+	var (
+		objIDSlice   []byte
+		jetIDSlice   []byte
+		virtualSlice []byte
+	)
+	err = recRow.Scan(
+		objIDSlice,
+		jetIDSlice,
+		retRec.Signature,
+		&retRec.Polymorph,
+		virtualSlice)
+
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "Unable to SELECT from records")
+		return
 	}
 
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	_, err = txn.Get(fullKey)
-	if err != nil && err != badger.ErrKeyNotFound {
-		return err
-	}
-	if err == nil {
-		return ErrOverride
+	err = tx.Commit(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+		return
 	}
 
-	return txn.Set(fullKey, data)
+	retRec.ID = id
+	err = retRec.ObjectID.UnmarshalBinary(objIDSlice)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to unmarshal objIDSlice")
+		return
+	}
+	err = retRec.JetID.Unmarshal(jetIDSlice)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to unmarshal jetIDSlice")
+		return
+	}
+	err = retRec.Virtual.Unmarshal(virtualSlice)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to unmarshal virtualSlice")
+		return
+	}
+
+	return
 }
 
-// setRecord is a helper method for getting last known position of record to db in scope of txn and pulse.
-func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
-	key := lastKnownRecordPositionKey{pn: pn}
+// LastKnownPosition returns last known position of record in Pulse.
+func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	var position uint32
+	var err error
 
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	err = r.db.Backend().View(func(txn *badger.Txn) error {
+		position, err = getLastKnownPosition(txn, pn)
+		return err
+	})
 
-	item, err := txn.Get(fullKey)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return 0, ErrNotFound
+	return position, err
+}
+
+// AtPosition returns record ID for a specific pulse and a position
+func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
+	var recID insolar.ID
+	err := r.db.Backend().View(func(txn *badger.Txn) error {
+		lastKnownPosition, err := getLastKnownPosition(txn, pn)
+		if err != nil {
+			return err
 		}
-		return 0, err
-	}
 
-	buff, err := item.ValueCopy(nil)
-	if err != nil {
-		return 0, err
-	}
+		if position > lastKnownPosition {
+			return ErrNotFound
+		}
+		positionKey := newRecordPositionKey(pn, position)
+		fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
 
-	return binary.BigEndian.Uint32(buff), nil
-}
+		item, err := txn.Get(fullKey)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		rawID, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
 
-// setLastKnownPosition is a helper method for setting last known position of record to db in scope of txn and pulse.
-func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
-	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
-	parsedPosition := make([]byte, 4)
-	binary.BigEndian.PutUint32(parsedPosition, position)
-
-	fullKey := append(lastPositionKey.Scope().Bytes(), lastPositionKey.ID()...)
-
-	return txn.Set(fullKey, parsedPosition)
-}
-
-func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
-	positionKey := newRecordPositionKey(recID.Pulse(), position)
-	fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
-
-	return txn.Set(fullKey, recID.Bytes())
+		recID = *insolar.NewIDFromBytes(rawID)
+		return nil
+	})
+	return recID, err
 }
 
 func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNumber) error {
@@ -369,17 +327,6 @@ func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from store.Ke
 	return nil
 }
 
-func makePositionKey(raw []byte) store.Key {
-	switch raw[0] {
-	case recordPositionKeyPrefix:
-		return newRecordPositionKeyFromBytes(raw)
-	case lastKnownRecordPositionKeyPrefix:
-		return newLastKnownRecordPositionKey(raw)
-	default:
-		panic("unknown prefix: " + string(raw[0]))
-	}
-}
-
 // TruncateHead remove all records after lastPulse
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
@@ -396,84 +343,4 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 	}
 
 	return nil
-}
-
-// ForID returns record for provided id.
-func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, error) {
-	return r.get(id)
-}
-
-// get loads record.Material from DB
-func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
-	var buff []byte
-	var err error
-	err = r.db.Backend().View(func(txn *badger.Txn) error {
-		key := recordKey(id)
-		fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-		item, err := txn.Get(fullKey)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return err
-		}
-
-		buff, err = item.ValueCopy(nil)
-		return err
-	})
-	if err != nil {
-		return record.Material{}, err
-	}
-
-	rec := record.Material{}
-	err = rec.Unmarshal(buff)
-
-	return rec, err
-}
-
-// LastKnownPosition returns last known position of record in Pulse.
-func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
-	var position uint32
-	var err error
-
-	err = r.db.Backend().View(func(txn *badger.Txn) error {
-		position, err = getLastKnownPosition(txn, pn)
-		return err
-	})
-
-	return position, err
-}
-
-// AtPosition returns record ID for a specific pulse and a position
-func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
-	var recID insolar.ID
-	err := r.db.Backend().View(func(txn *badger.Txn) error {
-		lastKnownPosition, err := getLastKnownPosition(txn, pn)
-		if err != nil {
-			return err
-		}
-
-		if position > lastKnownPosition {
-			return ErrNotFound
-		}
-		positionKey := newRecordPositionKey(pn, position)
-		fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
-
-		item, err := txn.Get(fullKey)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNotFound
-			}
-			return err
-		}
-		rawID, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-
-		recID = *insolar.NewIDFromBytes(rawID)
-		return nil
-	})
-	return recID, err
 }

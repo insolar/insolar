@@ -10,6 +10,8 @@ create table records (
     primary key(pulse_number, position)
 );
 
+create index records_recod_id_idx on records(record_id);
+
 create table records_last_position (
     pulse_number bigint primary key,
     position bigint not null
