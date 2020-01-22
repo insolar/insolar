@@ -1219,7 +1219,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", host=~\".*.br20.insolar.io\"}[1m])) by (host)",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", installation=\"$installation\"}[1m])) by (host)",
           "legendFormat": "{{ host }}",
           "refId": "A"
         }
@@ -1306,7 +1306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "1 - node_memory_MemAvailable_bytes{host=~\".*.br20.insolar.io\"} / node_memory_MemTotal_bytes",
+          "expr": "1 - node_memory_MemAvailable_bytes{installation=\"$installation\"} / node_memory_MemTotal_bytes",
           "legendFormat": "{{ host }}",
           "refId": "A"
         }
@@ -1393,7 +1393,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(1 - ((node_filesystem_avail_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'}) / node_filesystem_size_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'})) by (host)",
+          "expr": "sum(1 - ((node_filesystem_avail_bytes{installation=\"$installation\",device!~'rootfs'}) / node_filesystem_size_bytes{installation=\"$installation\",device!~'rootfs'})) by (host)",
           "legendFormat": "{{ host }}",
           "refId": "B"
         }
