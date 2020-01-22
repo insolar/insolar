@@ -194,6 +194,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses      *insolarPulse.DB
 		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
+		Pool        *pgxpool.Pool
 		Jets        *jet.DBStore
 	)
 	{
@@ -214,7 +215,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 
-		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
+		Pool, err = pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
@@ -225,13 +226,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		path := cfg.Ledger.PostgreSQL.MigrationPath
 		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
-		ver, err := migration.MigrateDatabase(ctx, pool, path)
+		ver, err := migration.MigrateDatabase(ctx, Pool, path)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to migrate database"))
 		}
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
-		Pulses = insolarPulse.NewDB(pool)
+		Pulses = insolarPulse.NewDB(Pool)
 		Nodes = node.NewStorageDB(DB) // AALEKSEEV TODO fix this
 		Jets = jet.NewDBStore(DB)     // AALEKSEEV TODO fix this
 
@@ -326,10 +327,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		// AALEKSEEV TODO fix this
-		Records = object.NewRecordDB(DB)
-		indexes := object.NewIndexDB(DB, Records)           // EGOR
-		drops := drop.NewDB(DB)                             // ILYA
-		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses) // ALEKSANDER
+		Records = object.NewRecordDB(DB, Pool)    // ALEKSANDER
+		indexes := object.NewIndexDB(DB, Records) // EGOR
+		drops := drop.NewDB(DB)                   // ILYA
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)

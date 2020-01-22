@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jackc/pgx/v4/pgxpool"
+
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
@@ -38,7 +40,8 @@ import (
 type RecordDB struct {
 	batchLock sync.Mutex
 
-	db *store.BadgerDB
+	db   *store.BadgerDB // AALEKSEEV TODO get rid of this
+	pool *pgxpool.Pool
 }
 
 type recordKey insolar.ID
@@ -124,8 +127,8 @@ func (k lastKnownRecordPositionKey) ID() []byte {
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB(db *store.BadgerDB) *RecordDB {
-	return &RecordDB{db: db}
+func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
+	return &RecordDB{db: db, pool: pool}
 }
 
 // Set saves new record-value in storage.

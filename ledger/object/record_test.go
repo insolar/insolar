@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package object
 
 import (
@@ -25,6 +27,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/tests/common"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
+
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -35,6 +43,43 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var pool *pgxpool.Pool
+
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		stopPostgreSQL()
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
+	os.Exit(code)
+}
 
 func TestRecordKey(t *testing.T) {
 	t.Parallel()
@@ -85,7 +130,7 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	recordStore := NewRecordDB(dbMock)
+	recordStore := NewRecordDB(dbMock, pool)
 
 	numElements := 10
 
@@ -269,7 +314,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 
 		rec.ID = id
 		err = recordStorage.Set(ctx, rec)
@@ -290,7 +335,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 
 		rec.ID = id
 		err = recordStorage.BatchSet(ctx, []record.Material{rec})
@@ -320,7 +365,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 
 		rec.ID = id
 		err = recordStorage.BatchSet(ctx, []record.Material{rec, sRec, tRec})
@@ -362,7 +407,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 
 		rec.ID = id
 		err = recordStorage.Set(ctx, rec)
@@ -387,7 +432,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 
 		rec.ID = id
 
@@ -489,7 +534,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		position, err := recordStorage.LastKnownPosition(pn)
@@ -508,7 +553,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -531,7 +576,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -560,7 +605,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		id := *insolar.NewID(pn, []byte{1})
@@ -590,7 +635,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		id := gen.IDWithPulse(pn)
@@ -625,7 +670,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordDB(db)
+		recordStorage := NewRecordDB(db, pool)
 		pn := gen.PulseNumber()
 
 		_, err = recordStorage.AtPosition(pn, 1)
