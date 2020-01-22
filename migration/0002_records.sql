@@ -1,14 +1,13 @@
-create type local_ref as (pulse_and_scope bigint, hash bytea);
-
 create table records (
-    id local_ref not null,
+    pulse_number bigint not null,
     position bigint not null,
-    object_id local_ref not null,
-    jet_id local_ref not null,
+    record_id bytea not null,
+    object_id bytea not null,
+    jet_id bytea not null,
     signature bytea not null,
     polymorph int not null,
     virtual bytea not null, -- serialized to protobuf
-    primary key(id, position)
+    primary key(pulse_number, position)
 );
 
 create table records_last_position (

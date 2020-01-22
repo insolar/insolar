@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/binary"
 
+	"github.com/jackc/pgx/v4"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/dgraph-io/badger"
@@ -37,6 +39,18 @@ import (
 type RecordDB struct {
 	db   *store.BadgerDB // AALEKSEEV TODO get rid of this
 	pool *pgxpool.Pool
+}
+
+var ReadTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadOnly,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+var WriteTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadWrite,
+	DeferrableMode: pgx.NotDeferrable,
 }
 
 //type recordKey insolar.ID
@@ -121,6 +135,10 @@ type RecordDB struct {
 //	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
 //}
 
+
+//rec.ID.MarshalBinary()
+//rec.ID.UnmarshalBinary()
+
 // NewRecordDB creates new DB storage instance.
 func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
 	return &RecordDB{db: db, pool: pool}
@@ -128,7 +146,50 @@ func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
 
 // Set saves new record-value in storage.
 func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
-	return r.BatchSet(ctx, []record.Material{rec})
+	conn, err := r.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		// Update the position for the pulse first
+		_, err = tx.Exec(ctx, `
+			INSERT INTO records_last_position (pulse_number, position)
+			VALUES ($1, 1)
+			ON CONFLICT(pulse_number) DO
+			UPDATE SET position = records_last_position.position + 1;
+		`, rec.ID.Pulse())
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to INSERT into records_last_position")
+		}
+
+
+
+		// Insert the record
+		_, err = tx.Exec(ctx, `
+			INSERT INTO records (id, position, object_id, jet_id, signature, polymorph, virtual)
+			VALUES ( ($1, $2), (SELECT position FROM records_last_position WHERE pulse_number = $3), 
+				($4, $5), ($5, $6), $7, $8, $9);
+		`, rec.ID.Pulse(), rec.ID.))
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("RecordDB.Set - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
 
 // BatchSet saves a batch of records to storage with order-processing.
