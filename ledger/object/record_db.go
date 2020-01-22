@@ -17,10 +17,8 @@
 package object
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -41,87 +39,87 @@ type RecordDB struct {
 	pool *pgxpool.Pool
 }
 
-type recordKey insolar.ID
-
-func (k recordKey) Scope() store.Scope {
-	return store.ScopeRecord
-}
-
-func (k recordKey) DebugString() string {
-	id := insolar.ID(k)
-	return "recordKey. " + id.DebugString()
-}
-
-func (k recordKey) ID() []byte {
-	id := insolar.ID(k)
-	return id.AsBytes()
-}
-
-func newRecordKey(raw []byte) recordKey {
-	pulse := insolar.NewPulseNumber(raw)
-	hash := raw[pulse.Size():]
-
-	return recordKey(*insolar.NewID(pulse, hash))
-}
-
-const (
-	recordPositionKeyPrefix          = 0x01
-	lastKnownRecordPositionKeyPrefix = 0x02
-)
-
-type recordPositionKey struct {
-	pn     insolar.PulseNumber
-	number uint32
-}
-
-func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
-	return recordPositionKey{pn: pn, number: number}
-}
-
-func (k recordPositionKey) Scope() store.Scope {
-	return store.ScopeRecordPosition
-}
-
-func (k recordPositionKey) ID() []byte {
-	parsedNum := make([]byte, 4)
-	binary.BigEndian.PutUint32(parsedNum, k.number)
-	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
-}
-
-func newRecordPositionKeyFromBytes(raw []byte) recordPositionKey {
-	k := recordPositionKey{}
-
-	k.pn = insolar.NewPulseNumber(raw[1:])
-	k.number = binary.BigEndian.Uint32(raw[(k.pn.Size() + 1):])
-
-	return k
-}
-
-func (k recordPositionKey) String() string {
-	return fmt.Sprintf("recordPositionKey. pulse: %d, number: %d", k.pn, k.number)
-}
-
-type lastKnownRecordPositionKey struct {
-	pn insolar.PulseNumber
-}
-
-func newLastKnownRecordPositionKey(raw []byte) lastKnownRecordPositionKey {
-	k := lastKnownRecordPositionKey{}
-	k.pn = insolar.NewPulseNumber(raw[1:])
-	return k
-}
-
-func (k lastKnownRecordPositionKey) String() string {
-	return fmt.Sprintf("lastKnownRecordPositionKey. pulse: %d", k.pn)
-}
-
-func (k lastKnownRecordPositionKey) Scope() store.Scope {
-	return store.ScopeRecordPosition
-}
-
-func (k lastKnownRecordPositionKey) ID() []byte {
-	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
-}
+//type recordKey insolar.ID
+//
+//func (k recordKey) Scope() store.Scope {
+//	return store.ScopeRecord
+//}
+//
+//func (k recordKey) DebugString() string {
+//	id := insolar.ID(k)
+//	return "recordKey. " + id.DebugString()
+//}
+//
+//func (k recordKey) ID() []byte {
+//	id := insolar.ID(k)
+//	return id.AsBytes()
+//}
+//
+//func newRecordKey(raw []byte) recordKey {
+//	pulse := insolar.NewPulseNumber(raw)
+//	hash := raw[pulse.Size():]
+//
+//	return recordKey(*insolar.NewID(pulse, hash))
+//}
+//
+//const (
+//	recordPositionKeyPrefix          = 0x01
+//	lastKnownRecordPositionKeyPrefix = 0x02
+//)
+//
+//type recordPositionKey struct {
+//	pn     insolar.PulseNumber
+//	number uint32
+//}
+//
+//func newRecordPositionKey(pn insolar.PulseNumber, number uint32) recordPositionKey {
+//	return recordPositionKey{pn: pn, number: number}
+//}
+//
+//func (k recordPositionKey) Scope() store.Scope {
+//	return store.ScopeRecordPosition
+//}
+//
+//func (k recordPositionKey) ID() []byte {
+//	parsedNum := make([]byte, 4)
+//	binary.BigEndian.PutUint32(parsedNum, k.number)
+//	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
+//}
+//
+//func newRecordPositionKeyFromBytes(raw []byte) recordPositionKey {
+//	k := recordPositionKey{}
+//
+//	k.pn = insolar.NewPulseNumber(raw[1:])
+//	k.number = binary.BigEndian.Uint32(raw[(k.pn.Size() + 1):])
+//
+//	return k
+//}
+//
+//func (k recordPositionKey) String() string {
+//	return fmt.Sprintf("recordPositionKey. pulse: %d, number: %d", k.pn, k.number)
+//}
+//
+//type lastKnownRecordPositionKey struct {
+//	pn insolar.PulseNumber
+//}
+//
+//func newLastKnownRecordPositionKey(raw []byte) lastKnownRecordPositionKey {
+//	k := lastKnownRecordPositionKey{}
+//	k.pn = insolar.NewPulseNumber(raw[1:])
+//	return k
+//}
+//
+//func (k lastKnownRecordPositionKey) String() string {
+//	return fmt.Sprintf("lastKnownRecordPositionKey. pulse: %d", k.pn)
+//}
+//
+//func (k lastKnownRecordPositionKey) Scope() store.Scope {
+//	return store.ScopeRecordPosition
+//}
+//
+//func (k lastKnownRecordPositionKey) ID() []byte {
+//	return bytes.Join([][]byte{{lastKnownRecordPositionKeyPrefix}, k.pn.Bytes()}, nil)
+//}
 
 // NewRecordDB creates new DB storage instance.
 func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
