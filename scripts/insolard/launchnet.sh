@@ -240,7 +240,7 @@ generate_root_member_keys()
     bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=node > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
     done
 
     for (( b = 0; b < 140; b++ ))

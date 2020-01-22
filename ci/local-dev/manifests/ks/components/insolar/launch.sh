@@ -18,7 +18,7 @@ then
 
     for (( b = 0; b < 10; b++ ))
     do
-    insolar gen-key-pair --target=user > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
+    insolar gen-key-pair --target=node > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
     done
 
     for (( b = 0; b < 140; b++ ))
