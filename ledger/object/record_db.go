@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"sync"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -38,8 +37,6 @@ import (
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
-	batchLock sync.Mutex
-
 	db   *store.BadgerDB // AALEKSEEV TODO get rid of this
 	pool *pgxpool.Pool
 }
@@ -141,9 +138,6 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	if len(recs) == 0 {
 		return nil
 	}
-
-	r.batchLock.Lock() // AALEKSEEV TODO consider removing this lock
-	defer r.batchLock.Unlock()
 
 	// It's possible, that in the batch can be records from different pulses
 	// because of that we need to track a current pulse and position
