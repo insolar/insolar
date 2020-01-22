@@ -160,6 +160,11 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	return nil
 }
 
+// get is legacy method used in index_db.go. Don't use it in the new code!
+func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
+	return r.ForID(context.Background(), id)
+}
+
 // ForID returns record for provided id.
 func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
 	conn, err := r.pool.Acquire(ctx)
