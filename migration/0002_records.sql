@@ -8,7 +8,7 @@ create table records (
     signature bytea not null,
     polymorph int not null,
     virtual bytea not null -- serialized to protobuf
-);h
+);
 
 ---- create above / drop below ----
 DROP TABLE records;
