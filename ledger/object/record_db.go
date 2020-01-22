@@ -229,20 +229,8 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 	return
 }
 
-// LastKnownPosition returns last known position of record in Pulse.
-func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
-	var position uint32
-	var err error
-
-	err = r.db.Backend().View(func(txn *badger.Txn) error {
-		position, err = getLastKnownPosition(txn, pn)
-		return err
-	})
-
-	return position, err
-}
-
 // AtPosition returns record ID for a specific pulse and a position
+// TODO optimize this. Actually user uses ID to select the Record
 func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
 	var recID insolar.ID
 	err := r.db.Backend().View(func(txn *badger.Txn) error {
@@ -273,6 +261,19 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.
 		return nil
 	})
 	return recID, err
+}
+
+// LastKnownPosition returns last known position of record in Pulse.
+func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
+	var position uint32
+	var err error
+
+	err = r.db.Backend().View(func(txn *badger.Txn) error {
+		position, err = getLastKnownPosition(txn, pn)
+		return err
+	})
+
+	return position, err
 }
 
 func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNumber) error {
