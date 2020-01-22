@@ -22,10 +22,10 @@ import (
 )
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = 5 * time.Second
+const DefaultTTL = 600 * time.Second
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
-const DefaultCleanPeriod = 5 * time.Second
+const DefaultCleanPeriod = 60 * time.Second
 
 type storedSeed struct {
 	ts    time.Time

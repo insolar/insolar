@@ -24,9 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
@@ -169,8 +168,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	memberForSign, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	ks := platformpolicy.NewKeyProcessor()
-	privateKey, err := ks.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
+	privateKey, err := secrets.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
 	signature, err := requester.Sign(privateKey, dataToSign)
 	require.NoError(t, err)
 

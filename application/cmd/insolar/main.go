@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -83,13 +84,16 @@ func main() {
 	addURLFlag(createMemberCmd.Flags())
 	rootCmd.AddCommand(createMemberCmd)
 
+	var targetValue string
 	var genKeysPairCmd = &cobra.Command{
 		Use:   "gen-key-pair",
 		Short: "generates public/private keys pair",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateKeysPair()
+			generateKeysPair(targetValue)
 		},
 	}
+	genKeysPairCmd.Flags().StringVarP(
+		&targetValue, "target", "t", "", "target for whom need to generate keys (possible values: node, user)")
 	rootCmd.AddCommand(genKeysPairCmd)
 
 	var genMigrationAddressesCmd = &cobra.Command{
@@ -252,18 +256,16 @@ type mixedConfig struct {
 }
 
 func createMember(sendURL string, userName string, serverLogLevel string) {
-	ks := platformpolicy.NewKeyProcessor()
-
 	logLevelInsolar, err := insolar.ParseLevel(serverLogLevel)
 	check("Failed to parse logging level", err)
 
-	privKey, err := ks.GeneratePrivateKey()
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	cfg := mixedConfig{
@@ -335,7 +337,21 @@ func generateMigrationAddresses() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func generateKeysPair() {
+func generateKeysPair(targetValue string) {
+	switch targetValue {
+	case "node":
+		generateKeysPairFast()
+		return
+	case "user":
+		generateKeysPairEthereum()
+		return
+	default:
+		fmt.Fprintln(os.Stderr, "Unknown target. Possible values: node, user.")
+		os.Exit(1)
+	}
+}
+
+func generateKeysPairFast() {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privKey, err := ks.GeneratePrivateKey()
@@ -345,6 +361,25 @@ func generateKeysPair() {
 	check("Problems with serialization of private key:", err)
 
 	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	check("Problems with serialization of public key:", err)
+
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": string(privKeyStr),
+		"public_key":  string(pubKeyStr),
+	}, "", "    ")
+	check("Problems with marshaling keys:", err)
+
+	mustWrite(os.Stdout, string(result))
+}
+
+func generateKeysPairEthereum() {
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
+	check("Problems with generating of private key:", err)
+
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
+	check("Problems with serialization of private key:", err)
+
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{

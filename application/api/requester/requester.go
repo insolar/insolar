@@ -17,10 +17,6 @@ package requester
 import (
 	"bytes"
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
@@ -30,6 +26,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/rand"
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/pkg/errors"
 

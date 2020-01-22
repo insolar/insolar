@@ -16,11 +16,12 @@ package api
 
 import (
 	"context"
-	"crypto"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/rpc/v2"
 	jsonrpc "github.com/insolar/rpc/v2/json2"

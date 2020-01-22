@@ -16,10 +16,6 @@ package requester
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,6 +25,11 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
+	"github.com/insolar/x-crypto/rand"
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 
