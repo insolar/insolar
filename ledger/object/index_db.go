@@ -26,10 +26,263 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulse"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
+
+type IndexDBNew struct {
+	pool *pgxpool.Pool
+}
+
+var ReadTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadOnly,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+var WriteTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadWrite,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+func NewIndexDBNew(pool *pgxpool.Pool) *IndexDBNew {
+	return &IndexDBNew{pool: pool}
+}
+
+// SetIndex adds a bucket with provided pulseNumber and ID
+func (i *IndexDBNew) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		_, err = tx.Exec(ctx, `
+			INSERT INTO indexes(object_id, pulse_number, lifeline_last_used, pending_records,
+				latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count)
+			VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`, bucket.ObjID, pn, bucket.LifelineLastUsed, bucket.PendingRecords,
+			bucket.Lifeline.LatestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent,
+			bucket.Lifeline.LatestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to INSERT index")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("Append - commit failed: %v - retrying transaction", err)
+	}
+
+	stats.Record(ctx, statIndexesAddedCount.M(1))
+
+	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully. Pulse: %d", bucket.ObjID.DebugString(), pn)
+
+	return nil
+}
+
+func (i *IndexDBNew) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error {
+	log := inslogger.FromContext(ctx)
+
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		return errors.Wrap(err, "Unable to start a read transaction")
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT 
+			object_id
+		FROM indexes 
+		WHERE AND pulse_number=`, pn)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return errors.Wrap(err, "Unable select from indexes for pn")
+
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id insolar.ID
+		err = rows.Scan(&id)
+		if err != nil {
+			log.Infof("failed to read index row: %v", err)
+			_ = tx.Rollback(ctx)
+			return ErrNotFound
+		}
+		_, err = tx.Exec(ctx, `DELETE FROM last_known_pulse_for_indexes WHERE object_id = $1`, id)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
+		}
+
+		_, err = tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes(object_id, pulse_number)
+									VALUES($1, $2)`, id, pn)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
+		}
+	}
+
+	return nil
+}
+
+func (i *IndexDBNew) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+	log := inslogger.FromContext(ctx)
+
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
+	}
+
+	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+	row := tx.QueryRow(ctx, `
+		SELECT 
+			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+		FROM indexes 
+		WHERE object_id=$1 AND pulse_number=$2`, objID, pn)
+	err = row.Scan(
+		&idx.LifelineLastUsed,
+		&idx.PendingRecords,
+		&idx.Lifeline.LatestState,
+		&idx.Lifeline.StateID,
+		&idx.Lifeline.Parent,
+		&idx.Lifeline.LatestRequest,
+		&idx.Lifeline.EarliestOpenRequest,
+		&idx.Lifeline.OpenRequestsCount,
+	)
+	if err != nil {
+		log.Infof("ForID: idx not found - %v", err)
+		_ = tx.Rollback(ctx)
+		return record.Index{}, ErrNotFound
+	}
+
+	return idx, nil
+}
+
+func (i *IndexDBNew) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
+	log := inslogger.FromContext(ctx)
+
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to start a read transaction")
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT 
+			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+		FROM indexes 
+		WHERE AND pulse_number=`, pn)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, errors.Wrap(err, "Unable select from indexes for pn")
+
+	}
+	defer rows.Close()
+
+	var idxs []record.Index
+	for rows.Next() {
+		idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+		err = rows.Scan(
+			&idx.LifelineLastUsed,
+			&idx.PendingRecords,
+			&idx.Lifeline.LatestState,
+			&idx.Lifeline.StateID,
+			&idx.Lifeline.Parent,
+			&idx.Lifeline.LatestRequest,
+			&idx.Lifeline.EarliestOpenRequest,
+			&idx.Lifeline.OpenRequestsCount,
+		)
+		if err != nil {
+			log.Infof("failed to read index row: %v", err)
+			_ = tx.Rollback(ctx)
+			return nil, ErrNotFound
+		}
+		idxs = append(idxs, idx)
+	}
+
+	return idxs, nil
+}
+
+func (i *IndexDBNew) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
+	log := inslogger.FromContext(ctx)
+
+	conn, err := i.pool.Acquire(ctx)
+	if err != nil {
+		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	if err != nil {
+		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
+	}
+
+	var pn insolar.PulseNumber
+	row := tx.QueryRow(ctx, "SELECT pulse_number FROM last_known_pulse_for_indexes WHERE object_id=$1", objID)
+	err = row.Scan(&pn)
+	if err != nil {
+		log.Infof("LastKnownForID: pulse not found - %v", err)
+		_ = tx.Rollback(ctx)
+		return record.Index{}, ErrNotFound
+	}
+
+	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+	row = tx.QueryRow(ctx, `
+		SELECT 
+			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+		FROM indexes 
+		WHERE object_id=$1 AND pulse_number=$2`, objID, pn)
+	err = row.Scan(
+		&idx.LifelineLastUsed,
+		&idx.PendingRecords,
+		&idx.Lifeline.LatestState,
+		&idx.Lifeline.StateID,
+		&idx.Lifeline.Parent,
+		&idx.Lifeline.LatestRequest,
+		&idx.Lifeline.EarliestOpenRequest,
+		&idx.Lifeline.OpenRequestsCount,
+	)
+	if err != nil {
+		log.Infof("LastKnownForID: idx not found - %v", err)
+		_ = tx.Rollback(ctx)
+		return record.Index{}, ErrNotFound
+	}
+
+	return idx, nil
+}
 
 // IndexDB is a db-based storage, that stores a collection of IndexBuckets
 type IndexDB struct {
