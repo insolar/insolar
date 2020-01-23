@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-const CONVERSION = "10"
+const conversionRate = "1"
 
 // MigrationDaemon make migration procedure.
 type MigrationDaemon struct {
@@ -60,7 +60,7 @@ func (md *MigrationDaemon) DepositMigrationCall(
 	if !ok {
 		return nil, fmt.Errorf("incorrect input: failed to get 'migrationAddress' param")
 	}
-	base, _ := new(big.Int).SetString(CONVERSION, 10)
+	base, _ := new(big.Int).SetString(conversionRate, 10)
 	amountXns := new(big.Int).Mul(amount, base)
 
 	return md.depositMigration(txId, migrationAddress, amountXns, caller, request)
