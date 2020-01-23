@@ -193,11 +193,11 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 		virtualSlice []byte
 	)
 	err = recRow.Scan(
-		objIDSlice,
-		jetIDSlice,
-		retRec.Signature,
+		&objIDSlice,
+		&jetIDSlice,
+		&retRec.Signature,
 		&retRec.Polymorph,
-		virtualSlice)
+		&virtualSlice)
 
 	if err != nil {
 		_ = tx.Rollback(ctx)
@@ -251,7 +251,7 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID in
 	recRow := tx.QueryRow(ctx, `SELECT record_id FROM records WHERE pulse_number = $1 AND position = $2`,
 		pn, position)
 	var recordIDSlice []byte
-	err = recRow.Scan(recordIDSlice)
+	err = recRow.Scan(&recordIDSlice)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		retErr = errors.Wrap(err, "Unable to SELECT from records")

@@ -24,6 +24,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/ledger/heavy/migration"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/tests/common"
@@ -85,14 +89,28 @@ func TestMain(m *testing.M) {
 }
 
 func TestSet(t *testing.T) {
-	//rec := record.Material{
-	//	Polymorph: 12,
-	//	Virtual:   record.Virtual{},
-	//	ID:        gen.ID(),
-	//	ObjectID:  gen.ID(),
-	//	JetID:     gen.JetID(),
-	//	Signature: []byte{1, 2, 3},
-	//}
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+
+	// Make sure there is no record with such ID
+	id := gen.ID()
+	_, err := db.ForID(ctx, id)
+	require.Error(t, err)
+
+	rec1 := record.Material{
+		Polymorph: 12,
+		Virtual:   record.Virtual{},
+		ID:        id,
+		ObjectID:  gen.ID(),
+		JetID:     gen.JetID(),
+		Signature: []byte{1, 2, 3},
+	}
+	err = db.Set(ctx, rec1)
+	require.NoError(t, err)
+
+	rec2, err := db.ForID(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, rec1, rec2)
 }
 
 func TestBatchSet(t *testing.T) {
