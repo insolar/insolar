@@ -233,8 +233,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
 		Pulses = insolarPulse.NewDB(Pool)
-		Nodes = node.NewStorageDB(DB) // ALEX - in progress
-		Jets = jet.NewDBStore(DB)     // AALEKSEEV TODO fix this
+		Nodes = node.NewStorageDB(Pool)
+		Jets = jet.NewDBStore(DB) // AALEKSEEV TODO fix this
 
 		timeBadgerStarted := time.Since(startTime)
 		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
