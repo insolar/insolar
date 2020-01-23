@@ -19,10 +19,24 @@ package node
 import (
 	"context"
 
+	"github.com/jackc/pgx/v4"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/insolar/insolar/insolar"
 )
+
+var readTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadOnly,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+var writeTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadWrite,
+	DeferrableMode: pgx.NotDeferrable,
+}
 
 // StorageDB is an implementation of a node storage.
 type StorageDB struct {

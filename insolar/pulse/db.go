@@ -34,13 +34,13 @@ type DB struct {
 	pool *pgxpool.Pool
 }
 
-var ReadTxOptions = pgx.TxOptions{
+var readTxOptions = pgx.TxOptions{
 	IsoLevel:       pgx.Serializable,
 	AccessMode:     pgx.ReadOnly,
 	DeferrableMode: pgx.NotDeferrable,
 }
 
-var WriteTxOptions = pgx.TxOptions{
+var writeTxOptions = pgx.TxOptions{
 	IsoLevel:       pgx.Serializable,
 	AccessMode:     pgx.ReadWrite,
 	DeferrableMode: pgx.NotDeferrable,
@@ -116,7 +116,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, readTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -155,7 +155,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, readTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -192,7 +192,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -232,7 +232,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
