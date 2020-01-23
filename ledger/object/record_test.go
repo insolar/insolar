@@ -148,3 +148,33 @@ func TestBatchSet(t *testing.T) {
 		require.Equal(t, records[i], rec)
 	}
 }
+
+func TestPosition(t *testing.T) {
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+
+	// Make sure there is no record with such ID
+	id := gen.ID()
+	_, err := db.ForID(ctx, id)
+	require.Error(t, err)
+
+	// Make sure there are no records with such pulse
+	_, err = db.LastKnownPosition(id.Pulse())
+	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
+
+	rec1 := record.Material{
+		Polymorph: 12,
+		Virtual:   record.Virtual{},
+		ID:        id,
+		ObjectID:  gen.ID(),
+		JetID:     gen.JetID(),
+		Signature: []byte{1, 2, 3},
+	}
+	err = db.Set(ctx, rec1)
+	require.NoError(t, err)
+
+	pos, err := db.LastKnownPosition(id.Pulse())
+	require.NoError(t, err)
+	require.Equal(t, uint32(1), pos)
+}

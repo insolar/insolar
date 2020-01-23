@@ -290,6 +290,13 @@ func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32
 
 	recRow := tx.QueryRow(ctx, `SELECT position FROM records_last_position WHERE pulse_number = $1`, pn)
 	err = recRow.Scan(&retPosition)
+
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
+		retErr = ErrNotFound
+		return
+	}
+
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		retErr = errors.Wrap(err, "Unable to SELECT from records_last_position")
