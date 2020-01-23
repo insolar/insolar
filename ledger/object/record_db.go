@@ -83,7 +83,7 @@ func (r *RecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Mater
 	}
 	_, err = tx.Exec(ctx, `
 			INSERT INTO records (pulse_number, position, record_id, object_id, jet_id, signature, polymorph, virtual)
-			VALUES ($1, (SELECT position FROM records_last_position LIMIT 1), $2, $3, $4, $5, $6, $7);
+			VALUES ($1, (SELECT position FROM records_last_position WHERE pulse_number = $1 LIMIT 1), $2, $3, $4, $5, $6, $7);
 		`, rec.ID.Pulse(), recordIDBinary, objectIDBinary, jetIDBinary, rec.Signature, rec.Polymorph, virtualBinary)
 	if err != nil {
 		return errors.Wrap(err, "Unable to INSERT into records")

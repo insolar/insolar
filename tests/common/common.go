@@ -36,7 +36,7 @@ func StartPostgreSQL() (pgURL string, cleaner func()) {
 	resource, err := pool.Run(
 		"postgres", "11",
 		[]string{
-			"POSTGRES_DB=restservice",
+			"POSTGRES_DB=insolar",
 			"POSTGRES_PASSWORD=s3cr3t",
 		},
 	)
@@ -46,7 +46,7 @@ func StartPostgreSQL() (pgURL string, cleaner func()) {
 
 	// PostgreSQL needs some time to start.
 	// Port forwarding always works, thus net.Dial can't be used here.
-	connString := "postgres://postgres:s3cr3t@" + resource.GetHostPort("5432/tcp") + "/restservice?sslmode=disable"
+	connString := "postgres://postgres:s3cr3t@" + resource.GetHostPort("5432/tcp") + "/insolar?sslmode=disable"
 	attempt := 0
 	ok := false
 	for attempt < 20 {

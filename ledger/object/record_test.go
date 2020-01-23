@@ -21,6 +21,7 @@ package object
 import (
 	"context"
 	"os"
+	"sort"
 	"sync"
 	"testing"
 
@@ -205,16 +206,16 @@ func TestPosition(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, ErrNotFound, err)
 
-		rec1 := record.Material{
+		rec := record.Material{
 			Virtual:  record.Virtual{},
 			ID:       id,
 			ObjectID: gen.ID(),
 			JetID:    gen.JetID(),
 		}
-		f.Fuzz(&rec1.Polymorph)
-		f.NilChance(0).Fuzz(&rec1.Signature)
+		f.Fuzz(&rec.Polymorph)
+		f.NilChance(0).Fuzz(&rec.Signature)
 
-		err = db.Set(ctx, rec1)
+		err = db.Set(ctx, rec)
 		require.NoError(t, err)
 
 		pos, err := db.LastKnownPosition(pn)
@@ -224,5 +225,85 @@ func TestPosition(t *testing.T) {
 		id2, err := db.AtPosition(id.Pulse(), uint32(ctr))
 		require.NoError(t, err)
 		require.Equal(t, id, id2)
+	}
+}
+
+func TestTruncateNonExistingPulse(t *testing.T) {
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+	pulse := gen.PulseNumber()
+	// TruncateHead doesn't return an error if given pulse doesn't exist
+	err := db.TruncateHead(ctx, pulse)
+	require.NoError(t, err)
+}
+
+func TestTruncateHead(t *testing.T) {
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+	f := fuzz.New()
+
+	// Fill database with records for 3 pulses
+	pulses := make([]insolar.PulseNumber, 3)
+	lastIDs := make([]insolar.ID, len(pulses))
+	recordsPerPulse := 5
+	for p := 0; p < len(pulses); p++ {
+		pulses[p] = gen.PulseNumber()
+	}
+	// sort pulses
+	sort.Slice(pulses, func(i, j int) bool {
+		return pulses[i] < pulses[j]
+	})
+
+	for p := 0; p < len(pulses); p++ {
+		for i := 1; i <= recordsPerPulse; i++ {
+			// Make sure there is no record with such ID
+			id := gen.IDWithPulse(pulses[p])
+			if i == recordsPerPulse {
+				lastIDs[p] = id
+			}
+			rec := record.Material{
+				Virtual:  record.Virtual{},
+				ID:       id,
+				ObjectID: gen.ID(),
+				JetID:    gen.JetID(),
+			}
+			f.Fuzz(&rec.Polymorph)
+			f.NilChance(0).Fuzz(&rec.Signature)
+
+			err := db.Set(ctx, rec)
+			require.NoError(t, err)
+		}
+	}
+
+	for p := 0; p < len(pulses); p++ {
+		pos, err := db.LastKnownPosition(pulses[p])
+		require.NoError(t, err)
+		require.Equal(t, uint32(recordsPerPulse), pos)
+
+		id, err := db.AtPosition(pulses[p], uint32(recordsPerPulse))
+		require.NoError(t, err)
+		require.Equal(t, lastIDs[p], id)
+	}
+
+	err := db.TruncateHead(ctx, pulses[len(pulses)-2])
+	require.NoError(t, err)
+	for p := 0; p < len(pulses)-1; p++ {
+		pos, err := db.LastKnownPosition(pulses[p])
+		require.NoError(t, err)
+		require.Equal(t, uint32(recordsPerPulse), pos)
+
+		id, err := db.AtPosition(pulses[p], uint32(recordsPerPulse))
+		require.NoError(t, err)
+		require.Equal(t, lastIDs[p], id)
+	}
+
+	_, err = db.LastKnownPosition(pulses[len(pulses)-1])
+	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
+
+	for pos := 1; pos <= recordsPerPulse; pos++ {
+		_, err = db.AtPosition(pulses[len(pulses)-1], uint32(pos))
+		require.Error(t, err)
+		require.Equal(t, ErrNotFound, err)
 	}
 }
