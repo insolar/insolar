@@ -98,6 +98,31 @@ func TestSetNilSignature(t *testing.T) {
 	db := NewRecordDB(getPool())
 	f := fuzz.New()
 
+	rec1 := record.Material{
+		Virtual:   record.Virtual{},
+		ID:        gen.ID(),
+		ObjectID:  gen.ID(),
+		JetID:     gen.JetID(),
+		Signature: nil,
+	}
+	f.Fuzz(&rec1.Polymorph)
+
+	err := db.Set(ctx, rec1)
+	require.NoError(t, err)
+
+	// Make sure the record was created with empty but not null signature
+	rec2, err := db.ForID(ctx, rec1.ID)
+	require.NoError(t, err)
+	require.NotEqual(t, rec1, rec2)
+	rec2.Signature = nil
+	require.Equal(t, rec1, rec2)
+}
+
+func TestBatchSetNilSignature(t *testing.T) {
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+	f := fuzz.New()
+
 	records := make([]record.Material, 1)
 	records[0] = record.Material{
 		Virtual:   record.Virtual{},
@@ -108,16 +133,15 @@ func TestSetNilSignature(t *testing.T) {
 	}
 	f.Fuzz(&records[0].Polymorph)
 
-	err := db.Set(ctx, records[0])
-	require.Error(t, err)
+	err := db.BatchSet(ctx, records)
+	require.NoError(t, err)
 
-	err = db.BatchSet(ctx, records)
-	require.Error(t, err)
-
-	// Make sure no records where ceated
-	_, err = db.ForID(ctx, records[0].ID)
-	require.Error(t, err)
-	require.Equal(t, ErrNotFound, err)
+	// Make sure the record was created with empty but not null signature
+	rec, err := db.ForID(ctx, records[0].ID)
+	require.NoError(t, err)
+	require.NotEqual(t, records[0], rec)
+	rec.Signature = nil
+	require.Equal(t, records[0], rec)
 }
 
 func TestSet(t *testing.T) {
