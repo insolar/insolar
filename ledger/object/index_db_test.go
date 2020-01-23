@@ -126,7 +126,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	indexStore := NewIndexDB(dbMock, NewRecordDB(dbMock, getPool()))
+	indexStore := NewIndexDB(dbMock, NewRecordDB(getPool()))
 
 	numElements := 10
 
@@ -197,7 +197,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, NewRecordDB(db, getPool()))
+		storage := NewIndexDB(db, NewRecordDB(getPool()))
 		pn := gen.PulseNumber()
 
 		_, err = storage.ForID(ctx, pn, id)
@@ -339,7 +339,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
@@ -362,7 +362,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
@@ -398,8 +398,8 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
-	recordStorage := NewRecordDB(db, getPool())
-	index := NewIndexDB(db, NewRecordDB(db, getPool()))
+	recordStorage := NewRecordDB(getPool())
+	index := NewIndexDB(db, NewRecordDB(getPool()))
 
 	first := insolar.NewID(1, nil)
 	second := insolar.NewID(2, nil)
@@ -452,8 +452,8 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		recordStorage := NewRecordDB(db, getPool())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		recordStorage := NewRecordDB(getPool())
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		firstFil := record.PendingFilament{
 			PreviousRecord: first,
@@ -482,8 +482,8 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		recordStorage := NewRecordDB(db, getPool())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		recordStorage := NewRecordDB(getPool())
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		firstFil := record.PendingFilament{}
 		firstFilV := record.Wrap(&firstFil)
@@ -508,7 +508,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
@@ -532,7 +532,7 @@ func TestIndexDB_Records(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
+		index := NewIndexDB(db, NewRecordDB(getPool()))
 
 		res, err := index.Records(ctx, 1, 10, insolar.ID{})
 
@@ -548,8 +548,8 @@ func TestIndexDB_Records(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewRecordDB(db, getPool()))
-		rms := NewRecordDB(db, getPool())
+		index := NewIndexDB(db, NewRecordDB(getPool()))
+		rms := NewRecordDB(getPool())
 
 		pn := insolar.PulseNumber(3)
 		pnS := insolar.PulseNumber(2)

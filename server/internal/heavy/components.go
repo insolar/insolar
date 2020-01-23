@@ -326,8 +326,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		JetKeeper    *executor.DBJetKeeper
 	)
 	{
+		Records = object.NewRecordDB(Pool)
 		// AALEKSEEV TODO fix this
-		Records = object.NewRecordDB(DB, Pool)    // ALEKSANDER
 		indexes := object.NewIndexDB(DB, Records) // EGOR
 		drops := drop.NewDB(DB)                   // ILYA
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)

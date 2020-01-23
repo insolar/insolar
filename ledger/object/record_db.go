@@ -27,13 +27,11 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
-	db   *store.BadgerDB // AALEKSEEV TODO get rid of this
 	pool *pgxpool.Pool
 }
 
@@ -50,8 +48,8 @@ var WriteTxOptions = pgx.TxOptions{
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB(db *store.BadgerDB, pool *pgxpool.Pool) *RecordDB {
-	return &RecordDB{db: db, pool: pool}
+func NewRecordDB(pool *pgxpool.Pool) *RecordDB {
+	return &RecordDB{pool: pool}
 }
 
 func (r *RecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Material) error {
