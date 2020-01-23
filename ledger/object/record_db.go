@@ -199,6 +199,12 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 		&retRec.Polymorph,
 		&virtualSlice)
 
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
+		retErr = ErrNotFound
+		return
+	}
+
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		retErr = errors.Wrap(err, "Unable to SELECT from records")

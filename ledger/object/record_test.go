@@ -24,6 +24,8 @@ import (
 	"sync"
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
+
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/insolar/gen"
@@ -90,23 +92,52 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestSetNilSignature(t *testing.T) {
+	ctx := context.Background()
+	db := NewRecordDB(getPool())
+	f := fuzz.New()
+
+	records := make([]record.Material, 1)
+	records[0] = record.Material{
+		Virtual:   record.Virtual{},
+		ID:        gen.ID(),
+		ObjectID:  gen.ID(),
+		JetID:     gen.JetID(),
+		Signature: nil,
+	}
+	f.Fuzz(&records[0].Polymorph)
+
+	err := db.Set(ctx, records[0])
+	require.Error(t, err)
+
+	err = db.BatchSet(ctx, records)
+	require.Error(t, err)
+
+	// Make sure no records where ceated
+	_, err = db.ForID(ctx, records[0].ID)
+	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
+}
+
 func TestSet(t *testing.T) {
 	ctx := context.Background()
 	db := NewRecordDB(getPool())
-
+	f := fuzz.New()
 	// Make sure there is no record with such ID
 	id := gen.ID()
 	_, err := db.ForID(ctx, id)
 	require.Error(t, err)
 
 	rec1 := record.Material{
-		Polymorph: 12,
-		Virtual:   record.Virtual{},
-		ID:        id,
-		ObjectID:  gen.ID(),
-		JetID:     gen.JetID(),
-		Signature: []byte{1, 2, 3},
+		Virtual:  record.Virtual{},
+		ID:       id,
+		ObjectID: gen.ID(),
+		JetID:    gen.JetID(),
 	}
+
+	f.Fuzz(&rec1.Polymorph)
+	f.NilChance(0).Fuzz(&rec1.Signature)
+
 	err = db.Set(ctx, rec1)
 	require.NoError(t, err)
 
@@ -118,6 +149,7 @@ func TestSet(t *testing.T) {
 func TestBatchSet(t *testing.T) {
 	ctx := context.Background()
 	db := NewRecordDB(getPool())
+	f := fuzz.New()
 
 	var ids [3]insolar.ID
 	for i := 0; i < len(ids); i++ {
@@ -130,13 +162,13 @@ func TestBatchSet(t *testing.T) {
 	records := make([]record.Material, len(ids))
 	for i := 0; i < len(records); i++ {
 		records[i] = record.Material{
-			Polymorph: 12,
-			Virtual:   record.Virtual{},
-			ID:        ids[i],
-			ObjectID:  gen.ID(),
-			JetID:     gen.JetID(),
-			Signature: []byte{},
+			Virtual:  record.Virtual{},
+			ID:       ids[i],
+			ObjectID: gen.ID(),
+			JetID:    gen.JetID(),
 		}
+		f.Fuzz(&records[i].Polymorph)
+		f.NilChance(0).Fuzz(&records[i].Signature)
 	}
 
 	err := db.BatchSet(ctx, records)
@@ -152,6 +184,7 @@ func TestBatchSet(t *testing.T) {
 func TestPosition(t *testing.T) {
 	ctx := context.Background()
 	db := NewRecordDB(getPool())
+	f := fuzz.New()
 
 	// Make sure there is no record with such ID
 	id := gen.ID()
@@ -168,13 +201,14 @@ func TestPosition(t *testing.T) {
 	require.Equal(t, ErrNotFound, err)
 
 	rec1 := record.Material{
-		Polymorph: 12,
-		Virtual:   record.Virtual{},
-		ID:        id,
-		ObjectID:  gen.ID(),
-		JetID:     gen.JetID(),
-		Signature: []byte{1, 2, 3},
+		Virtual:  record.Virtual{},
+		ID:       id,
+		ObjectID: gen.ID(),
+		JetID:    gen.JetID(),
 	}
+	f.Fuzz(&rec1.Polymorph)
+	f.NilChance(0).Fuzz(&rec1.Signature)
+
 	err = db.Set(ctx, rec1)
 	require.NoError(t, err)
 
