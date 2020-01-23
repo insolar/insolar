@@ -252,6 +252,13 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID in
 		pn, position)
 	var recordIDSlice []byte
 	err = recRow.Scan(&recordIDSlice)
+
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
+		retErr = ErrNotFound
+		return
+	}
+
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		retErr = errors.Wrap(err, "Unable to SELECT from records")

@@ -163,6 +163,10 @@ func TestPosition(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, ErrNotFound, err)
 
+	_, err = db.AtPosition(id.Pulse(), 1)
+	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
+
 	rec1 := record.Material{
 		Polymorph: 12,
 		Virtual:   record.Virtual{},
@@ -177,4 +181,8 @@ func TestPosition(t *testing.T) {
 	pos, err := db.LastKnownPosition(id.Pulse())
 	require.NoError(t, err)
 	require.Equal(t, uint32(1), pos)
+
+	id2, err := db.AtPosition(id.Pulse(), 1)
+	require.NoError(t, err)
+	require.Equal(t, id, id2)
 }
