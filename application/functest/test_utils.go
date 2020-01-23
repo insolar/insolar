@@ -232,7 +232,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposit, ok := deposits[tx].(map[string]interface{})
 	require.True(t, ok)
 	confirmations := deposit["confirmerReferences"].(map[string]interface{})
-	require.Equal(t, amount+"0", confirmations[launchnet.MigrationDaemons[mdNum].Ref])
+	require.Equal(t, amount, confirmations[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
 }

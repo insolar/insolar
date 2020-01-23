@@ -85,7 +85,7 @@ func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)))
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount).String(), migrationMember, replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)))
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {

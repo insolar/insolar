@@ -121,7 +121,7 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 
 	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
-	_ = migrate(t, member.Ref, "1000", ethHash, member.MigrationAddress, 2)
+	_ = migrate(t, member.Ref, "100", ethHash, member.MigrationAddress, 2)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": ethHash})
