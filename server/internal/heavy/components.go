@@ -233,7 +233,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
 		Pulses = insolarPulse.NewDB(Pool)
-		Nodes = node.NewStorageDB(DB) // AALEKSEEV TODO fix this
+		Nodes = node.NewStorageDB(DB) // ALEX - in progress
 		Jets = jet.NewDBStore(DB)     // AALEKSEEV TODO fix this
 
 		timeBadgerStarted := time.Since(startTime)
@@ -328,8 +328,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		Records = object.NewRecordDB(Pool)
 		// AALEKSEEV TODO fix this
-		indexes := object.NewIndexDB(DB, Records) // EGOR
-		drops := drop.NewDB(DB)                   // ILYA
+		indexes := object.NewIndexDB(DB, Records) // EGOR - in progress
+		drops := drop.NewDB(DB)                   // ILYA - in progress
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
