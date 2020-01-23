@@ -16,9 +16,15 @@ package foundation
 
 import (
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
+
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/x509"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -53,7 +59,36 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
 }
 
-// TrimPublicKey trims public key
+// Extracting canonical public key from .pem
+func ExtractCanonicalPublicKey(pk string) (string, error) {
+	pk = TrimPublicKey(pk)
+	// a DER encoded ASN.1 structure
+	pkASN1, _ := pem.Decode([]byte(pk))
+	if pkASN1 == nil {
+		return "", fmt.Errorf("problems with decoding. Key - %v", pk)
+	}
+
+	pkDecoded, err := x509.ParsePKIXPublicKey(pkASN1.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("problems with parsing. Key - %v", pk)
+	}
+	ecdsaPk, ok := pkDecoded.(*ecdsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("public key is not ecdsa type. Key - %v", pk)
+	}
+	firstByte := 2
+	if ecdsaPk.Y.Sign() == -1 {
+		firstByte = 2
+	} else {
+		firstByte = 3
+	}
+
+	canonicalPk := []byte{byte(firstByte)}
+	canonicalPk = append(canonicalPk, ecdsaPk.X.Bytes()...)
+	return hex.EncodeToString(canonicalPk), nil
+}
+
+// TrimPublicKey trims pem public key
 func TrimPublicKey(publicKey string) string {
 	return strings.Join(strings.Split(strings.TrimSpace(between(publicKey, "KEY-----", "-----END")), "\n"), "")
 }

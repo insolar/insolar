@@ -413,50 +413,77 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := 0; i < g.ContractsConfig.PKShardCount; i++ {
 		membersByPKShards = append(membersByPKShards, make(foundation.StableMap))
 	}
-	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
+	trimmedRootPublicKey, err := foundation.ExtractCanonicalPublicKey(g.ContractsConfig.RootPublicKey)
+	if err != nil {
+		panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", g.ContractsConfig.RootPublicKey))
+	}
 	index := foundation.GetShardIndex(trimmedRootPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
 
-	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
+	trimmedMigrationAdminPublicKey, err := foundation.ExtractCanonicalPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
+	if err != nil {
+		panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", g.ContractsConfig.MigrationAdminPublicKey))
+	}
 	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
 
-	trimmedFeeMemberPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeePublicKey)
+	trimmedFeeMemberPublicKey, err := foundation.ExtractCanonicalPublicKey(g.ContractsConfig.FeePublicKey)
+	if err != nil {
+		panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", g.ContractsConfig.FeePublicKey))
+	}
 	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedFeeMemberPublicKey] = genesisrefs.ContractFeeMember.String()
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
-		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
+		trimmedMigrationDaemonPublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.NetworkIncentivesPublicKeys {
-		trimmedNetworkIncentivesPublicKey := foundation.TrimPublicKey(key)
+		trimmedNetworkIncentivesPublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedNetworkIncentivesPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedNetworkIncentivesPublicKey] = genesisrefs.ContractNetworkIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
-		trimmedApplicationIncentivesPublicKey := foundation.TrimPublicKey(key)
+		trimmedApplicationIncentivesPublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedApplicationIncentivesPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedApplicationIncentivesPublicKey] = genesisrefs.ContractApplicationIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.FoundationPublicKeys {
-		trimmedFoundationPublicKey := foundation.TrimPublicKey(key)
+		trimmedFoundationPublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedFoundationPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.FundsPublicKeys {
-		trimmedFundsPublicKey := foundation.TrimPublicKey(key)
+		trimmedFundsPublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedFundsPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedFundsPublicKey] = genesisrefs.ContractFundsMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
-		trimmedEnterprisePublicKey := foundation.TrimPublicKey(key)
+		trimmedEnterprisePublicKey, err := foundation.ExtractCanonicalPublicKey(key)
+		if err != nil {
+			panic(fmt.Sprintf("[genesis] extracting canonical pk failed, current value %v", key))
+		}
 		index := foundation.GetShardIndex(trimmedEnterprisePublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedEnterprisePublicKey] = genesisrefs.ContractEnterpriseMembers[i].String()
 	}
