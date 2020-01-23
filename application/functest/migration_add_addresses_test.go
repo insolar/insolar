@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build functest
+
 package functest
 
 import (
