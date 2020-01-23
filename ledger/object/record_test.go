@@ -127,6 +127,7 @@ func TestSet(t *testing.T) {
 	id := gen.ID()
 	_, err := db.ForID(ctx, id)
 	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
 
 	rec1 := record.Material{
 		Virtual:  record.Virtual{},
@@ -157,6 +158,7 @@ func TestBatchSet(t *testing.T) {
 		// Make sure there is no record with such ID
 		_, err := db.ForID(ctx, ids[i])
 		require.Error(t, err)
+		require.Equal(t, ErrNotFound, err)
 	}
 
 	records := make([]record.Material, len(ids))
@@ -186,37 +188,41 @@ func TestPosition(t *testing.T) {
 	db := NewRecordDB(getPool())
 	f := fuzz.New()
 
-	// Make sure there is no record with such ID
-	id := gen.ID()
-	_, err := db.ForID(ctx, id)
-	require.Error(t, err)
-
 	// Make sure there are no records with such pulse
-	_, err = db.LastKnownPosition(id.Pulse())
+	pn := gen.PulseNumber()
+	_, err := db.LastKnownPosition(pn)
 	require.Error(t, err)
 	require.Equal(t, ErrNotFound, err)
 
-	_, err = db.AtPosition(id.Pulse(), 1)
-	require.Error(t, err)
-	require.Equal(t, ErrNotFound, err)
+	for ctr := 1; ctr <= 3; ctr++ {
+		// Make sure there is no record with such ID
+		id := gen.IDWithPulse(pn)
+		_, err = db.ForID(ctx, id)
+		require.Error(t, err)
+		require.Equal(t, ErrNotFound, err)
 
-	rec1 := record.Material{
-		Virtual:  record.Virtual{},
-		ID:       id,
-		ObjectID: gen.ID(),
-		JetID:    gen.JetID(),
+		_, err = db.AtPosition(pn, uint32(ctr))
+		require.Error(t, err)
+		require.Equal(t, ErrNotFound, err)
+
+		rec1 := record.Material{
+			Virtual:  record.Virtual{},
+			ID:       id,
+			ObjectID: gen.ID(),
+			JetID:    gen.JetID(),
+		}
+		f.Fuzz(&rec1.Polymorph)
+		f.NilChance(0).Fuzz(&rec1.Signature)
+
+		err = db.Set(ctx, rec1)
+		require.NoError(t, err)
+
+		pos, err := db.LastKnownPosition(pn)
+		require.NoError(t, err)
+		require.Equal(t, uint32(ctr), pos)
+
+		id2, err := db.AtPosition(id.Pulse(), uint32(ctr))
+		require.NoError(t, err)
+		require.Equal(t, id, id2)
 	}
-	f.Fuzz(&rec1.Polymorph)
-	f.NilChance(0).Fuzz(&rec1.Signature)
-
-	err = db.Set(ctx, rec1)
-	require.NoError(t, err)
-
-	pos, err := db.LastKnownPosition(id.Pulse())
-	require.NoError(t, err)
-	require.Equal(t, uint32(1), pos)
-
-	id2, err := db.AtPosition(id.Pulse(), 1)
-	require.NoError(t, err)
-	require.Equal(t, id, id2)
 }
