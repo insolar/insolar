@@ -314,29 +314,6 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
-func randomHex(n int) (string, error) {
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
-func generateMigrationAddresses() {
-	maLen := 40000
-	ma := make([]string, maLen)
-
-	for i := 0; i < maLen; i++ {
-		ethAddr, _ := randomHex(20)
-		ma[i] = "0x" + ethAddr
-	}
-
-	result, err := json.MarshalIndent(ma, "", "    ")
-	check("Problems with marshaling migration addresses:", err)
-
-	mustWrite(os.Stdout, string(result))
-}
-
 func generateKeysPair(targetValue string) {
 	switch targetValue {
 	case "node":
