@@ -50,6 +50,12 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	}
 
 	newNodeRef := node.GetReference().String()
+
+	_, ok := nd.NodeIndexPublicKey[publicKey]
+	if ok {
+		return "", fmt.Errorf("node already exist with this public key: %s", publicKey)
+	}
+
 	nd.NodeIndexPublicKey[publicKey] = newNodeRef
 
 	return newNodeRef, err

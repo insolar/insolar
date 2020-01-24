@@ -97,6 +97,7 @@ func (ar *Runner) makeCall(ctx context.Context, params requester.Params, rawBody
 		return nil, nil, errors.Wrap(err, "failed to marshal arguments")
 	}
 
+	// here
 	res, ref, err := ar.ContractRequester.Call(
 		ctx,
 		reference,

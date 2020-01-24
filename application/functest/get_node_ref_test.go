@@ -36,18 +36,19 @@ func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, 
 
 func TestGetNodeRefByPublicKey(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	publicKey := generateNodePublicKey(t)
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY})
+	nodeRef, err := getNodeRefSignedCall(t, map[string]interface{}{"publicKey": publicKey})
 	require.NoError(t, err)
 	require.Equal(t, ref, nodeRef)
 }
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
@@ -59,7 +60,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
