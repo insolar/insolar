@@ -129,7 +129,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 		return
 	}
 	if err != nil {
-		retErr = errors.Wrap(err, "selectByCondition - request failed")
+		retErr = errors.Wrapf(err, "selectByCondition - request failed query = `%v`, args = %v", query, args)
 		_ = tx.Rollback(ctx)
 		return
 	}

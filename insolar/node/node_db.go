@@ -94,7 +94,7 @@ func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 	return nil
 }
 
-func (s *StorageDB) selectByCondition(pulse insolar.PulseNumber, where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
+func (s *StorageDB) selectByCondition(where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
 	ctx := context.Background()
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
@@ -155,12 +155,12 @@ func (s *StorageDB) selectByCondition(pulse insolar.PulseNumber, where string, a
 
 // All return active nodes for specified pulse.
 func (s *StorageDB) All(pulse insolar.PulseNumber) ([]insolar.Node, error) {
-	return s.selectByCondition(pulse, "WHERE pulse_number = $1", pulse)
+	return s.selectByCondition("WHERE pulse_number = $1", pulse)
 }
 
 // InRole return active nodes for specified pulse and role.
 func (s *StorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error) {
-	return s.selectByCondition(pulse, "WHERE pulse_number = $1 AND role = $2", pulse, role)
+	return s.selectByCondition("WHERE pulse_number = $1 AND role = $2", pulse, role)
 }
 
 // DeleteForPN erases nodes for specified pulse.
