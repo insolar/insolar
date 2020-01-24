@@ -234,7 +234,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		Pulses = insolarPulse.NewDB(Pool)
 		Nodes = node.NewStorageDB(Pool)
-		Jets = jet.NewDBStore(DB) // AALEKSEEV TODO fix this
+		Jets = jet.NewDBStore(Pool)
 
 		timeBadgerStarted := time.Since(startTime)
 		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))

@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,20 +20,18 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/store"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 )
 
 type DBStore struct {
 	sync.RWMutex
-	db store.DB
+	pool *pgxpool.Pool
 }
 
-func NewDBStore(db store.DB) *DBStore {
-	return &DBStore{db: db}
+func NewDBStore(pool *pgxpool.Pool) *DBStore {
+	return &DBStore{pool: pool}
 }
 
 func (s *DBStore) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID {
@@ -50,33 +48,6 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 
 	tree := s.get(pulse)
 	return tree.Find(recordID)
-}
-
-// TruncateHead remove all records after lastPulse
-func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	s.Lock()
-	defer s.Unlock()
-
-	it := s.db.NewIterator(pulseKey(from), false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newPulseKey(it.Key())
-		err := s.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
-		}
-
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
-	}
-
-	if !hasKeys {
-		inslogger.FromContext(ctx).Debugf("No records. Nothing done. Pulse number: %s", from.String())
-	}
-
-	return nil
 }
 
 func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
@@ -110,6 +81,7 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
+
 func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
 	s.Lock()
 	defer s.Unlock()
@@ -123,42 +95,57 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepA
 	return nil
 }
 
-type pulseKey insolar.PulseNumber
-
-func (k pulseKey) Scope() store.Scope {
-	return store.ScopeJetTree
-}
-
-func (k pulseKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
-}
-
-func newPulseKey(raw []byte) pulseKey {
-	key := pulseKey(insolar.NewPulseNumber(raw))
-	return key
+// TruncateHead remove all records after lastPulse
+func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	panic("AALEKSEEV implement")
+	//s.Lock()
+	//defer s.Unlock()
+	//
+	//it := s.db.NewIterator(pulseKey(from), false)
+	//defer it.Close()
+	//
+	//var hasKeys bool
+	//for it.Next() {
+	//	hasKeys = true
+	//	key := newPulseKey(it.Key())
+	//	err := s.db.Delete(&key)
+	//	if err != nil {
+	//		return errors.Wrapf(err, "can't delete key: %+v", key)
+	//	}
+	//
+	//	inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
+	//}
+	//
+	//if !hasKeys {
+	//	inslogger.FromContext(ctx).Debugf("No records. Nothing done. Pulse number: %s", from.String())
+	//}
+	//
+	//return nil
 }
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
-	serializedTree, err := s.db.Get(pulseKey(pn))
-	if err != nil {
-		return NewTree(pn == insolar.GenesisPulse.PulseNumber)
-	}
-
-	recovered := &Tree{}
-	err = recovered.Unmarshal(serializedTree) // AALEKSEEV TODO just load a blog by given pulse number + truncate head
-	if err != nil {
-		return nil
-	}
-	return recovered
+	panic("AALEKSEEV implement me")
+	//serializedTree, err := s.db.Get(pulseKey(pn))
+	//if err != nil {
+	//	return NewTree(pn == insolar.GenesisPulse.PulseNumber)
+	//}
+	//
+	//recovered := &Tree{}
+	//err = recovered.Unmarshal(serializedTree) // AALEKSEEV TODO just load a blog by given pulse number + truncate head
+	//if err != nil {
+	//	return nil
+	//}
+	//return recovered
 }
 
 func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
-	key := pulseKey(pn)
-
-	serialized, err := jt.Marshal() // AALEKSEEV TODO just save a blob by given pulse number + truncate head
-	if err != nil {
-		return errors.Wrap(err, "failed to serialize jet.Tree")
-	}
-
-	return s.db.Set(key, serialized)
+	panic("AALEKSEEV implement me")
+	//key := pulseKey(pn)
+	//
+	//serialized, err := jt.Marshal() // AALEKSEEV TODO just save a blob by given pulse number + truncate head
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to serialize jet.Tree")
+	//}
+	//
+	//return s.db.Set(key, serialized)
 }

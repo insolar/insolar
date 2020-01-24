@@ -20,7 +20,14 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"sync"
 	"testing"
+
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/tests/common"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
@@ -35,6 +42,59 @@ import (
 )
 
 // AALEKSEEV TODO re-implement test
+
+var (
+	poolLock     sync.Mutex
+	globalPgPool *pgxpool.Pool
+)
+
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
+}
+
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
+}
+
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		stopPostgreSQL()
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	setPool(pool)
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
+	os.Exit(code)
+}
 
 func BadgerDefaultOptions(dir string) badger.Options {
 	ops := badger.DefaultOptions(dir)
@@ -255,7 +315,7 @@ func TestNewJetKeeper(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
-	jets := jet.NewDBStore(db)
+	jets := jet.NewDBStore(getPool())
 	pulses := pulse.NewCalculatorMock(t)
 	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 	require.NotNil(t, jetKeeper)
@@ -335,7 +395,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
-	jets := jet.NewDBStore(db)
+	jets := jet.NewDBStore(getPool())
 	pulses := pulse.NewCalculatorMock(t)
 	pulses.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
