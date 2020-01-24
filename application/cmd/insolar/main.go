@@ -16,8 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +26,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/cmd/insolar/insolarcmd"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -96,13 +95,17 @@ func main() {
 		&targetValue, "target", "t", "", "target for whom need to generate keys (possible values: node, user)")
 	rootCmd.AddCommand(genKeysPairCmd)
 
+	var addresses int
 	var genMigrationAddressesCmd = &cobra.Command{
 		Use:   "gen-migration-addresses",
 		Short: "generates fake migration addresses",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateMigrationAddresses()
+			err := insolarcmd.GenerateMigrationAddresses(os.Stdout, addresses)
+			check("failed to generate addresses:", err)
 		},
 	}
+	genMigrationAddressesCmd.Flags().IntVarP(
+		&addresses, "count", "c", 40000, "how many addresses to generate")
 	rootCmd.AddCommand(genMigrationAddressesCmd)
 
 	var rootKeysFile string
@@ -205,13 +208,14 @@ func main() {
 	)
 	rootCmd.AddCommand(freeMigrationCountCmd)
 
-	var (
-		addressesPath string
-	)
+	var addressesDir string
 	var addMigrationAddressesCmd = &cobra.Command{
 		Use: "add-migration-addresses",
 		Run: func(cmd *cobra.Command, args []string) {
-			addMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesPath, shardsCount)
+			fmt.Println("generate random migration addresses")
+			err := insolarcmd.AddMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesDir)
+			check("", err)
+			fmt.Println("All addresses were added successfully")
 		},
 	}
 	addURLFlag(addMigrationAddressesCmd.Flags())
@@ -220,12 +224,8 @@ func main() {
 		"Dir with config that contains public/private keys of admin member",
 	)
 	addMigrationAddressesCmd.Flags().StringVarP(
-		&addressesPath, "addresses", "g", "",
-		"Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
-	)
-	addMigrationAddressesCmd.Flags().IntVarP(
-		&shardsCount, "shards-count", "s", 10,
-		"Count of shards at platform (must be a multiple of ten)",
+		&addressesDir, "addresses-dir", "d", "",
+		"Path to dir with address files. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
 	)
 	rootCmd.AddCommand(addMigrationAddressesCmd)
 
@@ -312,29 +312,6 @@ func verboseInfo(msg string) {
 func mustWrite(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
-}
-
-func randomHex(n int) (string, error) {
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
-func generateMigrationAddresses() {
-	maLen := 40000
-	ma := make([]string, maLen)
-
-	for i := 0; i < maLen; i++ {
-		ethAddr, _ := randomHex(20)
-		ma[i] = "0x" + ethAddr
-	}
-
-	result, err := json.MarshalIndent(ma, "", "    ")
-	check("Problems with marshaling migration addresses:", err)
-
-	mustWrite(os.Stdout, string(result))
 }
 
 func generateKeysPair(targetValue string) {

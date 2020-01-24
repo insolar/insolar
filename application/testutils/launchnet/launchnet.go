@@ -71,7 +71,6 @@ var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers
 var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
 var Enterprise [application.GenesisAmountEnterpriseMembers]*User
 var Foundation [application.GenesisAmountFoundationMembers]*User
-var Funds [application.GenesisAmountFundsMembers]*User
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
@@ -298,19 +297,6 @@ func loadAllMembersKeys() error {
 			return err
 		}
 		Foundation[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		path, err := launchnetPath("configs", "funds_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		Funds[i] = &md
 	}
 
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
@@ -585,20 +571,22 @@ func RotateLogs(verbose bool) {
 	cmd := exec.Command("sh", "-c", rmCmd)
 	out, err := cmd.Output()
 	if err != nil {
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
 	}
 	if verbose {
-		fmt.Println("RotateLogs removed files:\n", string(out))
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 	}
 
-	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	rotateCmd := "pkill -SIGUSR2 -x inslogrotator"
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
-		if verbose {
-			println("RotateLogs killall output:", string(out))
-		}
-		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
+		log.Fatal("RotateLogs: failed to execute command:", rotateCmd)
+	}
+	if verbose {
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
 	}
 }
 
