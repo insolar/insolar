@@ -64,7 +64,6 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 			args:    args{pk: "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCF5iQBRQAijZo6V83VpA+u6c1i\nfzOLYNFWYTk72VK+W/m9DAvyDe2LJCX7kRq3hUhkQpR+YyfMJuNmCCFpz4/IfrfN\n/GdtNHlcmJU6f0hHE+CzxbY2yptXBLZpyg7Ll4vXHGD4WEbRBTzc8CW6L5kS5kJ5\ni2pwohrbRVBgfXkkmQIDAQAB\n-----END PUBLIC KEY-----"},
 			wantErr: true,
 		},
-		// todo add different ecdsa formats.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,4 +77,12 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("ok with additional fields in pem", func(t *testing.T) {
+		pk1 := "-----BEGIN PUBLIC KEY-----\nThisIsNewField:testvalue\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwDcgWZ1SbG+nbiXZkmYUZEfk2nkk\n1PEmEWoj4g6DLEkdaQVorOkqlloEz1zXclQaAE1S8i3F7OFNrNxLkm34ow==\n-----END PUBLIC KEY-----\n"
+		pk2 := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwDcgWZ1SbG+nbiXZkmYUZEfk2nkk\n1PEmEWoj4g6DLEkdaQVorOkqlloEz1zXclQaAE1S8i3F7OFNrNxLkm34ow==\n-----END PUBLIC KEY-----\n"
+		got1, _ := ExtractCanonicalPublicKey(pk1)
+		got2, _ := ExtractCanonicalPublicKey(pk2)
+		require.Equal(t, got1, got2)
+	})
 }
