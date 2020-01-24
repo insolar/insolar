@@ -151,16 +151,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
 
-	fundsPublicKeys := []string{}
-	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(
-			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "funds_")))
-		if err != nil {
-			return errors.Wrap(err, "couldn't get funds keys")
-		}
-		fundsPublicKeys = append(fundsPublicKeys, k)
-	}
-
 	enterprisePublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(
@@ -235,7 +225,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
 		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
 		FoundationPublicKeys:            foundationPublicKeys,
-		FundsPublicKeys:                 fundsPublicKeys,
 		EnterprisePublicKeys:            enterprisePublicKeys,
 		MigrationAddresses:              migrationAddresses,
 		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,

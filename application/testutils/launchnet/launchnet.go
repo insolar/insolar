@@ -71,7 +71,6 @@ var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers
 var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
 var Enterprise [application.GenesisAmountEnterpriseMembers]*User
 var Foundation [application.GenesisAmountFoundationMembers]*User
-var Funds [application.GenesisAmountFundsMembers]*User
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
@@ -298,19 +297,6 @@ func loadAllMembersKeys() error {
 			return err
 		}
 		Foundation[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		path, err := launchnetPath("configs", "funds_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		Funds[i] = &md
 	}
 
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
