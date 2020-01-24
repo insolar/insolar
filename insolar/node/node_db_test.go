@@ -21,6 +21,7 @@ package node
 import (
 	"context"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -140,5 +141,55 @@ func TestInsertSelect(t *testing.T) {
 		require.Equal(t, 2, len(readNodes))
 		require.Equal(t, nodes[2], readNodes[0])
 		require.Equal(t, nodes[3], readNodes[1])
+	}
+}
+
+func TestTruncateHead(t *testing.T) {
+	// Generate sorted list of pulses
+	pulses := make([]insolar.PulseNumber, 5)
+	for i := 0; i < len(pulses); i++ {
+		pulses[i] = gen.PulseNumber()
+	}
+	sort.Slice(pulses, func(i, j int) bool {
+		return pulses[i] < pulses[j]
+	})
+
+	// Insert some nodes for each pulse
+	nodes := make([][]insolar.Node, len(pulses))
+	for i := 0; i < len(pulses); i++ {
+		nodes[i] = []insolar.Node{
+			{
+				Polymorph: 123,
+				ID:        gen.Reference(),
+				Role:      insolar.StaticRoleVirtual,
+			},
+		}
+		err := db.Set(pulses[i], nodes[i])
+		require.NoError(t, err)
+	}
+
+	// Make sure data for all pulses is present
+	for i := 0; i < len(pulses); i++ {
+		readNodes, err := db.All(pulses[i])
+		require.NoError(t, err)
+		require.Equal(t, nodes[i], readNodes)
+	}
+
+	// Truncate head
+	err := db.TruncateHead(context.Background(), pulses[2])
+	require.NoError(t, err)
+
+	// Make sure nodes for pulses [0,1,2] is still here
+	for i := 0; i <= 2; i++ {
+		readNodes, err := db.All(pulses[i])
+		require.NoError(t, err)
+		require.Equal(t, nodes[i], readNodes)
+	}
+
+	// Make sure nodes for pulses [3,4] were deleted
+	for i := 3; i <= 4; i++ {
+		readNodes, err := db.All(pulses[i])
+		require.NoError(t, err)
+		require.Empty(t, readNodes)
 	}
 }
