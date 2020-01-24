@@ -201,6 +201,8 @@ func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO jet_trees(pulse_number, jet_tree)
 			VALUES ($1, $2)
+			ON CONFLICT (pulse_number) DO
+			UPDATE SET jet_tree = EXCLUDED.jet_tree
 		`, pn, serialized)
 		if err != nil {
 			_ = tx.Rollback(ctx)
