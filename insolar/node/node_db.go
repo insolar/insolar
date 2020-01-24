@@ -19,6 +19,9 @@ package node
 import (
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
+
 	"github.com/jackc/pgx/v4"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -50,7 +53,45 @@ func NewStorageDB(pool *pgxpool.Pool) *StorageDB {
 
 // Set saves active nodes for pulse in memory.
 func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
-	panic("implement me")
+	ctx := context.Background()
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		for k, n := range nodes {
+			nodeID, err := n.ID.MarshalBinary()
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrapf(err, "Unable to marshal nodeID: %v", nodeID)
+			}
+			_, err = tx.Exec(ctx, `
+				INSERT INTO nodes (pulse_number, node_num, polymorph, node_id, role)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, pulse, k, n.Polymorph, nodeID, n.Role)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to INSERT node")
+			}
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("Append - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
 
 // All return active nodes for specified pulse.
