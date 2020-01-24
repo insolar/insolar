@@ -6,6 +6,9 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     if: contains(github.ref, '/tags/')
+    strategy:
+      matrix:
+        artifact: [insolar, insolard, keeperd, pulsard]
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -15,23 +18,34 @@ jobs:
       - name: build code
         run: |
           make build
-          mkdir artifact
-          cp bin/insolar bin/insolard bin/keeperd bin/pulsard artifact/
+      - uses: actions/upload-artifact@v1
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
   pack:
     name: pack
     needs: build
     runs-on: ubuntu-latest
     if: contains(github.ref, '/tags/')
+    strategy:
+      matrix:
+        artifact: [insolar, insolard, keeperd, pulsard]
     steps:
       - name: checkout code
         uses: actions/checkout@master
+      - name: create path for artifacts
+        run: |
+          mkdir bin
+      - uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
       - name: pack project
         id: pack
         run: |
           echo "::set-output name=tag_name::$(echo $GITHUB_REF | cut -d '/' -f3)"
       - name: create docker image
         run: |
-          ls -1
           docker build -t ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} --pull --build-arg release_name=${{ steps.pack.outputs.tag_name }} .
           docker tag ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
           docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
@@ -47,6 +61,10 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@master
+      - uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
       - name: create release from tag
         id: create_release
         uses: actions/create-release@becafb2
