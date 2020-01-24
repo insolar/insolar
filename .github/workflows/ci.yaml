@@ -1,0 +1,65 @@
+name: insolar
+on:
+  push:
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    if: contains(github.ref, '/tags/')
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+      - uses: actions/setup-go@v1
+        with:
+          go-version: '1.12.10'
+      - name: build code
+        run: |
+          make build
+  pack:
+    name: pack
+    needs: build
+    runs-on: ubuntu-latest
+    if: contains(github.ref, '/tags/')
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+      - name: pack project
+        id: pack
+        run: |
+          echo "::set-output name=tag_name::$(echo $GITHUB_REF | cut -d '/' -f3)"
+      - name: create docker image
+        run: |
+          docker build -t ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} --pull --build-arg release_name=${{ steps.pack.outputs.tag_name }} .
+          docker tag ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
+          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
+          docker push ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
+  release:
+    name: release
+    needs: [build, pack]
+    runs-on: ubuntu-latest
+    if: contains(github.ref, '/tags/')
+    strategy:
+      matrix:
+        artifact: [insolar, insolard, keeperd, pulsard]
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+      - name: create release from tag
+        id: create_release
+        uses: actions/create-release@becafb2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: upload ${{ matrix.artifact }} binary to release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/${{ matrix.artifact }}
+          asset_name: ${{ matrix.artifact }}
+          asset_content_type: application/octet-stream
