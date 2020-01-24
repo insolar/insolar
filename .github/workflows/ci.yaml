@@ -1,14 +1,12 @@
 name: insolar
 on:
   push:
+    tags:
+      - v*
 jobs:
-  build:
+  build-pack-release:
     name: build
     runs-on: ubuntu-latest
-    if: contains(github.ref, '/tags/')
-    strategy:
-      matrix:
-        artifact: [insolar, insolard, keeperd, pulsard]
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -18,28 +16,6 @@ jobs:
       - name: build code
         run: |
           make build
-      - uses: actions/upload-artifact@v1
-        with:
-          name: ${{ matrix.artifact }}
-          path: bin/${{ matrix.artifact }}
-  pack:
-    name: pack
-    needs: build
-    runs-on: ubuntu-latest
-    if: contains(github.ref, '/tags/')
-    strategy:
-      matrix:
-        artifact: [insolar, insolard, keeperd, pulsard]
-    steps:
-      - name: checkout code
-        uses: actions/checkout@master
-      - name: create path for artifacts
-        run: |
-          mkdir bin
-      - uses: actions/download-artifact@v1
-        with:
-          name: ${{ matrix.artifact }}
-          path: bin/${{ matrix.artifact }}
       - name: pack project
         id: pack
         run: |
@@ -50,21 +26,6 @@ jobs:
           docker tag ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
           docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
           docker push ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
-  release:
-    name: release
-    needs: [build, pack]
-    runs-on: ubuntu-latest
-    if: contains(github.ref, '/tags/')
-    strategy:
-      matrix:
-        artifact: [insolar, insolard, keeperd, pulsard]
-    steps:
-      - name: checkout code
-        uses: actions/checkout@master
-      - uses: actions/download-artifact@v1
-        with:
-          name: ${{ matrix.artifact }}
-          path: bin/${{ matrix.artifact }}
       - name: create release from tag
         id: create_release
         uses: actions/create-release@becafb2
@@ -75,12 +36,39 @@ jobs:
           release_name: ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: upload ${{ matrix.artifact }} binary to release
+      - name: upload insolar binary to release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./bin/${{ matrix.artifact }}
-          asset_name: ${{ matrix.artifact }}
+          asset_path: ./bin/insolar
+          asset_name: insolar
+          asset_content_type: application/octet-stream
+      - name: upload insolard binary to release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/insolard
+          asset_name: insolard
+          asset_content_type: application/octet-stream
+      - name: upload keeperd binary to release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/keeperd
+          asset_name: keeperd
+          asset_content_type: application/octet-stream
+      - name: upload pulsard binary to release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/pulsard
+          asset_name: pulsard
           asset_content_type: application/octet-stream
