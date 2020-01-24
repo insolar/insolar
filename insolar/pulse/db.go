@@ -286,7 +286,7 @@ WITH RECURSIVE tmp AS (
 		UNION
 	SELECT t."depth" + 1, p.pulse_number, p.next_pn
 	FROM tmp t
-	LEFT JOIN pulses p ON p.pulse_number = t.next_pn
+	INNER JOIN pulses p ON p.pulse_number = t.next_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps)
@@ -303,7 +303,7 @@ WITH RECURSIVE tmp AS (
 		UNION
 	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
 	FROM tmp t
-	LEFT JOIN pulses p ON p.pulse_number = t.prev_pn
+	INNER JOIN pulses p ON p.pulse_number = t.prev_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps)
