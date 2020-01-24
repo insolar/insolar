@@ -19,8 +19,6 @@ package pulse
 import (
 	"context"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/jackc/pgx/v4"
 
 	"github.com/insolar/insolar/insolar"
@@ -125,9 +123,13 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	var pn insolar.PulseNumber
 	row := tx.QueryRow(ctx, query, args...)
 	err = row.Scan(&pn)
-	if err != nil {
-		log.Infof("selectByCondition: pulse not found - %v", err)
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
 		retErr = ErrNotFound
+		return
+	}
+	if err != nil {
+		retErr = errors.Wrap(err, "selectByCondition - request failed")
 		_ = tx.Rollback(ctx)
 		return
 	}

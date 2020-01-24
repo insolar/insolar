@@ -94,14 +94,73 @@ func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 	return nil
 }
 
+func (s *StorageDB) selectByCondition(pulse insolar.PulseNumber, where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
+	ctx := context.Background()
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, readTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		return
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT polymorph, node_id, role FROM nodes `+where+`
+		ORDER BY node_num
+	`, args...)
+	if err == pgx.ErrNoRows {
+		// return empty slice and no error
+		_ = tx.Rollback(ctx)
+		return
+	}
+	if err != nil {
+		retErr = errors.Wrap(err, "selectByCondition - query failed")
+		_ = tx.Rollback(ctx)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var nodeId []byte
+		var node insolar.Node
+		err = rows.Scan(&node.Polymorph, &nodeId, &node.Role)
+		if err != nil {
+			retErr = errors.Wrap(err, "Unable to scan another node row")
+			_ = tx.Rollback(ctx)
+			return
+		}
+		err = node.ID.UnmarshalBinary(nodeId)
+		if err != nil {
+			retErr = errors.Wrapf(err, "Unable to unmarshal nodeId: %v", nodeId)
+			_ = tx.Rollback(ctx)
+			return
+		}
+
+		retNodes = append(retNodes, node)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+		return
+	}
+
+	return
+}
+
 // All return active nodes for specified pulse.
 func (s *StorageDB) All(pulse insolar.PulseNumber) ([]insolar.Node, error) {
-	panic("implement me")
+	return s.selectByCondition(pulse, "WHERE pulse_number = $1", pulse)
 }
 
 // InRole return active nodes for specified pulse and role.
 func (s *StorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error) {
-	panic("implement me")
+	return s.selectByCondition(pulse, "WHERE pulse_number = $1 AND role = $2", pulse, role)
 }
 
 // DeleteForPN erases nodes for specified pulse.
