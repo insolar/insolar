@@ -1,6 +1,14 @@
 .artifacts
 .github
-bin
+bin/apirequester
+bin/backupmanager
+bin/benchmark
+bin/healthcheck
+bin/heavy-badger
+bin/insgocc
+bin/insgorund
+bin/pulsewatcher
+bin/testpulsard
 ci
 data
 docker
