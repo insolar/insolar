@@ -2,7 +2,7 @@ name: insolar
 on:
   push:
     tags:
-      - *
+      - '*'
 jobs:
   build-pack-release:
     name: build
