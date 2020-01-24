@@ -164,11 +164,40 @@ func (s *StorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) (
 }
 
 // DeleteForPN erases nodes for specified pulse.
-func (s *StorageDB) DeleteForPN(pulse insolar.PulseNumber) {
-	panic("implement me")
+func (s *StorageDB) DeleteForPN(_ insolar.PulseNumber) {
+	panic("NodeDB.DeleteForPN should never be called by anyone!")
+	// Also this method supposed to return at least `error`. Consider it a legacy.
 }
 
 // TruncateHead remove all records after lastPulse
 func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	panic("implement me")
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		_, err = tx.Exec(ctx, "DELETE FROM nodes WHERE pulse_number > $1", from)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM nodes")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
