@@ -6,4 +6,4 @@ RUN  set -eux; \
      apt-get install -y ca-certificates curl dumb-init gnupg openssl; \
      apt-get clean; \
      rm -rf /var/lib/apt/lists/*
-COPY $PWD/artifact/insolar $PWD/artifact/insolard $PWD/artifact/keeperd $PWD/artifact/pulsard /usr/local/bin/
+COPY $PWD/bin/insolar $PWD/bin/insolard $PWD/bin/keeperd $PWD/bin/pulsard /usr/local/bin/
