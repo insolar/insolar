@@ -242,23 +242,40 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance                     string
-	MDBalance                       string
-	RootPublicKey                   string
-	FeePublicKey                    string
-	MigrationAdminPublicKey         string
-	MigrationDaemonPublicKeys       []string
-	VestingPeriodInPulses           int64
-	LockupPeriodInPulses            int64
-	VestingStepInPulses             int64
-	MigrationAddresses              [][]string
-	FundsPublicKeys                 []string
-	EnterprisePublicKeys            []string
-	NetworkIncentivesPublicKeys     []string
+	// RootBalance is a balance of Root Member.
+	RootBalance string
+	// MDBalance is a balance of Migration Daemon.
+	MDBalance string
+	// RootPublicKey is public key of Root Member.
+	RootPublicKey string
+	// FeePublicKey is public key of Fee Member.
+	FeePublicKey string
+	// MigrationAdminPublicKey is public key of Migration Admin.
+	MigrationAdminPublicKey string
+	// MigrationDaemonPublicKeys is a public keys array of Migration Daemon members.
+	MigrationDaemonPublicKeys []string
+	// VestingPeriodInPulses is a vesting period measured with pulses.
+	VestingPeriodInPulses int64
+	// LockupPeriodInPulses is a lockup period before vesting measured with pulses.
+	LockupPeriodInPulses int64
+	// VestingStepInPulses is a one vesting step measured with pulses.
+	VestingStepInPulses int64
+	// MigrationAddresses are migration addresses array per shard where index array is a shard index.
+	MigrationAddresses [][]string
+	// FundsPublicKeys is a public keys array of Funds members.
+	FundsPublicKeys []string
+	// EnterprisePublicKeys is a public keys array of Enterprise members.
+	EnterprisePublicKeys []string
+	// NetworkIncentivesPublicKeys is a public keys array of Network Incentives members.
+	NetworkIncentivesPublicKeys []string
+	// ApplicationIncentivesPublicKeys is a public keys array of Application Incentives members.
 	ApplicationIncentivesPublicKeys []string
-	FoundationPublicKeys            []string
-	PKShardCount                    int
-	MAShardCount                    int
+	// FoundationPublicKeys is a public keys array of Foundation members.
+	FoundationPublicKeys []string
+	// PKShardCount is a primary keys shards count.
+	PKShardCount int
+	// MAShardCount is a migration addresses shards count.
+	MAShardCount int
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
