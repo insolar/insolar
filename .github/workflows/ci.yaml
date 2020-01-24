@@ -37,7 +37,7 @@ jobs:
           release_name: ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: upload insolar binary to release
+      - name: attach insolar binary to GH release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +46,7 @@ jobs:
           asset_path: ./bin/insolar
           asset_name: insolar
           asset_content_type: application/octet-stream
-      - name: upload insolard binary to release
+      - name: attach insolard binary to GH release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,7 +55,7 @@ jobs:
           asset_path: ./bin/insolard
           asset_name: insolard
           asset_content_type: application/octet-stream
-      - name: upload keeperd binary to release
+      - name: attach keeperd binary to GH release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,7 +64,7 @@ jobs:
           asset_path: ./bin/keeperd
           asset_name: keeperd
           asset_content_type: application/octet-stream
-      - name: upload pulsard binary to release
+      - name: attach pulsard binary to GH release
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
