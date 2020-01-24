@@ -31,6 +31,7 @@ jobs:
           echo "::set-output name=tag_name::$(echo $GITHUB_REF | cut -d '/' -f3)"
       - name: create docker image
         run: |
+          ls -1
           docker build -t ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} --pull --build-arg release_name=${{ steps.pack.outputs.tag_name }} .
           docker tag ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
           docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
