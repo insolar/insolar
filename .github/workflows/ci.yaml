@@ -25,7 +25,7 @@ jobs:
         run: |
           docker build -t ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} --pull .
           docker tag ${{ github.workflow }}:${{ steps.pack.outputs.tag_name }} ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
-          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
+          docker login -u https://${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
           docker push ${{ secrets.REGISTRY_URL }}/${{ github.workflow }}:${{ steps.pack.outputs.tag_name }}
       - name: create GH release
         id: create_release
