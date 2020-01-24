@@ -318,7 +318,10 @@ func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
 // GetFreeMigrationAddress return free migration address for new user.
 // ins:immutable
 func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	trimmedPublicKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
 	rndSrc := foundation.NewSource()
 	trimmedPublicKey += strconv.Itoa(int(rndSrc.Int63()))
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(mA.MigrationAddressShards))

@@ -33,7 +33,10 @@ type RootDomain struct {
 // GetMemberByPublicKey gets member reference by public key.
 // ins:immutable
 func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	trimmedPublicKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
 	i := foundation.GetShardIndex(trimmedPublicKey, len(rd.PublicKeyShards))
 	if i >= len(rd.PublicKeyShards) {
 		return nil, fmt.Errorf("incorrect shard index")
@@ -54,13 +57,16 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
 // ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	trimmedPublicKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(rd.PublicKeyShards))
 	if shardIndex >= len(rd.PublicKeyShards) {
 		return fmt.Errorf("incorrect public key shard index")
 	}
 	pks := pkshard.GetObject(rd.PublicKeyShards[shardIndex])
-	err := pks.SetRef(trimmedPublicKey, memberRef.String())
+	err = pks.SetRef(trimmedPublicKey, memberRef.String())
 	if err != nil {
 		return errors.Wrap(err, "failed to set reference in public key shard")
 	}

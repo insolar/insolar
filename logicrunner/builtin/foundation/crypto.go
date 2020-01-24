@@ -48,10 +48,21 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 		return fmt.Errorf("cant decode signature %s", err.Error())
 	}
 
-	if TrimPublicKey(key) != TrimPublicKey(rawpublicpem) && !selfSigned {
+	canonicalRawPk, err := ExtractCanonicalPublicKey(rawpublicpem)
+	if err != nil {
+		return fmt.Errorf("problems with parsing. Key - %v", rawpublicpem)
+	}
+
+	canonicalKey, err := ExtractCanonicalPublicKey(key)
+	if err != nil {
+		return fmt.Errorf("problems with parsing. Key - %v", key)
+	}
+
+	if canonicalKey != canonicalRawPk && !selfSigned {
 		return fmt.Errorf("access denied. Key - %v", rawpublicpem)
 	}
 
+	// todo: simplify next
 	blockPub, _ := pem.Decode([]byte(rawpublicpem))
 	if blockPub == nil {
 		return fmt.Errorf("problems with decoding. Key - %v", rawpublicpem)
@@ -84,6 +95,6 @@ func GetShardIndex(s string, mod int) int {
 // Calc hash
 func hash(s string) uint32 {
 	h := fnv.New32a()
-	h.Write([]byte(s))
+	_, _ = h.Write([]byte(s))
 	return h.Sum32()
 }
