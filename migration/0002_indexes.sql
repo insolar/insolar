@@ -18,7 +18,7 @@ create table indexes
     latest_state          bytea   null,
     state_id              integer not null,
     parent                bytea   not null,
-    latest_request        bytea   not null,
+    latest_request        bytea   null,
     earliest_open_request bigint  null,
     open_requests_count   bigint  not null,
 

@@ -48,8 +48,8 @@ var WriteTxOptions = pgx.TxOptions{
 }
 
 // NewIndexDB creates a new instance of IndexDB
-func NewIndexDBNew(pool *pgxpool.Pool) *IndexDB {
-	return &IndexDB{pool: pool}
+func NewIndexDB(pool *pgxpool.Pool, records *RecordDB) *IndexDB {
+	return &IndexDB{pool: pool, recordStore: records}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
@@ -68,13 +68,26 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
+		var pendingRecords [][]byte
+		for _, pr := range bucket.PendingRecords {
+			pendingRecords = append(pendingRecords, pr.Bytes())
+		}
+		var latestState []byte
+		if bucket.Lifeline.LatestState != nil {
+			latestState = bucket.Lifeline.LatestState.Bytes()
+		}
+		var latestRequest []byte
+		if bucket.Lifeline.LatestRequest != nil {
+			latestRequest = bucket.Lifeline.LatestRequest.Bytes()
+		}
+
 		_, err = tx.Exec(ctx, `
 			INSERT INTO indexes(object_id, pulse_number, lifeline_last_used, pending_records,
 				latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count)
 			VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		`, bucket.ObjID, pn, bucket.LifelineLastUsed, bucket.PendingRecords,
-			bucket.Lifeline.LatestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent,
-			bucket.Lifeline.LatestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
+		`, bucket.ObjID.Bytes(), pn, bucket.LifelineLastUsed, pendingRecords,
+			latestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent.Bytes(),
+			latestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to INSERT index")
@@ -85,7 +98,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 			break
 		}
 
-		log.Infof("Append - commit failed: %v - retrying transaction", err)
+		log.Infof("SetIndex - commit failed: %v - retrying transaction", err)
 	}
 
 	stats.Record(ctx, statIndexesAddedCount.M(1))
@@ -105,46 +118,59 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumb
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
-	if err != nil {
-		return errors.Wrap(err, "Unable to start a read transaction")
-	}
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a read transaction")
+		}
 
-	rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, `
 		SELECT 
 			object_id
 		FROM indexes 
-		WHERE AND pulse_number=`, pn)
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return errors.Wrap(err, "Unable select from indexes for pn")
-
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id insolar.ID
-		err = rows.Scan(&id)
-		if err != nil {
-			log.Infof("failed to read index row: %v", err)
-			_ = tx.Rollback(ctx)
-			return ErrNotFound
-		}
-		_, err = tx.Exec(ctx, `DELETE FROM last_known_pulse_for_indexes WHERE object_id = $1`, id)
+		WHERE pulse_number = $1`, pn)
 		if err != nil {
 			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
+			return errors.Wrap(err, "Unable select from indexes for pn")
+
 		}
 
-		_, err = tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes(object_id, pulse_number)
+		var rawIDs [][]byte
+		for rows.Next() {
+			var rawID []byte
+			err = rows.Scan(&rawID)
+			if err != nil {
+				log.Infof("failed to read index row: %v", err)
+				_ = tx.Rollback(ctx)
+				rows.Close()
+				return errors.Wrap(err, "failed to read from last_known_pulse_for_indexes")
+			}
+			rawIDs = append(rawIDs, rawID)
+		}
+		rows.Close()
+
+		for _, id := range rawIDs {
+			_, err = tx.Exec(ctx, `DELETE FROM last_known_pulse_for_indexes WHERE object_id = $1`, id)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
+			}
+
+			_, err = tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes(object_id, pulse_number)
 									VALUES($1, $2)`, id, pn)
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to INSERT INTO last_known_pulse_for_indexes")
+			}
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil {
+			break
 		}
 	}
 
-	return tx.Commit(ctx)
+	return nil
 }
 
 func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
@@ -161,26 +187,69 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
 	}
 
+	var objectID []byte
+	var pendingRecords [][]byte
+	var latestStateID []byte
+	var parent []byte
+	var latestRequest []byte
 	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
 	row := tx.QueryRow(ctx, `
-		SELECT 
-			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+		SELECT
+			object_id,
+			lifeline_last_used, 
+			pending_records, 
+			latest_state, 
+			state_id, 
+			parent, 
+			latest_request, 
+			earliest_open_request, 
+			open_requests_count
 		FROM indexes 
-		WHERE object_id=$1 AND pulse_number=$2`, objID, pn)
+		WHERE object_id=$1 AND pulse_number=$2`, objID.Bytes(), pn)
 	err = row.Scan(
+		&objectID,
 		&idx.LifelineLastUsed,
-		&idx.PendingRecords,
-		&idx.Lifeline.LatestState,
+		&pendingRecords,
+		&latestStateID,
 		&idx.Lifeline.StateID,
-		&idx.Lifeline.Parent,
-		&idx.Lifeline.LatestRequest,
+		&parent,
+		&latestRequest,
 		&idx.Lifeline.EarliestOpenRequest,
 		&idx.Lifeline.OpenRequestsCount,
 	)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			idx, err = i.lastKnownForID(ctx, tx, objID)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return record.Index{}, err
+			}
+			err = tx.Commit(ctx)
+			if err != nil {
+				return idx, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+			}
+			return idx, nil
+		}
+
 		log.Infof("ForID: idx not found - %v", err)
 		_ = tx.Rollback(ctx)
-		return record.Index{}, ErrNotFound
+		return record.Index{}, ErrIndexNotFound
+	}
+
+	idx.ObjID = *insolar.NewIDFromBytes(objectID)
+
+	for _, pr := range pendingRecords {
+		idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(pr))
+	}
+
+	if len(latestStateID) > 0 {
+		idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestStateID)
+	}
+
+	idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
+
+	if len(latestRequest) > 0 {
+		idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
 	}
 
 	err = tx.Commit(ctx)
@@ -246,10 +315,63 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	return idxs, nil
 }
 
+func (i *IndexDB) lastKnownForID(ctx context.Context, tx pgx.Tx, objID insolar.ID) (record.Index, error) {
+	log := inslogger.FromContext(ctx)
+	var pn insolar.PulseNumber
+	row := tx.QueryRow(ctx, "SELECT pulse_number FROM last_known_pulse_for_indexes WHERE object_id=$1", objID.Bytes())
+	err := row.Scan(&pn)
+	if err != nil {
+		log.Infof("can't fetch pulse from last_known_pulse_for_indexes for id:%v err:%v", objID.DebugString(), err)
+		return record.Index{}, ErrIndexNotFound
+	}
+
+	var pendingRecords [][]byte
+	var latestStateID []byte
+	var parent []byte
+	var latestRequest []byte
+	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+
+	row = tx.QueryRow(ctx, `
+		SELECT 
+			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+		FROM indexes 
+		WHERE object_id=$1 AND pulse_number=$2`, objID.Bytes(), pn)
+	err = row.Scan(
+		&idx.LifelineLastUsed,
+		&pendingRecords,
+		&latestStateID,
+		&idx.Lifeline.StateID,
+		&parent,
+		&latestRequest,
+		&idx.Lifeline.EarliestOpenRequest,
+		&idx.Lifeline.OpenRequestsCount,
+	)
+	if err != nil {
+		log.Infof("LastKnownForID: idx not found - %v", err)
+		return record.Index{}, ErrIndexNotFound
+	}
+
+	idx.ObjID = objID
+
+	for _, pr := range pendingRecords {
+		idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(pr))
+	}
+
+	if len(latestStateID) > 0 {
+		idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestStateID)
+	}
+
+	idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
+
+	if len(latestRequest) > 0 {
+		idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
+	}
+
+	return idx, nil
+}
+
 // LastKnownForID returns latest bucket for provided ID
 func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
-	log := inslogger.FromContext(ctx)
-
 	conn, err := i.pool.Acquire(ctx)
 	if err != nil {
 		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
@@ -261,40 +383,15 @@ func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.
 		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
 	}
 
-	var pn insolar.PulseNumber
-	row := tx.QueryRow(ctx, "SELECT pulse_number FROM last_known_pulse_for_indexes WHERE object_id=$1", objID)
-	err = row.Scan(&pn)
+	idx, err := i.lastKnownForID(ctx, tx, objID)
 	if err != nil {
-		log.Infof("LastKnownForID: pulse not found - %v", err)
 		_ = tx.Rollback(ctx)
-		return record.Index{}, ErrNotFound
-	}
-
-	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
-	row = tx.QueryRow(ctx, `
-		SELECT 
-			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
-		FROM indexes 
-		WHERE object_id=$1 AND pulse_number=$2`, objID, pn)
-	err = row.Scan(
-		&idx.LifelineLastUsed,
-		&idx.PendingRecords,
-		&idx.Lifeline.LatestState,
-		&idx.Lifeline.StateID,
-		&idx.Lifeline.Parent,
-		&idx.Lifeline.LatestRequest,
-		&idx.Lifeline.EarliestOpenRequest,
-		&idx.Lifeline.OpenRequestsCount,
-	)
-	if err != nil {
-		log.Infof("LastKnownForID: idx not found - %v", err)
-		_ = tx.Rollback(ctx)
-		return record.Index{}, ErrNotFound
+		return record.Index{}, err
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return record.Index{}, err
+		return record.Index{}, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
 	}
 
 	return idx, nil
@@ -310,26 +407,35 @@ func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
-	if err != nil {
-		return errors.Wrap(err, "Unable to start a read transaction")
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a read transaction")
+		}
+
+		_, err = tx.Exec(ctx, "DELETE FROM last_known_pulse_for_indexes WHERE pulse_number >= $1", from)
+		if err != nil {
+			log.Infof("TruncateHead: pulse not found - %v", err)
+			_ = tx.Rollback(ctx)
+			return ErrNotFound
+		}
+
+		_, err = tx.Exec(ctx, "DELETE FROM indexes WHERE pulse_number >= $1", from)
+		if err != nil {
+			log.Infof("TruncateHead: pulse not found - %v", err)
+			_ = tx.Rollback(ctx)
+			return ErrNotFound
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil {
+			break
+		}
+
+		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
 	}
 
-	_, err = tx.Exec(ctx, "DELETE FROM last_known_pulse_for_indexes WHERE pulse_number >= $1", from)
-	if err != nil {
-		log.Infof("TruncateHead: pulse not found - %v", err)
-		_ = tx.Rollback(ctx)
-		return ErrNotFound
-	}
-
-	_, err = tx.Exec(ctx, "DELETE FROM indexes WHERE pulse_number >= $1", from)
-	if err != nil {
-		log.Infof("TruncateHead: pulse not found - %v", err)
-		_ = tx.Rollback(ctx)
-		return ErrNotFound
-	}
-
-	return tx.Commit(ctx)
+	return nil
 }
 
 func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
