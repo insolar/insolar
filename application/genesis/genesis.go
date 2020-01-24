@@ -59,7 +59,7 @@ func (Key) Scope() store.Scope {
 
 const (
 	XNS                        = "XNS"
-	MigrationDaemonUnholdDate  = 1595980800 // 29.07.2020 00-00-00
+	MigrationDaemonUnholdDate  = 1596456000 // 03.08.2020 12-00-00
 	MigrationDaemonVesting     = 0
 	MigrationDaemonVestingStep = 0
 
@@ -359,27 +359,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		))
 	}
 
-	for i, key := range g.ContractsConfig.FundsPublicKeys {
-		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameFundsMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractFundsWallets[i]))
-		states = append(states, contracts.GetAccountGenesisContractState(
-			application.DefaultDistributionAmount,
-			application.GenesisNameFundsAccounts[i],
-			application.GenesisNameRootDomain,
-		))
-
-		membersAccounts := make(foundation.StableMap)
-		membersAccounts[XNS] = genesisrefs.ContractFundsAccounts[i].String()
-
-		membersDeposits := make(foundation.StableMap)
-
-		states = append(states, contracts.GetPreWalletGenesisContractState(
-			application.GenesisNameFundsWallets[i],
-			application.GenesisNameRootDomain,
-			membersAccounts,
-			membersDeposits,
-		))
-	}
-
 	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, application.GenesisNameEnterpriseMembers[i], application.GenesisNameRootDomain, genesisrefs.ContractEnterpriseWallets[i]))
 		states = append(states, contracts.GetAccountGenesisContractState(
@@ -447,12 +426,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		trimmedFoundationPublicKey := foundation.TrimPublicKey(key)
 		index := foundation.GetShardIndex(trimmedFoundationPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
-	}
-
-	for i, key := range g.ContractsConfig.FundsPublicKeys {
-		trimmedFundsPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedFundsPublicKey, g.ContractsConfig.PKShardCount)
-		membersByPKShards[index][trimmedFundsPublicKey] = genesisrefs.ContractFundsMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.EnterprisePublicKeys {

@@ -22,10 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/application/testutils/launchnet"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFoundationMemberCreate(t *testing.T) {
@@ -59,15 +60,6 @@ func TestNetworkIncentivesMemberCreate(t *testing.T) {
 func TestApplicationIncentivesMemberCreate(t *testing.T) {
 	for _, m := range launchnet.ApplicationIncentives {
 		err := verifyFundsMembersAndDeposits(t, m, application.AppIncentivesDistributionAmount)
-		if err != nil {
-			require.NoError(t, err)
-		}
-	}
-}
-
-func TestFundsMemberCreate(t *testing.T) {
-	for _, m := range launchnet.Funds {
-		err := verifyFundsMembersExist(t, m, application.DefaultDistributionAmount)
 		if err != nil {
 			require.NoError(t, err)
 		}
