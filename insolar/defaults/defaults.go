@@ -29,6 +29,11 @@ func LaunchnetDir() string {
 	return envVarWithDefault("LAUNCHNET_BASE_DIR", filepath.Join(ArtifactsDir(), "launchnet"))
 }
 
+// LaunchnetConfigDir returns path of launchnet's configs dir.
+func LaunchnetConfigDir() string {
+	return filepath.Join(LaunchnetDir(), "configs")
+}
+
 // LaunchnetDiscoveryNodesLogsDir returns path to dir with launchnet's discovery nodes logs.
 func LaunchnetDiscoveryNodesLogsDir() string {
 	return filepath.Join(LaunchnetDir(), "logs", "discoverynodes")
