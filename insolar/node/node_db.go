@@ -75,7 +75,7 @@ func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 			}
 			_, err = tx.Exec(ctx, `
 				INSERT INTO nodes (pulse_number, node_num, polymorph, node_id, role)
-				VALUES ($1, $2, $3, $4, $5, $6)
+				VALUES ($1, $2, $3, $4, $5)
 			`, pulse, k, n.Polymorph, nodeID, n.Role)
 			if err != nil {
 				_ = tx.Rollback(ctx)
