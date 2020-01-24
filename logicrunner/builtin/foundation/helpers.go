@@ -15,8 +15,8 @@
 package foundation
 
 import (
+	"encoding/base64"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -61,7 +61,6 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 
 // Extracting canonical public key from .pem
 func ExtractCanonicalPublicKey(pk string) (string, error) {
-	pk = TrimPublicKey(pk)
 	// a DER encoded ASN.1 structure
 	pkASN1, _ := pem.Decode([]byte(pk))
 	if pkASN1 == nil {
@@ -85,7 +84,7 @@ func ExtractCanonicalPublicKey(pk string) (string, error) {
 
 	canonicalPk := []byte{byte(firstByte)}
 	canonicalPk = append(canonicalPk, ecdsaPk.X.Bytes()...)
-	return hex.EncodeToString(canonicalPk), nil
+	return base64.StdEncoding.EncodeToString(canonicalPk), nil
 }
 
 // TrimPublicKey trims pem public key

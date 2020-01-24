@@ -48,12 +48,17 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 		return fmt.Errorf("cant decode signature %s", err.Error())
 	}
 
-	canonicalPk, err := ExtractCanonicalPublicKey(rawpublicpem)
+	canonicalRawPk, err := ExtractCanonicalPublicKey(rawpublicpem)
 	if err != nil {
 		return fmt.Errorf("problems with parsing. Key - %v", rawpublicpem)
 	}
 
-	if key != canonicalPk && !selfSigned {
+	canonicalKey, err := ExtractCanonicalPublicKey(key)
+	if err != nil {
+		return fmt.Errorf("problems with parsing. Key - %v", key)
+	}
+
+	if canonicalKey != canonicalRawPk && !selfSigned {
 		return fmt.Errorf("access denied. Key - %v", rawpublicpem)
 	}
 
