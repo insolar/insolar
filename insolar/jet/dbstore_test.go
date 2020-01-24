@@ -106,22 +106,22 @@ func TestDBStore_TruncateHead(t *testing.T) {
 		require.True(t, tree.Head.Actual)
 	}
 
-	numLeftElements := numElements / 2
-	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	truncateFrom := numElements / 2
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(truncateFrom))
 	require.NoError(t, err)
 
-	for i := 0; i < numLeftElements; i++ {
+	for i := 0; i < truncateFrom+1; i++ {
 		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
 		require.True(t, tree.Head.Actual)
 	}
 
-	for i := numElements - 1; i >= numLeftElements; i-- {
+	for i := numElements - 1; i > truncateFrom; i-- {
 		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
 		require.False(t, tree.Head.Actual)
 	}
 
 	// not existing record
-	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements+numElements*2))
+	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(truncateFrom+numElements*2))
 	require.NoError(t, err)
 }
 

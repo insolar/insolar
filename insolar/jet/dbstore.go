@@ -58,11 +58,16 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	it := s.db.NewIterator(pulseKey(from), false)
 	defer it.Close()
 
+	first := true
+	var err error
 	var hasKeys bool
 	for it.Next() {
 		hasKeys = true
 		key := newPulseKey(it.Key())
-		err := s.db.Delete(&key)
+		if !first { // don't delete `from`
+			err = s.db.Delete(&key)
+		}
+		first = false
 		if err != nil {
 			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
