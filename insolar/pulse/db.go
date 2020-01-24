@@ -283,7 +283,7 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (r
 WITH RECURSIVE tmp AS (
 	SELECT 1 as depth, pulse_number, next_pn
 	FROM pulses WHERE pulse_number = $1
-		UNION
+		UNION ALL
 	SELECT t."depth" + 1, p.pulse_number, p.next_pn
 	FROM tmp t
 	INNER JOIN pulses p ON p.pulse_number = t.next_pn
@@ -300,7 +300,7 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 WITH RECURSIVE tmp AS (
 	SELECT 1 as depth, pulse_number, prev_pn
 	FROM pulses WHERE pulse_number = $1
-		UNION
+		UNION ALL
 	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
 	FROM tmp t
 	INNER JOIN pulses p ON p.pulse_number = t.prev_pn
