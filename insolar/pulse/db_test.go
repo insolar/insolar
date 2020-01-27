@@ -22,6 +22,7 @@ import (
 	"context"
 	"os"
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -37,6 +38,23 @@ import (
 )
 
 var db *DB
+
+var (
+	poolLock     sync.Mutex
+	globalPgPool *pgxpool.Pool
+)
+
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
+}
+
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
+}
 
 // TestMain does the before and after setup
 func TestMain(m *testing.M) {
@@ -65,7 +83,7 @@ func TestMain(m *testing.M) {
 	}
 	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
 
-	db = NewDB(pool)
+	setPool(pool)
 
 	// Run all tests
 	code := m.Run()
@@ -73,6 +91,22 @@ func TestMain(m *testing.M) {
 	log.Info("[TestMain] Cleaning up...")
 	stopPostgreSQL()
 	os.Exit(code)
+}
+
+func cleanPulsesTable() {
+	// We have to clean `pulses` table between tests because gen.PulseNumber() doesn't
+	// return pulses in order which matters in our tests.
+	ctx := context.Background()
+	conn, err := getPool().Acquire(ctx)
+	if err != nil {
+		panic("Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, "DELETE FROM pulses CASCADE")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insolar.PulseNumber) *insolar.Pulse {
@@ -104,8 +138,11 @@ func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insola
 }
 
 func TestWriteReadAndLatest(t *testing.T) {
+	defer cleanPulsesTable()
+
 	ctx := context.Background()
 	pn := gen.PulseNumber()
+	db := NewDB(getPool())
 
 	// Make sure there is no such pulse in DB yet
 	_, err := db.ForPulseNumber(ctx, pn)
@@ -128,7 +165,10 @@ func TestWriteReadAndLatest(t *testing.T) {
 }
 
 func TestForwardsBackwards(t *testing.T) {
+	defer cleanPulsesTable()
+
 	ctx := context.Background()
+	db := NewDB(getPool())
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)
@@ -168,7 +208,10 @@ func TestForwardsBackwards(t *testing.T) {
 }
 
 func TestTruncateHead(t *testing.T) {
+	defer cleanPulsesTable()
+
 	ctx := context.Background()
+	db := NewDB(getPool())
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)

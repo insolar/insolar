@@ -9,7 +9,7 @@ create table pulses(
 );
 
 create table pulse_signs(
-  pulse_number bigint not null references pulses(pulse_number),
+  pulse_number bigint not null references pulses(pulse_number) on delete cascade, -- on delete part is only for tests!
   chosen_public_key text not null,
   entropy bytea not null,
   signature bytea not null,
