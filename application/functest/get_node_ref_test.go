@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const NOTEXISTINGPUBLICKEY = "not_existing_public_key"
-
 func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
 	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root, "contract.getNodeRef", params)
 	if err != nil {
@@ -52,10 +50,11 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
+	notExistingPublicKey := generateNodePublicKey(t)
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
-		"contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
+		"contract.getNodeRef", map[string]interface{}{"publicKey": notExistingPublicKey})
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "not_existing_public_key")
+	require.Contains(t, data.Trace, "network node was not found by public key")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
