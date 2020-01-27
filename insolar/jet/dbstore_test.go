@@ -172,6 +172,7 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 func TestDBStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewDBStore(getPool())
+	pn := gen.PulseNumber()
 
 	lArray := []byte{
 		0, 0, 1, 1,
@@ -192,56 +193,58 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	)
 
 	root := insolar.NewJetID(0, nil)
-	left, right, err := s.Split(ctx, 100, *root)
+	left, right, err := s.Split(ctx, pn, *root)
 	require.NoError(t, err)
 	assert.Equal(t, insolar.ZeroJetID, *root, "actual tree node in string form: %v", root.DebugString())
 	assert.Equal(t, expectedLeft, left, "actual tree node in string form: %v", left.DebugString())
 	assert.Equal(t, expectedRight, right, "actual tree node in string form: %v", right.DebugString())
 
-	tree := dbTreeForPulse(s, 100)
+	tree := dbTreeForPulse(s, pn)
 	require.Equal(t, expectedLeafs, *tree, "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewDBStore(getPool())
+	pn1 := gen.PulseNumber()
+	pn2 := gen.PulseNumber()
 
 	var (
 		expectedZero = []insolar.JetID{insolar.ZeroJetID}
 		expectedNil  []insolar.JetID
 	)
 
-	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	err := s.Update(ctx, pn1, true, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
-	tree := dbTreeForPulse(s, 100)
+	tree := dbTreeForPulse(s, pn1)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	err = s.Clone(ctx, 100, 101, false)
+	err = s.Clone(ctx, pn1, pn2, false)
 	require.NoError(t, err)
 
-	tree = dbTreeForPulse(s, 101)
+	tree = dbTreeForPulse(s, pn2)
 	assert.Equal(t, expectedNil, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	tree = dbTreeForPulse(s, 100)
+	tree = dbTreeForPulse(s, pn1)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_ForID_Basic(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	pn := gen.PulseNumber()
-	meaningfulBits := "01000011" + "11000011" + "010010"
-
-	bits := parsePrefix(meaningfulBits)
-	expectJetID := NewIDFromString(meaningfulBits)
-	searchID := gen.ID()
-	hash := searchID.Hash()
-	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	searchID = *insolar.NewID(searchID.Pulse(), hash)
-
-	s := NewDBStore(getPool())
 	for _, actuality := range []bool{true, false} {
+		pn := gen.PulseNumber()
+		meaningfulBits := "01000011" + "11000011" + "010010"
+
+		bits := parsePrefix(meaningfulBits)
+		expectJetID := NewIDFromString(meaningfulBits)
+		searchID := gen.ID()
+		hash := searchID.Hash()
+		hash = setBitsPrefix(hash, bits, len(meaningfulBits))
+		searchID = *insolar.NewID(searchID.Pulse(), hash)
+
+		s := NewDBStore(getPool())
+
 		err := s.Update(ctx, pn, actuality, expectJetID)
 		require.NoError(t, err)
 		found, ok := s.ForID(ctx, pn, searchID)
