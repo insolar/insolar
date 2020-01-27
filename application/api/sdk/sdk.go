@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -105,17 +106,18 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return nil, errors.Wrap(err, "failed to get info")
 	}
 
-	rootMember, err := getMember(memberKeysDirPath+"root_member_keys.json", response.RootMember)
+	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response.RootMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get root member")
 	}
 
-	migrationAdminMember, err := getMember(memberKeysDirPath+"migration_admin_member_keys.json", response.MigrationAdminMember)
+	migrationAdminMember, err := getMember(
+		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response.MigrationAdminMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
-	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.FeeMember)
+	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response.FeeMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get fee member")
 	}
@@ -136,7 +138,8 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 	}
 
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
-		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
+		m, err := getMember(
+			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))
 		}

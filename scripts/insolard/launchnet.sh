@@ -156,6 +156,7 @@ clear_dirs()
 {
     echo "clear_dirs() starts ..."
     set -x
+    rm -rfv ${CONFIGS_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     rm -rfv ${CONTRACTS_PLUGINS_DIR}

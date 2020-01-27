@@ -171,7 +171,7 @@ func (p *byteWriter) isFull() bool {
 	return int(p.o) >= p.v.len()
 }
 
-// Encoder encodes Local to string with chosen encoder.
+// Encode encodes Local to string with chosen encoder.
 func (v Local) Encode(enc Encoder) string {
 	repr, err := enc.EncodeRecord(&v)
 	if err != nil {
@@ -272,7 +272,7 @@ func (v *Local) UnmarshalBinary(data []byte) error {
 
 func (v *Local) Unmarshal(data []byte) error {
 	if len(data) < LocalBinarySize {
-		return errors.New("not enough bytes to unmarshal reference.Global")
+		return errors.New("not enough bytes to unmarshal reference.Local")
 	}
 
 	writer := v.asWriter()
