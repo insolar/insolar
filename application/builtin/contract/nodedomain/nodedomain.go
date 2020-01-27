@@ -43,14 +43,6 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 		return "", fmt.Errorf("only root member can register node")
 	}
 
-	newNode := noderecord.NewNodeRecord(publicKey, role)
-	node, err := newNode.AsChild(nd.GetReference())
-	if err != nil {
-		return "", fmt.Errorf("failed to save as child: %s", err.Error())
-	}
-
-	newNodeRef := node.GetReference().String()
-
 	canonicalKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
 	if err != nil {
 		return "", fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
@@ -60,6 +52,14 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	if ok {
 		return "", fmt.Errorf("node already exist with this public key: %s", publicKey)
 	}
+
+	newNode := noderecord.NewNodeRecord(publicKey, role)
+	node, err := newNode.AsChild(nd.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("failed to save as child: %s", err.Error())
+	}
+
+	newNodeRef := node.GetReference().String()
 
 	nd.NodeIndexPublicKey[canonicalKey] = newNodeRef
 
