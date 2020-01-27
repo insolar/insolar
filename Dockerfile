@@ -24,4 +24,5 @@ WORKDIR /go/src/github.com/insolar/insolar
 RUN  set -eux; \
      groupadd -r insolar --gid=999; \
      useradd -r -g insolar --uid=999 --shell=/bin/bash insolar
-COPY $PWD/bin/insolar $PWD/bin/insolard $PWD/bin/keeperd $PWD/bin/pulsard /usr/local/bin/
+COPY --from=build /go/src/github.com/insolar/insolar/bin/insolar /go/src/github.com/insolar/insolar/bin/insolard /go/src/github.com/insolar/insolar/bin/keeperd /go/src/github.com/insolar/insolar/bin/pulsard /usr/local/bin/
+
