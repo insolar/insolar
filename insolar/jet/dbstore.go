@@ -204,6 +204,10 @@ func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
+		// TODO we use UPSERT here to keep the old behaviour of DBStore
+		// This is not necessary the right behaviour - if someone tries to rewrite
+		// an existing jet tree this might indicate an error. Consider returning
+		// an error here in the future.
 		_, err = tx.Exec(ctx, `
 			INSERT INTO jet_trees(pulse_number, jet_tree)
 			VALUES ($1, $2)
