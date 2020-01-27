@@ -130,12 +130,12 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	err := dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
-	for i := 0; i < numLeftElements+1; i++ {
+	for i := 0; i < numLeftElements; i++ {
 		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
 		require.True(t, tree.Head.Actual)
 	}
 
-	for i := numElements - 1; i > numLeftElements; i-- {
+	for i := numElements - 1; i >= numLeftElements; i-- {
 		tree := dbStore.get(startPulseNumber + insolar.PulseNumber(i))
 		require.False(t, tree.Head.Actual)
 	}

@@ -111,6 +111,7 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepA
 }
 
 // TruncateHead remove all records after lastPulse
+// TODO AALEKSEEV make sure all TruncateHead implementations are consistent
 func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
@@ -125,7 +126,7 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE FROM jet_trees WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM jet_trees WHERE pulse_number >= $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to DELETE FROM jet_trees")
