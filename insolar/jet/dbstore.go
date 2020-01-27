@@ -144,15 +144,18 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	ctx := context.Background()
+	log := inslogger.FromContext(ctx)
 	ErrResult := NewTree(pn == insolar.GenesisPulse.PulseNumber)
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
+		log.Errorf("DBStore.get - s.pool.Acquire failed: %v", err)
 		return ErrResult
 	}
 	defer conn.Release()
 
 	tx, err := conn.BeginTx(ctx, readTxOptions)
 	if err != nil {
+		log.Errorf("DBStore.get - conn.BeginTx failed: %v", err)
 		return ErrResult
 	}
 
@@ -161,18 +164,21 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	err = row.Scan(&serializedTree)
 
 	if err != nil {
+		log.Errorf("DBStore.get - row.Scan failed: %v", err)
 		_ = tx.Rollback(ctx)
 		return ErrResult
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
+		log.Errorf("DBStore.get - tx.Commit failed: %v", err)
 		return ErrResult
 	}
 
 	recovered := &Tree{}
 	err = recovered.Unmarshal(serializedTree)
 	if err != nil {
+		log.Errorf("DBStore.get - recovered.Unmarshal failed: %v", err)
 		return nil
 	}
 	return recovered

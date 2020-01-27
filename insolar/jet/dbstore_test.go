@@ -240,9 +240,10 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
 	searchID = *insolar.NewID(searchID.Pulse(), hash)
 
+	s := NewDBStore(getPool())
 	for _, actuality := range []bool{true, false} {
-		s := NewDBStore(getPool())
-		_ = s.Update(ctx, pn, actuality, expectJetID)
+		err := s.Update(ctx, pn, actuality, expectJetID)
+		require.NoError(t, err)
 		found, ok := s.ForID(ctx, pn, searchID)
 		require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
 		require.Equal(t, actuality, ok, "jet should be in actuality state we defined in Update")
