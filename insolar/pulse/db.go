@@ -19,8 +19,6 @@ package pulse
 import (
 	"context"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/jackc/pgx/v4"
 
 	"github.com/insolar/insolar/insolar"
@@ -34,13 +32,13 @@ type DB struct {
 	pool *pgxpool.Pool
 }
 
-var ReadTxOptions = pgx.TxOptions{
+var readTxOptions = pgx.TxOptions{
 	IsoLevel:       pgx.Serializable,
 	AccessMode:     pgx.ReadOnly,
 	DeferrableMode: pgx.NotDeferrable,
 }
 
-var WriteTxOptions = pgx.TxOptions{
+var writeTxOptions = pgx.TxOptions{
 	IsoLevel:       pgx.Serializable,
 	AccessMode:     pgx.ReadWrite,
 	DeferrableMode: pgx.NotDeferrable,
@@ -116,7 +114,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, readTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -125,9 +123,13 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	var pn insolar.PulseNumber
 	row := tx.QueryRow(ctx, query, args...)
 	err = row.Scan(&pn)
-	if err != nil {
-		log.Infof("selectByCondition: pulse not found - %v", err)
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
 		retErr = ErrNotFound
+		return
+	}
+	if err != nil {
+		retErr = errors.Wrapf(err, "selectByCondition - request failed query = `%v`, args = %v", query, args)
 		_ = tx.Rollback(ctx)
 		return
 	}
@@ -155,7 +157,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, readTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -192,7 +194,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -232,7 +234,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -281,10 +283,10 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (r
 WITH RECURSIVE tmp AS (
 	SELECT 1 as depth, pulse_number, next_pn
 	FROM pulses WHERE pulse_number = $1
-		UNION
+		UNION ALL
 	SELECT t."depth" + 1, p.pulse_number, p.next_pn
 	FROM tmp t
-	LEFT JOIN pulses p ON p.pulse_number = t.next_pn
+	INNER JOIN pulses p ON p.pulse_number = t.next_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps)
@@ -298,10 +300,10 @@ func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (
 WITH RECURSIVE tmp AS (
 	SELECT 1 as depth, pulse_number, prev_pn
 	FROM pulses WHERE pulse_number = $1
-		UNION
+		UNION ALL
 	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
 	FROM tmp t
-	LEFT JOIN pulses p ON p.pulse_number = t.prev_pn
+	INNER JOIN pulses p ON p.pulse_number = t.prev_pn
 	WHERE t."depth" <= $2
 ) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
 	`, pn, steps)

@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,135 +19,184 @@ package node
 import (
 	"context"
 
-	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+
+	"github.com/jackc/pgx/v4"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+
+	"github.com/insolar/insolar/insolar"
 )
 
-// AALEKSEEV TODO use PostgreSQL + see node_db_test
+var readTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadOnly,
+	DeferrableMode: pgx.NotDeferrable,
+}
 
-// StorageDB is a badger-based impl of a node storage.
+var writeTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadWrite,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+// StorageDB is an implementation of a node storage.
 type StorageDB struct {
-	db *store.BadgerDB
+	pool *pgxpool.Pool
 }
 
 // NewStorageDB create new instance of StorageDB.
-func NewStorageDB(db *store.BadgerDB) *StorageDB {
-	return &StorageDB{db: db}
-}
-
-type nodeHistoryKey insolar.PulseNumber
-
-func (k nodeHistoryKey) Scope() store.Scope {
-	return store.ScopeNodeHistory
-}
-
-func (k nodeHistoryKey) DebugString() string {
-	pn := insolar.PulseNumber(k)
-	return "nodeHistoryKey. " + pn.String()
-}
-
-func (k nodeHistoryKey) ID() []byte {
-	pn := insolar.PulseNumber(k)
-	return pn.Bytes()
+func NewStorageDB(pool *pgxpool.Pool) *StorageDB {
+	return &StorageDB{pool: pool}
 }
 
 // Set saves active nodes for pulse in memory.
 func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
-	nodesList := &insolar.NodeList{}
-	if len(nodes) != 0 {
-		nodesList.Nodes = nodes
-	}
-	rawNodes, err := nodesList.Marshal()
+	ctx := context.Background()
+	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
-	return s.db.Backend().Update(func(txn *badger.Txn) error {
-		key := nodeHistoryKey(pulse)
-		fullKey := append(key.Scope().Bytes(), key.ID()...)
-		_, err = txn.Get(fullKey)
-		if err != nil && err != badger.ErrKeyNotFound {
-			return err
-		}
-		if err == nil {
-			return ErrOverride
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		return txn.Set(fullKey, rawNodes)
-	})
+		for k, n := range nodes {
+			nodeID, err := n.ID.MarshalBinary()
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrapf(err, "Unable to marshal nodeID: %v", nodeID)
+			}
+			_, err = tx.Exec(ctx, `
+				INSERT INTO nodes (pulse_number, node_num, polymorph, node_id, role)
+				VALUES ($1, $2, $3, $4, $5)
+			`, pulse, k, n.Polymorph, nodeID, n.Role)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to INSERT node")
+			}
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("Append - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
+}
+
+func (s *StorageDB) selectByCondition(where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
+	ctx := context.Background()
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, readTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		return
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT polymorph, node_id, role FROM nodes `+where+`
+		ORDER BY node_num
+	`, args...)
+	if err == pgx.ErrNoRows {
+		// return empty slice and no error
+		_ = tx.Rollback(ctx)
+		return
+	}
+	if err != nil {
+		retErr = errors.Wrap(err, "selectByCondition - query failed")
+		_ = tx.Rollback(ctx)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var nodeId []byte
+		var node insolar.Node
+		err = rows.Scan(&node.Polymorph, &nodeId, &node.Role)
+		if err != nil {
+			retErr = errors.Wrap(err, "Unable to scan another node row")
+			_ = tx.Rollback(ctx)
+			return
+		}
+		err = node.ID.UnmarshalBinary(nodeId)
+		if err != nil {
+			retErr = errors.Wrapf(err, "Unable to unmarshal nodeId: %v", nodeId)
+			_ = tx.Rollback(ctx)
+			return
+		}
+
+		retNodes = append(retNodes, node)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+		return
+	}
+
+	return
 }
 
 // All return active nodes for specified pulse.
 func (s *StorageDB) All(pulse insolar.PulseNumber) ([]insolar.Node, error) {
-	var res []insolar.Node
-	err := s.db.Backend().View(func(txn *badger.Txn) error {
-		key := nodeHistoryKey(pulse)
-		fullKey := append(key.Scope().Bytes(), key.ID()...)
-		item, err := txn.Get(fullKey)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return ErrNoNodes
-			}
-			return err
-		}
-
-		buff, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		list := &insolar.NodeList{}
-		err = list.Unmarshal(buff)
-		if err != nil {
-			return err
-		}
-		res = list.Nodes
-
-		return nil
-	})
-	return res, err
+	return s.selectByCondition("WHERE pulse_number = $1", pulse)
 }
 
 // InRole return active nodes for specified pulse and role.
 func (s *StorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error) {
-	nodes, err := s.All(pulse)
-	if err != nil {
-		return nil, err
-	}
-	var inRole []insolar.Node
-	for _, node := range nodes {
-		if node.Role == role {
-			inRole = append(inRole, node)
-		}
-	}
-
-	return inRole, nil
+	return s.selectByCondition("WHERE pulse_number = $1 AND role = $2", pulse, role)
 }
 
 // DeleteForPN erases nodes for specified pulse.
-func (s *StorageDB) DeleteForPN(pulse insolar.PulseNumber) {
-	panic("implement me")
+func (s *StorageDB) DeleteForPN(_ insolar.PulseNumber) {
+	panic("NodeDB.DeleteForPN should never be called by anyone!")
+	// Also this method supposed to return at least `error`. Consider it a legacy.
 }
 
 // TruncateHead remove all records after lastPulse
 func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	it := s.db.NewIterator(nodeHistoryKey(from), false)
-	defer it.Close()
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
 
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := nodeHistoryKey(insolar.NewPulseNumber(it.Key()))
-		err := s.db.Delete(&key)
+	log := inslogger.FromContext(ctx)
+
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
 		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
+			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		inslogger.FromContext(ctx).Debugf("Node db. Erased key. Pulse number: %s", key.DebugString())
-	}
-	if !hasKeys {
-		inslogger.FromContext(ctx).Debug("Node db. No records. Nothing done. Pulse number: " + from.String())
+		_, err = tx.Exec(ctx, "DELETE FROM nodes WHERE pulse_number > $1", from)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM nodes")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil

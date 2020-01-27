@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,328 +14,182 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package node
 
 import (
 	"context"
-	"io/ioutil"
-	"math/rand"
 	"os"
+	"sort"
 	"testing"
-	"time"
 
-	"github.com/dgraph-io/badger"
-	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/store"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/pulse"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/tests/common"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 )
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
+var db *StorageDB
 
-	return ops
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		stopPostgreSQL()
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	db = NewStorageDB(pool)
+
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
+	os.Exit(code)
 }
 
-func TestNodeStorageDB_All(t *testing.T) {
-	t.Parallel()
-
-	var all []insolar.Node
-	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
-		e.ID = gen.Reference()
-	})
-	f.NumElements(5, 10).NilChance(0).Fuzz(&all)
-	pulse := gen.PulseNumber()
-
-	t.Run("returns correct nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-		err = nodeStorage.Set(pulse, all)
-		require.NoError(t, err)
-
-		result, err := nodeStorage.All(pulse)
-
-		require.NoError(t, err)
-		require.Equal(t, all, result)
-	})
-
-	t.Run("returns nil when empty nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-		err = nodeStorage.Set(pulse, nil)
-		require.NoError(t, err)
-
-		result, err := nodeStorage.All(pulse)
-
-		require.NoError(t, err)
-		require.Nil(t, result)
-	})
-
-	t.Run("returns error when no nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-
-		result, err := nodeStorage.All(pulse)
-
-		require.Equal(t, ErrNoNodes, err)
-		require.Nil(t, result)
-	})
-}
-
-func TestNodeStorageDB_InRole(t *testing.T) {
-	t.Parallel()
-
-	var (
-		virtuals  []insolar.Node
-		materials []insolar.Node
-		all       []insolar.Node
-	)
+func TestInsertSelect(t *testing.T) {
+	pn := gen.PulseNumber()
+	// Make sure there are no nodes for a given pulse yet
 	{
-		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
-			e.ID = gen.Reference()
-			e.Role = insolar.StaticRoleVirtual
-		})
-		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
+		readNodes, err := db.All(pn)
+		require.NoError(t, err)
+		require.Empty(t, readNodes)
 	}
 	{
-		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
-			e.ID = gen.Reference()
-			e.Role = insolar.StaticRoleLightMaterial
-		})
-		f.NumElements(5, 10).NilChance(0).Fuzz(&materials)
+		readNodes, err := db.InRole(pn, insolar.StaticRoleVirtual)
+		require.NoError(t, err)
+		require.Empty(t, readNodes)
 	}
-	all = append(virtuals, materials...)
-	pulse := gen.PulseNumber()
 
-	t.Run("returns correct nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-		err = nodeStorage.Set(pulse, all)
-		require.NoError(t, err)
+	// Insert nodes for a given pulse
+	nodes := []insolar.Node{
 		{
-			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
-			require.NoError(t, err)
-			require.Equal(t, virtuals, result)
-		}
+			Polymorph: 123,
+			ID:        gen.Reference(),
+			Role:      insolar.StaticRoleVirtual,
+		},
 		{
-			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleLightMaterial)
-			require.NoError(t, err)
-			require.Equal(t, materials, result)
-		}
-	})
-
-	t.Run("returns nil when empty nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-		err = nodeStorage.Set(pulse, nil)
-		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
-	})
-
-	t.Run("returns error when no nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
-		assert.Equal(t, ErrNoNodes, err)
-		assert.Nil(t, result)
-	})
-}
-
-func TestNodeStorageDB_Set(t *testing.T) {
-	t.Parallel()
-
-	var nodes []insolar.Node
-	f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
-		e.ID = gen.Reference()
-	})
-	f.NumElements(5, 10).NilChance(0).Fuzz(&nodes)
-	pulse := gen.PulseNumber()
-
-	t.Run("saves correct nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-
-		err = nodeStorage.Set(pulse, nodes)
-		require.NoError(t, err)
-
-		res, err := nodeStorage.All(pulse)
-
-		require.NoError(t, err)
-		require.Equal(t, nodes, res)
-	})
-
-	t.Run("saves nil if empty nodes", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-
-		err = nodeStorage.Set(pulse, []insolar.Node{})
-		require.NoError(t, err)
-
-		res, err := nodeStorage.All(pulse)
-
-		require.NoError(t, err)
-		require.Nil(t, res)
-	})
-
-	t.Run("returns error when saving with the same pulse", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		nodeStorage := NewStorageDB(db)
-
-		_ = nodeStorage.Set(pulse, nodes)
-		err = nodeStorage.Set(pulse, nodes)
-		require.Equal(t, ErrOverride, err)
-	})
-}
-
-func TestNodeStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	defer dbMock.Stop(ctx)
+			Polymorph: 123,
+			ID:        gen.Reference(),
+			Role:      insolar.StaticRoleHeavyMaterial,
+		},
+		{
+			Polymorph: 123,
+			ID:        gen.Reference(),
+			Role:      insolar.StaticRoleLightMaterial,
+		},
+		{
+			Polymorph: 123,
+			ID:        gen.Reference(),
+			Role:      insolar.StaticRoleLightMaterial,
+		},
+	}
+	err := db.Set(pn, nodes)
 	require.NoError(t, err)
 
-	dropStore := NewStorageDB(dbMock)
+	// Make sure .All returns all nodes in the same order as saved
+	{
+		readNodes, err := db.All(pn)
+		require.NoError(t, err)
+		require.NotEmpty(t, readNodes)
+		require.Equal(t, nodes, readNodes)
+	}
 
-	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
-	require.NoError(t, err)
+	// Make sure .InRole returns only nodes that have a given role
+	{
+		readNodes, err := db.InRole(pn, insolar.StaticRoleVirtual)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(readNodes))
+		require.Equal(t, nodes[0], readNodes[0])
+	}
+	{
+		readNodes, err := db.InRole(pn, insolar.StaticRoleHeavyMaterial)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(readNodes))
+		require.Equal(t, nodes[1], readNodes[0])
+	}
+	{
+		readNodes, err := db.InRole(pn, insolar.StaticRoleLightMaterial)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(readNodes))
+		require.Equal(t, nodes[2], readNodes[0])
+		require.Equal(t, nodes[3], readNodes[1])
+	}
 }
 
-func TestDropStorageDB_TruncateHead(t *testing.T) {
-	t.Parallel()
+func TestTruncateHead(t *testing.T) {
+	// Generate sorted list of pulses
+	pulses := make([]insolar.PulseNumber, 5)
+	for i := 0; i < len(pulses); i++ {
+		pulses[i] = gen.PulseNumber()
+	}
+	sort.Slice(pulses, func(i, j int) bool {
+		return pulses[i] < pulses[j]
+	})
 
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	nodeStor := NewStorageDB(dbMock)
-
-	nodeSets := make([]struct {
-		nodes []insolar.Node
-		pn    insolar.PulseNumber
-	}, 10)
-
-	for i := range nodeSets {
-		nodeSets[i].pn = pulse.Number(pulse.MinTimePulse + (i * 10))
-		nodeSets[i].nodes = []insolar.Node{
+	// Insert some nodes for each pulse
+	nodes := make([][]insolar.Node, len(pulses))
+	for i := 0; i < len(pulses); i++ {
+		nodes[i] = []insolar.Node{
 			{
-				Role: insolar.StaticRoleHeavyMaterial,
-			},
-			{
-				Role: insolar.StaticRoleLightMaterial,
-			},
-			{
-				Role: insolar.StaticRoleVirtual,
+				Polymorph: 123,
+				ID:        gen.Reference(),
+				Role:      insolar.StaticRoleVirtual,
 			},
 		}
-	}
-
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(nodeSets), func(i, j int) { nodeSets[i], nodeSets[j] = nodeSets[j], nodeSets[i] })
-
-	for _, nodeSet := range nodeSets {
-		err := nodeStor.Set(nodeSet.pn, nodeSet.nodes)
+		err := db.Set(pulses[i], nodes[i])
 		require.NoError(t, err)
 	}
 
-	for i := 0; i < 10; i++ {
-		_, err := nodeStor.All(pulse.Number(pulse.MinTimePulse + (i * 10)))
+	// Make sure data for all pulses is present
+	for i := 0; i < len(pulses); i++ {
+		readNodes, err := db.All(pulses[i])
 		require.NoError(t, err)
+		require.Equal(t, nodes[i], readNodes)
 	}
 
-	numLeftElements := 10 / 2
-	err = nodeStor.TruncateHead(ctx, pulse.MinTimePulse+insolar.PulseNumber(numLeftElements*10))
+	// Truncate head
+	err := db.TruncateHead(context.Background(), pulses[2])
 	require.NoError(t, err)
 
-	for i := 0; i < numLeftElements; i++ {
-		_, err := nodeStor.All(pulse.Number(pulse.MinTimePulse + (i * 10)))
+	// Make sure nodes for pulses [0,1,2] is still here
+	for i := 0; i <= 2; i++ {
+		readNodes, err := db.All(pulses[i])
 		require.NoError(t, err)
+		require.Equal(t, nodes[i], readNodes)
 	}
 
-	for i := numLeftElements - 1; i >= numLeftElements; i-- {
-		p := pulse.MinTimePulse + insolar.PulseNumber(numLeftElements*10)
-		_, err := nodeStor.All(p)
-		require.EqualError(t, err, ErrNoNodes.Error(), "Pulse: ", p.String())
+	// Make sure nodes for pulses [3,4] were deleted
+	for i := 3; i <= 4; i++ {
+		readNodes, err := db.All(pulses[i])
+		require.NoError(t, err)
+		require.Empty(t, readNodes)
 	}
 }

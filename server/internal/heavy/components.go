@@ -194,8 +194,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses      *insolarPulse.DB
 		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
-		Jets        *jet.DBStore
 		Pool        *pgxpool.Pool
+		Jets        *jet.DBStore
 	)
 	{
 		var err error
@@ -215,11 +215,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 
-		pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
+		Pool, err = pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
-		Pool = pool
 
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -227,15 +226,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		path := cfg.Ledger.PostgreSQL.MigrationPath
 		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
-		ver, err := migration.MigrateDatabase(ctx, pool, path)
+		ver, err := migration.MigrateDatabase(ctx, Pool, path)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to migrate database"))
 		}
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
-		Pulses = insolarPulse.NewDB(pool)
-		Nodes = node.NewStorageDB(DB) // AALEKSEEV TODO fix this
-		Jets = jet.NewDBStore(DB)     // AALEKSEEV TODO fix this
+		Pulses = insolarPulse.NewDB(Pool)
+		Nodes = node.NewStorageDB(Pool)
+		Jets = jet.NewDBStore(DB) // AALEKSEEV TODO fix this
 
 		timeBadgerStarted := time.Since(startTime)
 		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
@@ -327,10 +326,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		JetKeeper    *executor.DBJetKeeper
 	)
 	{
+		Records = object.NewRecordDB(Pool)
 		// AALEKSEEV TODO fix this
-		Records = object.NewRecordDB(DB)            // ALEKSANDER
-		indexes := object.NewIndexDB(Pool, Records) // EGOR
-		drops := drop.NewDB(DB)
+		indexes := object.NewIndexDB(DB, Records) // EGOR - in progress
+		drops := drop.NewDB(DB)                   // ILYA - in progress
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
@@ -348,11 +347,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager.StartPulse = sp
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets, gcRunInfo)
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets)
 		c.replicator = replicator
 
-		h := handler.New(cfg.Ledger, gcRunInfo)
+		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
