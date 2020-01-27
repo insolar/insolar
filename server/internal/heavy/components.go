@@ -195,6 +195,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
 		Jets        *jet.DBStore
+		Pool        *pgxpool.Pool
 	)
 	{
 		var err error
@@ -218,6 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
+		Pool = pool
 
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -326,8 +328,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		// AALEKSEEV TODO fix this
-		Records = object.NewRecordDB(DB)          // ALEKSANDER
-		indexes := object.NewIndexDB(DB, Records) // EGOR
+		Records = object.NewRecordDB(DB)            // ALEKSANDER
+		indexes := object.NewIndexDB(Pool, Records) // EGOR
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
