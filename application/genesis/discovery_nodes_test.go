@@ -82,7 +82,9 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
 		ref := genesisrefs.GenesisRef(pKey)
-		expectIndexMap[pKey] = ref.String()
+		canonicalKey, err := foundation.ExtractCanonicalPublicKey(pKey)
+		require.NoError(t, err, "extracting canonical pk failed, current value %v "+pKey)
+		expectIndexMap[canonicalKey] = ref.String()
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)
 		require.NoError(t, err, "nodeInfo object not found for public key: "+pKey)

@@ -17,18 +17,20 @@
 package functest
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/certificate"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeCert(t *testing.T) {
-	const TESTPUBLICKEY = "some_fancy_public_key"
+	publicKey := generateNodePublicKey(t)
 	const testRole = "virtual"
 	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
-		"contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
@@ -38,5 +40,13 @@ func TestNodeCert(t *testing.T) {
 		"params":  map[string]string{"ref": res.(string)},
 	})
 
-	require.NotEqual(t, "", string(body))
+	cert := struct {
+		Result struct {
+			Cert certificate.Certificate
+		}
+	}{}
+
+	err = json.Unmarshal(body, &cert)
+	require.NoError(t, err)
+	require.Equal(t, res.(string), cert.Result.Cert.Reference)
 }
