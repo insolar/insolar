@@ -15,7 +15,7 @@ jobs:
         run: |
           echo "::set-output name=tag_name::$(echo $GITHUB_REF | cut -d '/' -f3)"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-          echo "::set-output name=go_version::1.12.16"
+          echo "::set-output name=go_version::1.12.15"
           echo "::set-output name=build_date::$(shell ./scripts/dev/git-date-time.sh -d)"
           echo "::set-output name=build_time::$(shell ./scripts/dev/git-date-time.sh -t)"
           echo "::set-output name=build_version::$(git describe --tags)"
