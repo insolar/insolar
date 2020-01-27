@@ -205,6 +205,7 @@ func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
+		// UPSERT is needed during genesis
 		_, err = tx.Exec(ctx, `
 			INSERT INTO jet_trees(pulse_number, jet_tree)
 			VALUES ($1, $2)
