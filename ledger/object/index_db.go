@@ -85,6 +85,16 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 			INSERT INTO indexes(object_id, pulse_number, lifeline_last_used, pending_records,
 				latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count)
 			VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			ON CONFLICT (object_id, pulse_number)
+			DO UPDATE SET 
+				lifeline_last_used = $3,
+				pending_records = $4,
+				latest_state = $5,
+				state_id = $6,
+				parent = $7,
+				latest_request = $8,
+				earliest_open_request = $9,
+				open_requests_count = $10
 		`, bucket.ObjID.Bytes(), pn, bucket.LifelineLastUsed, pendingRecords,
 			latestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent.Bytes(),
 			latestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
@@ -192,7 +202,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	var latestStateID []byte
 	var parent []byte
 	var latestRequest []byte
-	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+	idx := record.Index{Lifeline: record.Lifeline{}}
 	row := tx.QueryRow(ctx, `
 		SELECT
 			object_id,
@@ -276,9 +286,17 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 
 	rows, err := tx.Query(ctx, `
 		SELECT 
-			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
+			object_id,
+			lifeline_last_used, 
+			pending_records, 
+			latest_state,
+			state_id, 
+			parent, 
+			latest_request, 
+			earliest_open_request, 
+			open_requests_count
 		FROM indexes 
-		WHERE AND pulse_number=`, pn)
+		WHERE pulse_number = $1`, pn)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return nil, errors.Wrap(err, "Unable select from indexes for pn")
@@ -288,28 +306,52 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 
 	var idxs []record.Index
 	for rows.Next() {
-		idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+		var id []byte
+		var pendingRecords [][]byte
+		var latestState []byte
+		var parent []byte
+		var latestRequest []byte
+
+		idx := record.Index{Lifeline: record.Lifeline{}}
 		err = rows.Scan(
+			&id,
 			&idx.LifelineLastUsed,
-			&idx.PendingRecords,
-			&idx.Lifeline.LatestState,
+			&pendingRecords,
+			&latestState,
 			&idx.Lifeline.StateID,
-			&idx.Lifeline.Parent,
-			&idx.Lifeline.LatestRequest,
+			&parent,
+			&latestRequest,
 			&idx.Lifeline.EarliestOpenRequest,
 			&idx.Lifeline.OpenRequestsCount,
 		)
 		if err != nil {
 			log.Infof("failed to read index row: %v", err)
 			_ = tx.Rollback(ctx)
-			return nil, ErrNotFound
+			return nil, errors.Wrap(err, "Unable select from indexes for pn")
 		}
+
+		idx.ObjID = *insolar.NewIDFromBytes(id)
+		for _, id := range pendingRecords {
+			idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(id))
+		}
+		if len(latestState) > 0 {
+			idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestState)
+		}
+		idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
+		if len(latestRequest) > 0 {
+			idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
+		}
+
 		idxs = append(idxs, idx)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+	}
+
+	if len(idxs) == 0 {
+		return nil, ErrIndexNotFound
 	}
 
 	return idxs, nil
@@ -329,7 +371,7 @@ func (i *IndexDB) lastKnownForID(ctx context.Context, tx pgx.Tx, objID insolar.I
 	var latestStateID []byte
 	var parent []byte
 	var latestRequest []byte
-	idx := record.Index{Lifeline: record.Lifeline{}, PendingRecords: []insolar.ID{}}
+	idx := record.Index{Lifeline: record.Lifeline{}}
 
 	row = tx.QueryRow(ctx, `
 		SELECT 
