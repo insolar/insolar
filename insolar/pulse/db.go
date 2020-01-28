@@ -20,28 +20,16 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/pkg/errors"
 )
 
 // DB is a pulse.DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
 type DB struct {
 	pool *pgxpool.Pool
-}
-
-var readTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var writeTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
 }
 
 // NewDB creates new DB storage instance.
@@ -114,7 +102,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -157,7 +145,7 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -194,7 +182,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -234,7 +222,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
