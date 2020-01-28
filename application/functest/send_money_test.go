@@ -29,7 +29,7 @@ import (
 )
 
 const times = 5
-const feeSize = "1000000000"
+const feeSize = "100000000"
 
 func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expected *big.Int) {
 	for i := 0; i < times; i++ {
