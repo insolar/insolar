@@ -282,7 +282,8 @@ func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (r
 	// There can be "holes" in pulses double-linked list, e.g.
 	// 1) Between fake genesis pulse and first real pulse
 	// 2) If pulsar is separated from the rest of the network for N pulses
-	// Thus we can't use recursive queries here for now. In the future we are
+	// 3) The platform was down for N pulses
+	// Thus we can't use recursive queries here. In the future we are
 	// going to refactor the entire pulses logic.
 	retPulse, retErr = s.selectByCondition(ctx, `
 SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number asc OFFSET $2 LIMIT 1;
