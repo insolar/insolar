@@ -16,7 +16,7 @@
 
 // +build slowtest
 
-package executor_test
+package executor
 
 import (
 	"context"
@@ -34,7 +34,6 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -114,7 +113,7 @@ func cleanJetsInfoTables() {
 	}
 }
 
-func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, *jet.DBStore, *pulse.DB) {
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStore, *pulse.DB) {
 	cleanJetsInfoTables()
 
 	ctx := inslogger.TestContext(t)
@@ -126,7 +125,7 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, *j
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
 
 	return jetKeeper, jets, pulses
 }
@@ -135,7 +134,7 @@ func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	ji, _, _ := initDB(t, testPulse)
-	err := ji.(*executor.DBJetKeeper).TruncateHead(ctx, 1)
+	err := ji.(*DBJetKeeper).TruncateHead(ctx, 1)
 	require.EqualError(t, err, "try to truncate top sync pulse")
 }
 
@@ -284,7 +283,7 @@ func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
 func TestNewJetKeeper(t *testing.T) {
 	jets := jet.NewDBStore(getPool())
 	pulses := pulse.NewCalculatorMock(t)
-	jetKeeper := executor.NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
 	require.NotNil(t, jetKeeper)
 }
 
@@ -350,7 +349,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	pulses.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
 	})
-	jetKeeper := executor.NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
 
 	var (
 		pulse insolar.PulseNumber
@@ -389,7 +388,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
@@ -449,7 +448,7 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
@@ -526,4 +525,45 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	err = jetKeeper.AddBackupConfirmation(ctx, futurePulse)
 	require.NoError(t, err)
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
+}
+
+func Test_TruncateHead(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji_interface, jets, _ := initDB(t, testPulse)
+	ji := ji_interface.(*DBJetKeeper)
+
+	testJet := insolar.ZeroJetID
+
+	err := jets.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
+	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+
+	require.Equal(t, testPulse, ji.TopSyncPulse())
+
+	_, err = ji.get(testPulse)
+	require.NoError(t, err)
+
+	nextPulse := testPulse + 10
+
+	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+
+	_, err = ji.get(nextPulse)
+	require.NoError(t, err)
+
+	err = ji.TruncateHead(ctx, nextPulse)
+	require.NoError(t, err)
+
+	_, err = ji.get(testPulse)
+	require.NoError(t, err)
+	_, err = ji.get(nextPulse)
+	require.EqualError(t, err, "value not found")
 }
