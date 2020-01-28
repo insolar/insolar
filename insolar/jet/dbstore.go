@@ -20,25 +20,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/jackc/pgx/v4"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 )
-
-var readTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var writeTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
-}
 
 type DBStore struct {
 	sync.RWMutex
@@ -121,7 +107,7 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -154,7 +140,7 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		log.Errorf("DBStore.get - conn.BeginTx failed: %v", err)
 		return ErrResult
@@ -200,7 +186,7 @@ func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}

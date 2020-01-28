@@ -20,9 +20,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v4"
-
 	"github.com/jackc/pgx/v4/pgxpool"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -33,18 +31,6 @@ import (
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
 	pool *pgxpool.Pool
-}
-
-var readTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var writeTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
 }
 
 // NewRecordDB creates new DB storage instance.
@@ -103,7 +89,7 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -135,7 +121,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -173,7 +159,7 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -249,7 +235,7 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID in
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -296,7 +282,7 @@ func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -336,7 +322,7 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}

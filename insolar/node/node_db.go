@@ -29,18 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-var readTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var writeTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
 // StorageDB is an implementation of a node storage.
 type StorageDB struct {
 	pool *pgxpool.Pool
@@ -62,7 +50,7 @@ func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -103,7 +91,7 @@ func (s *StorageDB) selectByCondition(where string, args ...interface{}) (retNod
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, readTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to start a read transaction")
 		return
@@ -180,7 +168,7 @@ func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) 
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
