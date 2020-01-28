@@ -14,93 +14,128 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package executor
 
 import (
+	"context"
+	"sync"
 	"testing"
 
-	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/stretchr/testify/require"
 )
 
-// AALEKSEEV TODO re-implement tests
+var (
+	poolLock     sync.Mutex
+	globalPgPool *pgxpool.Pool
+)
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
-
-	return ops
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
 }
 
-//func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
-//	ctx := inslogger.TestContext(t)
-//	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-//
-//	require.NoError(t, err)
-//
-//	ops := BadgerDefaultOptions(tmpdir)
-//	db, err := store.NewBadgerDB(ops)
-//	require.NoError(t, err)
-//
-//	jets := jet.NewDBStore(db)
-//	pulses := pulse.NewDB(db)
-//	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
-//	require.NoError(t, err)
-//
-//	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
-//	require.NoError(t, err)
-//
-//	jetKeeper := NewJetKeeper(jets, db, pulses)
-//
-//	return jetKeeper, tmpdir, db, jets, pulses
-//}
-
-func Test_JetKeeperKey(t *testing.T) {
-	k := jetKeeperKey(insolar.GenesisPulse.PulseNumber)
-	d := k.ID()
-	require.Equal(t, k, newJetKeeperKey(d))
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
 }
 
-//func Test_TruncateHead(t *testing.T) {
-//	ctx := inslogger.TestContext(t)
-//	testPulse := insolar.GenesisPulse.PulseNumber + 10
-//	ji, tmpDir, db, jets, _ := initDB(t, testPulse)
-//	defer os.RemoveAll(tmpDir)
-//	defer db.Stop(ctx)
+// TestMain does the before and after setup
+//func TestMain(m *testing.M) {
+//	ctx := context.Background()
+//	log.Info("[TestMain] About to start PostgreSQL...")
+//	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+//	log.Info("[TestMain] PostgreSQL started!")
 //
-//	testJet := insolar.ZeroJetID
+//	pool, err := pgxpool.Connect(ctx, pgURL)
+//	if err != nil {
+//		stopPostgreSQL()
+//		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+//	}
 //
-//	err := jets.Update(ctx, testPulse, true, testJet)
-//	require.NoError(t, err)
-//	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
-//	require.NoError(t, err)
-//	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
-//	require.NoError(t, err)
-//	err = ji.AddBackupConfirmation(ctx, testPulse)
-//	require.NoError(t, err)
+//	migrationPath := "../../../migration"
+//	cwd, err := os.Getwd()
+//	if err != nil {
+//		stopPostgreSQL()
+//		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+//	}
+//	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+//	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+//	if err != nil {
+//		stopPostgreSQL()
+//		panic(errors.Wrap(err, "Unable to migrate database"))
+//	}
+//	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
 //
-//	require.Equal(t, testPulse, ji.TopSyncPulse())
+//	setPool(pool)
+//	// Run all tests
+//	code := m.Run()
 //
-//	_, err = db.Get(jetKeeperKey(testPulse))
-//	require.NoError(t, err)
-//
-//	nextPulse := testPulse + 10
-//
-//	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
-//	require.NoError(t, err)
-//	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
-//	require.NoError(t, err)
-//
-//	_, err = db.Get(jetKeeperKey(nextPulse))
-//	require.NoError(t, err)
-//
-//	err = ji.(*DBJetKeeper).TruncateHead(ctx, nextPulse)
-//	require.NoError(t, err)
-//
-//	_, err = db.Get(jetKeeperKey(testPulse))
-//	require.NoError(t, err)
-//	_, err = db.Get(jetKeeperKey(nextPulse))
-//	require.EqualError(t, err, "value not found")
+//	log.Info("[TestMain] Cleaning up...")
+//	stopPostgreSQL()
+//	os.Exit(code)
 //}
+
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (*DBJetKeeper, *jet.DBStore, *pulse.DB) {
+	ctx := context.Background()
+	jets := jet.NewDBStore(getPool())
+	pulses := pulse.NewDB(getPool())
+	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
+	require.NoError(t, err)
+
+	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+
+	return jetKeeper, jets, pulses
+}
+
+func Test_TruncateHead(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, jets, _ := initDB(t, testPulse)
+
+	testJet := insolar.ZeroJetID
+
+	err := jets.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
+	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+
+	require.Equal(t, testPulse, ji.TopSyncPulse())
+
+	_, err = ji.get(testPulse)
+	require.NoError(t, err)
+
+	nextPulse := testPulse + 10
+
+	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+
+	_, err = ji.get(nextPulse)
+	require.NoError(t, err)
+
+	err = ji.TruncateHead(ctx, nextPulse)
+	require.NoError(t, err)
+
+	_, err = ji.get(testPulse)
+	require.NoError(t, err)
+	_, err = ji.get(nextPulse)
+	require.EqualError(t, err, "value not found")
+}

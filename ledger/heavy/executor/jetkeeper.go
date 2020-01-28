@@ -21,6 +21,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jackc/pgx/v4"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -49,10 +53,10 @@ type JetKeeper interface {
 	Storage() jet.Storage
 }
 
-func NewJetKeeper(jets jet.Storage, db store.DB, pulses insolarPulse.Calculator) *DBJetKeeper {
+func NewJetKeeper(jets jet.Storage, pool *pgxpool.Pool, pulses insolarPulse.Calculator) *DBJetKeeper {
 	return &DBJetKeeper{
 		jetTrees: jets,
-		db:       db,
+		pool:     pool,
 		pulses:   pulses,
 	}
 }
@@ -61,7 +65,7 @@ type DBJetKeeper struct {
 	lock     sync.RWMutex
 	jetTrees jet.Storage
 	pulses   insolarPulse.Calculator
-	db       store.DB
+	pool     *pgxpool.Pool
 }
 
 func (jk *DBJetKeeper) Storage() jet.Storage {
@@ -163,10 +167,32 @@ func (jk *DBJetKeeper) TopSyncPulse() insolar.PulseNumber {
 }
 
 func (jk *DBJetKeeper) topSyncPulse() insolar.PulseNumber {
-	val, err := jk.db.Get(syncPulseKey{})
+	errValue := insolar.GenesisPulse.PulseNumber
+	ctx := context.Background()
+	conn, err := jk.pool.Acquire(ctx)
 	if err != nil {
-		return insolar.GenesisPulse.PulseNumber
+		return errValue
 	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
+	if err != nil {
+		return errValue
+	}
+
+	pulseRow := tx.QueryRow(ctx, "SELECT v FROM key_value WHERE k = 'top_sync_pulse'")
+	var val []byte
+	err = pulseRow.Scan(&val)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return errValue
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return errValue
+	}
+
 	return insolar.NewPulseNumber(val)
 }
 
@@ -362,37 +388,41 @@ func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 	return jets
 }
 
-type jetKeeperKey insolar.PulseNumber
-
-func (k jetKeeperKey) Scope() store.Scope {
-	return store.ScopeJetKeeper
-}
-
-func (k jetKeeperKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
-}
-
-func newJetKeeperKey(raw []byte) jetKeeperKey {
-	return jetKeeperKey(insolar.NewPulseNumber(raw))
-}
-
-type syncPulseKey struct{}
-
-func (k syncPulseKey) Scope() store.Scope {
-	return store.ScopeJetKeeperSyncPulse
-}
-
-func (k syncPulseKey) ID() []byte {
-	return []byte{}
-}
-
-func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]JetInfo, error) {
-	serializedJets, err := jk.db.Get(jetKeeperKey(pn))
+func (jk *DBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr error) {
+	ctx := context.Background()
+	conn, err := jk.pool.Acquire(ctx)
 	if err != nil {
-		if err == store.ErrNotFound {
-			return nil, err
-		}
-		return nil, errors.Wrapf(err, "failed to get jets by pulse=%v", pn)
+		retErr = errors.Wrap(err, "Unable to acquire a database connection")
+		return
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
+	if err != nil {
+		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		return
+	}
+
+	pulseRow := tx.QueryRow(ctx, "SELECT info FROM jets_info WHERE pulse_number = $1", pn)
+	var serializedJets []byte
+	err = pulseRow.Scan(&serializedJets)
+	if err == pgx.ErrNoRows {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "jet_info not found")
+		return
+	}
+
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "Unable SELECT from jets_info")
+		return
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		retErr = errors.Wrap(err, "Unable to commit read transaction")
+		return
 	}
 
 	var jets JetsInfo
@@ -404,20 +434,80 @@ func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]JetInfo, error) {
 }
 
 func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
-	key := jetKeeperKey(pn)
-
+	ctx := context.Background()
 	jetsInfo := JetsInfo{Jets: jets}
 	serialized, err := jetsInfo.Marshal()
 	if err != nil {
-		return errors.Wrap(err, "failed to serialize jets")
+		return errors.Wrap(err, "Unable to serialize jetsInfo")
 	}
 
-	return jk.db.Set(key, serialized)
+	conn, err := jk.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		// AALEKSEEV TODO: maybe? ON CONFLICT (pulse_number) DO UPDATE SET info = EXCLUDED.info
+		_, err = tx.Exec(ctx, `
+			INSERT INTO jets_info(pulse_number, info) VALUES ($1, $2)
+		`, pn, serialized)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to UPSERT jets_info")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("DBJetKeeper.set - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
 
 func (jk *DBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
-	err := jk.db.Set(syncPulseKey{}, pn.Bytes())
-	return errors.Wrapf(err, "failed to set up new sync pulse")
+	ctx := context.Background()
+	val := pn.Bytes()
+	conn, err := jk.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		_, err = tx.Exec(ctx, `
+			INSERT INTO key_value(k, v) VALUES ($1, $2)
+			ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v
+		`, pn, val)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to UPSERT key_value")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("DBJetKeeper.updateSyncPulse - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
 
 func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
@@ -428,22 +518,32 @@ func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumbe
 		return errors.New("try to truncate top sync pulse")
 	}
 
-	it := jk.db.NewIterator(jetKeeperKey(from), false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newJetKeeperKey(it.Key())
-		err := jk.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
-		}
-		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %d", key)
+	conn, err := jk.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
+	defer conn.Release()
 
-	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	log := inslogger.FromContext(ctx)
+
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		_, err = tx.Exec(ctx, "DELETE FROM jet_info WHERE pulse_number >= $1", from)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM jet_info")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
