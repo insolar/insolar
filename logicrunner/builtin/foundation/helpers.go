@@ -20,10 +20,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"strings"
 
 	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
 	"github.com/insolar/x-crypto/x509"
 
 	"github.com/insolar/insolar/insolar"
@@ -76,7 +78,10 @@ func ExtractCanonicalPublicKey(pk string) (string, error) {
 		return "", fmt.Errorf("public key is not ecdsa type. Key - %v", pk)
 	}
 	firstByte := 2
-	if ecdsaPk.Y.Sign() == -1 {
+	p256kCurve := elliptic.P256K()
+	tmp := big.NewInt(0)
+	// if odd
+	if tmp.Mod(ecdsaPk.Y, p256kCurve.Params().P).Bit(0) == 0 {
 		firstByte = 2
 	} else {
 		firstByte = 3
@@ -84,12 +89,7 @@ func ExtractCanonicalPublicKey(pk string) (string, error) {
 
 	canonicalPk := []byte{byte(firstByte)}
 	canonicalPk = append(canonicalPk, ecdsaPk.X.Bytes()...)
-	return base64.StdEncoding.EncodeToString(canonicalPk), nil
-}
-
-// TrimPublicKey trims pem public key
-func TrimPublicKey(publicKey string) string {
-	return strings.Join(strings.Split(strings.TrimSpace(between(publicKey, "KEY-----", "-----END")), "\n"), "")
+	return base64.RawURLEncoding.EncodeToString(canonicalPk), nil
 }
 
 // TrimAddress trims address
