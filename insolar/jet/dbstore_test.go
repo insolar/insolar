@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,78 +14,94 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package jet
 
 import (
-	"io/ioutil"
+	"context"
 	"math/rand"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/tests/common"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulse"
 )
 
-// AALEKSEEV TODO rewrite
+var (
+	poolLock     sync.Mutex
+	globalPgPool *pgxpool.Pool
+)
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
+}
 
-	return ops
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
+}
+
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		stopPostgreSQL()
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	setPool(pool)
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
+	os.Exit(code)
 }
 
 // helper for tests
 func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
-	store := s
-	serializedTree, err := store.db.Get(pulseKey(pulse))
-	if err != nil {
-		return nil
-	}
-
-	recovered := &Tree{}
-	err = recovered.Unmarshal(serializedTree)
-	if err != nil {
-		return nil
-	}
-	return recovered
-}
-
-func TestPulseKey(t *testing.T) {
-	t.Parallel()
-
-	expectedKey := pulseKey(insolar.GenesisPulse.PulseNumber)
-
-	rawID := expectedKey.ID()
-
-	actualKey := newPulseKey(rawID)
-	require.Equal(t, expectedKey, actualKey)
+	return s.get(pulse)
 }
 
 func TestDBStore_TruncateHead(t *testing.T) {
-	t.Parallel()
-
 	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	dbStore := NewDBStore(dbMock)
+	dbStore := NewDBStore(getPool())
 
 	numElements := 10
 
@@ -111,7 +127,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	err := dbStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
@@ -131,16 +147,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 
 func TestDBStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(ctx)
-	s := NewDBStore(db)
+	s := NewDBStore(getPool())
 
 	all := s.All(ctx, pulse.MinTimePulse)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
@@ -149,22 +156,13 @@ func TestDBStorage_Empty(t *testing.T) {
 
 func TestDBStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(ctx)
-	s := NewDBStore(db)
+	s := NewDBStore(getPool())
 
 	var (
 		expected = []insolar.JetID{insolar.ZeroJetID}
 	)
 
-	err = s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	err := s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
 	tree := dbTreeForPulse(s, 100)
@@ -173,16 +171,8 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 
 func TestDBStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(ctx)
-	s := NewDBStore(db)
+	s := NewDBStore(getPool())
+	pn := gen.PulseNumber()
 
 	lArray := []byte{
 		0, 0, 1, 1,
@@ -203,74 +193,60 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	)
 
 	root := insolar.NewJetID(0, nil)
-	left, right, err := s.Split(ctx, 100, *root)
+	left, right, err := s.Split(ctx, pn, *root)
 	require.NoError(t, err)
 	assert.Equal(t, insolar.ZeroJetID, *root, "actual tree node in string form: %v", root.DebugString())
 	assert.Equal(t, expectedLeft, left, "actual tree node in string form: %v", left.DebugString())
 	assert.Equal(t, expectedRight, right, "actual tree node in string form: %v", right.DebugString())
 
-	tree := dbTreeForPulse(s, 100)
+	tree := dbTreeForPulse(s, pn)
 	require.Equal(t, expectedLeafs, *tree, "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(ctx)
-	require.NoError(t, err)
-	s := NewDBStore(db)
+	s := NewDBStore(getPool())
+	pn1 := gen.PulseNumber()
+	pn2 := gen.PulseNumber()
 
 	var (
 		expectedZero = []insolar.JetID{insolar.ZeroJetID}
 		expectedNil  []insolar.JetID
 	)
 
-	err = s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
+	err := s.Update(ctx, pn1, true, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
-	tree := dbTreeForPulse(s, 100)
+	tree := dbTreeForPulse(s, pn1)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	err = s.Clone(ctx, 100, 101, false)
+	err = s.Clone(ctx, pn1, pn2, false)
 	require.NoError(t, err)
 
-	tree = dbTreeForPulse(s, 101)
+	tree = dbTreeForPulse(s, pn2)
 	assert.Equal(t, expectedNil, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	tree = dbTreeForPulse(s, 100)
+	tree = dbTreeForPulse(s, pn1)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 }
 
 func TestDBStorage_ForID_Basic(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-
-	pn := gen.PulseNumber()
-	meaningfulBits := "01000011" + "11000011" + "010010"
-
-	bits := parsePrefix(meaningfulBits)
-	expectJetID := NewIDFromString(meaningfulBits)
-	searchID := gen.ID()
-	hash := searchID.Hash()
-	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	searchID = *insolar.NewID(searchID.Pulse(), hash)
-
 	for _, actuality := range []bool{true, false} {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
+		pn := gen.PulseNumber()
+		meaningfulBits := "01000011" + "11000011" + "010010"
 
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
+		bits := parsePrefix(meaningfulBits)
+		expectJetID := NewIDFromString(meaningfulBits)
+		searchID := gen.ID()
+		hash := searchID.Hash()
+		hash = setBitsPrefix(hash, bits, len(meaningfulBits))
+		searchID = *insolar.NewID(searchID.Pulse(), hash)
+
+		s := NewDBStore(getPool())
+
+		err := s.Update(ctx, pn, actuality, expectJetID)
 		require.NoError(t, err)
-		defer db.Stop(ctx)
-		s := NewDBStore(db)
-		s.Update(ctx, pn, actuality, expectJetID)
 		found, ok := s.ForID(ctx, pn, searchID)
 		require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
 		require.Equal(t, actuality, ok, "jet should be in actuality state we defined in Update")

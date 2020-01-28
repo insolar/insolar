@@ -1,5 +1,5 @@
 //
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,19 +21,32 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
+	"github.com/jackc/pgx/v4"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/store"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 )
+
+var readTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadOnly,
+	DeferrableMode: pgx.NotDeferrable,
+}
+
+var writeTxOptions = pgx.TxOptions{
+	IsoLevel:       pgx.Serializable,
+	AccessMode:     pgx.ReadWrite,
+	DeferrableMode: pgx.NotDeferrable,
+}
 
 type DBStore struct {
 	sync.RWMutex
-	db store.DB
+	pool *pgxpool.Pool
 }
 
-func NewDBStore(db store.DB) *DBStore {
-	return &DBStore{db: db}
+func NewDBStore(pool *pgxpool.Pool) *DBStore {
+	return &DBStore{pool: pool}
 }
 
 func (s *DBStore) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID {
@@ -50,33 +63,6 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 
 	tree := s.get(pulse)
 	return tree.Find(recordID)
-}
-
-// TruncateHead remove all records after lastPulse
-func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	s.Lock()
-	defer s.Unlock()
-
-	it := s.db.NewIterator(pulseKey(from), false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newPulseKey(it.Key())
-		err := s.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
-		}
-
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s", insolar.PulseNumber(key))
-	}
-
-	if !hasKeys {
-		inslogger.FromContext(ctx).Debugf("No records. Nothing done. Pulse number: %s", from.String())
-	}
-
-	return nil
 }
 
 func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
@@ -110,6 +96,7 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
+
 func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
 	s.Lock()
 	defer s.Unlock()
@@ -123,42 +110,120 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepA
 	return nil
 }
 
-type pulseKey insolar.PulseNumber
+// TruncateHead remove all records after lastPulse
+// TODO AALEKSEEV make sure all TruncateHead implementations are consistent
+func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
 
-func (k pulseKey) Scope() store.Scope {
-	return store.ScopeJetTree
-}
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
 
-func (k pulseKey) ID() []byte {
-	return insolar.PulseNumber(k).Bytes()
-}
+		_, err = tx.Exec(ctx, "DELETE FROM jet_trees WHERE pulse_number >= $1", from)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to DELETE FROM jet_trees")
+		}
 
-func newPulseKey(raw []byte) pulseKey {
-	key := pulseKey(insolar.NewPulseNumber(raw))
-	return key
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }
 
 func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
-	serializedTree, err := s.db.Get(pulseKey(pn))
+	ctx := context.Background()
+	log := inslogger.FromContext(ctx)
+	ErrResult := NewTree(pn == insolar.GenesisPulse.PulseNumber)
+	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		return NewTree(pn == insolar.GenesisPulse.PulseNumber)
+		log.Errorf("DBStore.get - s.pool.Acquire failed: %v", err)
+		return ErrResult
+	}
+	defer conn.Release()
+
+	tx, err := conn.BeginTx(ctx, readTxOptions)
+	if err != nil {
+		log.Errorf("DBStore.get - conn.BeginTx failed: %v", err)
+		return ErrResult
+	}
+
+	row := tx.QueryRow(ctx, "SELECT jet_tree FROM jet_trees WHERE pulse_number = $1", pn)
+	var serializedTree []byte
+	err = row.Scan(&serializedTree)
+
+	if err != nil {
+		log.Errorf("DBStore.get - row.Scan failed: %v", err)
+		_ = tx.Rollback(ctx)
+		return ErrResult
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		log.Errorf("DBStore.get - tx.Commit failed: %v", err)
+		return ErrResult
 	}
 
 	recovered := &Tree{}
 	err = recovered.Unmarshal(serializedTree)
 	if err != nil {
+		log.Errorf("DBStore.get - recovered.Unmarshal failed: %v", err)
 		return nil
 	}
 	return recovered
 }
 
 func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
-	key := pulseKey(pn)
-
+	ctx := context.Background()
 	serialized, err := jt.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize jet.Tree")
 	}
 
-	return s.db.Set(key, serialized)
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	log := inslogger.FromContext(ctx)
+	for { // retry loop
+		tx, err := conn.BeginTx(ctx, writeTxOptions)
+		if err != nil {
+			return errors.Wrap(err, "Unable to start a write transaction")
+		}
+
+		// UPSERT is needed during genesis
+		_, err = tx.Exec(ctx, `
+			INSERT INTO jet_trees(pulse_number, jet_tree)
+			VALUES ($1, $2)
+			ON CONFLICT (pulse_number) DO
+			UPDATE SET jet_tree = EXCLUDED.jet_tree
+		`, pn, serialized)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to INSERT jet_tree")
+		}
+
+		err = tx.Commit(ctx)
+		if err == nil { // success
+			break
+		}
+
+		log.Infof("DBStore.set - commit failed: %v - retrying transaction", err)
+	}
+
+	return nil
 }

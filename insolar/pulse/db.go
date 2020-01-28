@@ -279,16 +279,14 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+	// There can be "holes" in pulses double-linked list, e.g.
+	// 1) Between fake genesis pulse and first real pulse
+	// 2) If pulsar is separated from the rest of the network for N pulses
+	// 3) The platform was down for N pulses
+	// Thus we can't use recursive queries here. In the future we are
+	// going to refactor the entire pulses logic.
 	retPulse, retErr = s.selectByCondition(ctx, `
-WITH RECURSIVE tmp AS (
-	SELECT 1 as depth, pulse_number, next_pn
-	FROM pulses WHERE pulse_number = $1
-		UNION ALL
-	SELECT t."depth" + 1, p.pulse_number, p.next_pn
-	FROM tmp t
-	INNER JOIN pulses p ON p.pulse_number = t.next_pn
-	WHERE t."depth" <= $2
-) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
+SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number asc OFFSET $2 LIMIT 1;
 	`, pn, steps)
 	return
 }
@@ -297,15 +295,7 @@ WITH RECURSIVE tmp AS (
 // be returned.
 func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	retPulse, retErr = s.selectByCondition(ctx, `
-WITH RECURSIVE tmp AS (
-	SELECT 1 as depth, pulse_number, prev_pn
-	FROM pulses WHERE pulse_number = $1
-		UNION ALL
-	SELECT t."depth" + 1, p.pulse_number, p.prev_pn
-	FROM tmp t
-	INNER JOIN pulses p ON p.pulse_number = t.prev_pn
-	WHERE t."depth" <= $2
-) SELECT pulse_number FROM tmp OFFSET $2 LIMIT 1;
+SELECT pulse_number FROM pulses WHERE pulse_number <= $1 ORDER BY pulse_number desc offset $2 limit 1;
 	`, pn, steps)
 	return
 }
