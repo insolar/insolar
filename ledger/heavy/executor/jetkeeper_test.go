@@ -21,6 +21,7 @@ package executor
 import (
 	"context"
 	"os"
+	"sort"
 	"sync"
 	"testing"
 
@@ -132,7 +133,7 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStor
 
 func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	ji, _, _ := initDB(t, testPulse)
 	err := ji.(*DBJetKeeper).TruncateHead(ctx, 1)
 	require.EqualError(t, err, "try to truncate top sync pulse")
@@ -140,7 +141,7 @@ func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	ji, jets, _ := initDB(t, testPulse)
 	testJet := insolar.ZeroJetID
 
@@ -163,7 +164,7 @@ func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 
 func Test_DifferentSplitFlagsInDropsAndHots(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	ji, _, _ := initDB(t, testPulse)
 
 	testJet := insolar.ZeroJetID
@@ -191,11 +192,14 @@ func Test_DifferentSplitFlagsInDropsAndHots(t *testing.T) {
 
 func TestJetInfoIsConfirmed_Split(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
+	nextPulse := gen.PulseNumber()
+	if nextPulse < testPulse {
+		nextPulse, testPulse = testPulse, nextPulse
+	}
+
 	ji, jets, pulses := initDB(t, testPulse)
 	testJet := insolar.ZeroJetID
-
-	nextPulse := insolar.GenesisPulse.PulseNumber + 20
 
 	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
@@ -228,7 +232,7 @@ func TestJetInfoIsConfirmed_Split(t *testing.T) {
 
 func TestJetInfo_BackupConfirmComesFirst(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, _, _ := initDB(t, testPulse)
 	err := jetKeeper.AddBackupConfirmation(ctx, testPulse)
 	require.Contains(t, err.Error(), "Received backup confirmation before replication data")
@@ -236,7 +240,7 @@ func TestJetInfo_BackupConfirmComesFirst(t *testing.T) {
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, _, _ := initDB(t, testPulse)
 	testJet := gen.JetID()
 	err := jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
@@ -249,7 +253,7 @@ func TestJetInfo_ExistingDrop(t *testing.T) {
 
 func TestJetInfo_ExistingHot(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, _, _ := initDB(t, testPulse)
 
 	testJet := gen.JetID()
@@ -263,7 +267,7 @@ func TestJetInfo_ExistingHot(t *testing.T) {
 func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, _, _ := initDB(t, testPulse)
 
 	testJet := gen.JetID()
@@ -290,7 +294,7 @@ func TestNewJetKeeper(t *testing.T) {
 func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, jets, _ := initDB(t, testPulse)
 	testJet := gen.JetID()
 	left, _ := jet.Siblings(testJet)
@@ -315,7 +319,7 @@ func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
 func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	jetKeeper, jets, _ := initDB(t, testPulse)
 
 	testJet := gen.JetID()
@@ -364,7 +368,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 
 func TestDbJetKeeper_CheckJetTreeFail(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
 	ji, _, _ := initDB(t, testPulse)
 
 	testJet := insolar.ZeroJetID
@@ -397,8 +401,11 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 		nextPulse    insolar.PulseNumber
 		testJet      insolar.JetID
 	)
-	currentPulse = insolar.GenesisPulse.PulseNumber + 10
-	nextPulse = insolar.GenesisPulse.PulseNumber + 20
+	currentPulse = gen.PulseNumber()
+	nextPulse = gen.PulseNumber()
+	if nextPulse < currentPulse {
+		currentPulse, nextPulse = nextPulse, currentPulse
+	}
 	testJet = insolar.ZeroJetID
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: currentPulse})
@@ -458,9 +465,17 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 		futurePulse  insolar.PulseNumber
 		testJet      insolar.JetID
 	)
-	currentPulse = insolar.GenesisPulse.PulseNumber + 10
-	nextPulse = insolar.GenesisPulse.PulseNumber + 20
-	futurePulse = insolar.GenesisPulse.PulseNumber + 30
+	pulsesSlice := make([]insolar.PulseNumber, 3)
+	for i := 0; i < len(pulsesSlice); i++ {
+		pulsesSlice[i] = gen.PulseNumber()
+	}
+	sort.Slice(pulsesSlice, func(i, j int) bool {
+		return pulsesSlice[i] < pulsesSlice[j]
+	})
+
+	currentPulse = pulsesSlice[0]
+	nextPulse = pulsesSlice[1]
+	futurePulse = pulsesSlice[2]
 	testJet = insolar.ZeroJetID
 
 	err = jets.Update(ctx, currentPulse, true, testJet)
@@ -529,7 +544,11 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 
 func Test_TruncateHead(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testPulse := gen.PulseNumber()
+	nextPulse := gen.PulseNumber()
+	if nextPulse < testPulse {
+		testPulse, nextPulse = nextPulse, testPulse
+	}
 	ji_interface, jets, _ := initDB(t, testPulse)
 	ji := ji_interface.(*DBJetKeeper)
 
@@ -548,8 +567,6 @@ func Test_TruncateHead(t *testing.T) {
 
 	_, err = ji.get(testPulse)
 	require.NoError(t, err)
-
-	nextPulse := testPulse + 10
 
 	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
 	require.NoError(t, err)
