@@ -157,7 +157,7 @@ func (s *StorageDB) DeleteForPN(_ insolar.PulseNumber) {
 	// Also this method supposed to return at least `error`. Consider it a legacy.
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records >= from
 func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) 
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE FROM nodes WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM nodes WHERE pulse_number >= $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to DELETE FROM nodes")

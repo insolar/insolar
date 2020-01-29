@@ -238,14 +238,14 @@ func TestTruncateHead(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure half of the pulses are still in the database...
-	for i := startPulseIdx; i <= startPulseIdx+pulsesNum/2; i++ {
+	for i := startPulseIdx; i < startPulseIdx+pulsesNum/2; i++ {
 		readPulse, err := db.ForPulseNumber(ctx, pulseNumbers[i])
 		require.NoError(t, err)
 		require.Equal(t, *pulses[i], readPulse)
 	}
 
 	// ...and another half is gone
-	for i := startPulseIdx + pulsesNum/2 + 1; i < endPulseIdx; i++ {
+	for i := startPulseIdx + pulsesNum/2; i < endPulseIdx; i++ {
 		_, err := db.ForPulseNumber(ctx, pulseNumbers[i])
 		require.Error(t, err)
 	}

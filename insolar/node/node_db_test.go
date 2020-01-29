@@ -179,15 +179,15 @@ func TestTruncateHead(t *testing.T) {
 	err := db.TruncateHead(context.Background(), pulses[2])
 	require.NoError(t, err)
 
-	// Make sure nodes for pulses [0,1,2] is still here
-	for i := 0; i <= 2; i++ {
+	// Make sure nodes for pulses [0,1] is still here
+	for i := 0; i < 2; i++ {
 		readNodes, err := db.All(pulses[i])
 		require.NoError(t, err)
 		require.Equal(t, nodes[i], readNodes)
 	}
 
-	// Make sure nodes for pulses [3,4] were deleted
-	for i := 3; i <= 4; i++ {
+	// Make sure nodes for pulses [2,3,4] were deleted
+	for i := 2; i <= 4; i++ {
 		readNodes, err := db.All(pulses[i])
 		require.NoError(t, err)
 		require.Empty(t, readNodes)
