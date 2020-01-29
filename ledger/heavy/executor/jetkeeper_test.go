@@ -112,6 +112,11 @@ func cleanJetsInfoTables() {
 	if err != nil {
 		panic(err)
 	}
+
+	_, err = conn.Exec(ctx, "DELETE FROM pulses CASCADE")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStore, *pulse.DB) {
@@ -386,6 +391,8 @@ func TestDbJetKeeper_CheckJetTreeFail(t *testing.T) {
 }
 
 func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
+	cleanJetsInfoTables()
+
 	ctx := inslogger.TestContext(t)
 	jets := jet.NewDBStore(getPool())
 	pulses := pulse.NewDB(getPool())
@@ -448,6 +455,8 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 }
 
 func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
+	cleanJetsInfoTables()
+
 	ctx := inslogger.TestContext(t)
 
 	jets := jet.NewDBStore(getPool())
