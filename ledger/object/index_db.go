@@ -35,18 +35,6 @@ type IndexDB struct {
 	recordStore *RecordDB
 }
 
-var ReadTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var WriteTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
 // NewIndexDB creates a new instance of IndexDB
 func NewIndexDB(pool *pgxpool.Pool, records *RecordDB) *IndexDB {
 	return &IndexDB{pool: pool, recordStore: records}
@@ -63,7 +51,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -87,14 +75,14 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 			VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 			ON CONFLICT (object_id, pulse_number)
 			DO UPDATE SET 
-				lifeline_last_used = $3,
-				pending_records = $4,
-				latest_state = $5,
-				state_id = $6,
-				parent = $7,
-				latest_request = $8,
-				earliest_open_request = $9,
-				open_requests_count = $10
+				lifeline_last_used = EXCLUDED.lifeline_last_used,
+				pending_records = EXCLUDED.pending_records,
+				latest_state = EXCLUDED.latest_state,
+				state_id = EXCLUDED.state_id,
+				parent = EXCLUDED.parent,
+				latest_request = EXCLUDED.latest_request,
+				earliest_open_request = EXCLUDED.earliest_open_request,
+				open_requests_count = EXCLUDED.open_requests_count
 		`, bucket.ObjID.Bytes(), pn, bucket.LifelineLastUsed, pendingRecords,
 			latestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent.Bytes(),
 			latestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
@@ -129,9 +117,9 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumb
 	defer conn.Release()
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
-			return errors.Wrap(err, "Unable to start a read transaction")
+			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
 		rows, err := tx.Query(ctx, `
@@ -160,17 +148,14 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumb
 		rows.Close()
 
 		for _, id := range rawIDs {
-			_, err = tx.Exec(ctx, `DELETE FROM last_known_pulse_for_indexes WHERE object_id = $1`, id)
+			_, err := tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes
+										 VALUES($1, $2)
+										 ON CONFLICT (object_id, pulse_number)
+										 DO UPDATE SET
+											SET pulse_number = EXCLUDED.pulse_number`, id, pn)
 			if err != nil {
 				_ = tx.Rollback(ctx)
-				return errors.Wrap(err, "Unable to DELETE FROM last_known_pulse_for_indexes")
-			}
-
-			_, err = tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes(object_id, pulse_number)
-									VALUES($1, $2)`, id, pn)
-			if err != nil {
-				_ = tx.Rollback(ctx)
-				return errors.Wrap(err, "Unable to INSERT INTO last_known_pulse_for_indexes")
+				return errors.Wrap(err, "Unable to UPDATE last_known_pulse_for_indexes")
 			}
 		}
 
@@ -192,7 +177,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
 	}
@@ -279,7 +264,7 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to start a read transaction")
 	}
@@ -420,7 +405,7 @@ func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
 	}
@@ -450,7 +435,7 @@ func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	defer conn.Release()
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a read transaction")
 		}

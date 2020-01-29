@@ -12,7 +12,7 @@ create table indexes
     pulse_number          bigint  not null,
 
     lifeline_last_used    bigint  not null,
-    pending_records       bytea[],
+    pending_records       bytea[] null,
 
     -- lifeline
     latest_state          bytea   null,
