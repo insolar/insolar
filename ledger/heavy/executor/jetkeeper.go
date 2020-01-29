@@ -531,10 +531,10 @@ func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumbe
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE FROM jet_info WHERE pulse_number >= $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM jets_info WHERE pulse_number >= $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to DELETE FROM jet_info")
+			return errors.Wrap(err, "Unable to DELETE FROM jets_info")
 		}
 
 		err = tx.Commit(ctx)
