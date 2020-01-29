@@ -408,8 +408,7 @@ func (jk *DBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr er
 	err = pulseRow.Scan(&serializedJets)
 	if err == pgx.ErrNoRows {
 		_ = tx.Rollback(ctx)
-		retErr = errors.Wrap(err, "jet_info not found")
-		return
+		return nil, store.ErrNotFound
 	}
 
 	if err != nil {
@@ -454,9 +453,9 @@ func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		// AALEKSEEV TODO: maybe? ON CONFLICT (pulse_number) DO UPDATE SET info = EXCLUDED.info
 		_, err = tx.Exec(ctx, `
 			INSERT INTO jets_info(pulse_number, info) VALUES ($1, $2)
+			ON CONFLICT (pulse_number) DO UPDATE SET info = EXCLUDED.info
 		`, pn, serialized)
 		if err != nil {
 			_ = tx.Rollback(ctx)
@@ -491,9 +490,9 @@ func (jk *DBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 		}
 
 		_, err = tx.Exec(ctx, `
-			INSERT INTO key_value(k, v) VALUES ($1, $2)
+			INSERT INTO key_value(k, v) VALUES ('top_sync_pulse', $1)
 			ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v
-		`, pn, val)
+		`, val)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to UPSERT key_value")
