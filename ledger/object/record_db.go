@@ -312,7 +312,7 @@ func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32
 	return
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records >= from
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
@@ -327,12 +327,12 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, `DELETE FROM records_last_position WHERE pulse_number > $1`, from)
+		_, err = tx.Exec(ctx, `DELETE FROM records_last_position WHERE pulse_number >= $1`, from)
 		if err != nil {
 			return errors.Wrap(err, "Unable to DELETE from records_last_position")
 		}
 
-		_, err = tx.Exec(ctx, `DELETE FROM records WHERE pulse_number > $1`, from)
+		_, err = tx.Exec(ctx, `DELETE FROM records WHERE pulse_number >= $1`, from)
 		if err != nil {
 			return errors.Wrap(err, "Unable to DELETE from records")
 		}

@@ -96,8 +96,7 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepA
 	return nil
 }
 
-// TruncateHead remove all records after lastPulse
-// TODO AALEKSEEV make sure all TruncateHead implementations are consistent
+// TruncateHead remove all records >= from
 func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {

@@ -171,7 +171,7 @@ func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) 
 	return
 }
 
-// TruncateHead remove all records with pulse_number > `from`
+// TruncateHead remove all records with pulse_number >= `from`
 func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
@@ -187,13 +187,13 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE FROM pulse_signs WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM pulse_signs WHERE pulse_number >= $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to DELETE FROM pulse_signs")
 		}
 
-		_, err = tx.Exec(ctx, "DELETE FROM pulses WHERE pulse_number > $1", from)
+		_, err = tx.Exec(ctx, "DELETE FROM pulses WHERE pulse_number >= $1", from)
 		if err != nil {
 			_ = tx.Rollback(ctx)
 			return errors.Wrap(err, "Unable to DELETE FROM pulses")

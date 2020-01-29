@@ -309,7 +309,7 @@ func TestTruncateHead(t *testing.T) {
 		require.Equal(t, lastIDs[p], id)
 	}
 
-	err := db.TruncateHead(ctx, pulses[len(pulses)-2])
+	err := db.TruncateHead(ctx, pulses[len(pulses)-1])
 	require.NoError(t, err)
 	for p := 0; p < len(pulses)-1; p++ {
 		pos, err := db.LastKnownPosition(pulses[p])
