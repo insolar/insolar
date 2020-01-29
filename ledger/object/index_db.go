@@ -151,7 +151,7 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumb
 			_, err := tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes
 										 VALUES($1, $2)
 										 ON CONFLICT (object_id, pulse_number)
-										 DO UPDATE SET
+										 DO UPDATE
 											SET pulse_number = EXCLUDED.pulse_number`, id, pn)
 			if err != nil {
 				_ = tx.Rollback(ctx)
