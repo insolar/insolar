@@ -320,7 +320,7 @@ func makePositionKey(raw []byte) store.Key {
 	}
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records starting with 'from'
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
 	if err := r.truncateRecordsHead(ctx, from); err != nil {

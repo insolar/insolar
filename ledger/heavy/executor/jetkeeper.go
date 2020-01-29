@@ -418,6 +418,7 @@ func (jk *DBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	return errors.Wrapf(err, "failed to set up new sync pulse")
 }
 
+// TruncateHead remove all records starting with 'from'
 func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
