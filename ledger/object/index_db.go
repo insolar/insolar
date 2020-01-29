@@ -424,7 +424,7 @@ func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.
 	return idx, nil
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records >= 'from'
 func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
