@@ -42,7 +42,7 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
+	require.Contains(t, data.Trace, fmt.Sprintf("problems with parsing. Key - %s", member.PubKey))
 }
 
 func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {

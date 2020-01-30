@@ -126,7 +126,7 @@ func (s *StorageDB) DeleteForPN(pulse insolar.PulseNumber) {
 	panic("implement me")
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records starting with 'from'
 func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	it := s.db.NewIterator(nodeHistoryKey(from), false)
 	defer it.Close()

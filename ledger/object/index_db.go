@@ -115,7 +115,7 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar
 	return nil
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records starting with 'from'
 func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()

@@ -90,7 +90,7 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 	return ds.db.Set(&k, encoded)
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records starting with 'from'
 func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: from}, false)
 	defer it.Close()

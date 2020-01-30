@@ -1,6 +1,9 @@
 .. Insolar documentation master file, created by
    sphinx-quickstart on Tue May 14 19:35:14 2019.
 
+.. raw:: html
+   :file: landing-page.html
+
 Insolar Documentation
 =====================
 
@@ -12,30 +15,51 @@ Insolar’s vision is to facilitate seamless low friction interactions between c
 
 .. _quick_start:
 
-Quick Start
-===========
+Start With a Guide
+------------------
 
-To take a deep dive into Insolar technologies, start with the :ref:`Understanding Insolar <basics>` section and take a look at the :ref:`Architecture <architecture>`.
+.. raw:: html
 
-To test token migration during the testing period of Insolar MainNet, go thought the :ref:`migration test steps <migration_test>`.
+   <div class="reduced-width">
 
-To integrate with Insolar, go through :ref:`step-by-step instructions <integration>`.
+.. rst-class:: column column2
 
-.. _toc:
+:ref:`Learn the basics <basics>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Table of Contents
-=================
+Understand Insolar.
+
+.. rst-class:: column column2
+
+:ref:`Explore the architecture <architecture>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Take a deep dive.
+
+.. rst-class:: column column2
+
+:ref:`Set up Insolar network locally <integration>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go through step-by-step instructions.
+
+.. rst-class:: column column2
+
+:ref:`Test token migration <migration_test>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go through step-by-step instructions.
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
    :caption: Overview
 
    basics
    architecture
    glossary
- 
+
 .. toctree::
-   :maxdepth: 2
+   :hidden:
    :caption: Integration
 
    migration-test

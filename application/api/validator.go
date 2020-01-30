@@ -106,7 +106,7 @@ func IsInternalMethod(method string) bool {
 	switch method {
 	case "funcTestContract.upload", "funcTestContract.callConstructor", "funcTestContract.callMethod":
 		return true
-	case "contract.registerNode", "contract.getNodeRef":
+	case "contract.registerNode", "contract.getNodeRef", "cert.get":
 		return true
 	default:
 		return false
