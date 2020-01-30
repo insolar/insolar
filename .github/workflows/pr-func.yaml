@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
       - name: set up go ${{env.GO_VERSION}}
         uses: actions/setup-go@v1
         with:
@@ -21,3 +23,4 @@ jobs:
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: test_func
         run: make build functest
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
