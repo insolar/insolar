@@ -193,7 +193,7 @@ func main() {
 	indexDB := object.NewIndexDB(bdb, recordDB)
 	dropDB := drop.NewDB(bdb)
 
-	numIterations := numPulses / 10 // write only 1/10 part of oll data ( for tests )
+	numIterations := numPulses / 1 // write only 1/10 part of oll data ( for tests )
 
 	wg := &sync.WaitGroup{}
 	wg.Add(numIterations)
