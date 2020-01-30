@@ -18,11 +18,8 @@ package exporter
 
 import (
 	"context"
-	//"io/ioutil"
-	//"os"
 	"testing"
 
-	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -37,16 +34,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
 )
-
-// AALEKSEEV TODO re-implement tests
-
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
-
-	return ops
-}
 
 func TestRecordIterator_HasNext(t *testing.T) {
 	t.Parallel()
@@ -421,6 +408,7 @@ func getMaterialRecord() record.Material {
 	return materialRecord
 }
 
+// AALEKSEEV TODO re-implement tests
 //func TestRecordServer_Export_Composite(t *testing.T) {
 //	t.Parallel()
 //
@@ -601,7 +589,7 @@ func getMaterialRecord() record.Material {
 //		require.Equal(t, err, context.Canceled)
 //	})
 //}
-
+//
 //func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 //	t.Parallel()
 //
@@ -763,7 +751,7 @@ func getMaterialRecord() record.Material {
 //	})
 //
 //}
-
+//
 //func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
 //	t.Parallel()
 //

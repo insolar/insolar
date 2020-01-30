@@ -100,7 +100,7 @@ func (jk *DBJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 }
 
 // AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
-func (jk *DBJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error { // AALEKSEEV TODO deprecated
+func (jk *DBJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
