@@ -10,7 +10,6 @@ jobs:
   test-func:
     runs-on: self-hosted
     name: test-func
-    runs-on: ubuntu-latest
     steps:
       - name: checkout code
         uses: actions/checkout@master
