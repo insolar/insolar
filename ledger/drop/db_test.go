@@ -39,8 +39,6 @@ import (
 	"github.com/insolar/insolar/tests/common"
 )
 
-var db *DB
-
 var (
 	poolLock     sync.Mutex
 	globalPgPool *pgxpool.Pool
@@ -96,8 +94,6 @@ func TestMain(m *testing.M) {
 }
 
 func cleanDropsTable() {
-	// We have to clean `drops` table between tests because gen.PulseNumber() doesn't
-	// return pulses in order which matters in our tests.  // TODO
 	ctx := context.Background()
 	conn, err := getPool().Acquire(ctx)
 	if err != nil {

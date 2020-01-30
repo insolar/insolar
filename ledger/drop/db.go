@@ -30,15 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-// type DB struct {
-// 	db store.DB
-// }
-//
-// // NewDB creates a new storage, that holds data in a db.
-// func NewDB(db store.DB) *DB {
-// 	return &DB{db: db}
-// }
-
 type dropDbKey struct {
 	jetPrefix []byte
 	pn        insolar.PulseNumber
@@ -61,78 +52,9 @@ func newDropDbKey(raw []byte) dropDbKey {
 	return dk
 }
 
-// // ForPulse returns a Drop for a provided pulse, that is stored in a db.
-// func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
-// 	k := dropDbKey{jetID.Prefix(), pulse}
-//
-// 	buf, err := ds.db.Get(&k)
-// 	if err != nil {
-// 		return Drop{}, err
-// 	}
-//
-// 	drop := Drop{}
-// 	err = drop.Unmarshal(buf)
-// 	if err != nil {
-// 		return Drop{}, err
-// 	}
-// 	return drop, nil
-// }
-//
-// // Set saves a provided Drop to a db.
-// func (ds *DB) Set(ctx context.Context, drop Drop) error {
-// 	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
-//
-// 	_, err := ds.db.Get(&k)
-// 	if err == nil {
-// 		return ErrOverride
-// 	}
-//
-// 	encoded, err := drop.Marshal()
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	return ds.db.Set(&k, encoded)
-// }
-//
-// // TruncateHead remove all records after lastPulse
-// func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-// 	it := ds.db.NewIterator(&dropDbKey{jetPrefix: []byte{}, pn: from}, false)
-// 	defer it.Close()
-//
-// 	var hasKeys bool
-// 	for it.Next() {
-// 		hasKeys = true
-// 		key := newDropDbKey(it.Key())
-// 		err := ds.db.Delete(&key)
-// 		if err != nil {
-// 			return errors.Wrapf(err, "can't delete key: %+v", key)
-// 		}
-//
-// 		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. Jet prefix: %s", key.pn.String(), base64.RawURLEncoding.EncodeToString(key.jetPrefix))
-// 	}
-// 	if !hasKeys {
-// 		inslogger.FromContext(ctx).Debug("No records. Nothing done. Pulse number: " + from.String())
-// 	}
-//
-// 	return nil
-// }
-
 // DB is a pulse.DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
 type DB struct {
 	pool *pgxpool.Pool
-}
-
-var ReadTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadOnly,
-	DeferrableMode: pgx.NotDeferrable,
-}
-
-var WriteTxOptions = pgx.TxOptions{
-	IsoLevel:       pgx.Serializable,
-	AccessMode:     pgx.ReadWrite,
-	DeferrableMode: pgx.NotDeferrable,
 }
 
 // NewDB creates new DB storage instance.
@@ -148,7 +70,7 @@ func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.P
 	}
 	defer conn.Release()
 
-	tx, err := conn.BeginTx(ctx, ReadTxOptions)
+	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
 		return Drop{}, errors.Wrap(err, "Unable to start a read transaction")
 	}
@@ -177,7 +99,7 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 	defer conn.Release()
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 
 		if err != nil {
 			return errors.Wrap(err, "unable to start write transaction")
@@ -217,7 +139,7 @@ func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error 
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
-		tx, err := conn.BeginTx(ctx, WriteTxOptions)
+		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
@@ -270,7 +192,7 @@ func (ds *DB) selectDrop(ctx context.Context, tx pgx.Tx, key dropDbKey) (Drop, e
 		return retDrop, errors.Wrap(err, "Unable to SELECT ... FROM drops")
 	}
 
-	retDrop.JetID = insolar.JetID(*insolar.NewIDFromBytes(jetID)) // TODO seems strange
+	retDrop.JetID = insolar.JetID(*insolar.NewIDFromBytes(jetID))
 
 	return retDrop, nil
 }
