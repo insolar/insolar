@@ -21,17 +21,13 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/dgraph-io/badger" // AALEKSEEV TODO
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
 	component "github.com/insolar/component-manager"
@@ -48,7 +44,6 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
@@ -67,14 +62,6 @@ import (
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
 )
-
-type badgerLogger struct {
-	insolar.Logger
-}
-
-func (b badgerLogger) Warningf(fmt string, args ...interface{}) {
-	b.Warnf(fmt, args...)
-}
 
 type components struct {
 	cmp         *component.Manager
@@ -193,27 +180,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.DB
 		Nodes       *node.StorageDB
-		DB          *store.BadgerDB
 		Pool        *pgxpool.Pool
 		Jets        *jet.DBStore
 	)
 	{
 		var err error
-		startTime := time.Now()
-		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
-		}
-		options := badger.DefaultOptions(fullDataDirectoryPath)
-		options.Logger = badgerLogger{Logger: logger.WithField("component", "badger")}
-		DB, err = store.NewBadgerDB(
-			options,
-			store.ValueLogDiscardRatio(cfg.Ledger.Storage.BadgerValueLogGCDiscardRatio),
-			store.OpenAndCloseBadgerOnStart(true),
-		)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to initialize DB"))
-		}
 
 		Pool, err = pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
 		if err != nil {
@@ -235,10 +206,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses = insolarPulse.NewDB(Pool)
 		Nodes = node.NewStorageDB(Pool)
 		Jets = jet.NewDBStore(Pool)
-
-		timeBadgerStarted := time.Since(startTime)
-		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
-		logger.Info("badger starts in ", timeBadgerStarted)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
@@ -382,7 +349,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
 			BaseRecord: &genesis.BaseRecord{
-				DB:             DB,
+				Pool:           Pool,
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
 				PulseAccessor:  Pulses,
