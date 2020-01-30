@@ -23,11 +23,12 @@ jobs:
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: test_prepare
         run: |
-           cd $GOPATH/src/github.com/insolar/insolar
            go mod download
            make pre-build build
+        working-directory: $GOPATH/src/github.com/insolar/insolar
       - name: test_unit
         run: make test_unit
+        working-directory: $GOPATH/src/github.com/insolar/insolar
   test-slow:
     name: test-slow
     runs-on: ubuntu-latest
@@ -44,8 +45,9 @@ jobs:
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: test_prepare
         run: |
-           cd $GOPATH/src/github.com/insolar/insolar
            go mod download
            make pre-build build 
+        working-directory: $GOPATH/src/github.com/insolar/insolar
       - name: test_slow
         run: make test_slow
+        working-directory: $GOPATH/src/github.com/insolar/insolar
