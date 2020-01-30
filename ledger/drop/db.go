@@ -52,7 +52,7 @@ func newDropDbKey(raw []byte) dropDbKey {
 	return dk
 }
 
-// DB is a pulse.DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
+// DB is a drop.DB storage implementation. It saves drops to PostgreSQL and does not allow removal.
 type DB struct {
 	pool *pgxpool.Pool
 }
