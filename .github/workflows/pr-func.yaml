@@ -1,4 +1,3 @@
-runs-on: self-hosted
 name: pull_request_func
 on:
   pull_request:
@@ -9,6 +8,7 @@ env:
   GOPATH: /home/runner/work/insolar/insolar/go
 jobs:
   test-func:
+    runs-on: self-hosted
     name: test-func
     runs-on: ubuntu-latest
     steps:
