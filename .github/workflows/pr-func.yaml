@@ -1,5 +1,5 @@
 runs-on: self-hosted
-name: pull_request
+name: pull_request_func
 on:
   pull_request:
 env:
