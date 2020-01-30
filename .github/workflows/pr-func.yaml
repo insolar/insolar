@@ -5,7 +5,7 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
-  GOPATH: /home/runner/work/insolar/insolar/go
+  GOPATH: /home/admin/actions-runner/_work/insolar/go
 jobs:
   test-func:
     runs-on: self-hosted
@@ -21,11 +21,5 @@ jobs:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-      - name: test_prepare
-        run: |
-           go mod download
-           make pre-build build
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_func
-        run: make test_func
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: make build functest
