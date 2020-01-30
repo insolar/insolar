@@ -15,6 +15,8 @@
 package server
 
 import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/server/internal/heavy"
 	"github.com/insolar/insolar/server/internal/light"
 	"github.com/insolar/insolar/server/internal/virtual"
@@ -32,6 +34,12 @@ func NewHeavyServer(cfgPath string, gensisCfgPath string) Server {
 	return heavy.New(cfgPath, gensisCfgPath)
 }
 
-func NewVirtualServer(cfgPath string) Server {
-	return virtual.New(cfgPath)
+func NewVirtualServer(cfgPath string, codeRegistry map[string]insolar.ContractWrapper,
+	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
+	prototypeDescriptors []artifacts.PrototypeDescriptor) Server {
+	return virtual.New(cfgPath, codeRegistry,
+		codeRefRegistry,
+		codeDescriptors,
+		prototypeDescriptors,
+	)
 }

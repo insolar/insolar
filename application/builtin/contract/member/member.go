@@ -25,9 +25,9 @@ import (
 	"github.com/insolar/insolar/application/builtin/proxy/member"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/application/builtin/proxy/nodedomain"
-	"github.com/insolar/insolar/application/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/application/builtin/proxy/wallet"
+	"github.com/insolar/insolar/applicationbase/builtin/proxy/nodedomain"
+	"github.com/insolar/insolar/applicationbase/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )

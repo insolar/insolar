@@ -1,4 +1,5 @@
-// Copyright 2020 Insolar Network Ltd.
+///
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+///
 
 package rootdomain
 
@@ -19,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/builtin/proxy/pkshard"
+	"github.com/insolar/insolar/applicationbase/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )

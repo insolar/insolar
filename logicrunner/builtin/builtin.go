@@ -20,9 +20,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/insolar/insolar/applicationbase/builtin"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -52,22 +52,34 @@ type BuiltIn struct {
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
-	codeDescriptors := builtin.InitializeCodeDescriptors()
-	for _, codeDescriptor := range codeDescriptors {
+func NewBuiltIn(
+	am artifacts.Client, stub LogicRunnerRPCStub, codeRegistry map[string]insolar.ContractWrapper,
+	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
+	prototypeDescriptors []artifacts.PrototypeDescriptor,
+) *BuiltIn {
+	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), codeDescriptors...)
+	for _, codeDescriptor := range fullCodeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
-	for _, prototypeDescriptor := range prototypeDescriptors {
+	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), prototypeDescriptors...)
+	for _, prototypeDescriptor := range fullPrototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
+	fullCodeRefRegistry := builtin.InitializeCodeRefs()
+	for k, v := range codeRefRegistry {
+		fullCodeRefRegistry[k] = v
+	}
+	fullCodeRegistry := builtin.InitializeContractMethods()
+	for k, v := range codeRegistry {
+		fullCodeRegistry[k] = v
+	}
 	return &BuiltIn{
-		CodeRefRegistry: builtin.InitializeCodeRefs(),
-		CodeRegistry:    builtin.InitializeContractMethods(),
+		CodeRefRegistry: fullCodeRefRegistry,
+		CodeRegistry:    fullCodeRegistry,
 	}
 }
 

@@ -1,4 +1,5 @@
-// Copyright 2020 Insolar Network Ltd.
+///
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,14 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+///
 
 package nodedomain
 
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/application/appfoundation"
-	"github.com/insolar/insolar/application/builtin/proxy/noderecord"
+	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
@@ -38,7 +40,7 @@ func NewNodeDomain() (*NodeDomain, error) {
 
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
-	root := appfoundation.GetRootMember()
+	root := genesisrefs.ContractRootMember
 	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
 	}

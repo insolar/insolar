@@ -217,7 +217,11 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
 	}
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus, codeRegistry,
+		codeRefRegistry,
+		codeDescriptors,
+		prototypeDescriptors,
+	)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(
