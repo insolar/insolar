@@ -22,5 +22,7 @@ jobs:
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: test_func
-        run: make build functest
+        run: |
+          make build
+          make functest
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
