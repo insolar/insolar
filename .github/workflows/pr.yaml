@@ -25,7 +25,7 @@ jobs:
         run: |
            cd $GOPATH/src/github.com/insolar/insolar
            go mod download
-           make submodule pre-build build test_unit
+           make pre-build build test_unit
   test-slow:
     name: test-slow
     runs-on: ubuntu-latest
@@ -44,4 +44,4 @@ jobs:
         run: |
            cd $GOPATH/src/github.com/insolar/insolar
            go mod download
-           make submodule pre-build build test_slow
+           make pre-build build test_slow
