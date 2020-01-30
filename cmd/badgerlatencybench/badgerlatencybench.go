@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -28,10 +30,12 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 // data from task
@@ -60,8 +64,17 @@ var signature = gen.Signature(256)
 
 func writeRecord(ctx context.Context, db *object.RecordDB, pulseNumber insolar.PulseNumber) {
 	records := make([]record.Material, 0, recordRatio)
+	uniq := map[string]struct{}{}
 	for i := 0; i < recordRatio; i++ {
 		hash := <-idChan
+
+		hashStr := string(hash)
+		if _, ok := uniq[hashStr]; ok {
+			i--
+			continue
+		}
+		uniq[hashStr] = struct{}{}
+
 		id := insolar.NewID(pulseNumber, hash)
 		records = append(records, record.Material{ID: *id, Signature: signature})
 	}
@@ -69,30 +82,62 @@ func writeRecord(ctx context.Context, db *object.RecordDB, pulseNumber insolar.P
 	if err != nil {
 		panic(err)
 	}
+
+	stats.Record(ctx,
+		statNumRecords.M(int64(recordRatio)),
+	)
 }
 
 func writeIndex(ctx context.Context, db *object.IndexDB, pulseNumber insolar.PulseNumber, wg *sync.WaitGroup) {
+	uniq := map[string]struct{}{}
 	for i := 0; i < indexRatio; i++ {
 		hash := <-idChan
+
+		hashStr := string(hash)
+		if _, ok := uniq[hashStr]; ok {
+			i--
+			continue
+		}
+		uniq[hashStr] = struct{}{}
+
 		err := db.SetIndex(ctx, pulseNumber, record.Index{ObjID: *insolar.NewID(pulseNumber, hash)})
 		if err != nil {
 			panic(err)
 		}
 	}
+	stats.Record(ctx,
+		statNumIndexes.M(int64(indexRatio)),
+	)
+
 	wg.Done()
 }
 
 func writeDrop(ctx context.Context, db *drop.DB, pulseNumber insolar.PulseNumber, wg *sync.WaitGroup) {
 	numJets := 32
+	uniq := map[string]struct{}{}
 	for i := 0; i < numJets; i++ {
 		hash := <-idChan
+
+		jetID := insolar.NewJetID(uint8(len(hash)), hash)
+		jetPrefix := jetID.Prefix()
+		hashStr := string(jetPrefix)
+		if _, ok := uniq[hashStr]; ok {
+			//i--
+			continue
+		}
+		uniq[hashStr] = struct{}{}
+
 		err := db.Set(ctx, drop.Drop{Pulse: pulseNumber, JetID: *insolar.NewJetID(uint8(len(hash)), hash)})
 		if err != nil {
-			panic(err)
+			panic(err.Error() + ". pulse: " + pulseNumber.String())
 		}
 	}
 
-	wg.Done()
+	stats.Record(ctx,
+		statNumDrops.M(int64(numJets)),
+	)
+
+	//wg.Done()
 }
 
 var entropyGenerator = &entropygenerator.StandardEntropyGenerator{}
@@ -114,15 +159,33 @@ func makeNewPulse(newPulseNumber insolar.PulseNumber) *insolar.Pulse {
 
 func main() {
 
+	exp, err := insmetrics.RegisterPrometheus("my_prefix", nil, 1, nil, "HER")
+	if err != nil {
+		panic(err)
+
+	}
+
+	addr := ":5959"
+	http.Handle("/metrics", exp)
+
+	go func() {
+		http.ListenAndServe(addr, nil)
+	}()
+
 	globalStart := time.Now()
 	go genIDS()
 
 	ctx := context.Background()
-	bdb, err := store.NewBadgerDB(badger.DefaultOptions("/tmp/LATENCY_BADGER"))
+
+	path := "/tmp/LATENCY_BADGER"
+	err = os.RemoveAll(path)
+	if err != nil {
+		panic(err)
+	}
+	bdb, err := store.NewBadgerDB(badger.DefaultOptions(path))
 	if err != nil {
 		panic(errors.Wrap(err, "failed to open badger"))
 	}
-
 	defer bdb.Stop(ctx)
 
 	pulseDB := pulse.NewDB(bdb)
@@ -130,42 +193,60 @@ func main() {
 	indexDB := object.NewIndexDB(bdb, recordDB)
 	dropDB := drop.NewDB(bdb)
 
-	numIterations := numPulses / 1000 // write only 1/1000 part of oll data ( for tests )
+	numIterations := numPulses / 10 // write only 1/10 part of oll data ( for tests )
 
 	wg := &sync.WaitGroup{}
-	wg.Add(2 * numIterations)
+	wg.Add(numIterations)
 	for i := 0; i < numIterations; i++ {
-		if i%29 == 0 {
-			fmt.Println("iter: ", i)
-		}
-
 		start := time.Now()
 		nextPulseNumber := insolar.GenesisPulse.PulseNumber + (insolar.PulseNumber(i) * pulseDelta)
 		nextPulse := makeNewPulse(nextPulseNumber)
-		fmt.Printf("Make new pulse took %s\n", time.Since(start))
+		if i%29 == 0 {
+			fmt.Println("iter: ", i, ", pulse: ", nextPulse.PulseNumber.String())
+		}
+		//fmt.Printf("Make new pulse took %s\n", time.Since(start))
 
-		start = time.Now()
-		go writeDrop(ctx, dropDB, nextPulseNumber, wg)
-		fmt.Printf("writeDrop took %s\n", time.Since(start))
+		//start = time.Now()
+		writeDrop(ctx, dropDB, nextPulseNumber, wg)
+		//fmt.Printf("writeDrop took %s\n", time.Since(start))
 
-		start = time.Now()
-		go writeIndex(ctx, indexDB, nextPulseNumber, wg)
-		fmt.Printf("writeIndex took %s\n", time.Since(start))
+		//start = time.Now()
+		go func() {
+			writeIndex(ctx, indexDB, nextPulseNumber, wg)
+		}()
+		//fmt.Printf("writeIndex took %s\n", time.Since(start))
 
-		start = time.Now()
+		//start = time.Now()
 		writeRecord(ctx, recordDB, nextPulseNumber)
-		fmt.Printf("writeRecord took %s\n", time.Since(start))
+		//fmt.Printf("writeRecord took %s\n", time.Since(start))
 
-		start = time.Now()
+		//start = time.Now()
 		err = pulseDB.Append(ctx, *nextPulse)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Append took %s\n", time.Since(start))
-		fmt.Println(" ")
+
+		stats.Record(ctx,
+			statWholePulseWrite.M(time.Since(start).Nanoseconds()),
+		)
+		stats.Record(ctx,
+			statIter.M(1),
+		)
+
+		lsmSize, vlogSize := bdb.Backend().Size()
+
+		stats.Record(ctx,
+			statVlogSize.M(vlogSize),
+		)
+		stats.Record(ctx,
+			statLSMSize.M(lsmSize),
+		)
+
+		// fmt.Printf("Append took %s\n", time.Since(start))
+		// fmt.Println(" ")
 	}
 
-	wg.Wait()
+	//wg.Wait()
 
 	fmt.Printf("\nTotal time %s, number of iterations: %d\n", time.Since(globalStart), numIterations)
 }
