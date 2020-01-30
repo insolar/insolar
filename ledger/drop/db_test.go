@@ -14,25 +14,102 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package drop
 
 import (
 	"context"
-	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/stretchr/testify/assert"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/heavy/migration"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/tests/common"
 )
+
+var db *DB
+
+var (
+	poolLock     sync.Mutex
+	globalPgPool *pgxpool.Pool
+)
+
+func setPool(pool *pgxpool.Pool) {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	globalPgPool = pool
+}
+
+func getPool() *pgxpool.Pool {
+	poolLock.Lock()
+	defer poolLock.Unlock()
+	return globalPgPool
+}
+
+// TestMain does the before and after setup
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Info("[TestMain] About to start PostgreSQL...")
+	pgURL, stopPostgreSQL := common.StartPostgreSQL()
+	log.Info("[TestMain] PostgreSQL started!")
+
+	pool, err := pgxpool.Connect(ctx, pgURL)
+	if err != nil {
+		stopPostgreSQL()
+		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
+	}
+
+	migrationPath := "../../migration"
+	cwd, err := os.Getwd()
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
+	}
+	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
+	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
+	if err != nil {
+		stopPostgreSQL()
+		panic(errors.Wrap(err, "Unable to migrate database"))
+	}
+	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
+
+	setPool(pool)
+
+	// Run all tests
+	code := m.Run()
+
+	log.Info("[TestMain] Cleaning up...")
+	stopPostgreSQL()
+	os.Exit(code)
+}
+
+func cleanDropsTable() {
+	// We have to clean `drops` table between tests because gen.PulseNumber() doesn't
+	// return pulses in order which matters in our tests.  // TODO
+	ctx := context.Background()
+	conn, err := getPool().Acquire(ctx)
+	if err != nil {
+		panic("Unable to acquire a database connection")
+	}
+	defer conn.Release()
+
+	_, err = conn.Exec(ctx, "DELETE FROM drops CASCADE")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestDropDBKey(t *testing.T) {
 	t.Parallel()
@@ -46,57 +123,26 @@ func TestDropDBKey(t *testing.T) {
 	require.Equal(t, expectedKey, actualKey)
 }
 
-func TestNewStorageDB(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	dbStore := NewDB(db)
-	require.NotNil(t, dbStore)
-}
-
 type setInput struct {
 	jetID insolar.JetID
 	dr    Drop
 }
 
 func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
-	t.Parallel()
+	defer cleanDropsTable()
 
 	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
+	db := NewDB(getPool())
 
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	dropStore := NewDB(dbMock)
-
-	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
+	err := db.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
 	require.NoError(t, err)
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {
-	t.Parallel()
+	defer cleanDropsTable()
 
 	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	dropStore := NewDB(dbMock)
+	db := NewDB(getPool())
 
 	numElements := 10
 
@@ -116,41 +162,44 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 		jets[idx] = *insolar.NewJetID(uint8(idx), gen.ID().Bytes())
 
 		drop.JetID = jets[idx]
-		err := dropStore.Set(ctx, drop)
+		err := db.Set(ctx, drop)
 		require.NoError(t, err)
 
 		for i := 0; i < 3; i++ {
 			drop.JetID = *insolar.NewJetID(uint8(idx+i+50), gen.ID().Bytes())
-			err = dropStore.Set(ctx, drop)
+			err = db.Set(ctx, drop)
 			require.NoError(t, err)
 		}
 	}
 
 	for i := 0; i < numElements; i++ {
-		_, err := dropStore.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
+		_, err := db.ForPulse(ctx, jets[i], startPulseNumber+insolar.PulseNumber(i))
 		require.NoError(t, err)
 	}
 
 	numLeftElements := numElements / 2
-	err = dropStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	err := db.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
 		p := startPulseNumber + insolar.PulseNumber(i)
-		_, err := dropStore.ForPulse(ctx, jets[i], p)
+		_, err := db.ForPulse(ctx, jets[i], p)
 		require.NoError(t, err, "Pulse: ", p.String())
 	}
 
 	for i := numElements - 1; i >= numLeftElements; i-- {
 		p := startPulseNumber + insolar.PulseNumber(i)
-		_, err := dropStore.ForPulse(ctx, jets[i], p)
+		_, err := db.ForPulse(ctx, jets[i], p)
 		require.EqualError(t, err, ErrNotFound.Error(), "Pulse: ", p.String())
 	}
 }
 
 func TestDropStorageDB_Set(t *testing.T) {
+	defer cleanDropsTable()
 
 	ctx := inslogger.TestContext(t)
+	db := NewDB(getPool())
+
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
@@ -165,86 +214,64 @@ func TestDropStorageDB_Set(t *testing.T) {
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
 
-	dbMock := store.NewDBMock(t)
-	dbMock.SetMock.Set(func(p store.Key, p1 []byte) (r error) {
-		_, ok := encodedDrops[string(p1)]
-		require.Equal(t, true, ok)
-		return nil
-	})
-	dbMock.GetMock.Return(nil, ErrNotFound)
-
-	dropStore := NewDB(dbMock)
-
 	for _, inp := range inputs {
-		err := dropStore.Set(ctx, inp.dr)
+		err := db.Set(ctx, inp.dr)
 		require.NoError(t, err)
 	}
 }
 
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
+	defer cleanDropsTable()
+
 	ctx := inslogger.TestContext(t)
+	db := NewDB(getPool())
+
 	dr := Drop{
 		Pulse: gen.PulseNumber(),
 		JetID: gen.JetID(),
 	}
 
-	dbMock := store.NewDBMock(t)
-	dbMock.GetMock.Return(nil, nil)
+	err := db.Set(ctx, dr)
+	err = db.Set(ctx, dr)
 
-	dropStore := NewDB(dbMock)
-
-	err := dropStore.Set(ctx, dr)
-
-	require.Error(t, err, ErrNotFound)
+	require.Error(t, err)
+	require.Equal(t, ErrOverride, err)
 }
 
 func TestDropStorageDB_ForPulse(t *testing.T) {
+	defer cleanDropsTable()
+
 	ctx := inslogger.TestContext(t)
+	db := NewDB(getPool())
+
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 	dr := Drop{
-		Pulse: gen.PulseNumber(),
+		Pulse: pn,
+		JetID: jetID,
 	}
-	buf, err := dr.Marshal()
+
+	err := db.Set(ctx, dr)
 	require.NoError(t, err)
 
-	dbMock := store.NewDBMock(t)
-	dbMock.GetMock.Return(buf, nil)
-
-	dropStore := NewDB(dbMock)
-
-	resDr, err := dropStore.ForPulse(ctx, jetID, pn)
+	resDr, err := db.ForPulse(ctx, jetID, pn)
 
 	require.NoError(t, err)
 	require.Equal(t, dr, resDr)
+
 }
 
 func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
+	defer cleanDropsTable()
+
 	ctx := inslogger.TestContext(t)
+	db := NewDB(getPool())
+
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 
-	dbMock := store.NewDBMock(t)
-	dbMock.GetMock.Return(nil, ErrNotFound)
-
-	dropStore := NewDB(dbMock)
-
-	_, err := dropStore.ForPulse(ctx, jetID, pn)
-
-	require.Error(t, err, ErrNotFound)
-}
-
-func TestDropStorageDB_ForPulse_ProblemsWithDecoding(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	jetID := gen.JetID()
-	pn := gen.PulseNumber()
-
-	dbMock := store.NewDBMock(t)
-	dbMock.GetMock.Return([]byte{1, 2, 3}, nil)
-
-	dropStore := NewDB(dbMock)
-
-	_, err := dropStore.ForPulse(ctx, jetID, pn)
+	_, err := db.ForPulse(ctx, jetID, pn)
 
 	require.Error(t, err)
+	require.Equal(t, ErrNotFound, err)
 }

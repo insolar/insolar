@@ -14,34 +14,31 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package drop
 
 import (
-	"context"
-	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/insolar/store"
-	"github.com/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 // AALEKSEEV TODO rewrite
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
-
-	return ops
-}
+// func BadgerDefaultOptions(dir string) badger.Options {
+// 	ops := badger.DefaultOptions(dir)
+// 	ops.CompactL0OnClose = false
+// 	ops.SyncWrites = false
+//
+// 	return ops
+// }
 
 type jetPulse struct {
 	jetID insolar.JetID
@@ -90,16 +87,10 @@ func TestDropStorageMemory(t *testing.T) {
 }
 
 func TestDropStorageDB(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
+	defer cleanDropsTable()
 
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	ds := NewDB(db)
+	ctx := inslogger.TestContext(t)
+	db := NewDB(getPool())
 
 	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
@@ -116,29 +107,23 @@ func TestDropStorageDB(t *testing.T) {
 
 	// Add
 	for _, dr := range drops {
-		err := ds.Set(ctx, dr)
+		err := db.Set(ctx, dr)
 		require.NoError(t, err)
 	}
 
 	// Fetch
 	for inp := range genInputs {
-		_, err := ds.ForPulse(ctx, inp.jetID, inp.pn)
+		_, err := db.ForPulse(ctx, inp.jetID, inp.pn)
 		require.NoError(t, err)
 	}
 }
 
 func TestDropStorageCompare(t *testing.T) {
+	defer cleanDropsTable()
+
 	ctx := inslogger.TestContext(t)
 
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	ds := NewDB(db)
+	db := NewDB(getPool())
 	ms := NewStorageMemory()
 
 	var drops []Drop
@@ -157,7 +142,7 @@ func TestDropStorageCompare(t *testing.T) {
 
 	// Add
 	for _, dr := range drops {
-		err := ds.Set(ctx, dr)
+		err := db.Set(ctx, dr)
 		require.NoError(t, err)
 		err = ms.Set(ctx, dr)
 		require.NoError(t, err)
@@ -165,7 +150,7 @@ func TestDropStorageCompare(t *testing.T) {
 
 	// Fetch
 	for inp := range genInputs {
-		dbDrop, err := ds.ForPulse(ctx, inp.jetID, inp.pn)
+		dbDrop, err := db.ForPulse(ctx, inp.jetID, inp.pn)
 		require.NoError(t, err)
 
 		memDrop, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
