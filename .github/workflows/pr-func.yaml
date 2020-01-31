@@ -21,14 +21,6 @@ jobs:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-#      - name: test_unit
-#        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-#        run: |
-#          make test
-#      - name: test_slow
-#        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-#        run: |
-#          make test_slow
       - name: debug_info
         run: |
           echo '=== ID ==='
@@ -43,8 +35,15 @@ jobs:
           which go
           echo '=== DOCKER PS ==='
           docker ps
-      - name: test_func
-        run: |
-          make build
-          make functest
+      - name: test_unit
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          make test
+      - name: test_slow
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          make test_slow
+      - name: test_func
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          make functest
