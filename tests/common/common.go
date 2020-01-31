@@ -34,7 +34,8 @@ func StartPostgreSQL() (pgURL string, cleaner func()) {
 	}
 
 	resource, err := pool.Run(
-		"postgres", "11",
+		"postgres",
+		"11",
 		[]string{
 			"POSTGRES_DB=insolar",
 			"POSTGRES_PASSWORD=s3cr3t",
