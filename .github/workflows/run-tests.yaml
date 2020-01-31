@@ -7,7 +7,7 @@ env:
   INSOLAR_LOG_LEVEL: warn
   GOPATH: /home/admin/actions-runner/_work/insolar/go
 jobs:
-  test-unit:
+  run-all-tests:
     name: GitHub Actions Tests
     runs-on: self-hosted
     steps:
