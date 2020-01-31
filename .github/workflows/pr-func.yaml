@@ -31,6 +31,8 @@ jobs:
 #          make test_slow
       - name: debug_info
         run: |
+          echo '=== ID ==='
+          id
           echo '=== ENV ==='
           env
           echo '=== PWD ==='
@@ -39,6 +41,8 @@ jobs:
           ls -la
           echo '=== WHICH GO ==='
           which go
+          echo '=== DOCKER PS ==='
+          docker ps
       - name: test_func
         run: |
           make build
