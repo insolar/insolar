@@ -35,6 +35,10 @@ jobs:
           env
           echo '=== PWD ==='
           pwd
+          echo '=== LS ==='
+          ls -la
+          echo '=== WHICH GO ==='
+          which go
       - name: test_func
         run: |
           make build
