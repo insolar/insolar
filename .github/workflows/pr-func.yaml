@@ -16,20 +16,21 @@ jobs:
         with:
           path: go/src/github.com/insolar/insolar
       - name: set up go ${{env.GO_VERSION}}
-        uses: actions/setup-go@master
+        uses: actions/setup-go@v1
         with:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-      - name: test_unit
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-        run: |
-          make test
-      - name: test_slow
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-        run: |
-          make test_slow
+#      - name: test_unit
+#        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+#        run: |
+#          make test
+#      - name: test_slow
+#        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+#        run: |
+#          make test_slow
       - name: test_func
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
+          make build
           make functest
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
