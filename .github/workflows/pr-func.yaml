@@ -1,5 +1,4 @@
 name: insolar-on-push
-# on: [push]
 on:
   pull_request:
 env:
@@ -13,11 +12,11 @@ jobs:
     name: test-func
     steps:
       - name: checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
         with:
           path: go/src/github.com/insolar/insolar
       - name: set up go ${{env.GO_VERSION}}
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v2
         with:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
