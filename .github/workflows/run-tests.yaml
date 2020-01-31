@@ -1,4 +1,4 @@
-name: insolar-on-push
+name: run-tests
 on:
   pull_request:
 env:
@@ -7,9 +7,9 @@ env:
   INSOLAR_LOG_LEVEL: warn
   GOPATH: /home/admin/actions-runner/_work/insolar/go
 jobs:
-  test-func:
+  test-unit:
+    name: GitHub Actions Tests
     runs-on: self-hosted
-    name: test-func
     steps:
       - name: checkout code
         uses: actions/checkout@master
