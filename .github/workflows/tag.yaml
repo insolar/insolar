@@ -23,7 +23,7 @@ jobs:
         run: |
           docker build -t ${{ github.workflow }}:${{ steps.info.outputs.build_version }} --pull --build-arg "GOLANG_VERSION=${{env.GO_VERSION}}" --build-arg "BUILD_NUMBER=$GITHUB_RUN_NUMBER" --build-arg "BUILD_DATE=${{ steps.info.outputs.build_date }}" --build-arg "BUILD_TIME=${{ steps.info.outputs.build_time }}" --build-arg "BUILD_HASH=${{ steps.info.outputs.sha_short }}" --build-arg "BUILD_VERSION=${{ steps.info.outputs.build_version }}" .
           docker tag ${{ github.workflow }}:${{ steps.info.outputs.build_version }} ${{ github.workflow }}/${{ github.workflow }}:${{ steps.info.outputs.build_version }}
-          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} https://${{ secrets.REGISTRY_URL }}
+          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} ${{ secrets.REGISTRY_URL }}
           docker push ${{ github.workflow }}/${{ github.workflow }}:${{ steps.info.outputs.build_version }}
       - name: copy artifacts
         run: |
