@@ -459,8 +459,9 @@ func getMaterialRecord() record.Material {
 	virtRec := getVirtualRecord()
 
 	materialRecord := record.Material{
-		Virtual: virtRec,
-		JetID:   gen.JetID(),
+		Virtual:   virtRec,
+		JetID:     gen.JetID(),
+		Signature: []byte{1, 2, 3},
 	}
 
 	return materialRecord
@@ -541,7 +542,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(1), resRecord.RecordNumber)
 		require.Equal(t, firstID, resRecord.Record.ID)
-		//require.Equal(t, firstRec, resRecord.Record) // AALEKSEEV TODO fixme
+		require.Equal(t, firstRec, resRecord.Record)
 	})
 
 	t.Run("export 1 of 3. second pulse", func(t *testing.T) {
@@ -563,7 +564,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, secondPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(1), resRecord.RecordNumber)
 		require.Equal(t, thirdID, resRecord.Record.ID)
-		// require.Equal(t, thirdRec, resRecord.Record) // AALEKSEEV TODO fixme
+		require.Equal(t, thirdRec, resRecord.Record)
 	})
 
 	t.Run("export 3 of 3. first pulse", func(t *testing.T) {
@@ -617,7 +618,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
 		require.Equal(t, uint32(2), resRecord.RecordNumber)
 		require.Equal(t, secondID, resRecord.Record.ID)
-		// require.Equal(t, secondRec, resRecord.Record) // AALEKSEEV TODO FIXME
+		require.Equal(t, secondRec, resRecord.Record)
 	})
 
 	t.Run("context.Canceled error", func(t *testing.T) {
