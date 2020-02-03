@@ -227,6 +227,31 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
+		checkPassed := false
+		row := tx.QueryRow(ctx, "SELECT v FROM key_value WHERE k = 'last_insert_pulse'")
+		lastPulseSlice := make([]byte, 128)
+		err = row.Scan(&lastPulseSlice)
+		if err == pgx.ErrNoRows {
+			// there was no previous pulse
+			checkPassed = true
+		} else if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to SELECT last_insert_pulse")
+		} else {
+			var lastPulse insolar.PulseNumber
+			err = lastPulse.Unmarshal(lastPulseSlice)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return errors.Wrap(err, "Unable to unmarshal last_insert_pulse")
+			}
+			checkPassed = pulse.PulseNumber > lastPulse
+		}
+
+		if !checkPassed {
+			_ = tx.Rollback(ctx)
+			return ErrBadPulse
+		}
+
 		_, err = tx.Exec(ctx, `
 			INSERT INTO pulses(pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -251,6 +276,20 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 				_ = tx.Rollback(ctx)
 				return errors.Wrap(err, "Unable to INSERT pulse_sign")
 			}
+		}
+
+		_, err = pulse.PulseNumber.MarshalTo(lastPulseSlice)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to marshal pulse.PulseNumber")
+		}
+		_, err = tx.Exec(ctx, `
+			INSERT INTO key_value(k, v) VALUES ('last_insert_pulse', $1)
+			ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v
+		`, lastPulseSlice)
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			return errors.Wrap(err, "Unable to INSERT last_insert_pulse")
 		}
 
 		err = tx.Commit(ctx)

@@ -1,3 +1,8 @@
+CREATE TABLE key_value (
+    k varchar(256) primary key,
+    v bytea not null
+);
+
 create table pulses(
   pulse_number bigint primary key,
   prev_pn bigint not null,
@@ -16,5 +21,6 @@ create table pulse_signs(
   primary key(pulse_number, chosen_public_key)
 );
 ---- create above / drop below ----
+DROP TABLE key_value;
 DROP TABLE pulse_signs;
 DROP TABLE pulses;
