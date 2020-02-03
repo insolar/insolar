@@ -5,7 +5,7 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
-  GOPATH: /home/admin/actions-runner/_work/insolar/insolar/go
+  GOPATH: /home/admin/actions-runner/_work/insolar/go
 jobs:
   test-func:
     runs-on: self-hosted
