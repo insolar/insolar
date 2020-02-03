@@ -819,68 +819,58 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 
 }
 
-// AALEKSEEV TODO re-enable test
-//func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
-//
-//	ctx := inslogger.TestContext(t)
-//
-//	// Pulses
-//	firstPN := insolar.PulseNumber(pulse.MinTimePulse + 100)
-//	secondPN := insolar.PulseNumber(firstPN + 10)
-//
-//	// JetKeeper
-//	jetKeeper := executor.NewJetKeeperMock(t)
-//	jetKeeper.TopSyncPulseMock.Return(secondPN)
-//	// TempDB
-//	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-//	defer os.RemoveAll(tmpdir)
-//	require.NoError(t, err)
-//
-//	ops := BadgerDefaultOptions(tmpdir)
-//	db, err := store.NewBadgerDB(ops)
-//	require.NoError(t, err)
-//	defer db.Stop(context.Background())
-//
-//	pulseStorage := insolarPulse.NewDB(db)
-//	recordStorage := object.NewRecordDB(db)
-//	recordPosition := object.NewRecordDB(db)
-//
-//	// Pulses
-//
-//	// Trash pulses without data
-//	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
-//	require.NoError(t, err)
-//	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
-//	require.NoError(t, err)
-//	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 20})
-//	require.NoError(t, err)
-//
-//	// LegalInfo
-//	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: firstPN})
-//	require.NoError(t, err)
-//	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
-//	require.NoError(t, err)
-//
-//	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
-//
-//	t.Run("calling for pulse with empty pulses after returns the last pulse", func(t *testing.T) {
-//		var recs []*Record
-//		streamMock := &streamMock{checker: func(i *Record) error {
-//			recs = append(recs, i)
-//			return nil
-//		}}
-//
-//		err := recordServer.Export(&GetRecords{
-//			PulseNumber:  pulse.MinTimePulse,
-//			RecordNumber: 1,
-//			Count:        1,
-//		}, streamMock)
-//		require.NoError(t, err)
-//		require.Equal(t, 1, len(recs))
-//
-//		resRecord := recs[0]
-//		require.NotNil(t, resRecord.ShouldIterateFrom)
-//		require.NotNil(t, secondPN, *resRecord.ShouldIterateFrom)
-//	})
-//
-//}
+func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
+	defer cleanupDatabase()
+	ctx := inslogger.TestContext(t)
+
+	// Pulses
+	firstPN := insolar.PulseNumber(pulse.MinTimePulse + 100)
+	secondPN := insolar.PulseNumber(firstPN + 10)
+
+	// JetKeeper
+	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper.TopSyncPulseMock.Return(secondPN)
+
+	pulseStorage := insolarPulse.NewDB(getPool())
+	recordStorage := object.NewRecordDB(getPool())
+	recordPosition := object.NewRecordDB(getPool())
+
+	// Pulses
+
+	// Trash pulses without data
+	err := pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 20})
+	require.NoError(t, err)
+
+	// LegalInfo
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: firstPN})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
+	require.NoError(t, err)
+
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
+
+	t.Run("calling for pulse with empty pulses after returns the last pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  pulse.MinTimePulse,
+			RecordNumber: 1,
+			Count:        1,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+
+		resRecord := recs[0]
+		require.NotNil(t, resRecord.ShouldIterateFrom)
+		require.NotNil(t, secondPN, *resRecord.ShouldIterateFrom)
+	})
+
+}
