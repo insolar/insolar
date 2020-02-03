@@ -20,10 +20,15 @@ package pulse
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"sort"
 	"sync"
 	"testing"
+
+	fuzz "github.com/google/gofuzz"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
@@ -256,72 +261,71 @@ func TestTruncateHead(t *testing.T) {
 	}
 }
 
-// AALEKSEEV TODO re-enable test
-//func TestPulse_Components(t *testing.T) {
-//	ctx := inslogger.TestContext(t)
-//
-//	memStorage := NewStorageMem()
-//	dbStorage := NewDB(getPool())
-//
-//	var pulses []insolar.Pulse
-//	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
-//		p.PulseNumber = gen.PulseNumber()
-//		p.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
-//		_, err := rand.Read(p.Entropy[:])
-//		require.NoError(t, err)
-//	})
-//	f.NilChance(0).NumElements(10, 20)
-//	f.Fuzz(&pulses)
-//
-//	var appended []insolar.Pulse
-//	latest := pulses[0]
-//	for i, p := range pulses {
-//		// Append appends if Pulse is greater.
-//		memErr := memStorage.Append(ctx, p)
-//		dbErr := dbStorage.Append(ctx, p)
-//		if p.PulseNumber <= latest.PulseNumber && i > 0 {
-//			assert.Equal(t, ErrBadPulse, memErr)
-//			assert.Equal(t, ErrBadPulse, dbErr)
-//			continue
-//		}
-//		latest = p
-//		appended = append(appended, p)
-//
-//		// Latest returns correct Pulse.
-//		memLatest, memErr := memStorage.Latest(ctx)
-//		dbLatest, dbErr := dbStorage.Latest(ctx)
-//		assert.NoError(t, memErr)
-//		assert.NoError(t, dbErr)
-//		assert.Equal(t, p, memLatest)
-//		assert.Equal(t, p, dbLatest)
-//
-//		// ForPulse returns correct value
-//		memForPulse, memErr := memStorage.ForPulseNumber(ctx, p.PulseNumber)
-//		dbForPulse, dbErr := dbStorage.ForPulseNumber(ctx, p.PulseNumber)
-//		assert.NoError(t, memErr)
-//		assert.NoError(t, dbErr)
-//		assert.Equal(t, p, memForPulse)
-//		assert.Equal(t, p, dbForPulse)
-//	}
-//
-//	// Forwards returns correct value.
-//	{
-//		steps := rand.Intn(len(appended))
-//		memPulse, memErr := memStorage.Forwards(ctx, appended[0].PulseNumber, steps)
-//		dbPulse, dbErr := dbStorage.Forwards(ctx, appended[0].PulseNumber, steps)
-//		assert.NoError(t, memErr)
-//		assert.NoError(t, dbErr)
-//		assert.Equal(t, appended[steps], memPulse)
-//		assert.Equal(t, appended[steps], dbPulse)
-//	}
-//	// Backwards returns correct value.
-//	{
-//		steps := rand.Intn(len(appended))
-//		memPulse, memErr := memStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
-//		dbPulse, dbErr := dbStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
-//		assert.NoError(t, memErr)
-//		assert.NoError(t, dbErr)
-//		assert.Equal(t, appended[len(appended)-steps-1], memPulse)
-//		assert.Equal(t, appended[len(appended)-steps-1], dbPulse)
-//	}
-//}
+func TestPulse_Components(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	memStorage := NewStorageMem()
+	dbStorage := NewDB(getPool())
+
+	var pulses []insolar.Pulse
+	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
+		p.PulseNumber = gen.PulseNumber()
+		p.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
+		_, err := rand.Read(p.Entropy[:])
+		require.NoError(t, err)
+	})
+	f.NilChance(0).NumElements(10, 20)
+	f.Fuzz(&pulses)
+
+	var appended []insolar.Pulse
+	latest := pulses[0]
+	for i, p := range pulses {
+		// Append appends if Pulse is greater.
+		memErr := memStorage.Append(ctx, p)
+		dbErr := dbStorage.Append(ctx, p)
+		if p.PulseNumber <= latest.PulseNumber && i > 0 {
+			assert.Equal(t, ErrBadPulse, memErr)
+			assert.Equal(t, ErrBadPulse, dbErr)
+			continue
+		}
+		latest = p
+		appended = append(appended, p)
+
+		// Latest returns correct Pulse.
+		memLatest, memErr := memStorage.Latest(ctx)
+		dbLatest, dbErr := dbStorage.Latest(ctx)
+		assert.NoError(t, memErr)
+		assert.NoError(t, dbErr)
+		assert.Equal(t, p, memLatest)
+		assert.Equal(t, p, dbLatest)
+
+		// ForPulse returns correct value
+		memForPulse, memErr := memStorage.ForPulseNumber(ctx, p.PulseNumber)
+		dbForPulse, dbErr := dbStorage.ForPulseNumber(ctx, p.PulseNumber)
+		assert.NoError(t, memErr)
+		assert.NoError(t, dbErr)
+		assert.Equal(t, p, memForPulse)
+		assert.Equal(t, p, dbForPulse)
+	}
+
+	// Forwards returns correct value.
+	{
+		steps := rand.Intn(len(appended))
+		memPulse, memErr := memStorage.Forwards(ctx, appended[0].PulseNumber, steps)
+		dbPulse, dbErr := dbStorage.Forwards(ctx, appended[0].PulseNumber, steps)
+		assert.NoError(t, memErr)
+		assert.NoError(t, dbErr)
+		assert.Equal(t, appended[steps], memPulse)
+		assert.Equal(t, appended[steps], dbPulse)
+	}
+	// Backwards returns correct value.
+	{
+		steps := rand.Intn(len(appended))
+		memPulse, memErr := memStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
+		dbPulse, dbErr := dbStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
+		assert.NoError(t, memErr)
+		assert.NoError(t, dbErr)
+		assert.Equal(t, appended[len(appended)-steps-1], memPulse)
+		assert.Equal(t, appended[len(appended)-steps-1], dbPulse)
+	}
+}
