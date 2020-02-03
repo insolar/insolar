@@ -15,7 +15,6 @@ PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
-BADGER = badger # AALEKSEEV TODO get rid of this
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
