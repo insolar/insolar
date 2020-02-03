@@ -93,7 +93,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func cleanDropsTable() {
+func cleanupDatabase() {
 	ctx := context.Background()
 	conn, err := getPool().Acquire(ctx)
 	if err != nil {
@@ -125,7 +125,7 @@ type setInput struct {
 }
 
 func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -135,7 +135,7 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 }
 
 func TestDropStorageDB_TruncateHead(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -191,7 +191,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 }
 
 func TestDropStorageDB_Set(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -217,7 +217,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 }
 
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -235,7 +235,7 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 }
 
 func TestDropStorageDB_ForPulse(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -258,7 +258,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 }
 
 func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())

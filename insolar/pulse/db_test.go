@@ -98,9 +98,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func cleanPulsesTable() {
-	// We have to clean `pulses` table between tests because gen.PulseNumber() doesn't
-	// return pulses in order which matters in our tests.
+func cleanupDatabase() {
 	ctx := context.Background()
 	conn, err := getPool().Acquire(ctx)
 	if err != nil {
@@ -148,7 +146,7 @@ func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insola
 }
 
 func TestWriteReadAndLatest(t *testing.T) {
-	defer cleanPulsesTable()
+	defer cleanupDatabase()
 
 	ctx := context.Background()
 	pn := gen.PulseNumber()
@@ -175,7 +173,7 @@ func TestWriteReadAndLatest(t *testing.T) {
 }
 
 func TestForwardsBackwards(t *testing.T) {
-	defer cleanPulsesTable()
+	defer cleanupDatabase()
 
 	ctx := context.Background()
 	db := NewDB(getPool())
@@ -218,7 +216,7 @@ func TestForwardsBackwards(t *testing.T) {
 }
 
 func TestTruncateHead(t *testing.T) {
-	defer cleanPulsesTable()
+	defer cleanupDatabase()
 
 	ctx := context.Background()
 	db := NewDB(getPool())

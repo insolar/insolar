@@ -77,7 +77,7 @@ func TestDropStorageMemory(t *testing.T) {
 }
 
 func TestDropStorageDB(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 	db := NewDB(getPool())
@@ -109,7 +109,7 @@ func TestDropStorageDB(t *testing.T) {
 }
 
 func TestDropStorageCompare(t *testing.T) {
-	defer cleanDropsTable()
+	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
 
