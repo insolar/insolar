@@ -1,8 +1,8 @@
 .. _basics:
 
-=====================
-Understanding Insolar
-=====================
+==================
+Understand Insolar
+==================
 
 Insolar aims to deliver an open and collaborative environment required to enable third-party companies to build and maintain templates and services, provide hardware capacities, and adapt services and functions to local practices and legal and regulatory requirements.
 

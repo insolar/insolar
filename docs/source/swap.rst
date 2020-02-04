@@ -1,7 +1,7 @@
 .. _swap:
 
-Swapping INS for XNS
-====================
+Swap INS for XNS
+================
 
 To swap your INS tokens to XNS coins and simultaneously migrate them from the Ethereum network to Insolar MainNet, go through the following steps:
 
