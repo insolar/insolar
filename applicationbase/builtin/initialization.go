@@ -22,8 +22,8 @@ package builtin
 import (
 	"github.com/pkg/errors"
 
-	nodedomain "github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
-	noderecord "github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
+	nodedomain "baseappp/nodedomain"
+	noderecord "baseappp/noderecord"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"

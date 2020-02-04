@@ -3,7 +3,9 @@ module github.com/insolar/insolar
 go 1.12
 
 require (
+	baseappp v0.0.0-00010101000000-000000000000
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
+	customappp v0.0.0-00010101000000-000000000000
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/ThreeDotsLabs/watermill v1.0.2
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -65,3 +67,7 @@ require (
 )
 
 replace github.com/insolar/insolar => ./
+
+replace customappp => ./application/builtin/contract
+
+replace baseappp => ./applicationbase/builtin/contract

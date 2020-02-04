@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"go/build"
 	"io"
 	"io/ioutil"
 	"os"
@@ -116,54 +115,6 @@ var (
 	rootProjectError error
 	rootProjectOnce  sync.Once
 )
-
-func getRootProjectDir() (string, error) {
-	rootProjectOnce.Do(func() {
-		gopath := build.Default.GOPATH
-		if gopath == "" {
-			rootProjectDir, rootProjectError = "", errors.New("GOPATH is not set")
-			return
-		}
-		contractsPath := ""
-		for _, p := range strings.Split(gopath, ":") {
-			contractsPath = path.Join(p, "src/github.com/insolar/insolar/")
-			_, err := os.Stat(contractsPath)
-			if err == nil {
-				rootProjectDir, rootProjectError = contractsPath, nil
-				return
-			}
-		}
-
-		rootProjectDir, rootProjectError = "", errors.New("Not found github.com/insolar/insolar in GOPATH")
-	})
-	return rootProjectDir, rootProjectError
-}
-
-func findImportPath(dir string) (string, error) {
-	// ImportPath: "github.com/insolar/insolar/" + contractDirPath[len(rootProjectDir)+1:],
-
-	projectRoot, err := getRootProjectDir()
-	if err != nil {
-		return "", err
-	}
-	return path.Join(projectRoot, "applicationbase", "builtin", dir), nil
-}
-
-// func getBuiltinContractDir(dir string) (string, error) {
-// 	projectRoot, err := getRootProjectDir()
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return path.Join(projectRoot, "applicationbase", "builtin", dir), nil
-// }
-
-// func getApplicationContractDir(dir string) (string, error) {
-// 	projectRoot, err := getRootProjectDir()
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return path.Join(projectRoot, "application", dir), nil
-// }
 
 func getAppropriateContractDir(machineType insolar.MachineType, dir string) string {
 	if machineType == insolar.MachineTypeBuiltin {
@@ -313,46 +264,50 @@ func main() {
 
 	var cmdGenerateBuiltins = &cobra.Command{
 		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
-		Short: "Build builtin proxy, wrappers and initializator. Example of dir path to builtin contracts: applicationbase/builtin",
+		Short: "Build builtin proxy, wrappers and initializator. Example of dir path to builtin contracts: applicationbase/builtin/contracts",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			var contractPath string
+			var contractsPath string
 			if path.IsAbs(args[0]) {
-				contractPath = args[0]
+				contractsPath = args[0]
 			} else {
 				dir, err := os.Getwd()
 				checkError(err)
-				contractPath = path.Join(dir, args[0])
+				contractsPath = path.Join(dir, args[0])
 			}
 
-			buildInPath := path.Join(contractPath, "..")
+			buildInPath := path.Join(contractsPath, "..")
 
-			fileList, err := ioutil.ReadDir(contractPath)
+			fileList, err := ioutil.ReadDir(contractsPath)
 			checkError(err)
 
 			contractList := make(preprocessor.ContractList, 0)
 
-			rootProjectDir, err := getRootProjectDir()
-			fmt.Println("root - ", rootProjectDir)
-			fmt.Println("buildInPath - ", buildInPath)
-			checkError(err)
-
 			// find all contracts in the folder
 			for _, file := range fileList {
 				if file.IsDir() {
-					contractDirPath := path.Join(contractPath, file.Name())
+					contractDirPath := path.Join(contractsPath, file.Name())
 
 					contractPath := findContractPath(contractDirPath)
-					fmt.Println("contractDirPath - ", contractDirPath)
 					if contractPath != nil {
 						parsedFile, err := preprocessor.ParseFile(*contractPath, insolar.MachineTypeBuiltin)
 						checkError(err)
+
+						var importPath string
+						// This if will be deleted after PENV-40
+						// For now we have two different directories with contracts, so generated files must contains different
+						// paths to this directories
+						if strings.Contains(contractDirPath, "applicationbase") {
+							importPath = path.Join("baseappp", file.Name())
+						} else {
+							importPath = path.Join("customappp", file.Name())
+						}
 
 						contract := preprocessor.ContractListEntry{
 							Name:       file.Name(),
 							Path:       *contractPath,
 							Parsed:     parsedFile,
-							ImportPath: "github.com/insolar/insolar/" + contractDirPath[len(rootProjectDir)+1:],
+							ImportPath: importPath,
 						}
 						contractList = append(contractList, contract)
 					}

@@ -1,5 +1,19 @@
+# baseappp v0.0.0-00010101000000-000000000000 => ./applicationbase/builtin/contract
+baseappp/nodedomain
+baseappp/noderecord
 # contrib.go.opencensus.io/exporter/prometheus v0.1.0
 contrib.go.opencensus.io/exporter/prometheus
+# customappp v0.0.0-00010101000000-000000000000 => ./application/builtin/contract
+customappp/account
+customappp/costcenter
+customappp/deposit
+customappp/member
+customappp/migrationadmin
+customappp/migrationdaemon
+customappp/migrationshard
+customappp/pkshard
+customappp/rootdomain
+customappp/wallet
 # github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96
 github.com/AndreasBriese/bbloom
 # github.com/ThreeDotsLabs/watermill v1.0.2
@@ -35,8 +49,6 @@ github.com/dgryski/go-farm
 github.com/dustin/go-humanize
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
-# github.com/fortytw2/leaktest v1.3.0
-github.com/fortytw2/leaktest
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
 # github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
@@ -139,21 +151,21 @@ github.com/insolar/go-actors/actor/mailbox
 github.com/insolar/rpc/v2
 github.com/insolar/rpc/v2/json2
 # github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
-github.com/insolar/x-crypto/ecdsa
-github.com/insolar/x-crypto/sha256
-github.com/insolar/x-crypto/x509
 github.com/insolar/x-crypto
+github.com/insolar/x-crypto/sha256
+github.com/insolar/x-crypto/ecdsa
+github.com/insolar/x-crypto/rand
 github.com/insolar/x-crypto/elliptic
+github.com/insolar/x-crypto/x509
 github.com/insolar/x-crypto/internal/randutil
 github.com/insolar/x-crypto/sha512
+github.com/insolar/x-crypto/rand/internal/unix
 github.com/insolar/x-crypto/dsa
 github.com/insolar/x-crypto/md5
 github.com/insolar/x-crypto/rsa
 github.com/insolar/x-crypto/sha1
 github.com/insolar/x-crypto/x509/pkix
-github.com/insolar/x-crypto/rand
 github.com/insolar/x-crypto/subtle
-github.com/insolar/x-crypto/rand/internal/unix
 # github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 github.com/jbenet/go-base58
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
@@ -288,9 +300,9 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 # golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
+golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-golang.org/x/sys/cpu
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
