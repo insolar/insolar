@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -261,18 +260,19 @@ func main() {
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
 	cmdImports.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
+	var (
+		importPath    string
+		contractsPath string
+	)
 	var cmdGenerateBuiltins = &cobra.Command{
-		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
-		Short: "Build builtin proxy, wrappers and initializator. Example of dir path to builtin contracts: applicationbase/builtin/contracts",
-		Args:  cobra.ExactArgs(1),
+		Use:   "regen-builtin",
+		Short: "Build builtin proxy, wrappers and initializator",
+		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			var contractsPath string
-			if path.IsAbs(args[0]) {
-				contractsPath = args[0]
-			} else {
+			if !path.IsAbs(contractsPath) {
 				dir, err := os.Getwd()
 				checkError(err)
-				contractsPath = path.Join(dir, args[0])
+				contractsPath = path.Join(dir, contractsPath)
 			}
 
 			buildInPath := path.Join(contractsPath, "..")
@@ -292,21 +292,11 @@ func main() {
 						parsedFile, err := preprocessor.ParseFile(*contractPath, insolar.MachineTypeBuiltin)
 						checkError(err)
 
-						var importPath string
-						// This if will be deleted after PENV-40
-						// For now we have two different directories with contracts, so generated files must contains different
-						// paths to this directories
-						if strings.Contains(contractDirPath, "applicationbase") {
-							importPath = path.Join("baseappp", file.Name())
-						} else {
-							importPath = path.Join("customappp", file.Name())
-						}
-
 						contract := preprocessor.ContractListEntry{
 							Name:       file.Name(),
 							Path:       *contractPath,
 							Parsed:     parsedFile,
-							ImportPath: importPath,
+							ImportPath: path.Join(importPath, file.Name()),
 						}
 						contractList = append(contractList, contract)
 					}
@@ -339,6 +329,10 @@ func main() {
 			checkError(err)
 		},
 	}
+	cmdGenerateBuiltins.Flags().StringVarP(
+		&importPath, "importPath", "i", "", "import path for builtin contracts, example: github.com/insolar/insolar/applicationbase/builtin/contract")
+	cmdGenerateBuiltins.Flags().StringVarP(
+		&contractsPath, "contractsPath", "c", "", "dir path to builtin contracts, example: applicationbase/builtin/contract")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(
