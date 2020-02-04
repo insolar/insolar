@@ -19,7 +19,6 @@ package nodedomain
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/applicationbase/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
@@ -40,11 +39,6 @@ func NewNodeDomain() (*NodeDomain, error) {
 
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
-	root := genesisrefs.ContractRootMember
-	if *nd.GetContext().Caller != root {
-		return "", fmt.Errorf("only root member can register node")
-	}
-
 	newNode := noderecord.NewNodeRecord(publicKey, role)
 	node, err := newNode.AsChild(nd.GetReference())
 	if err != nil {

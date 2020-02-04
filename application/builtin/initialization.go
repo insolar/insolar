@@ -29,6 +29,8 @@ import (
 	migrationadmin "github.com/insolar/insolar/application/builtin/contract/migrationadmin"
 	migrationdaemon "github.com/insolar/insolar/application/builtin/contract/migrationdaemon"
 	migrationshard "github.com/insolar/insolar/application/builtin/contract/migrationshard"
+	pkshard "github.com/insolar/insolar/application/builtin/contract/pkshard"
+	rootdomain "github.com/insolar/insolar/application/builtin/contract/rootdomain"
 	wallet "github.com/insolar/insolar/application/builtin/contract/wallet"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
@@ -44,6 +46,8 @@ func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 		"migrationadmin":  migrationadmin.Initialize(),
 		"migrationdaemon": migrationdaemon.Initialize(),
 		"migrationshard":  migrationshard.Initialize(),
+		"pkshard":         pkshard.Initialize(),
+		"rootdomain":      rootdomain.Initialize(),
 		"wallet":          wallet.Initialize(),
 	}
 }
@@ -57,7 +61,7 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 }
 
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
-	rv := make(map[XXX_insolar.Reference]string, 8)
+	rv := make(map[XXX_insolar.Reference]string, 10)
 
 	rv[shouldLoadRef("insolar:0AAABAtrxlP_Iiq10drn2FuNMs2VppatXni7MP5Iy47g.record")] = "account"
 	rv[shouldLoadRef("insolar:0AAABAt3ka4Zhm241MIue3ibjyPHXE0GONYHMDtJEMEs.record")] = "costcenter"
@@ -66,13 +70,15 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv[shouldLoadRef("insolar:0AAABAi0UBL8r3E8dtn66NJ-TcBoppzrRpp7JzKZOlLo.record")] = "migrationadmin"
 	rv[shouldLoadRef("insolar:0AAABAq4jEiQHkJX-GKVM5pIQhUVtBPKWrV08Ycf85SY.record")] = "migrationdaemon"
 	rv[shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")] = "migrationshard"
+	rv[shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")] = "pkshard"
+	rv[shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")] = "rootdomain"
 	rv[shouldLoadRef("insolar:0AAABAgNCLM5-bWKjwAzmla4KxnaQenrEahCeKXgwjOE.record")] = "wallet"
 
 	return rv
 }
 
 func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
-	rv := make(map[XXX_insolar.Reference]string, 8)
+	rv := make(map[XXX_insolar.Reference]string, 10)
 
 	rv[shouldLoadRef("insolar:0AAABAijqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")] = "account"
 	rv[shouldLoadRef("insolar:0AAABAiiIlRbDnHuBzCCo8E9V-kCUpb22kUkU2ebIsa8")] = "costcenter"
@@ -81,13 +87,15 @@ func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
 	rv[shouldLoadRef("insolar:0AAABAv4b40_lF0ivLCNhzPcq1hKkHWpRSaZCfZuPDUU")] = "migrationadmin"
 	rv[shouldLoadRef("insolar:0AAABAs7xI_AGLwMS4lHNeLrbXbog1tOZL4BQiV0FNLQ")] = "migrationdaemon"
 	rv[shouldLoadRef("insolar:0AAABAp-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")] = "migrationshard"
+	rv[shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")] = "pkshard"
+	rv[shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")] = "rootdomain"
 	rv[shouldLoadRef("insolar:0AAABAgfNy9VkTWQBamlz1DPbynRrVLzRtsRo-X2YI6U")] = "wallet"
 
 	return rv
 }
 
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
-	rv := make([]XXX_artifacts.CodeDescriptor, 0, 8)
+	rv := make([]XXX_artifacts.CodeDescriptor, 0, 10)
 
 	// account
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
@@ -131,6 +139,18 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record"),
 	))
+	// pkshard
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record"),
+	))
+	// rootdomain
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record"),
+	))
 	// wallet
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
@@ -142,7 +162,7 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 }
 
 func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
-	rv := make([]XXX_artifacts.PrototypeDescriptor, 0, 8)
+	rv := make([]XXX_artifacts.PrototypeDescriptor, 0, 10)
 
 	{ // account
 		pRef := shouldLoadRef("insolar:0AAABAijqpfzqLqOhivOFDQOK5OO_gW78OzTTniCChIU")
@@ -207,6 +227,26 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	{ // migrationshard
 		pRef := shouldLoadRef("insolar:0AAABAp-wD4rEsoVt39uIJ6CdqepSCnt5xmwZcs4Twjw")
 		cRef := shouldLoadRef("insolar:0AAABAi9NXoKZFkG1sIUjNtX1lLdr2v57Ej22q3SAEbw.record")
+		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.GetLocal(),
+			/* code:         */ cRef,
+		))
+	}
+
+	{ // pkshard
+		pRef := shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
+		cRef := shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")
+		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.GetLocal(),
+			/* code:         */ cRef,
+		))
+	}
+
+	{ // rootdomain
+		pRef := shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")
+		cRef := shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),

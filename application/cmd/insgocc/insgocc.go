@@ -139,27 +139,37 @@ func getRootProjectDir() (string, error) {
 	return rootProjectDir, rootProjectError
 }
 
-func getBuiltinContractDir(dir string) (string, error) {
+func findImportPath(dir string) (string, error) {
+	// ImportPath: "github.com/insolar/insolar/" + contractDirPath[len(rootProjectDir)+1:],
+
 	projectRoot, err := getRootProjectDir()
 	if err != nil {
 		return "", err
 	}
-	return path.Join(projectRoot, "application", "builtin", dir), nil
+	return path.Join(projectRoot, "applicationbase", "builtin", dir), nil
 }
 
-func getApplicationContractDir(dir string) (string, error) {
-	projectRoot, err := getRootProjectDir()
-	if err != nil {
-		return "", err
-	}
-	return path.Join(projectRoot, "application", dir), nil
-}
+// func getBuiltinContractDir(dir string) (string, error) {
+// 	projectRoot, err := getRootProjectDir()
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return path.Join(projectRoot, "applicationbase", "builtin", dir), nil
+// }
 
-func getAppropriateContractDir(machineType insolar.MachineType, dir string) (string, error) {
+// func getApplicationContractDir(dir string) (string, error) {
+// 	projectRoot, err := getRootProjectDir()
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return path.Join(projectRoot, "application", dir), nil
+// }
+
+func getAppropriateContractDir(machineType insolar.MachineType, dir string) string {
 	if machineType == insolar.MachineTypeBuiltin {
-		return getBuiltinContractDir(dir)
+		return path.Join(dir, "proxy")
 	} else if machineType == insolar.MachineTypeGoPlugin {
-		return getApplicationContractDir(dir)
+		return path.Join(dir, "..", "proxy")
 	}
 	panic("unreachable")
 }
@@ -183,13 +193,12 @@ func mkdirIfNotExists(pathParts ...string) (string, error) {
 
 func openDefaultProxyPath(proxyOut *outputFlag,
 	machineType insolar.MachineType,
-	parsed *preprocessor.ParsedFile) error {
+	parsed *preprocessor.ParsedFile,
+	dir string) error {
 
-	p, err := getAppropriateContractDir(machineType, "proxy")
-	if err != nil {
-		return err
-	}
+	p := getAppropriateContractDir(machineType, dir)
 
+	fmt.Println("p - ", p)
 	proxyPackage, err := parsed.ProxyPackageName()
 	if err != nil {
 		return err
@@ -208,18 +217,9 @@ func openDefaultProxyPath(proxyOut *outputFlag,
 	return nil
 }
 
-func openDefaultInitializationPath(output *outputFlag) error {
-	initPath, err := getBuiltinContractDir("")
-	if err != nil {
-		return err
-	}
-
-	err = output.SetJoin(initPath, "initialization.go")
-	if err != nil {
-		return err
-	}
-
-	return nil
+func openDefaultInitializationPath(output *outputFlag, initPath string) error {
+	err := output.SetJoin(initPath, "initialization.go")
+	return err
 }
 
 func checkError(err error) {
@@ -259,7 +259,7 @@ func main() {
 			}
 
 			if proxyOut.String() == "" {
-				err = openDefaultProxyPath(proxyOut, machineType.Value(), parsed)
+				err = openDefaultProxyPath(proxyOut, machineType.Value(), parsed, "")
 				checkError(err)
 			}
 
@@ -313,11 +313,19 @@ func main() {
 
 	var cmdGenerateBuiltins = &cobra.Command{
 		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
-		Short: "Build builtin proxy, wrappers and initializator",
-		Args:  cobra.ExactArgs(0),
+		Short: "Build builtin proxy, wrappers and initializator. Example of dir path to builtin contracts: applicationbase/builtin",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			contractPath, err := getBuiltinContractDir("contract")
-			checkError(err)
+			var contractPath string
+			if path.IsAbs(args[0]) {
+				contractPath = args[0]
+			} else {
+				dir, err := os.Getwd()
+				checkError(err)
+				contractPath = path.Join(dir, args[0])
+			}
+
+			buildInPath := path.Join(contractPath, "..")
 
 			fileList, err := ioutil.ReadDir(contractPath)
 			checkError(err)
@@ -325,6 +333,8 @@ func main() {
 			contractList := make(preprocessor.ContractList, 0)
 
 			rootProjectDir, err := getRootProjectDir()
+			fmt.Println("root - ", rootProjectDir)
+			fmt.Println("buildInPath - ", buildInPath)
 			checkError(err)
 
 			// find all contracts in the folder
@@ -333,6 +343,7 @@ func main() {
 					contractDirPath := path.Join(contractPath, file.Name())
 
 					contractPath := findContractPath(contractDirPath)
+					fmt.Println("contractDirPath - ", contractDirPath)
 					if contractPath != nil {
 						parsedFile, err := preprocessor.ParseFile(*contractPath, insolar.MachineTypeBuiltin)
 						checkError(err)
@@ -351,7 +362,8 @@ func main() {
 			for _, contract := range contractList {
 				/* write proxy */
 				output := newOutputFlag("")
-				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
+				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed, buildInPath)
+				fmt.Println(output.path)
 				checkError(err)
 				reference := genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
@@ -367,7 +379,7 @@ func main() {
 
 			// write include contract + write initialization function
 			initializeOutput := newOutputFlag("")
-			err = openDefaultInitializationPath(initializeOutput)
+			err = openDefaultInitializationPath(initializeOutput, buildInPath)
 			checkError(err)
 
 			err = preprocessor.GenerateInitializationList(initializeOutput.writer, contractList)

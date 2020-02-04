@@ -24,8 +24,6 @@ import (
 
 	nodedomain "github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 	noderecord "github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
-	pkshard "github.com/insolar/insolar/applicationbase/builtin/contract/pkshard"
-	rootdomain "github.com/insolar/insolar/applicationbase/builtin/contract/rootdomain"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
@@ -35,8 +33,6 @@ func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 	return map[string]XXX_insolar.ContractWrapper{
 		"nodedomain": nodedomain.Initialize(),
 		"noderecord": noderecord.Initialize(),
-		"pkshard":    pkshard.Initialize(),
-		"rootdomain": rootdomain.Initialize(),
 	}
 }
 
@@ -49,29 +45,25 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 }
 
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
-	rv := make(map[XXX_insolar.Reference]string, 4)
+	rv := make(map[XXX_insolar.Reference]string, 2)
 
 	rv[shouldLoadRef("insolar:0AAABAq5GWKE7v1W8gHxS2BzsokOe1vgl-WaKyOMLQhs.record")] = "nodedomain"
 	rv[shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")] = "noderecord"
-	rv[shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")] = "pkshard"
-	rv[shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")] = "rootdomain"
 
 	return rv
 }
 
 func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
-	rv := make(map[XXX_insolar.Reference]string, 4)
+	rv := make(map[XXX_insolar.Reference]string, 2)
 
 	rv[shouldLoadRef("insolar:0AAABAkocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")] = "nodedomain"
 	rv[shouldLoadRef("insolar:0AAABAgXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")] = "noderecord"
-	rv[shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")] = "pkshard"
-	rv[shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")] = "rootdomain"
 
 	return rv
 }
 
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
-	rv := make([]XXX_artifacts.CodeDescriptor, 0, 4)
+	rv := make([]XXX_artifacts.CodeDescriptor, 0, 2)
 
 	// nodedomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
@@ -85,24 +77,12 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record"),
 	))
-	// pkshard
-	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
-		/* code:        */ nil,
-		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record"),
-	))
-	// rootdomain
-	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
-		/* code:        */ nil,
-		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record"),
-	))
 
 	return rv
 }
 
 func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
-	rv := make([]XXX_artifacts.PrototypeDescriptor, 0, 4)
+	rv := make([]XXX_artifacts.PrototypeDescriptor, 0, 2)
 
 	{ // nodedomain
 		pRef := shouldLoadRef("insolar:0AAABAkocNP8SpY6g890ZsRwVOqLADBviGimy2cm_x60")
@@ -117,26 +97,6 @@ func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
 	{ // noderecord
 		pRef := shouldLoadRef("insolar:0AAABAgXJhmV8uwhpxIEfL7hqjD1wQUGg8SArUa0VOAc")
 		cRef := shouldLoadRef("insolar:0AAABAvLOOIFkH6ikCcIZLil_HvpvwXFMxHvvyDwq8ls.record")
-		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
-			/* head:         */ pRef,
-			/* state:        */ *pRef.GetLocal(),
-			/* code:         */ cRef,
-		))
-	}
-
-	{ // pkshard
-		pRef := shouldLoadRef("insolar:0AAABAiGN1L8F9gCH_keBaxOP4atp9fzLiIci7xOg-hs")
-		cRef := shouldLoadRef("insolar:0AAABAhxOSY2jr3NGP38lV6vd97RpEyJYZuuBkwCcykA.record")
-		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
-			/* head:         */ pRef,
-			/* state:        */ *pRef.GetLocal(),
-			/* code:         */ cRef,
-		))
-	}
-
-	{ // rootdomain
-		pRef := shouldLoadRef("insolar:0AAABAu9gOQ8PRiG_hT8l-hHXMXvc89IhJBemCzzAglQ")
-		cRef := shouldLoadRef("insolar:0AAABAiprNXjHYYuFbiGWyHqOhVd1kiZcuVJruipVv7s.record")
 		rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),

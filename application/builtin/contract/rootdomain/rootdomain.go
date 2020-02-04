@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/applicationbase/builtin/proxy/pkshard"
+	"github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
