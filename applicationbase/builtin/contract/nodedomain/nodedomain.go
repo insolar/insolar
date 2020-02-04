@@ -39,6 +39,16 @@ func NewNodeDomain() (*NodeDomain, error) {
 
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
+	canonicalKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
+
+	_, ok := nd.NodeIndexPublicKey[canonicalKey]
+	if ok {
+		return "", fmt.Errorf("node already exist with this public key: %s", publicKey)
+	}
+
 	newNode := noderecord.NewNodeRecord(publicKey, role)
 	node, err := newNode.AsChild(nd.GetReference())
 	if err != nil {
@@ -46,7 +56,8 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 	}
 
 	newNodeRef := node.GetReference().String()
-	nd.NodeIndexPublicKey[publicKey] = newNodeRef
+
+	nd.NodeIndexPublicKey[canonicalKey] = newNodeRef
 
 	return newNodeRef, err
 }
@@ -54,7 +65,11 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 // GetNodeRefByPublicKey returns node reference.
 // ins:immutable
 func (nd *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
-	nodeRef, ok := nd.NodeIndexPublicKey[publicKey]
+	canonicalKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
+	nodeRef, ok := nd.NodeIndexPublicKey[canonicalKey]
 	if !ok {
 		return "", fmt.Errorf("network node not found by public key: %s", publicKey)
 	}

@@ -1,5 +1,5 @@
 # 1) build step (approx local build time ~4m w/o cache)
-ARG GOLANG_VERSION=1.12.9
+ARG GOLANG_VERSION=1.12
 FROM golang:${GOLANG_VERSION} AS build
 
 ADD . /go/src/github.com/insolar/insolar
@@ -19,12 +19,10 @@ RUN BUILD_NUMBER=${BUILD_NUMBER} \
     BUILD_VERSION=${BUILD_VERSION} \
     make build
 
-# 2) Base image for running tests and binaries distribution images
-FROM golang:${GOLANG_VERSION}
+FROM debian:buster-slim
 WORKDIR /go/src/github.com/insolar/insolar
+RUN  set -eux; \
+     groupadd -r insolar --gid=999; \
+     useradd -r -g insolar --uid=999 --shell=/bin/bash insolar
+COPY --from=build /go/src/github.com/insolar/insolar/bin/insolar /go/src/github.com/insolar/insolar/bin/insolard /go/src/github.com/insolar/insolar/bin/keeperd /go/src/github.com/insolar/insolar/bin/pulsard /usr/local/bin/
 
-# tools for functest (launchnet)
-RUN RUN apt-get -y update && apt-get -y install jq lsof psmisc && apt-get clean
-
-COPY --from=build /go/src/github.com/insolar/insolar /go/src/github.com/insolar/insolar
-# It's ok to have binaries and sources because we need all this dependencies and environment for tests insgorund and running functest

@@ -59,7 +59,7 @@ func TestExtLog_ZerologCaller(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
+	assert.Regexp(t, "log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
@@ -81,7 +81,7 @@ func TestExtLog_ZerologCallerWithFunc(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
+	assert.Regexp(t, "log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 	assert.Equal(t, "TestExtLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
@@ -103,7 +103,7 @@ func TestExtLog_GlobalCaller(t *testing.T) {
 
 	s := b.String()
 	lf := logFields(t, []byte(s))
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Regexp(t, "log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 	assert.NotContains(t, s, "test2shouldNotBeThere")
 }
@@ -125,7 +125,7 @@ func TestExtLog_GlobalCallerWithFunc(t *testing.T) {
 
 	s := b.String()
 	lf := logFields(t, []byte(s))
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Regexp(t, "log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "TestExtLog_GlobalCallerWithFunc", lf.Func, "log contains func name")
 	assert.NotContains(t, s, "test2shouldNotBeThere")
 }

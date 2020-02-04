@@ -1,42 +1,113 @@
 .. Insolar documentation master file, created by
    sphinx-quickstart on Tue May 14 19:35:14 2019.
 
+.. raw:: html
+   :file: landing-page.html
+
 Insolar Documentation
 =====================
 
 Welcome to Insolar documentation.
 
-Insolar Platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily. Whether a minimum viable product or full-scale production software, Insolar builds and integrates applications for your enterprise's existing systems.
-
-Insolar’s vision is to facilitate seamless low friction interactions between companies by distributing trust, thus accelerating and opening up new opportunities for innovation and value creation.
+Explore Insolar technologies and MainNet API reference, run Insolar locally, or learn how to swap INS to XNS.
 
 .. _quick_start:
 
-Quick Start
-===========
+Start With a Guide
+------------------
 
-To take a deep dive into Insolar technologies, start with the :ref:`Understanding Insolar <basics>` section and take a look at the :ref:`Architecture <architecture>`.
+.. raw:: html
 
-To test token migration during the testing period of Insolar MainNet, go thought the :ref:`migration test steps <migration_test>`.
+   <div class="reduced-width">
 
-To integrate with Insolar, go through :ref:`step-by-step instructions <integration>`.
+.. rst-class:: column column2
 
-.. _toc:
+:ref:`Learn the basics <basics>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Table of Contents
-=================
+Understand Insolar.
+
+.. rst-class:: column column2
+
+:ref:`Explore the architecture <architecture>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Take a deep dive.
+
+.. rst-class:: column column2
+
+:ref:`Set up Insolar network locally <integration>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go through step-by-step instructions.
+
+.. rst-class:: row
+
+.. rst-class:: reg-text
+
+Explore the API
+---------------
+
+.. raw:: html
+
+   <div class="reduced-width">
+
+.. rst-class:: column column2
+
+`MainNet API <https://apidocs.insolar.io/platform/latest>`_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+API for creating members and transactions on the network.
+
+.. rst-class:: column column2
+
+`Observer API <https://apidocs.insolar.io/observer/latest>`_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+API for pulling information from the network in a read-only fashion.
+
+.. rst-class:: row
+
+.. rst-class:: reg-text
+
+Swap INS to XNS
+---------------
+
+.. raw:: html
+
+   <div class="reduced-width">
+
+.. rst-class:: column column2
+
+:ref:`Test the swap <migration_test>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the TestNet.
+
+.. rst-class:: column column2
+
+:ref:`Perform the swap <swap>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the MainNet.
 
 .. toctree::
-   :maxdepth: 2
+   :hidden:
    :caption: Overview
 
    basics
    architecture
    glossary
- 
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Integration
+   :hidden:
+   :caption: Setup
+
+   integration
+
+.. toctree::
+   :hidden:
+   :caption: User Guides
 
    migration-test
-   integration
+   swap

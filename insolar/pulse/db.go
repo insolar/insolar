@@ -107,7 +107,7 @@ func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) 
 	return
 }
 
-// TruncateHead remove all records after lastPulse
+// TruncateHead remove all records starting with 'from'
 func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	var hasKeys bool
 	for {

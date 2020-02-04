@@ -38,7 +38,7 @@ var (
 	statBackupTime = stats.Int64(
 		"backup_time",
 		"duration backup process",
-		"s",
+		"ns",
 	)
 
 	statBadgerValueGCTime = stats.Int64(

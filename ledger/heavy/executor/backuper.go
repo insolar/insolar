@@ -310,6 +310,7 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 	return nil
 }
 
+// TruncateHead remove all records starting with 'from'
 func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()

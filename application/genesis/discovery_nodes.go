@@ -114,7 +114,12 @@ func (nm *DiscoveryNodeManager) addDiscoveryNodes(
 			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord nodeInfo instance")
 		}
 
-		indexMap[n.key] = contract.String()
+		canonicalKey, err := foundation.ExtractCanonicalPublicKey(n.key)
+		if err != nil {
+			return nil, errors.Wrapf(err, "extracting canonical pk failed, current value %v", n.key)
+		}
+
+		indexMap[canonicalKey] = contract.String()
 	}
 	return indexMap, nil
 }
