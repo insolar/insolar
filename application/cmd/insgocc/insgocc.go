@@ -149,7 +149,6 @@ func openDefaultProxyPath(proxyOut *outputFlag,
 
 	p := getAppropriateContractDir(machineType, dir)
 
-	fmt.Println("p - ", p)
 	proxyPackage, err := parsed.ProxyPackageName()
 	if err != nil {
 		return err
@@ -318,7 +317,6 @@ func main() {
 				/* write proxy */
 				output := newOutputFlag("")
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed, buildInPath)
-				fmt.Println(output.path)
 				checkError(err)
 				reference := genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)

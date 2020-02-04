@@ -1,19 +1,5 @@
-# baseappp v0.0.0-00010101000000-000000000000 => ./applicationbase/builtin/contract
-baseappp/nodedomain
-baseappp/noderecord
 # contrib.go.opencensus.io/exporter/prometheus v0.1.0
 contrib.go.opencensus.io/exporter/prometheus
-# customappp v0.0.0-00010101000000-000000000000 => ./application/builtin/contract
-customappp/account
-customappp/costcenter
-customappp/deposit
-customappp/member
-customappp/migrationadmin
-customappp/migrationdaemon
-customappp/migrationshard
-customappp/pkshard
-customappp/rootdomain
-customappp/wallet
 # github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96
 github.com/AndreasBriese/bbloom
 # github.com/ThreeDotsLabs/watermill v1.0.2

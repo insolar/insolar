@@ -19,9 +19,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"baseappp/nodedomain"
-
-	"baseappp/noderecord"
+	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"

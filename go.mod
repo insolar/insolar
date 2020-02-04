@@ -3,9 +3,7 @@ module github.com/insolar/insolar
 go 1.12
 
 require (
-	baseappp v0.0.0-00010101000000-000000000000
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
-	customappp v0.0.0-00010101000000-000000000000
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/ThreeDotsLabs/watermill v1.0.2
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -25,7 +23,7 @@ require (
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 	github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
-	github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
+	github.com/insolar/x-crypto v0.0.0-00010101000000-000000000000
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
@@ -67,7 +65,3 @@ require (
 )
 
 replace github.com/insolar/insolar => ./
-
-replace customappp => ./application/builtin/contract
-
-replace baseappp => ./applicationbase/builtin/contract

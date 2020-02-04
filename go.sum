@@ -112,8 +112,6 @@ github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9 h1:476W50z1EA/U8
 github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9/go.mod h1:vh6gyvTJhKxCMROgV7ADLE1jS19NAd6gIaHCjHgVWKQ=
 github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f h1:ULc0JNaPBjv2yxucU06zkqoXtDgX5Xokb4Dv3iJAcsE=
 github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f/go.mod h1:BZcTsPtQu8QG8RqqQdAnuNAG8n6TOrdNxIHro0h99Ik=
-github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6 h1:WS4a7qw+P1pcnviyxyMTA/aR+T51wJok1IC9rJkHrTg=
-github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6/go.mod h1:9mvKFD2wFLEGmK8pNFIowmGRTjfyn3YHtr10s7DHpBY=
 github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6 h1:4zOlv2my+vf98jT1nQt4bT/yKWUImevYPJ2H344CloE=
 github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6/go.mod h1:r/8JmuR0qjuCiEhAolkfvdZgmPiHTnJaG0UXCSeR1Zo=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=

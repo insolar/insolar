@@ -17,21 +17,18 @@ package contracts
 import (
 	"fmt"
 
-	"customappp/account"
+	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 
-	"customappp/costcenter"
-
-	"customappp/deposit"
-
-	"customappp/member"
-	"customappp/migrationadmin"
-	"customappp/migrationdaemon"
-	"customappp/migrationshard"
-	"customappp/pkshard"
-	"customappp/rootdomain"
-	"customappp/wallet"
-
-	"baseappp/nodedomain"
+	"github.com/insolar/insolar/application/builtin/contract/account"
+	"github.com/insolar/insolar/application/builtin/contract/costcenter"
+	"github.com/insolar/insolar/application/builtin/contract/deposit"
+	"github.com/insolar/insolar/application/builtin/contract/member"
+	"github.com/insolar/insolar/application/builtin/contract/migrationadmin"
+	"github.com/insolar/insolar/application/builtin/contract/migrationdaemon"
+	"github.com/insolar/insolar/application/builtin/contract/migrationshard"
+	"github.com/insolar/insolar/application/builtin/contract/pkshard"
+	"github.com/insolar/insolar/application/builtin/contract/rootdomain"
+	"github.com/insolar/insolar/application/builtin/contract/wallet"
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/appfoundation"
