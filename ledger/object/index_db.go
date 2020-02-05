@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +11,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package object
 
 import (
+	"bytes"
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -31,72 +31,59 @@ import (
 
 // IndexDB is a db-based storage, that stores a collection of IndexBuckets
 type IndexDB struct {
-	pool        *pgxpool.Pool
-	recordStore *RecordDB
+	lock sync.RWMutex
+	db   store.DB
+
+	recordStore *PostgresRecordDB
+}
+
+type indexKey struct {
+	pn    insolar.PulseNumber
+	objID insolar.ID
+}
+
+func newIndexKey(raw []byte) indexKey {
+	ik := indexKey{}
+	ik.pn = insolar.NewPulseNumber(raw)
+	ik.objID = *insolar.NewIDFromBytes(raw[ik.pn.Size():])
+
+	return ik
+}
+
+func (k indexKey) Scope() store.Scope {
+	return store.ScopeIndex
+}
+
+func (k indexKey) ID() []byte {
+	return append(k.pn.Bytes(), k.objID.Bytes()...)
+}
+
+type lastKnownIndexPNKey struct {
+	objID insolar.ID
+}
+
+func (k lastKnownIndexPNKey) Scope() store.Scope {
+	return store.ScopeLastKnownIndexPN
+}
+
+func (k lastKnownIndexPNKey) ID() []byte {
+	id := k.objID
+	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
 // NewIndexDB creates a new instance of IndexDB
-func NewIndexDB(pool *pgxpool.Pool, records *RecordDB) *IndexDB {
-	return &IndexDB{pool: pool, recordStore: records}
+func NewIndexDB(db store.DB, recordStore *PostgresRecordDB) *IndexDB {
+	return &IndexDB{db: db, recordStore: recordStore}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
 func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
-	conn, err := i.pool.Acquire(ctx)
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	err := i.setBucket(pn, bucket.ObjID, &bucket)
 	if err != nil {
-		return errors.Wrap(err, "Unable to acquire a database connection")
-	}
-	defer conn.Release()
-
-	log := inslogger.FromContext(ctx)
-
-	for { // retry loop
-		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
-		if err != nil {
-			return errors.Wrap(err, "Unable to start a write transaction")
-		}
-
-		var pendingRecords [][]byte
-		for _, pr := range bucket.PendingRecords {
-			pendingRecords = append(pendingRecords, pr.Bytes())
-		}
-		var latestState []byte
-		if bucket.Lifeline.LatestState != nil {
-			latestState = bucket.Lifeline.LatestState.Bytes()
-		}
-		var latestRequest []byte
-		if bucket.Lifeline.LatestRequest != nil {
-			latestRequest = bucket.Lifeline.LatestRequest.Bytes()
-		}
-
-		_, err = tx.Exec(ctx, `
-			INSERT INTO indexes(object_id, pulse_number, lifeline_last_used, pending_records,
-				latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count)
-			VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			ON CONFLICT (object_id, pulse_number)
-			DO UPDATE SET 
-				lifeline_last_used = EXCLUDED.lifeline_last_used,
-				pending_records = EXCLUDED.pending_records,
-				latest_state = EXCLUDED.latest_state,
-				state_id = EXCLUDED.state_id,
-				parent = EXCLUDED.parent,
-				latest_request = EXCLUDED.latest_request,
-				earliest_open_request = EXCLUDED.earliest_open_request,
-				open_requests_count = EXCLUDED.open_requests_count
-		`, bucket.ObjID.Bytes(), pn, bucket.LifelineLastUsed, pendingRecords,
-			latestState, bucket.Lifeline.StateID, bucket.Lifeline.Parent.Bytes(),
-			latestRequest, bucket.Lifeline.EarliestOpenRequest, bucket.Lifeline.OpenRequestsCount)
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable to INSERT index")
-		}
-
-		err = tx.Commit(ctx)
-		if err == nil { // success
-			break
-		}
-
-		log.Infof("SetIndex - commit failed: %v - retrying transaction", err)
+		return err
 	}
 
 	stats.Record(ctx, statIndexesAddedCount.M(1))
@@ -107,398 +94,154 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 }
 
 // UpdateLastKnownPulse must be called after updating TopSyncPulse
-func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error {
-	log := inslogger.FromContext(ctx)
+func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 
-	conn, err := i.pool.Acquire(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Unable to acquire a database connection")
+	inslogger.FromContext(ctx).Info("UpdateLastKnownPulse starts. topSyncPulse: ", topSyncPulse)
+
+	indexes, err := i.ForPulse(ctx, topSyncPulse)
+	if err != nil && err != ErrIndexNotFound {
+		return errors.Wrapf(err, "failed to get indexes for pulse: %d", topSyncPulse)
 	}
-	defer conn.Release()
 
-	for { // retry loop
-		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
-		if err != nil {
-			return errors.Wrap(err, "Unable to start a write transaction")
-		}
-
-		rows, err := tx.Query(ctx, `
-		SELECT 
-			object_id
-		FROM indexes 
-		WHERE pulse_number = $1`, pn)
-		if err != nil {
-			_ = tx.Rollback(ctx)
-			return errors.Wrap(err, "Unable select from indexes for pn")
-
-		}
-
-		var rawIDs [][]byte
-		for rows.Next() {
-			var rawID []byte
-			err = rows.Scan(&rawID)
-			if err != nil {
-				log.Infof("failed to read index row: %v", err)
-				_ = tx.Rollback(ctx)
-				rows.Close()
-				return errors.Wrap(err, "failed to read from last_known_pulse_for_indexes")
-			}
-			rawIDs = append(rawIDs, rawID)
-		}
-		rows.Close()
-
-		for _, id := range rawIDs {
-			_, err := tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes
-										 VALUES($1, $2)
-										 ON CONFLICT (object_id, pulse_number)
-										 DO UPDATE
-											SET pulse_number = EXCLUDED.pulse_number`, id, pn)
-			if err != nil {
-				_ = tx.Rollback(ctx)
-				return errors.Wrap(err, "Unable to UPDATE last_known_pulse_for_indexes")
-			}
-		}
-
-		err = tx.Commit(ctx)
-		if err == nil {
-			break
+	for idx := range indexes {
+		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indexes[idx].ObjID.DebugString())
+		if err := i.setLastKnownPN(topSyncPulse, indexes[idx].ObjID); err != nil {
+			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indexes[idx].ObjID.DebugString(), topSyncPulse)
 		}
 	}
 
 	return nil
 }
 
-func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
-	log := inslogger.FromContext(ctx)
+// TruncateHead remove all records starting with 'from'
+func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 
-	conn, err := i.pool.Acquire(ctx)
-	if err != nil {
-		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
-	}
-	defer conn.Release()
+	it := i.db.NewIterator(&indexKey{objID: *insolar.NewID(pulse.MinTimePulse, nil), pn: from}, false)
+	defer it.Close()
 
-	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
-	if err != nil {
-		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
-	}
-
-	var objectID []byte
-	var pendingRecords [][]byte
-	var latestStateID []byte
-	var parent []byte
-	var latestRequest []byte
-	idx := record.Index{Lifeline: record.Lifeline{}}
-	row := tx.QueryRow(ctx, `
-		SELECT
-			object_id,
-			lifeline_last_used, 
-			pending_records, 
-			latest_state, 
-			state_id, 
-			parent, 
-			latest_request, 
-			earliest_open_request, 
-			open_requests_count
-		FROM indexes 
-		WHERE object_id=$1 AND pulse_number=$2`, objID.Bytes(), pn)
-	err = row.Scan(
-		&objectID,
-		&idx.LifelineLastUsed,
-		&pendingRecords,
-		&latestStateID,
-		&idx.Lifeline.StateID,
-		&parent,
-		&latestRequest,
-		&idx.Lifeline.EarliestOpenRequest,
-		&idx.Lifeline.OpenRequestsCount,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			idx, err = i.lastKnownForID(ctx, tx, objID)
-			if err != nil {
-				_ = tx.Rollback(ctx)
-				return record.Index{}, err
-			}
-			err = tx.Commit(ctx)
-			if err != nil {
-				return idx, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
-			}
-			return idx, nil
-		}
-
-		log.Infof("ForID: idx not found - %v", err)
-		_ = tx.Rollback(ctx)
-		return record.Index{}, ErrIndexNotFound
-	}
-
-	idx.ObjID = *insolar.NewIDFromBytes(objectID)
-
-	for _, pr := range pendingRecords {
-		idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(pr))
-	}
-
-	if len(latestStateID) > 0 {
-		idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestStateID)
-	}
-
-	idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
-
-	if len(latestRequest) > 0 {
-		idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return idx, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
-	}
-
-	return idx, nil
-}
-
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
-	log := inslogger.FromContext(ctx)
-
-	conn, err := i.pool.Acquire(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to acquire a database connection")
-	}
-	defer conn.Release()
-
-	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to start a read transaction")
-	}
-
-	rows, err := tx.Query(ctx, `
-		SELECT 
-			object_id,
-			lifeline_last_used, 
-			pending_records, 
-			latest_state,
-			state_id, 
-			parent, 
-			latest_request, 
-			earliest_open_request, 
-			open_requests_count
-		FROM indexes 
-		WHERE pulse_number = $1`, pn)
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		return nil, errors.Wrap(err, "Unable select from indexes for pn")
-
-	}
-	defer rows.Close()
-
-	var idxs []record.Index
-	for rows.Next() {
-		var id []byte
-		var pendingRecords [][]byte
-		var latestState []byte
-		var parent []byte
-		var latestRequest []byte
-
-		idx := record.Index{Lifeline: record.Lifeline{}}
-		err = rows.Scan(
-			&id,
-			&idx.LifelineLastUsed,
-			&pendingRecords,
-			&latestState,
-			&idx.Lifeline.StateID,
-			&parent,
-			&latestRequest,
-			&idx.Lifeline.EarliestOpenRequest,
-			&idx.Lifeline.OpenRequestsCount,
-		)
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := newIndexKey(it.Key())
+		err := i.db.Delete(&key)
 		if err != nil {
-			log.Infof("failed to read index row: %v", err)
-			_ = tx.Rollback(ctx)
-			return nil, errors.Wrap(err, "Unable select from indexes for pn")
+			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
 
-		idx.ObjID = *insolar.NewIDFromBytes(id)
-		for _, id := range pendingRecords {
-			idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(id))
-		}
-		if len(latestState) > 0 {
-			idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestState)
-		}
-		idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
-		if len(latestRequest) > 0 {
-			idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
-		}
-
-		idxs = append(idxs, idx)
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s. ObjectID: %s", key.pn.String(), key.objID.String())
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
 	}
 
-	if len(idxs) == 0 {
-		return nil, ErrIndexNotFound
-	}
-
-	return idxs, nil
+	return nil
 }
 
-func (i *IndexDB) lastKnownForID(ctx context.Context, tx pgx.Tx, objID insolar.ID) (record.Index, error) {
-	log := inslogger.FromContext(ctx)
-	var pn insolar.PulseNumber
-	row := tx.QueryRow(ctx, "SELECT pulse_number FROM last_known_pulse_for_indexes WHERE object_id=$1", objID.Bytes())
-	err := row.Scan(&pn)
-	if err != nil {
-		log.Infof("can't fetch pulse from last_known_pulse_for_indexes for id:%v err:%v", objID.DebugString(), err)
-		return record.Index{}, ErrIndexNotFound
-	}
+// ForID returns a lifeline from a bucket with provided PN and ObjID
+func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+	var buck *record.Index
+	buck, err := i.getBucket(pn, objID)
+	if err == ErrIndexNotFound {
+		lastPN, err := i.getLastKnownPN(objID)
+		if err != nil {
+			return record.Index{}, ErrIndexNotFound
+		}
 
-	var pendingRecords [][]byte
-	var latestStateID []byte
-	var parent []byte
-	var latestRequest []byte
-	idx := record.Index{Lifeline: record.Lifeline{}}
-
-	row = tx.QueryRow(ctx, `
-		SELECT 
-			lifeline_last_used, pending_records, latest_state, state_id, parent, latest_request, earliest_open_request, open_requests_count
-		FROM indexes 
-		WHERE object_id=$1 AND pulse_number=$2`, objID.Bytes(), pn)
-	err = row.Scan(
-		&idx.LifelineLastUsed,
-		&pendingRecords,
-		&latestStateID,
-		&idx.Lifeline.StateID,
-		&parent,
-		&latestRequest,
-		&idx.Lifeline.EarliestOpenRequest,
-		&idx.Lifeline.OpenRequestsCount,
-	)
-	if err != nil {
-		log.Infof("LastKnownForID: idx not found - %v", err)
-		return record.Index{}, ErrIndexNotFound
-	}
-
-	idx.ObjID = objID
-
-	for _, pr := range pendingRecords {
-		idx.PendingRecords = append(idx.PendingRecords, *insolar.NewIDFromBytes(pr))
-	}
-
-	if len(latestStateID) > 0 {
-		idx.Lifeline.LatestState = insolar.NewIDFromBytes(latestStateID)
-	}
-
-	idx.Lifeline.Parent = *insolar.NewReferenceFromBytes(parent)
-
-	if len(latestRequest) > 0 {
-		idx.Lifeline.LatestRequest = insolar.NewIDFromBytes(latestRequest)
-	}
-
-	return idx, nil
-}
-
-// LastKnownForID returns latest bucket for provided ID
-func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
-	conn, err := i.pool.Acquire(ctx)
-	if err != nil {
-		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
-	}
-	defer conn.Release()
-
-	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
-	if err != nil {
-		return record.Index{}, errors.Wrap(err, "Unable to start a read transaction")
-	}
-
-	idx, err := i.lastKnownForID(ctx, tx, objID)
-	if err != nil {
-		_ = tx.Rollback(ctx)
+		buck, err = i.getBucket(lastPN, objID)
+		if err != nil {
+			return record.Index{}, err
+		}
+	} else if err != nil {
 		return record.Index{}, err
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return record.Index{}, errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
-	}
-
-	return idx, nil
+	return *buck, nil
 }
 
-// TruncateHead remove all records >= 'from'
-func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	log := inslogger.FromContext(ctx)
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
+	indexes := make([]record.Index, 0)
 
-	conn, err := i.pool.Acquire(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Unable to acquire a database connection")
-	}
-	defer conn.Release()
+	key := &indexKey{objID: insolar.ID{}, pn: pn}
+	it := i.db.NewIterator(key, false)
+	defer it.Close()
 
-	for { // retry loop
-		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
-		if err != nil {
-			return errors.Wrap(err, "Unable to start a read transaction")
-		}
-
-		_, err = tx.Exec(ctx, "DELETE FROM last_known_pulse_for_indexes WHERE pulse_number >= $1", from)
-		if err != nil {
-			log.Infof("TruncateHead: pulse not found - %v", err)
-			_ = tx.Rollback(ctx)
-			return ErrNotFound
-		}
-
-		_, err = tx.Exec(ctx, "DELETE FROM indexes WHERE pulse_number >= $1", from)
-		if err != nil {
-			log.Infof("TruncateHead: pulse not found - %v", err)
-			_ = tx.Rollback(ctx)
-			return ErrNotFound
-		}
-
-		err = tx.Commit(ctx)
-		if err == nil {
+	for it.Next() {
+		rawKey := it.Key()
+		currentKey := newIndexKey(rawKey)
+		if currentKey.pn != pn {
 			break
 		}
 
-		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		index := record.Index{}
+		rawIndex, err := it.Value()
+		err = index.Unmarshal(rawIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "Can't unmarshal index")
+		}
+		indexes = append(indexes, index)
 	}
 
-	return nil
+	if len(indexes) == 0 {
+		return nil, ErrIndexNotFound
+	}
+
+	return indexes, nil
 }
 
-func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
-	currentPN := readFrom
-	var res []record.CompositeFilamentRecord
-
-	if readUntil > readFrom {
-		return nil, errors.New("readUntil can't be more then readFrom")
+func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
+	lastPN, err := i.getLastKnownPN(objID)
+	if err != nil {
+		return record.Index{}, ErrIndexNotFound
 	}
 
-	hasFilamentBehind := true
-	for hasFilamentBehind && currentPN >= readUntil {
-		b, err := i.ForID(ctx, currentPN, objID)
-		if err != nil {
-			return nil, err
-		}
-		if len(b.PendingRecords) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-
-		tempRes, err := i.filament(&b)
-		if err != nil {
-			return nil, err
-		}
-		if len(tempRes) == 0 {
-			return nil, errors.New("can't fetch pendings from index")
-		}
-		res = append(tempRes, res...)
-
-		hasFilamentBehind, currentPN, err = i.nextFilament(&b)
-		if err != nil {
-			return nil, err
-		}
+	idx, err := i.getBucket(lastPN, objID)
+	if err != nil {
+		return record.Index{}, err
 	}
 
-	return res, nil
+	return *idx, nil
+}
+
+func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
+	key := indexKey{pn: pn, objID: objID}
+
+	buff, err := bucket.Marshal()
+	if err != nil {
+		return err
+	}
+
+	return i.db.Set(key, buff)
+}
+
+func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.Index, error) {
+	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
+	if err == store.ErrNotFound {
+		return nil, ErrIndexNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	bucket := record.Index{}
+	err = bucket.Unmarshal(buff)
+	return &bucket, err
+}
+
+func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error {
+	key := lastKnownIndexPNKey{objID: objID}
+	return i.db.Set(key, pn.Bytes())
+}
+
+func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
+	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
+	if err != nil {
+		return pulse.MinTimePulse, err
+	}
+	return insolar.NewPulseNumber(buff), err
 }
 
 func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, error) {
@@ -537,4 +280,40 @@ func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insola
 	}
 
 	return false, insolar.PulseNumber(0), nil
+}
+
+func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+	currentPN := readFrom
+	var res []record.CompositeFilamentRecord
+
+	if readUntil > readFrom {
+		return nil, errors.New("readUntil can't be more then readFrom")
+	}
+
+	hasFilamentBehind := true
+	for hasFilamentBehind && currentPN >= readUntil {
+		b, err := i.getBucket(currentPN, objID)
+		if err != nil {
+			return nil, err
+		}
+		if len(b.PendingRecords) == 0 {
+			return nil, errors.New("can't fetch pendings from index")
+		}
+
+		tempRes, err := i.filament(b)
+		if err != nil {
+			return nil, err
+		}
+		if len(tempRes) == 0 {
+			return nil, errors.New("can't fetch pendings from index")
+		}
+		res = append(tempRes, res...)
+
+		hasFilamentBehind, currentPN, err = i.nextFilament(b)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
 }

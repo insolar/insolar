@@ -28,17 +28,17 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-// RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
-type RecordDB struct {
+// PostgresRecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
+type PostgresRecordDB struct {
 	pool *pgxpool.Pool
 }
 
-// NewRecordDB creates new DB storage instance.
-func NewRecordDB(pool *pgxpool.Pool) *RecordDB {
-	return &RecordDB{pool: pool}
+// NewPostgresRecordDB creates new DB storage instance.
+func NewPostgresRecordDB(pool *pgxpool.Pool) *PostgresRecordDB {
+	return &PostgresRecordDB{pool: pool}
 }
 
-func (r *RecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Material) error {
+func (r *PostgresRecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Material) error {
 	// Update the position for the pulse first
 	_, err := tx.Exec(ctx, `
 			INSERT INTO records_last_position (pulse_number, position)
@@ -80,7 +80,7 @@ func (r *RecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec record.Mater
 }
 
 // Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
+func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -105,14 +105,14 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 			break
 		}
 
-		log.Infof("RecordDB.Set - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresRecordDB.Set - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
 }
 
 // BatchSet saves a batch of records to storage with order-processing.
-func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
+func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -139,19 +139,19 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 			break
 		}
 
-		log.Infof("RecordDB.BatchSet - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresRecordDB.BatchSet - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
 }
 
 // get is legacy method used in index_db.go. Don't use it in the new code!
-func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
+func (r *PostgresRecordDB) get(id insolar.ID) (record.Material, error) {
 	return r.ForID(context.Background(), id)
 }
 
 // ForID returns record for provided id.
-func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
+func (r *PostgresRecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -226,7 +226,7 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Mate
 
 // AtPosition returns record ID for a specific pulse and a position
 // TODO optimize this. Actually user needs ID only to select the Record using .ForID method
-func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID insolar.ID, retErr error) {
+func (r *PostgresRecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID insolar.ID, retErr error) {
 	ctx := context.Background()
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
@@ -273,7 +273,7 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID in
 }
 
 // LastKnownPosition returns last known position of record in Pulse.
-func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32, retErr error) {
+func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32, retErr error) {
 	ctx := context.Background()
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
@@ -313,7 +313,7 @@ func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32
 }
 
 // TruncateHead remove all records >= from
-func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := r.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -342,7 +342,7 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 			break
 		}
 
-		log.Infof("RecordDB.TruncateHead - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresRecordDB.TruncateHead - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil

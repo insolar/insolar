@@ -1,4 +1,5 @@
-// Copyright 2020 Insolar Network Ltd.
+//
+// Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,73 +12,51 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+
+// +build slowtest
 
 package object
 
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
-
-	return ops
+func truncateIndexAndRecordTables() {
+	_, err := getPool().Exec(context.Background(),
+		"TRUNCATE last_known_pulse_for_indexes, indexes, records, records_last_position")
+	if err != nil {
+		panic(err)
+	}
 }
 
-const badgerIndexCount = 5
+const indexCount = 5
 
-func TestIndexKey(t *testing.T) {
-	t.Parallel()
-
-	testPulseNumber := insolar.GenesisPulse.PulseNumber
-	expectedKey := indexKey{objID: gen.ID(), pn: testPulseNumber}
-
-	rawID := expectedKey.ID()
-
-	actualKey := newIndexKey(rawID)
-	require.Equal(t, expectedKey, actualKey)
-}
-
-func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
-	t.Parallel()
+func TestPostgresIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 
 	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
 
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	indexStore := NewIndexDB(dbMock, nil)
+	indexStore := NewPostgresIndexDB(getPool(), nil)
 
 	testPulse := insolar.GenesisPulse.PulseNumber
 	nextPulse := testPulse + 1
 	bucket := record.Index{}
 	bucket.ObjID = gen.ID()
 
-	err = indexStore.SetIndex(ctx, testPulse, bucket)
+	err := indexStore.SetIndex(ctx, testPulse, bucket)
 	require.NoError(t, err)
 	_, err = indexStore.ForID(ctx, testPulse, bucket.ObjID)
 	require.NoError(t, err)
@@ -99,26 +78,18 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	_, err = indexStore.ForID(ctx, nextPulse+1, bucket.ObjID)
 	require.EqualError(t, err, ErrIndexNotFound.Error())
 
-	indexStore.UpdateLastKnownPulse(ctx, testPulse)
+	err = indexStore.UpdateLastKnownPulse(ctx, testPulse)
+	require.NoError(t, err)
 	_, err = indexStore.ForID(ctx, testPulse+2, bucket.ObjID)
 	require.NoError(t, err)
 }
 
-func TestIndexDB_TruncateHead(t *testing.T) {
-	t.Parallel()
+func TestPostgresIndexDB_TruncateHead(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 
 	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
 
-	ops := BadgerDefaultOptions(tmpdir)
-	dbMock, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	indexStore := NewIndexDB(dbMock, NewPostgresRecordDB(dbMock))
+	indexStore := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 	numElements := 10
 
@@ -142,7 +113,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 		err := indexStore.SetIndex(ctx, pulse, bucket)
 		require.NoError(t, err)
 
-		for i := 0; i < badgerIndexCount; i++ {
+		for i := 0; i < indexCount; i++ {
 			bucket := record.Index{}
 
 			bucket.ObjID = gen.ID()
@@ -158,7 +129,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	}
 
 	numLeftElements := numElements / 2
-	err = indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
+	err := indexStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
 	require.NoError(t, err)
 
 	for i := 0; i < numLeftElements; i++ {
@@ -172,34 +143,25 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	}
 }
 
-func TestDBIndexStorage_ForID(t *testing.T) {
-	t.Parallel()
+func TestPostgresDBIndexStorage_ForID(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 
 	ctx := inslogger.TestContext(t)
 
 	id := gen.ID()
 
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
-		t.Parallel()
-
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, NewPostgresRecordDB(db))
+		storage := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 		pn := gen.PulseNumber()
 
-		_, err = storage.ForID(ctx, pn, id)
+		_, err := storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrIndexNotFound, err)
 	})
 }
 
-func TestDBIndexStorage_ForPulse(t *testing.T) {
-	t.Parallel()
+func TestPostgresDBIndexStorage_ForPulse(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 
 	ctx := inslogger.TestContext(t)
 	prevPn := gen.PulseNumber()
@@ -217,16 +179,8 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 	}
 
 	t.Run("empty index storage", func(t *testing.T) {
-		t.Parallel()
-
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		defer truncateIndexAndRecordTables()
+		storage := NewPostgresIndexDB(getPool(), nil)
 
 		indexes, err := storage.ForPulse(ctx, pn)
 		require.Error(t, err)
@@ -235,21 +189,13 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 	})
 
 	t.Run("index storage with couple values", func(t *testing.T) {
-		t.Parallel()
-
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		defer truncateIndexAndRecordTables()
+		storage := NewPostgresIndexDB(getPool(), nil)
 
 		var indexes []record.Index
-		for i := 0; i < badgerIndexCount; i++ {
+		for i := 0; i < indexCount; i++ {
 			indexes = append(indexes, record.Index{ObjID: gen.ID()})
-			err = storage.SetIndex(ctx, pn, indexes[i])
+			err := storage.SetIndex(ctx, pn, indexes[i])
 			require.NoError(t, err)
 		}
 
@@ -259,39 +205,31 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 
 		sortIndexes(realIndexes)
 		sortIndexes(indexes)
-		for i := 0; i < badgerIndexCount; i++ {
+		for i := 0; i < indexCount; i++ {
 			require.Equal(t, indexes[i], realIndexes[i])
 		}
 	})
 
 	t.Run("index storage with couple values in different pulses", func(t *testing.T) {
-		t.Parallel()
-
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		defer truncateIndexAndRecordTables()
+		storage := NewPostgresIndexDB(getPool(), nil)
 
 		var indexes []record.Index
-		for i := 0; i < badgerIndexCount; i++ {
+		for i := 0; i < indexCount; i++ {
 			indexes = append(indexes, record.Index{ObjID: gen.ID()})
-			err = storage.SetIndex(ctx, pn, indexes[i])
+			err := storage.SetIndex(ctx, pn, indexes[i])
 			require.NoError(t, err)
 		}
 
 		// add some values in prev pulse
-		for i := 0; i < badgerIndexCount; i++ {
-			err = storage.SetIndex(ctx, prevPn, record.Index{ObjID: gen.ID()})
+		for i := 0; i < indexCount; i++ {
+			err := storage.SetIndex(ctx, prevPn, record.Index{ObjID: gen.ID()})
 			require.NoError(t, err)
 		}
 
 		// add some values in next pulse
-		for i := 0; i < badgerIndexCount; i++ {
-			err = storage.SetIndex(ctx, nextPn, record.Index{ObjID: gen.ID()})
+		for i := 0; i < indexCount; i++ {
+			err := storage.SetIndex(ctx, nextPn, record.Index{ObjID: gen.ID()})
 			require.NoError(t, err)
 		}
 
@@ -301,15 +239,13 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 
 		sortIndexes(realIndexes)
 		sortIndexes(indexes)
-		for i := 0; i < badgerIndexCount; i++ {
+		for i := 0; i < indexCount; i++ {
 			require.Equal(t, indexes[i], realIndexes[i])
 		}
 	})
 }
 
-func TestDBIndex_SetBucket(t *testing.T) {
-	t.Parallel()
-
+func TestPostgresDBIndex_SetBucket(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	objID := gen.ID()
 	lflID := gen.ID()
@@ -321,19 +257,12 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	}
 
 	t.Run("saves correct bucket", func(t *testing.T) {
+		defer truncateIndexAndRecordTables()
+
 		pn := gen.PulseNumber()
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
-		ops := BadgerDefaultOptions(tmpdir)
-		db, err := store.NewBadgerDB(ops)
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
-
-		err = index.SetIndex(ctx, pn, buck)
+		err := index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		res, err := index.ForID(ctx, pn, objID)
@@ -346,17 +275,12 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	})
 
 	t.Run("re-save works fine", func(t *testing.T) {
+		defer truncateIndexAndRecordTables()
+
 		pn := gen.PulseNumber()
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
-
-		err = index.SetIndex(ctx, pn, buck)
+		err := index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
 
 		sLlflID := gen.ID()
@@ -380,18 +304,12 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	})
 }
 
-func TestIndexDB_FetchFilament(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
+func TestPostgresIndexDB_FetchFilament(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 
-	ops := BadgerDefaultOptions(tmpdir)
-	db, err := store.NewBadgerDB(ops)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	recordStorage := NewPostgresRecordDB(db)
-	index := NewIndexDB(db, NewPostgresRecordDB(db))
+	ctx := inslogger.TestContext(t)
+	recordStorage := NewPostgresRecordDB(getPool())
+	index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 	first := insolar.NewID(1, nil)
 	second := insolar.NewID(2, nil)
@@ -430,22 +348,17 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	require.Equal(t, secondMeta, res[1].MetaID)
 }
 
-func TestIndexDB_NextFilament(t *testing.T) {
+func TestPostgresIndexDB_NextFilament(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 	ctx := inslogger.TestContext(t)
 
 	first := insolar.NewID(1, nil)
 	firstMeta := *insolar.NewID(11, nil)
 
 	t.Run("previous exists", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		recordStorage := NewPostgresRecordDB(db)
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		defer truncateIndexAndRecordTables()
+		recordStorage := NewPostgresRecordDB(getPool())
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 		firstFil := record.PendingFilament{
 			PreviousRecord: first,
@@ -467,15 +380,9 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("previous doesn't exist", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		recordStorage := NewPostgresRecordDB(db)
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		defer truncateIndexAndRecordTables()
+		recordStorage := NewPostgresRecordDB(getPool())
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 		firstFil := record.PendingFilament{}
 		firstFilV := record.Wrap(&firstFil)
@@ -493,14 +400,8 @@ func TestIndexDB_NextFilament(t *testing.T) {
 	})
 
 	t.Run("doesn't exist", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		defer truncateIndexAndRecordTables()
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
@@ -508,23 +409,18 @@ func TestIndexDB_NextFilament(t *testing.T) {
 
 		cc, _, err := index.nextFilament(fi)
 
-		require.Error(t, err, store.ErrNotFound)
+		require.Error(t, err, ErrNotFound)
 		require.Equal(t, false, cc)
 	})
 }
 
-func TestIndexDB_Records(t *testing.T) {
+func TestPostgresIndexDB_Records(t *testing.T) {
+	defer truncateIndexAndRecordTables()
 	ctx := inslogger.TestContext(t)
 
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		defer truncateIndexAndRecordTables()
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
 
 		res, err := index.Records(ctx, 1, 10, insolar.ID{})
 
@@ -533,15 +429,9 @@ func TestIndexDB_Records(t *testing.T) {
 	})
 
 	t.Run("works fine", func(t *testing.T) {
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
-		rms := NewPostgresRecordDB(db)
+		defer truncateIndexAndRecordTables()
+		index := NewPostgresIndexDB(getPool(), NewPostgresRecordDB(getPool()))
+		rms := NewPostgresRecordDB(getPool())
 
 		pn := insolar.PulseNumber(3)
 		pnS := insolar.PulseNumber(2)
@@ -585,7 +475,7 @@ func TestIndexDB_Records(t *testing.T) {
 		second := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*midS}}
 		first := record.Index{ObjID: objID, PendingRecords: []insolar.ID{*mid}}
 
-		err = index.SetIndex(ctx, pn, first)
+		err := index.SetIndex(ctx, pn, first)
 		require.NoError(t, err)
 		err = index.SetIndex(ctx, pnS, second)
 		require.NoError(t, err)

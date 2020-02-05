@@ -95,7 +95,7 @@ func TestMain(m *testing.M) {
 
 func TestSetNilSignature(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 
 	rec1 := record.Material{
@@ -120,7 +120,7 @@ func TestSetNilSignature(t *testing.T) {
 
 func TestBatchSetNilSignature(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 
 	records := make([]record.Material, 1)
@@ -146,7 +146,7 @@ func TestBatchSetNilSignature(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 	// Make sure there is no record with such ID
 	id := gen.ID()
@@ -174,7 +174,7 @@ func TestSet(t *testing.T) {
 
 func TestBatchSet(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 
 	var ids [3]insolar.ID
@@ -210,7 +210,7 @@ func TestBatchSet(t *testing.T) {
 
 func TestPosition(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 
 	// Make sure there are no records with such pulse
@@ -254,7 +254,7 @@ func TestPosition(t *testing.T) {
 
 func TestTruncateNonExistingPulse(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	pulse := gen.PulseNumber()
 	// TruncateHead doesn't return an error if given pulse doesn't exist
 	err := db.TruncateHead(ctx, pulse)
@@ -263,7 +263,7 @@ func TestTruncateNonExistingPulse(t *testing.T) {
 
 func TestTruncateHead(t *testing.T) {
 	ctx := context.Background()
-	db := NewRecordDB(getPool())
+	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
 
 	// Fill database with records for 3 pulses

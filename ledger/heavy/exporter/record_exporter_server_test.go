@@ -523,8 +523,8 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	thirdRec.ID = thirdID
 
 	pulseStorage := insolarPulse.NewDB(getPool())
-	recordStorage := object.NewRecordDB(getPool())
-	recordPosition := object.NewRecordDB(getPool())
+	recordStorage := object.NewPostgresRecordDB(getPool())
+	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Save records to DB
 	err := recordStorage.Set(ctx, firstRec)
@@ -694,8 +694,8 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	thirdRec.ID = thirdID
 
 	pulseStorage := insolarPulse.NewDB(getPool())
-	recordStorage := object.NewRecordDB(getPool())
-	recordPosition := object.NewRecordDB(getPool())
+	recordStorage := object.NewPostgresRecordDB(getPool())
+	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Save records to DB
 	err := recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec, thirdRec})
@@ -832,8 +832,8 @@ func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Return(secondPN)
 
 	pulseStorage := insolarPulse.NewDB(getPool())
-	recordStorage := object.NewRecordDB(getPool())
-	recordPosition := object.NewRecordDB(getPool())
+	recordStorage := object.NewPostgresRecordDB(getPool())
+	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Pulses
 

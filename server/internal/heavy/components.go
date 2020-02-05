@@ -289,12 +289,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager *pulsemanager.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
-		Records      *object.RecordDB
+		Records      *object.PostgresRecordDB
 		JetKeeper    *executor.DBJetKeeper
 	)
 	{
-		Records = object.NewRecordDB(Pool)
-		indexes := object.NewIndexDB(Pool, Records)
+		Records = object.NewPostgresRecordDB(Pool)
+		indexes := object.NewPostgresIndexDB(Pool, Records)
 		drops := drop.NewDB(Pool)
 		JetKeeper = executor.NewJetKeeper(Jets, Pool, Pulses)
 
