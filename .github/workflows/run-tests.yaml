@@ -32,7 +32,7 @@ jobs:
       - name: test_slow_cockroachdb
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
-          USE_COCKROACH_DB=true make test_slow
+          USE_COCKROACH_DB=1 make test_slow
       - name: test_func
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |

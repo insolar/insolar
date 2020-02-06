@@ -470,9 +470,29 @@ if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
   build_logger
 fi
 
-# Terminate running PostgreSQL container if there is one
-docker stop insolar-postgresql || true
-docker rm insolar-postgresql || true
+# Terminate running containers if there are any
+docker rm -f insolar-postgresql || true
+docker rm -f insolar-cockroachdb || true
+
+if [[ "$USE_COCKROACH_DB" == "1" ]];
+then
+echo "STARTING COCKROACKDB"
+
+# Start a new CockroachDB container
+docker run -d --name insolar-cockroachdb -p 5432:26257 -p 8035:8080 cockroachdb/cockroach:v19.2.3 start-single-node --insecure
+# Make sure CockroachDB is up
+until bash -c "docker exec -t insolar-cockroachdb ./cockroach sql --insecure -e 'SELECT 1;'"
+do
+  echo "CockroachDB is not up yet, retrying..."
+  sleep 1
+done
+
+# password is ignored in insecure cluster mode
+docker exec -t insolar-cockroachdb ./cockroach sql --insecure -e "create database insolar; create user if not exists postgres; grant all on database insolar to postgres; "
+
+else
+echo "STARTING POSTGRESQL"
+
 # Build PostgreSQL Docker image with custom postgresql.conf
 OLD_PWD=`pwd`
 echo "pwd: $OLD_PWD"
@@ -487,6 +507,8 @@ do
   echo "PostgreSQL is not up yet, retrying..."
   sleep 1
 done
+
+fi
 
 handle_sigchld()
 {
