@@ -42,7 +42,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var db *DB
+var db *PostgresDB
 
 var (
 	poolLock     sync.Mutex
@@ -145,14 +145,14 @@ func generatePulse(pn insolar.PulseNumber, prev insolar.PulseNumber, next insola
 	}
 }
 
-func TestWriteReadAndLatest(t *testing.T) {
+func TestPostgresWriteReadAndLatest(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := context.Background()
 	pn := gen.PulseNumber()
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
-	// Make sure there is no such pulse in DB yet
+	// Make sure there is no such pulse in PostgresDB yet
 	_, err := db.ForPulseNumber(ctx, pn)
 	require.Error(t, err)
 
@@ -172,11 +172,11 @@ func TestWriteReadAndLatest(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestForwardsBackwards(t *testing.T) {
+func TestPostgresForwardsBackwards(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := context.Background()
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)
@@ -215,11 +215,11 @@ func TestForwardsBackwards(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestTruncateHead(t *testing.T) {
+func TestPostgresTruncateHead(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := context.Background()
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)
@@ -259,11 +259,11 @@ func TestTruncateHead(t *testing.T) {
 	}
 }
 
-func TestPulse_Components(t *testing.T) {
+func TestPostgresPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMem()
-	dbStorage := NewDB(getPool())
+	dbStorage := NewPostgresDB(getPool())
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {

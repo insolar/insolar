@@ -27,17 +27,17 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-// DB is a pulse.DB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
-type DB struct {
+// PostgresDB is a pulse.PostgresDB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
+type PostgresDB struct {
 	pool *pgxpool.Pool
 }
 
-// NewDB creates new DB storage instance.
-func NewDB(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool}
+// NewPostgresDB creates new PostgresDB storage instance.
+func NewPostgresDB(pool *pgxpool.Pool) *PostgresDB {
+	return &PostgresDB{pool: pool}
 }
 
-func (s *DB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
 	pulseRow := tx.QueryRow(ctx,
 		"SELECT pulse_number, prev_pn, next_pn, tstamp, epoch, origin_id, entropy FROM pulses WHERE pulse_number = $1",
 		pn)
@@ -94,7 +94,7 @@ func (s *DB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber)
 	return
 }
 
-func (s *DB) selectByCondition(ctx context.Context, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -137,7 +137,7 @@ func (s *DB) selectByCondition(ctx context.Context, query string, args ...interf
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
-func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -165,14 +165,14 @@ func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPul
 	return
 }
 
-// Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
-func (s *DB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
+// Latest returns a latest pulse saved in PostgresDB. If not found, ErrNotFound will be returned.
+func (s *PostgresDB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
 	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) as latest FROM pulses")
 	return
 }
 
 // TruncateHead remove all records with pulse_number >= `from`
-func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -212,7 +212,7 @@ func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
+func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -305,7 +305,7 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	// There can be "holes" in pulses double-linked list, e.g.
 	// 1) Between fake genesis pulse and first real pulse
 	// 2) If pulsar is separated from the rest of the network for N pulses
@@ -320,7 +320,7 @@ SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number a
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	retPulse, retErr = s.selectByCondition(ctx, `
 SELECT pulse_number FROM pulses WHERE pulse_number <= $1 ORDER BY pulse_number desc offset $2 limit 1;
 	`, pn, steps)

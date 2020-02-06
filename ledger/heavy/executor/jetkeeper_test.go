@@ -119,12 +119,12 @@ func cleanJetsInfoTables() {
 	}
 }
 
-func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStore, *pulse.DB) {
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStore, *pulse.PostgresDB) {
 	cleanJetsInfoTables()
 
 	ctx := inslogger.TestContext(t)
 	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewDB(getPool())
+	pulses := pulse.NewPostgresDB(getPool())
 	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
@@ -395,7 +395,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewDB(getPool())
+	pulses := pulse.NewPostgresDB(getPool())
 	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
@@ -460,7 +460,7 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewDB(getPool())
+	pulses := pulse.NewPostgresDB(getPool())
 	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
