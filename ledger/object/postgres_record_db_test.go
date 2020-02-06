@@ -93,7 +93,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestSetNilSignature(t *testing.T) {
+func TestPostgresSetNilSignature(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
@@ -118,7 +118,7 @@ func TestSetNilSignature(t *testing.T) {
 	require.Equal(t, rec1, rec2)
 }
 
-func TestBatchSetNilSignature(t *testing.T) {
+func TestPostgresBatchSetNilSignature(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
@@ -144,7 +144,7 @@ func TestBatchSetNilSignature(t *testing.T) {
 	require.Equal(t, records[0], rec)
 }
 
-func TestSet(t *testing.T) {
+func TestPostgresSet(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
@@ -172,7 +172,7 @@ func TestSet(t *testing.T) {
 	require.Equal(t, rec1, rec2)
 }
 
-func TestBatchSet(t *testing.T) {
+func TestPostgresBatchSet(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
@@ -208,7 +208,7 @@ func TestBatchSet(t *testing.T) {
 	}
 }
 
-func TestPosition(t *testing.T) {
+func TestPostgresPosition(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()
@@ -252,7 +252,7 @@ func TestPosition(t *testing.T) {
 	}
 }
 
-func TestTruncateNonExistingPulse(t *testing.T) {
+func TestPostgresTruncateNonExistingPulse(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	pulse := gen.PulseNumber()
@@ -261,7 +261,7 @@ func TestTruncateNonExistingPulse(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTruncateHead(t *testing.T) {
+func TestPostgresTruncateHead(t *testing.T) {
 	ctx := context.Background()
 	db := NewPostgresRecordDB(getPool())
 	f := fuzz.New()

@@ -44,7 +44,7 @@ func BadgerDefaultOptions(dir string) badger.Options {
 
 const badgerIndexCount = 5
 
-func TestIndexKey(t *testing.T) {
+func TestBadgerIndexKey(t *testing.T) {
 	t.Parallel()
 
 	testPulseNumber := insolar.GenesisPulse.PulseNumber
@@ -56,7 +56,7 @@ func TestIndexKey(t *testing.T) {
 	require.Equal(t, expectedKey, actualKey)
 }
 
-func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
+func TestBadgerIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -70,7 +70,7 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	indexStore := NewIndexDB(dbMock, nil)
+	indexStore := NewBadgerIndexDB(dbMock, nil)
 
 	testPulse := insolar.GenesisPulse.PulseNumber
 	nextPulse := testPulse + 1
@@ -104,7 +104,7 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestIndexDB_TruncateHead(t *testing.T) {
+func TestBadgerIndexDB_TruncateHead(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -118,7 +118,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	indexStore := NewIndexDB(dbMock, NewPostgresRecordDB(dbMock))
+	indexStore := NewBadgerIndexDB(dbMock, NewBadgerRecordDB(dbMock))
 
 	numElements := 10
 
@@ -172,7 +172,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	}
 }
 
-func TestDBIndexStorage_ForID(t *testing.T) {
+func TestBadgerIndexStorage_ForID(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -189,7 +189,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, NewPostgresRecordDB(db))
+		storage := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 		pn := gen.PulseNumber()
 
 		_, err = storage.ForID(ctx, pn, id)
@@ -198,7 +198,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 	})
 }
 
-func TestDBIndexStorage_ForPulse(t *testing.T) {
+func TestBadgerIndexStorage_ForPulse(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -226,7 +226,7 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		storage := NewBadgerIndexDB(db, nil)
 
 		indexes, err := storage.ForPulse(ctx, pn)
 		require.Error(t, err)
@@ -244,7 +244,7 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		storage := NewBadgerIndexDB(db, nil)
 
 		var indexes []record.Index
 		for i := 0; i < badgerIndexCount; i++ {
@@ -274,7 +274,7 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		storage := NewIndexDB(db, nil)
+		storage := NewBadgerIndexDB(db, nil)
 
 		var indexes []record.Index
 		for i := 0; i < badgerIndexCount; i++ {
@@ -307,7 +307,7 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 	})
 }
 
-func TestDBIndex_SetBucket(t *testing.T) {
+func TestBadgerIndex_SetBucket(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -331,7 +331,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
@@ -354,7 +354,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		err = index.SetIndex(ctx, pn, buck)
 		require.NoError(t, err)
@@ -380,7 +380,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	})
 }
 
-func TestIndexDB_FetchFilament(t *testing.T) {
+func TestBadgerIndexDB_FetchFilament(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
@@ -390,8 +390,8 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
-	recordStorage := NewPostgresRecordDB(db)
-	index := NewIndexDB(db, NewPostgresRecordDB(db))
+	recordStorage := NewBadgerRecordDB(db)
+	index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 	first := insolar.NewID(1, nil)
 	second := insolar.NewID(2, nil)
@@ -418,7 +418,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 		PendingRecords: []insolar.ID{firstMeta, secondMeta},
 	}
 
-	res, err := index.filament(fi)
+	res, err := index.filament(ctx, fi)
 
 	require.NoError(t, err)
 	require.Equal(t, 2, len(res))
@@ -430,7 +430,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	require.Equal(t, secondMeta, res[1].MetaID)
 }
 
-func TestIndexDB_NextFilament(t *testing.T) {
+func TestBadgerIndexDB_NextFilament(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	first := insolar.NewID(1, nil)
@@ -444,8 +444,8 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		recordStorage := NewPostgresRecordDB(db)
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		recordStorage := NewBadgerRecordDB(db)
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		firstFil := record.PendingFilament{
 			PreviousRecord: first,
@@ -458,7 +458,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
-		cc, npn, err := index.nextFilament(fi)
+		cc, npn, err := index.nextFilament(ctx, fi)
 
 		require.NoError(t, err)
 		require.Equal(t, true, cc)
@@ -474,8 +474,8 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		recordStorage := NewPostgresRecordDB(db)
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		recordStorage := NewBadgerRecordDB(db)
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		firstFil := record.PendingFilament{}
 		firstFilV := record.Wrap(&firstFil)
@@ -486,7 +486,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
-		cc, _, err := index.nextFilament(fi)
+		cc, _, err := index.nextFilament(ctx, fi)
 
 		require.NoError(t, err)
 		require.Equal(t, false, cc)
@@ -500,20 +500,20 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		fi := &record.Index{
 			PendingRecords: []insolar.ID{firstMeta},
 		}
 
-		cc, _, err := index.nextFilament(fi)
+		cc, _, err := index.nextFilament(ctx, fi)
 
 		require.Error(t, err, store.ErrNotFound)
 		require.Equal(t, false, cc)
 	})
 }
 
-func TestIndexDB_Records(t *testing.T) {
+func TestBadgerIndexDB_Records(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	t.Run("returns err, if readUntil > readFrom", func(t *testing.T) {
@@ -524,7 +524,7 @@ func TestIndexDB_Records(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
 
 		res, err := index.Records(ctx, 1, 10, insolar.ID{})
 
@@ -540,8 +540,8 @@ func TestIndexDB_Records(t *testing.T) {
 		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
-		index := NewIndexDB(db, NewPostgresRecordDB(db))
-		rms := NewPostgresRecordDB(db)
+		index := NewBadgerIndexDB(db, NewBadgerRecordDB(db))
+		rms := NewBadgerRecordDB(db)
 
 		pn := insolar.PulseNumber(3)
 		pnS := insolar.PulseNumber(2)

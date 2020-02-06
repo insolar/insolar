@@ -29,12 +29,12 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// IndexDB is a db-based storage, that stores a collection of IndexBuckets
-type IndexDB struct {
+// BadgerIndexDB is a db-based storage, that stores a collection of IndexBuckets
+type BadgerIndexDB struct {
 	lock sync.RWMutex
 	db   store.DB
 
-	recordStore *PostgresRecordDB
+	recordStore RecordStorage
 }
 
 type indexKey struct {
@@ -71,13 +71,13 @@ func (k lastKnownIndexPNKey) ID() []byte {
 	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
 }
 
-// NewIndexDB creates a new instance of IndexDB
-func NewIndexDB(db store.DB, recordStore *PostgresRecordDB) *IndexDB {
-	return &IndexDB{db: db, recordStore: recordStore}
+// NewBadgerIndexDB creates a new instance of BadgerIndexDB
+func NewBadgerIndexDB(db store.DB, recordStore RecordStorage) *BadgerIndexDB {
+	return &BadgerIndexDB{db: db, recordStore: recordStore}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
+func (i *BadgerIndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -94,7 +94,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 }
 
 // UpdateLastKnownPulse must be called after updating TopSyncPulse
-func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
+func (i *BadgerIndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -116,7 +116,7 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar
 }
 
 // TruncateHead remove all records starting with 'from'
-func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (i *BadgerIndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -143,7 +143,7 @@ func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 }
 
 // ForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+func (i *BadgerIndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
 	var buck *record.Index
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexNotFound {
@@ -163,7 +163,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return *buck, nil
 }
 
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
+func (i *BadgerIndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
 	indexes := make([]record.Index, 0)
 
 	key := &indexKey{objID: insolar.ID{}, pn: pn}
@@ -193,7 +193,7 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	return indexes, nil
 }
 
-func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
+func (i *BadgerIndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
 	lastPN, err := i.getLastKnownPN(objID)
 	if err != nil {
 		return record.Index{}, ErrIndexNotFound
@@ -207,7 +207,7 @@ func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.
 	return *idx, nil
 }
 
-func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
+func (i *BadgerIndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
 	key := indexKey{pn: pn, objID: objID}
 
 	buff, err := bucket.Marshal()
@@ -218,7 +218,7 @@ func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *re
 	return i.db.Set(key, buff)
 }
 
-func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.Index, error) {
+func (i *BadgerIndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.Index, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexNotFound
@@ -231,12 +231,12 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*record.I
 	return &bucket, err
 }
 
-func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error {
+func (i *BadgerIndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error {
 	key := lastKnownIndexPNKey{objID: objID}
 	return i.db.Set(key, pn.Bytes())
 }
 
-func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
+func (i *BadgerIndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
 	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
 	if err != nil {
 		return pulse.MinTimePulse, err
@@ -244,15 +244,15 @@ func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) 
 	return insolar.NewPulseNumber(buff), err
 }
 
-func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, error) {
+func (i *BadgerIndexDB) filament(ctx context.Context, b *record.Index) ([]record.CompositeFilamentRecord, error) {
 	tempRes := make([]record.CompositeFilamentRecord, len(b.PendingRecords))
 	for idx, metaID := range b.PendingRecords {
-		metaRec, err := i.recordStore.get(metaID)
+		metaRec, err := i.recordStore.ForID(ctx, metaID)
 		if err != nil {
 			return nil, err
 		}
 		pend := record.Unwrap(&metaRec.Virtual).(*record.PendingFilament)
-		rec, err := i.recordStore.get(pend.RecordID)
+		rec, err := i.recordStore.ForID(ctx, pend.RecordID)
 		if err != nil {
 			return nil, err
 		}
@@ -268,9 +268,9 @@ func (i *IndexDB) filament(b *record.Index) ([]record.CompositeFilamentRecord, e
 	return tempRes, nil
 }
 
-func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insolar.PulseNumber, err error) {
+func (i *BadgerIndexDB) nextFilament(ctx context.Context, b *record.Index) (canContinue bool, nextPN insolar.PulseNumber, err error) {
 	firstRecord := b.PendingRecords[0]
-	metaRec, err := i.recordStore.get(firstRecord)
+	metaRec, err := i.recordStore.ForID(ctx, firstRecord)
 	if err != nil {
 		return false, insolar.PulseNumber(0), err
 	}
@@ -282,7 +282,7 @@ func (i *IndexDB) nextFilament(b *record.Index) (canContinue bool, nextPN insola
 	return false, insolar.PulseNumber(0), nil
 }
 
-func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
+func (i *BadgerIndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, readUntil insolar.PulseNumber, objID insolar.ID) ([]record.CompositeFilamentRecord, error) {
 	currentPN := readFrom
 	var res []record.CompositeFilamentRecord
 
@@ -300,7 +300,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 			return nil, errors.New("can't fetch pendings from index")
 		}
 
-		tempRes, err := i.filament(b)
+		tempRes, err := i.filament(ctx, b)
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +309,7 @@ func (i *IndexDB) Records(ctx context.Context, readFrom insolar.PulseNumber, rea
 		}
 		res = append(tempRes, res...)
 
-		hasFilamentBehind, currentPN, err = i.nextFilament(b)
+		hasFilamentBehind, currentPN, err = i.nextFilament(ctx, b)
 		if err != nil {
 			return nil, err
 		}
