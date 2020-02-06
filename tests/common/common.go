@@ -19,6 +19,7 @@ package common
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/insolar/insolar/log"
@@ -26,34 +27,25 @@ import (
 	"github.com/ory/dockertest/v3"
 )
 
-func StartPostgreSQL() (pgURL string, cleaner func()) {
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		log.Panicf("[StartPostgreSQL] dockertest.NewPool failed: %v", err)
+func StartDBMS() (pgURL string, cleaner func()) {
+	env := os.Getenv("USE_COCKROACH_DB")
+	if len(env) > 0 {
+		log.Info("Starting CockroachDB...")
+		return startCockroachDB()
+	} else {
+		log.Info("Starting PostgreSQL...")
+		return startPostgreSQL()
 	}
+}
 
-	resource, err := pool.Run(
-		"postgres",
-		"11",
-		[]string{
-			"POSTGRES_DB=insolar",
-			"POSTGRES_PASSWORD=s3cr3t",
-		},
-	)
-	if err != nil {
-		log.Panicf("[StartPostgreSQL] pool.Run failed: %v", err)
-	}
-
-	// PostgreSQL needs some time to start.
-	// Port forwarding always works, thus net.Dial can't be used here.
-	connString := "postgres://postgres:s3cr3t@" + resource.GetHostPort("5432/tcp") + "/insolar?sslmode=disable"
+func waitForDBMS(pool *dockertest.Pool, resource *dockertest.Resource, connString string) (url string, cleaner func()) {
 	attempt := 0
 	ok := false
 	for attempt < 20 {
 		attempt++
 		conn, err := pgx.Connect(context.Background(), connString)
 		if err != nil {
-			log.Infof("[StartPostgreSQL] pgx.Connect failed: %v, waiting... (attempt %d)", err, attempt)
+			log.Infof("[waitForDBMS] pgx.Connect failed: %v, waiting... (attempt %d)", err, attempt)
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -65,16 +57,59 @@ func StartPostgreSQL() (pgURL string, cleaner func()) {
 
 	if !ok {
 		_ = pool.Purge(resource)
-		log.Panicf("[StartPostgreSQL] couldn't connect to PostgreSQL")
+		log.Panicf("[waitForDBMS] couldn't connect to CockroachDB")
 	}
 
 	cleanerFunc := func() {
 		// purge the container
 		err := pool.Purge(resource)
 		if err != nil {
-			log.Panicf("[StartPostgreSQL] pool.Purge failed: %v", err)
+			log.Panicf("[waitForDBMS] pool.Purge failed: %v", err)
 		}
 	}
 
 	return connString, cleanerFunc
+}
+
+func startPostgreSQL() (url string, cleaner func()) {
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		log.Panicf("[startPostgreSQL] dockertest.NewPool failed: %v", err)
+	}
+
+	resource, err := pool.Run(
+		"postgres",
+		"11",
+		[]string{
+			"POSTGRES_DB=insolar",
+			"POSTGRES_PASSWORD=s3cr3t",
+		},
+	)
+	if err != nil {
+		log.Panicf("[startPostgreSQL] pool.Run failed: %v", err)
+	}
+
+	connString := "postgres://postgres:s3cr3t@" + resource.GetHostPort("5432/tcp") + "/insolar?sslmode=disable"
+	return waitForDBMS(pool, resource, connString)
+}
+
+func startCockroachDB() (url string, cleaner func()) {
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		log.Panicf("[startCockroachDB] dockertest.NewPool failed: %v", err)
+	}
+
+	opts := &dockertest.RunOptions{
+		Repository: "cockroachdb/cockroach",
+		Tag:        "v19.2.3",
+		Cmd:        []string{"start-single-node", "--insecure"},
+	}
+	resource, err := pool.RunWithOptions(opts)
+
+	if err != nil {
+		log.Panicf("[startCockroachDB] pool.Run failed: %v", err)
+	}
+
+	connString := "postgres://root@" + resource.GetHostPort("26257/tcp") + "/postgres?sslmode=disable"
+	return waitForDBMS(pool, resource, connString)
 }

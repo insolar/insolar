@@ -21,28 +21,18 @@ jobs:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-      - name: debug_info
-        run: |
-          echo '=== ID ==='
-          id
-          echo '=== ENV ==='
-          env
-          echo '=== PWD ==='
-          pwd
-          echo '=== LS ==='
-          ls -la
-          echo '=== WHICH GO ==='
-          which go
-          echo '=== DOCKER PS ==='
-          docker ps
       - name: test_unit
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
           make test
-      - name: test_slow
+      - name: test_slow_postgresql
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
           make test_slow
+      - name: test_slow_cockroachdb
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          USE_COCKROACH_DB=true make test_slow
       - name: test_func
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |

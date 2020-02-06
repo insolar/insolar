@@ -63,26 +63,24 @@ func getPool() *pgxpool.Pool {
 // TestMain does the before and after setup
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	log.Info("[TestMain] About to start PostgreSQL...")
-	pgURL, stopPostgreSQL := common.StartPostgreSQL()
-	log.Info("[TestMain] PostgreSQL started!")
+	pgURL, stopDBMS := common.StartDBMS()
 
 	pool, err := pgxpool.Connect(ctx, pgURL)
 	if err != nil {
-		stopPostgreSQL()
+		stopDBMS()
 		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
 	}
 
 	migrationPath := "../../../migration"
 	cwd, err := os.Getwd()
 	if err != nil {
-		stopPostgreSQL()
+		stopDBMS()
 		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
 	}
 	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
 	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
 	if err != nil {
-		stopPostgreSQL()
+		stopDBMS()
 		panic(errors.Wrap(err, "Unable to migrate database"))
 	}
 	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
@@ -93,7 +91,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	log.Info("[TestMain] Cleaning up...")
-	stopPostgreSQL()
+	stopDBMS()
 	os.Exit(code)
 }
 
