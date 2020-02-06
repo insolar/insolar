@@ -111,7 +111,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, states []application.GenesisContractState) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -373,8 +373,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			ContractsConfig: genesisCfg.ContractsConfig,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
+			States:         states,
 		}
 	}
 

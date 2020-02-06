@@ -15,6 +15,7 @@
 package server
 
 import (
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/server/internal/heavy"
@@ -30,8 +31,8 @@ func NewLightServer(cfgPath string) Server {
 	return light.New(cfgPath)
 }
 
-func NewHeavyServer(cfgPath string, gensisCfgPath string) Server {
-	return heavy.New(cfgPath, gensisCfgPath)
+func NewHeavyServer(cfgPath string, gensisCfgPath string, states []application.GenesisContractState) Server {
+	return heavy.New(cfgPath, gensisCfgPath, states)
 }
 
 func NewVirtualServer(cfgPath string, codeRegistry map[string]insolar.ContractWrapper,
