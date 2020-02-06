@@ -107,7 +107,7 @@ func cleanupDatabase() {
 	}
 }
 
-func TestDropDBKey(t *testing.T) {
+func TestPostgresDropDBKey(t *testing.T) {
 	t.Parallel()
 
 	testPulseNumber := insolar.GenesisPulse.PulseNumber
@@ -119,26 +119,21 @@ func TestDropDBKey(t *testing.T) {
 	require.Equal(t, expectedKey, actualKey)
 }
 
-type setInput struct {
-	jetID insolar.JetID
-	dr    Drop
-}
-
-func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
+func TestPostgresDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	err := db.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
 	require.NoError(t, err)
 }
 
-func TestDropStorageDB_TruncateHead(t *testing.T) {
+func TestPostgresDropStorageDB_TruncateHead(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	numElements := 10
 
@@ -190,11 +185,11 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	}
 }
 
-func TestDropStorageDB_Set(t *testing.T) {
+func TestPostgresDropStorageDB_Set(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	var inputs []setInput
 	encodedDrops := map[string]struct{}{}
@@ -216,11 +211,11 @@ func TestDropStorageDB_Set(t *testing.T) {
 	}
 }
 
-func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
+func TestPostgresDropStorageDB_Set_ErrOverride(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	dr := Drop{
 		Pulse: gen.PulseNumber(),
@@ -234,11 +229,11 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	require.Equal(t, ErrOverride, err)
 }
 
-func TestDropStorageDB_ForPulse(t *testing.T) {
+func TestPostgresDropStorageDB_ForPulse(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
@@ -257,11 +252,11 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 
 }
 
-func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
+func TestPostgresDropStorageDB_ForPulse_NotExist(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()

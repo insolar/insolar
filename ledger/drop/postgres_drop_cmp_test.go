@@ -30,57 +30,11 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-type jetPulse struct {
-	jetID insolar.JetID
-	pn    insolar.PulseNumber
-}
-
-func TestDropStorageMemory(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	ms := NewStorageMemory()
-
-	var drops []Drop
-	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
-		pn := gen.PulseNumber()
-		jd.Pulse = pn
-
-		jetID := gen.JetID()
-		jd.JetID = jetID
-
-		genInputs[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
-	}).NumElements(5, 1000)
-	f.Fuzz(&drops)
-
-	// Add
-	for _, dr := range drops {
-		err := ms.Set(ctx, dr)
-		require.NoError(t, err)
-	}
-
-	// Fetch
-	for inp := range genInputs {
-		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
-		require.NoError(t, err)
-	}
-
-	// Delete
-	for inp := range genInputs {
-		ms.DeleteForPN(ctx, inp.pn)
-	}
-
-	// Check for deleting
-	for inp := range genInputs {
-		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
-		require.Error(t, err, ErrNotFound)
-	}
-}
-
-func TestDropStorageDB(t *testing.T) {
+func TestPostgresDropStorageDB(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := inslogger.TestContext(t)
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 
 	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
@@ -113,7 +67,7 @@ func TestDropStorageCompare(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	db := NewDB(getPool())
+	db := NewPostgresDB(getPool())
 	ms := NewStorageMemory()
 
 	var drops []Drop

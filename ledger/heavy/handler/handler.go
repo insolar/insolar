@@ -64,7 +64,7 @@ type Handler struct {
 	StartPulse      pulse.StartPulse
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
-	DropDB          *drop.DB
+	DropDB          *drop.PostgresDB
 
 	Replicator executor.HeavyReplicator
 

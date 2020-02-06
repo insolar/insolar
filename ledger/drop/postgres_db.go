@@ -17,7 +17,6 @@
 package drop
 
 import (
-	"bytes"
 	"context"
 	"strings"
 
@@ -26,44 +25,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-type dropDbKey struct {
-	jetPrefix []byte
-	pn        insolar.PulseNumber
-}
-
-func (dk *dropDbKey) Scope() store.Scope {
-	return store.ScopeJetDrop
-}
-
-func (dk *dropDbKey) ID() []byte {
-	// order ( pn + jetPrefix ) is important: we use this logic for removing not finalized drops
-	return bytes.Join([][]byte{dk.pn.Bytes(), dk.jetPrefix}, nil)
-}
-
-func newDropDbKey(raw []byte) dropDbKey {
-	dk := dropDbKey{}
-	dk.pn = insolar.NewPulseNumber(raw)
-	dk.jetPrefix = raw[dk.pn.Size():]
-
-	return dk
-}
-
-// DB is a drop.DB storage implementation. It saves drops to PostgreSQL and does not allow removal.
-type DB struct {
+// PostgresDB is a drop.PostgresDB storage implementation. It saves drops to PostgreSQL and does not allow removal.
+type PostgresDB struct {
 	pool *pgxpool.Pool
 }
 
-// NewDB creates new DB storage instance.
-func NewDB(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool}
+// NewPostgresDB creates new PostgresDB storage instance.
+func NewPostgresDB(pool *pgxpool.Pool) *PostgresDB {
+	return &PostgresDB{pool: pool}
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
-func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
+func (ds *PostgresDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	conn, err := ds.pool.Acquire(ctx)
 	if err != nil {
 		return Drop{}, errors.Wrap(err, "Unable to acquire a database connection")
@@ -91,7 +67,7 @@ func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.P
 }
 
 // Set saves a provided Drop to a db.
-func (ds *DB) Set(ctx context.Context, drop Drop) error {
+func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
 	conn, err := ds.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -129,7 +105,7 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 }
 
 // TruncateHead remove all records after lastPulse
-func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (ds *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := ds.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -161,7 +137,7 @@ func (ds *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error 
 	return nil
 }
 
-func (ds *DB) selectDrop(ctx context.Context, tx pgx.Tx, key dropDbKey) (Drop, error) {
+func (ds *PostgresDB) selectDrop(ctx context.Context, tx pgx.Tx, key dropDbKey) (Drop, error) {
 	dropRow := tx.QueryRow(ctx,
 		`
 			SELECT 

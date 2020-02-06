@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	component "github.com/insolar/component-manager"
+	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/genesis"
@@ -295,7 +295,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	{
 		Records = object.NewPostgresRecordDB(Pool)
 		indexes := object.NewPostgresIndexDB(Pool, Records)
-		drops := drop.NewDB(Pool)
+		drops := drop.NewPostgresDB(Pool)
 		JetKeeper = executor.NewJetKeeper(Jets, Pool, Pulses)
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
