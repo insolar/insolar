@@ -1,8 +1,8 @@
 .. _architecture:
 
-============
-Architecture
-============
+====================
+Explore Architecture
+====================
 
 Below is the platform architecture diagram aimed to address the :ref:`interconnected layers <big_pic>`. The architecture has multiple components and consensuses to address the complexity and variety of requirements.
 

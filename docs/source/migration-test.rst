@@ -1,7 +1,7 @@
 .. _migration_test:
 
-Testing Token Swap
-==================
+Test Token Swap
+===============
 
 This test scenario walks you through the process of acquiring test INS tokens and swapping them to test XNS coins in the Insolar **TestNet**.
 
