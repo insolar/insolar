@@ -52,8 +52,6 @@ type Migration struct {
 }
 
 type MigratorOptions struct {
-	// DisableTx causes the Migrator not to run migrations in a transaction.
-	DisableTx bool
 	// MigratorFS is the interface used for collecting the migrations.
 	MigratorFS MigratorFS
 }
@@ -137,10 +135,6 @@ func FindMigrationsEx(path string, fs MigratorFS) ([]string, error) {
 
 	return paths, nil
 }
-
-//func FindMigrations(path string) ([]string, error) {
-//	return FindMigrationsEx(path, defaultMigratorFS{})
-//}
 
 func (m *Migrator) loadMigrations(path string) error {
 	path = strings.TrimRight(path, string(filepath.Separator))
@@ -242,104 +236,97 @@ func (m *Migrator) AppendMigration(name, upSQL, downSQL string) {
 	return
 }
 
-// migrate runs pending migrations
+// Migrate runs pending migrations
 // It calls m.OnStart when it begins a migration
-func (m *Migrator) migrate() error {
-	return m.MigrateTo(int32(len(m.Migrations)))
+func (m *Migrator) migrate(onCommitFailed func(err error) (retry bool)) error {
+	return m.MigrateTo(int32(len(m.Migrations)), onCommitFailed)
 }
 
 // MigrateTo migrates to targetVersion
-func (m *Migrator) MigrateTo(targetVersion int32) (err error) {
-	// Lock to ensure multiple migrations cannot occur simultaneously
-	lockNum := int64(9628173550095224) // arbitrary random number
-	if _, lockErr := m.conn.Exec(context.Background(), "select pg_advisory_lock($1)", lockNum); lockErr != nil {
-		return lockErr
-	}
-	defer func() {
-		_, unlockErr := m.conn.Exec(context.Background(), "select pg_advisory_unlock($1)", lockNum)
-		if err == nil && unlockErr != nil {
-			err = unlockErr
+func (m *Migrator) MigrateTo(targetVersion int32, onCommitFailed func(err error) (retry bool)) (err error) {
+	for { // transaction retry loop
+		// All migrations are executed in a single serializable transaction
+		txOpts := pgx.TxOptions{
+			IsoLevel:   pgx.Serializable,
+			AccessMode: pgx.ReadWrite,
 		}
-	}()
+		tx, err := m.conn.BeginTx(context.Background(), txOpts)
+		if err != nil {
+			return errors.Wrap(err, "Unable to begin serializable transaction")
+		}
+		// Rollback has no effect if Commit will be called
+		defer tx.Rollback(context.Background())
 
-	currentVersion, err := m.getCurrentVersion()
-	if err != nil {
-		return err
-	}
+		currentVersion, err := m.getCurrentVersion()
+		if err != nil {
+			return errors.Wrap(err, "Unable to get current schema version")
+		}
 
-	if targetVersion < 0 || int32(len(m.Migrations)) < targetVersion {
-		errMsg := fmt.Sprintf("destination version %d is outside the valid versions of 0 to %d", targetVersion, len(m.Migrations))
-		return BadVersionError(errMsg)
-	}
+		if targetVersion < 0 || int32(len(m.Migrations)) < targetVersion {
+			errMsg := fmt.Sprintf("destination version %d is outside the valid versions of 0 to %d", targetVersion, len(m.Migrations))
+			return BadVersionError(errMsg)
+		}
 
-	if currentVersion < 0 || int32(len(m.Migrations)) < currentVersion {
-		errMsg := fmt.Sprintf("current version %d is outside the valid versions of 0 to %d", currentVersion, len(m.Migrations))
-		return BadVersionError(errMsg)
-	}
+		if currentVersion < 0 || int32(len(m.Migrations)) < currentVersion {
+			errMsg := fmt.Sprintf("current version %d is outside the valid versions of 0 to %d", currentVersion, len(m.Migrations))
+			return BadVersionError(errMsg)
+		}
 
-	var direction int32
-	if currentVersion < targetVersion {
-		direction = 1
-	} else {
-		direction = -1
-	}
-
-	for currentVersion != targetVersion {
-		var current *Migration
-		var sql, directionName string
-		var sequence int32
-		if direction == 1 {
-			current = m.Migrations[currentVersion]
-			sequence = current.Sequence
-			sql = current.UpSQL
-			directionName = "up"
+		var direction int32
+		if currentVersion < targetVersion {
+			direction = 1
 		} else {
-			current = m.Migrations[currentVersion-1]
-			sequence = current.Sequence - 1
-			sql = current.DownSQL
-			directionName = "down"
-			if current.DownSQL == "" {
-				return IrreversibleMigrationError{m: current}
-			}
+			direction = -1
 		}
 
-		var tx pgx.Tx
-		if !m.options.DisableTx {
-			tx, err = m.conn.Begin(context.Background())
+		for currentVersion != targetVersion {
+			var current *Migration
+			var sql, directionName string
+			var sequence int32
+			if direction == 1 {
+				current = m.Migrations[currentVersion]
+				sequence = current.Sequence
+				sql = current.UpSQL
+				directionName = "up"
+			} else {
+				current = m.Migrations[currentVersion-1]
+				sequence = current.Sequence - 1
+				sql = current.DownSQL
+				directionName = "down"
+				if current.DownSQL == "" {
+					return IrreversibleMigrationError{m: current}
+				}
+			}
+
+			// Fire on start callback
+			if m.OnStart != nil {
+				m.OnStart(current.Sequence, current.Name, directionName, sql)
+			}
+
+			// Execute the migration
+			_, err = m.conn.Exec(context.Background(), sql)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "Unable to execute migration query")
 			}
-			defer tx.Rollback(context.Background())
-		}
 
-		// Fire on start callback
-		if m.OnStart != nil {
-			m.OnStart(current.Sequence, current.Name, directionName, sql)
-		}
-
-		// Execute the migration
-		_, err = m.conn.Exec(context.Background(), sql)
-		if err != nil {
-			return err
-		}
-
-		// Reset all database connection settings. Important to do before updating version as search_path may have been changed.
-		m.conn.Exec(context.Background(), "reset all")
-
-		// Add one to the version
-		_, err = m.conn.Exec(context.Background(), "update "+m.versionTable+" set version=$1", sequence)
-		if err != nil {
-			return err
-		}
-
-		if !m.options.DisableTx {
-			err = tx.Commit(context.Background())
+			// Add one to the version
+			_, err = m.conn.Exec(context.Background(), "update "+m.versionTable+" set version=$1", sequence)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "Unable to update schema version")
 			}
+
+			currentVersion = currentVersion + direction
 		}
 
-		currentVersion = currentVersion + direction
+		err = tx.Commit(context.Background())
+		if err == nil {
+			break // success
+		}
+
+		retry := onCommitFailed(err)
+		if !retry {
+			return errors.Wrap(err, "Commit failed, retry = false")
+		}
 	}
 
 	return nil
@@ -372,13 +359,15 @@ func MigrateDatabase(ctx context.Context, pool *pgxpool.Pool, path string) (int3
 	if err != nil {
 		return 0, errors.Wrap(err, "Unable to create a migrator")
 	}
-
 	err = migrator.loadMigrations(path)
 	if err != nil {
 		return 0, errors.Wrap(err, "Unable to load migrations")
 	}
 
-	err = migrator.migrate()
+	err = migrator.migrate(func(err error) (retry bool) {
+		return true // always retry
+	})
+
 	if err != nil {
 		return 0, errors.Wrap(err, "Unable to migrate")
 	}
