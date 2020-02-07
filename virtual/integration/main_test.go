@@ -217,10 +217,11 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
 	}
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus, codeRegistry,
-		codeRefRegistry,
-		codeDescriptors,
-		prototypeDescriptors,
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus,
+		nil,
+		nil,
+		nil,
+		nil,
 	)
 	checkError(ctx, err, "failed to start LogicRunner")
 
