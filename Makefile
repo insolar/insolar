@@ -310,7 +310,8 @@ generate-protobuf: ## generate protobuf structs
 
 .PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
-	$(BININSGOCC) regen-builtin
+	$(BININSGOCC) regen-builtin -c application/builtin/contract -i github.com/insolar/insolar/application/builtin/contract
+	$(BININSGOCC) regen-builtin -c applicationbase/builtin/contract -i github.com/insolar/insolar/applicationbase/builtin/contract
 
 .PHONY: build-track
 build-track: ## build logs event tracker tool
