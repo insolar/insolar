@@ -150,7 +150,8 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	err = row.Scan(&serializedTree)
 
 	if err != nil {
-		log.Errorf("DBStore.get - row.Scan failed: %v", err)
+		// this happens on a regular basis...
+		// log.Errorf("DBStore.get - row.Scan failed: %v", err)
 		_ = tx.Rollback(ctx)
 		return ErrResult
 	}
