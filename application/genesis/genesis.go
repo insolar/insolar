@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/bootstrap/contracts"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
@@ -172,8 +173,6 @@ func (g *Genesis) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// contracts.ContractMigrationAddressShardRefs(g.ContractsConfig.MAShardCount)
-	// contracts.ContractPublicKeyShardRefs(g.ContractsConfig.PKShardCount)
 
 	inslog.Info("[genesis] store contracts")
 	err = g.storeContracts(ctx, g.States)
@@ -203,6 +202,9 @@ func (g *Genesis) Start(ctx context.Context) error {
 
 func (g *Genesis) storeContracts(ctx context.Context, states []application.GenesisContractState) error {
 	inslog := inslogger.FromContext(ctx)
+
+	states = append(states, contracts.NodeDomain())
+
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)
 		if err != nil {
