@@ -87,10 +87,8 @@ func (g *Generator) readMigrationAddresses() ([][]string, error) {
 
 // Run generates bootstrap data.
 //
-// 1. builds Go plugins for genesis contracts
-//    (gone when built-in contracts (INS-2308) would be implemented)
-// 2. read root keys file and generates keys and certificates for discovery nodes.
-// 3. generates genesis config for heavy node.
+// 1. read root keys file and generates keys and certificates for discovery nodes.
+// 2. generates genesis config for heavy node.
 func (g *Generator) Run(ctx context.Context) error {
 	fmt.Printf("[ bootstrap ] config:\n%v\n", dumpAsJSON(g.config))
 

@@ -32,14 +32,6 @@ type Node struct {
 	KeysFile string `mapstructure:"keys_file" yaml:"keys_file"`
 }
 
-// Contracts contains config for contract's plugins generation.
-type Contracts struct {
-	// Insgocc is the path to ingocc binary for plugins generation.
-	Insgocc string
-	// OutDir is the path to directory where plugins so files would be saved.
-	OutDir string
-}
-
 // Config contains configuration required for bootstrap.
 type Config struct {
 	// MembersKeysDir is the root key place.
@@ -54,7 +46,6 @@ type Config struct {
 	ReuseKeys bool `mapstructure:"reuse_keys" yaml:"reuse_keys"`
 
 	HeavyGenesisConfigFile string `mapstructure:"heavy_genesis_config_file" yaml:"heavy_genesis_config_file"`
-	HeavyGenesisPluginsDir string `mapstructure:"heavy_genesis_plugins_dir" yaml:"heavy_genesis_plugins_dir"`
 
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance string `mapstructure:"root_balance" yaml:"root_balance"`
@@ -68,7 +59,6 @@ type Config struct {
 	LockupPeriodInPulses int64 `mapstructure:"lockup_pulse_period" yaml:"lockup_pulse_period"`
 	PKShardCount         int   `mapstructure:"pk_shard_count" yaml:"pk_shard_count"`
 	MAShardCount         int   `mapstructure:"ma_shard_count" yaml:"ma_shard_count"`
-	Contracts            Contracts
 
 	// Discovery settings.
 
