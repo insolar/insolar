@@ -33,10 +33,8 @@ func bootstrapCommand() *cobra.Command {
 		Short: "creates files required for new network (keys, genesis config)",
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx := context.Background()
-			contractsGen, err := bootstrap.NewGenesisContractsGenerator(configPath)
-			check("failed to start genesis contracts config generator", err)
 
-			contractsConfig, err := contractsGen.CreateGenesisContractsConfig(ctx)
+			contractsConfig, err := bootstrap.CreateGenesisContractsConfig(ctx, configPath)
 			check("failed to create genesis contracts config", err)
 
 			gen, err := basebootstrap.NewGenerator(configPath, certificatesOutDir, contractsConfig)

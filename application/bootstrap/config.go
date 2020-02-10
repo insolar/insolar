@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config contains configuration required for bootstrap.
+// ContractsConfig contains configuration required for bootstrap application logic.
 type ContractsConfig struct {
 	// MembersKeysDir is the root key place.
 	MembersKeysDir string `mapstructure:"members_keys_dir" yaml:"members_keys_dir"`
