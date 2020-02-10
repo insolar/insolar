@@ -53,26 +53,26 @@ type JetKeeper interface {
 	Storage() jet.Storage
 }
 
-func NewJetKeeper(jets jet.Storage, pool *pgxpool.Pool, pulses insolarPulse.Calculator) *DBJetKeeper {
-	return &DBJetKeeper{
+func NewPostgresJetKeeper(jets jet.Storage, pool *pgxpool.Pool, pulses insolarPulse.Calculator) *PostgresDBJetKeeper {
+	return &PostgresDBJetKeeper{
 		jetTrees: jets,
 		pool:     pool,
 		pulses:   pulses,
 	}
 }
 
-type DBJetKeeper struct {
+type PostgresDBJetKeeper struct {
 	lock     sync.RWMutex
 	jetTrees jet.Storage
 	pulses   insolarPulse.Calculator
 	pool     *pgxpool.Pool
 }
 
-func (jk *DBJetKeeper) Storage() jet.Storage {
+func (jk *PostgresDBJetKeeper) Storage() jet.Storage {
 	return jk.jetTrees
 }
 
-func (jk *DBJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
+func (jk *PostgresDBJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
@@ -86,7 +86,7 @@ func (jk *DBJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 }
 
 // AddDropConfirmation performs adding jet to storage and checks pulse completion.
-func (jk *DBJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
+func (jk *PostgresDBJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
@@ -100,7 +100,7 @@ func (jk *DBJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 }
 
 // AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
-func (jk *DBJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
+func (jk *PostgresDBJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
@@ -115,7 +115,7 @@ func (jk *DBJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.Pul
 	return errors.Wrap(err, "updateTopSyncPulse returns error")
 }
 
-func (jk *DBJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
+func (jk *PostgresDBJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
 	jets, err := jk.get(pulse)
 	if err != nil && err != store.ErrNotFound {
 		return errors.Wrapf(err, "updateBackup. can't get pulse: %d", pulse)
@@ -132,7 +132,7 @@ func (jk *DBJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
 	return jk.set(pulse, jets)
 }
 
-func (jk *DBJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber) error {
+func (jk *PostgresDBJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 
 	if jk.checkPulseConsistency(ctx, pn, true) {
@@ -147,7 +147,7 @@ func (jk *DBJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 }
 
 // HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
-func (jk *DBJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
+func (jk *PostgresDBJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
 	jk.lock.RLock()
 	defer jk.lock.RUnlock()
 
@@ -159,14 +159,14 @@ func (jk *DBJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.Puls
 }
 
 // TopSyncPulse provides access to highest synced (replicated) pulse.
-func (jk *DBJetKeeper) TopSyncPulse() insolar.PulseNumber {
+func (jk *PostgresDBJetKeeper) TopSyncPulse() insolar.PulseNumber {
 	jk.lock.RLock()
 	defer jk.lock.RUnlock()
 
 	return jk.topSyncPulse()
 }
 
-func (jk *DBJetKeeper) topSyncPulse() insolar.PulseNumber {
+func (jk *PostgresDBJetKeeper) topSyncPulse() insolar.PulseNumber {
 	errValue := insolar.GenesisPulse.PulseNumber
 	ctx := context.Background()
 	conn, err := jk.pool.Acquire(ctx)
@@ -196,7 +196,7 @@ func (jk *DBJetKeeper) topSyncPulse() insolar.PulseNumber {
 	return insolar.NewPulseNumber(val)
 }
 
-func (jk *DBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []JetInfo, error) {
+func (jk *PostgresDBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []JetInfo, error) {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
 	if err != nil && err != store.ErrNotFound {
@@ -216,7 +216,7 @@ func (jk *DBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber,
 	return len(jets) - 1, jets, nil
 }
 
-func (jk *DBJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
+func (jk *PostgresDBJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	parentID := id
 	if split {
 		parentID = jet.Parent(id)
@@ -235,7 +235,7 @@ func (jk *DBJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber,
 	return jk.set(pulse, jets)
 }
 
-func (jk *DBJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
+func (jk *PostgresDBJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID, split bool) error {
 	idx, jets, err := jk.getForJet(ctx, pulse, id)
 	if err != nil {
 		return errors.Wrap(err, "Can't getForJet")
@@ -249,31 +249,7 @@ func (jk *DBJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 	return jk.set(pulse, jets)
 }
 
-// infoToSet converts given jetInfo slice to set and checks confirmations
-// if at least one jetInfo is not confirmed it returns false
-// checkBackup is used to skip checking of backup confirmation
-func infoToSet(ctx context.Context, s []JetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
-	r := make(map[insolar.JetID]struct{}, len(s))
-	for _, el := range s {
-		if !el.isConfirmed(ctx, checkBackup) {
-			return nil, false
-		}
-		r[el.JetID] = struct{}{}
-	}
-	return r, len(r) != 0
-}
-
-func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
-	r := make([]insolar.JetID, len(s))
-	var idx int
-	for jet := range s {
-		r[idx] = jet
-		idx++
-	}
-	return r
-}
-
-func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
+func (jk *PostgresDBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
 	if top == pulse.MinTimePulse {
@@ -301,30 +277,7 @@ func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, err
 
 }
 
-func compareJets(ctx context.Context, what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{}) (bool, error) {
-	if len(actualJetsSet) != len(what) {
-		if len(actualJetsSet) > len(what) {
-			inslogger.FromContext(ctx).Debug("num actual jets is more then topSyncJets." +
-				" TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
-				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
-			return false, nil
-		}
-		inslogger.FromContext(ctx).Debug("actual and top sync pule jets are still different")
-		return false, nil
-	}
-
-	for _, expID := range what {
-		if _, ok := actualJetsSet[expID]; !ok {
-			return false, errors.New("jet sets are different. it's too bad. " +
-				". TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
-				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
-		}
-	}
-
-	return true, nil
-}
-
-func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
+func (jk *PostgresDBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
 	logger := inslogger.FromContext(ctx)
 
 	prev, err := jk.pulses.Backwards(ctx, pulse, 1)
@@ -380,7 +333,7 @@ func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	return true
 }
 
-func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
+func (jk *PostgresDBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 	jets, err := jk.get(pulse)
 	if err != nil {
 		jets = []JetInfo{}
@@ -388,7 +341,7 @@ func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 	return jets
 }
 
-func (jk *DBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr error) {
+func (jk *PostgresDBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr error) {
 	ctx := context.Background()
 	conn, err := jk.pool.Acquire(ctx)
 	if err != nil {
@@ -432,7 +385,7 @@ func (jk *DBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr er
 	return jets.Jets, nil
 }
 
-func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
+func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
 	ctx := context.Background()
 	jetsInfo := JetsInfo{Jets: jets}
 	serialized, err := jetsInfo.Marshal()
@@ -467,13 +420,13 @@ func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
 			break
 		}
 
-		log.Infof("DBJetKeeper.set - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresDBJetKeeper.set - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
 }
 
-func (jk *DBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
+func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	ctx := context.Background()
 	val := pn.Bytes()
 	conn, err := jk.pool.Acquire(ctx)
@@ -503,13 +456,13 @@ func (jk *DBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 			break
 		}
 
-		log.Infof("DBJetKeeper.updateSyncPulse - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresDBJetKeeper.updateSyncPulse - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil
 }
 
-func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (jk *PostgresDBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 

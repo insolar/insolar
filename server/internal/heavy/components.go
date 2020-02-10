@@ -181,7 +181,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses      *insolarPulse.PostgresDB
 		Nodes       *node.PostgresStorageDB
 		Pool        *pgxpool.Pool
-		Jets        *jet.DBStore
+		Jets        *jet.PostgresDBStore
 	)
 	{
 		var err error
@@ -205,7 +205,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		Pulses = insolarPulse.NewPostgresDB(Pool)
 		Nodes = node.NewPostgresStorageDB(Pool)
-		Jets = jet.NewDBStore(Pool)
+		Jets = jet.NewPostgresDBStore(Pool)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
@@ -290,13 +290,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.PostgresRecordDB
-		JetKeeper    *executor.DBJetKeeper
+		JetKeeper    *executor.PostgresDBJetKeeper
 	)
 	{
 		Records = object.NewPostgresRecordDB(Pool)
 		indexes := object.NewPostgresIndexDB(Pool, Records)
 		drops := drop.NewPostgresDB(Pool)
-		JetKeeper = executor.NewJetKeeper(Jets, Pool, Pulses)
+		JetKeeper = executor.NewPostgresJetKeeper(Jets, Pool, Pulses)
 
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)

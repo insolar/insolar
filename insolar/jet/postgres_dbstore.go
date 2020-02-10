@@ -26,16 +26,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type DBStore struct {
+type PostgresDBStore struct {
 	sync.RWMutex
 	pool *pgxpool.Pool
 }
 
-func NewDBStore(pool *pgxpool.Pool) *DBStore {
-	return &DBStore{pool: pool}
+func NewPostgresDBStore(pool *pgxpool.Pool) *PostgresDBStore {
+	return &PostgresDBStore{pool: pool}
 }
 
-func (s *DBStore) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID {
+func (s *PostgresDBStore) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -43,7 +43,7 @@ func (s *DBStore) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.
 	return tree.LeafIDs()
 }
 
-func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool) {
+func (s *PostgresDBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -51,7 +51,7 @@ func (s *DBStore) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID
 	return tree.Find(recordID)
 }
 
-func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
+func (s *PostgresDBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -67,7 +67,7 @@ func (s *DBStore) Update(ctx context.Context, pulse insolar.PulseNumber, actual 
 	return nil
 }
 
-func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
+func (s *PostgresDBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -83,7 +83,7 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	return left, right, nil
 }
 
-func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
+func (s *PostgresDBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -97,7 +97,7 @@ func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepA
 }
 
 // TruncateHead remove all records >= from
-func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -128,20 +128,20 @@ func (s *DBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	return nil
 }
 
-func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
+func (s *PostgresDBStore) get(pn insolar.PulseNumber) *Tree {
 	ctx := context.Background()
 	log := inslogger.FromContext(ctx)
 	ErrResult := NewTree(pn == insolar.GenesisPulse.PulseNumber)
 	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
-		log.Errorf("DBStore.get - s.pool.Acquire failed: %v", err)
+		log.Errorf("PostgresDBStore.get - s.pool.Acquire failed: %v", err)
 		return ErrResult
 	}
 	defer conn.Release()
 
 	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
-		log.Errorf("DBStore.get - conn.BeginTx failed: %v", err)
+		log.Errorf("PostgresDBStore.get - conn.BeginTx failed: %v", err)
 		return ErrResult
 	}
 
@@ -150,27 +150,27 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	err = row.Scan(&serializedTree)
 
 	if err != nil {
-		log.Errorf("DBStore.get - row.Scan failed: %v", err)
+		log.Errorf("PostgresDBStore.get - row.Scan failed: %v", err)
 		_ = tx.Rollback(ctx)
 		return ErrResult
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		log.Errorf("DBStore.get - tx.Commit failed: %v", err)
+		log.Errorf("PostgresDBStore.get - tx.Commit failed: %v", err)
 		return ErrResult
 	}
 
 	recovered := &Tree{}
 	err = recovered.Unmarshal(serializedTree)
 	if err != nil {
-		log.Errorf("DBStore.get - recovered.Unmarshal failed: %v", err)
+		log.Errorf("PostgresDBStore.get - recovered.Unmarshal failed: %v", err)
 		return nil
 	}
 	return recovered
 }
 
-func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
+func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 	ctx := context.Background()
 	serialized, err := jt.Marshal()
 	if err != nil {
@@ -207,7 +207,7 @@ func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 			break
 		}
 
-		log.Infof("DBStore.set - commit failed: %v - retrying transaction", err)
+		log.Infof("PostgresDBStore.set - commit failed: %v - retrying transaction", err)
 	}
 
 	return nil

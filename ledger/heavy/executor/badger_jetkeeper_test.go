@@ -1,5 +1,4 @@
-//
-// Copyright 2020 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,142 +11,77 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-// +build slowtest
-
-package executor
+package executor_test
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
-	"sort"
-	"sync"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/gen"
-
-	"github.com/insolar/insolar/ledger/heavy/migration"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/tests/common"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/pkg/errors"
-
+	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-var (
-	poolLock     sync.Mutex
-	globalPgPool *pgxpool.Pool
-)
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
 
-func setPool(pool *pgxpool.Pool) {
-	poolLock.Lock()
-	defer poolLock.Unlock()
-	globalPgPool = pool
+	return ops
 }
 
-func getPool() *pgxpool.Pool {
-	poolLock.Lock()
-	defer poolLock.Unlock()
-	return globalPgPool
-}
-
-// TestMain does the before and after setup
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	log.Info("[TestMain] About to start PostgreSQL...")
-	pgURL, stopPostgreSQL := common.StartPostgreSQL()
-	log.Info("[TestMain] PostgreSQL started!")
-
-	pool, err := pgxpool.Connect(ctx, pgURL)
-	if err != nil {
-		stopPostgreSQL()
-		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
-	}
-
-	migrationPath := "../../../migration"
-	cwd, err := os.Getwd()
-	if err != nil {
-		stopPostgreSQL()
-		panic(errors.Wrap(err, "[TestMain] os.Getwd failed"))
-	}
-	log.Infof("[TestMain] About to run PostgreSQL migration, cwd = %s, migration migrationPath = %s", cwd, migrationPath)
-	ver, err := migration.MigrateDatabase(ctx, pool, migrationPath)
-	if err != nil {
-		stopPostgreSQL()
-		panic(errors.Wrap(err, "Unable to migrate database"))
-	}
-	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
-
-	setPool(pool)
-	// Run all tests
-	code := m.Run()
-
-	log.Info("[TestMain] Cleaning up...")
-	stopPostgreSQL()
-	os.Exit(code)
-}
-
-func cleanJetsInfoTables() {
-	ctx := context.Background()
-	conn, err := getPool().Acquire(ctx)
-	if err != nil {
-		panic("Unable to acquire a database connection")
-	}
-	defer conn.Release()
-
-	_, err = conn.Exec(ctx, "DELETE FROM jets_info")
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = conn.Exec(ctx, "DELETE FROM key_value")
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = conn.Exec(ctx, "DELETE FROM pulses CASCADE")
-	if err != nil {
-		panic(err)
-	}
-}
-
-func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *jet.DBStore, *pulse.PostgresDB) {
-	cleanJetsInfoTables()
-
+func initBadgerDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.BadgerDBStore, *pulse.BadgerDB) {
 	ctx := inslogger.TestContext(t)
-	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(db)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := executor.NewBadgerJetKeeper(jets, db, pulses)
 
-	return jetKeeper, jets, pulses
+	return jetKeeper, tmpdir, db, jets, pulses
 }
 
 func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	ji, _, _ := initDB(t, testPulse)
-	err := ji.(*DBJetKeeper).TruncateHead(ctx, 1)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+	err := ji.(*executor.BadgerDBJetKeeper).TruncateHead(ctx, 1)
 	require.EqualError(t, err, "try to truncate top sync pulse")
 }
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	ji, jets, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
 	testJet := insolar.ZeroJetID
 
 	err := jets.Update(ctx, testPulse, true, testJet)
@@ -168,9 +102,12 @@ func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 }
 
 func Test_DifferentSplitFlagsInDropsAndHots(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	ji, _, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
 
 	testJet := insolar.ZeroJetID
 
@@ -196,15 +133,16 @@ func Test_DifferentSplitFlagsInDropsAndHots(t *testing.T) {
 }
 
 func TestJetInfoIsConfirmed_Split(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	nextPulse := gen.PulseNumber()
-	if nextPulse < testPulse {
-		nextPulse, testPulse = testPulse, nextPulse
-	}
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets, pulses := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
 
-	ji, jets, pulses := initDB(t, testPulse)
 	testJet := insolar.ZeroJetID
+
+	nextPulse := insolar.GenesisPulse.PulseNumber + 20
 
 	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
@@ -236,17 +174,26 @@ func TestJetInfoIsConfirmed_Split(t *testing.T) {
 }
 
 func TestJetInfo_BackupConfirmComesFirst(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	jetKeeper, _, _ := initDB(t, testPulse)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
 	err := jetKeeper.AddBackupConfirmation(ctx, testPulse)
 	require.Contains(t, err.Error(), "Received backup confirmation before replication data")
 }
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	jetKeeper, _, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
 	testJet := gen.JetID()
 	err := jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
@@ -257,9 +204,12 @@ func TestJetInfo_ExistingDrop(t *testing.T) {
 }
 
 func TestJetInfo_ExistingHot(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	jetKeeper, _, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
 
 	testJet := gen.JetID()
 	err := jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
@@ -270,10 +220,13 @@ func TestJetInfo_ExistingHot(t *testing.T) {
 }
 
 func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	testPulse := gen.PulseNumber()
-	jetKeeper, _, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
 
 	testJet := gen.JetID()
 	left, right := jet.Siblings(testJet)
@@ -290,17 +243,30 @@ func TestJetInfo_ExceedNumHotConfirmations(t *testing.T) {
 }
 
 func TestNewJetKeeper(t *testing.T) {
-	jets := jet.NewDBStore(getPool())
+	t.Parallel()
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	jets := jet.NewBadgerDBStore(db)
 	pulses := pulse.NewCalculatorMock(t)
-	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := executor.NewBadgerJetKeeper(jets, db, pulses)
 	require.NotNil(t, jetKeeper)
 }
 
 func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	testPulse := gen.PulseNumber()
-	jetKeeper, jets, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, jets, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
+
 	testJet := gen.JetID()
 	left, _ := jet.Siblings(testJet)
 
@@ -322,10 +288,13 @@ func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
 }
 
 func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	testPulse := gen.PulseNumber()
-	jetKeeper, jets, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	jetKeeper, tmpDir, db, jets, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(context.Background())
 
 	testJet := gen.JetID()
 	left, right := jet.Siblings(testJet)
@@ -352,13 +321,23 @@ func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
 }
 
 func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jets := jet.NewDBStore(getPool())
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	jets := jet.NewBadgerDBStore(db)
 	pulses := pulse.NewCalculatorMock(t)
 	pulses.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
 	})
-	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+	jetKeeper := executor.NewBadgerJetKeeper(jets, db, pulses)
 
 	var (
 		pulse insolar.PulseNumber
@@ -367,14 +346,17 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	f := fuzz.New()
 	f.Fuzz(&pulse)
 	f.Fuzz(&jet)
-	err := jetKeeper.AddDropConfirmation(ctx, pulse, jet, false)
+	err = jetKeeper.AddDropConfirmation(ctx, pulse, jet, false)
 	require.NoError(t, err)
 }
 
 func TestDbJetKeeper_CheckJetTreeFail(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	ji, _, _ := initDB(t, testPulse)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initBadgerDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
 
 	testJet := insolar.ZeroJetID
 
@@ -391,15 +373,23 @@ func TestDbJetKeeper_CheckJetTreeFail(t *testing.T) {
 }
 
 func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
-	cleanJetsInfoTables()
-
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(db)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+
+	jetKeeper := executor.NewBadgerJetKeeper(jets, db, pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
@@ -408,11 +398,8 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 		nextPulse    insolar.PulseNumber
 		testJet      insolar.JetID
 	)
-	currentPulse = gen.PulseNumber()
-	nextPulse = gen.PulseNumber()
-	if nextPulse < currentPulse {
-		currentPulse, nextPulse = nextPulse, currentPulse
-	}
+	currentPulse = insolar.GenesisPulse.PulseNumber + 10
+	nextPulse = insolar.GenesisPulse.PulseNumber + 20
 	testJet = insolar.ZeroJetID
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: currentPulse})
@@ -455,16 +442,23 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 }
 
 func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
-	cleanJetsInfoTables()
-
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	jets := jet.NewDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, getPool(), pulses)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(db)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+
+	jetKeeper := executor.NewBadgerJetKeeper(jets, db, pulses)
 
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 
@@ -474,17 +468,9 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 		futurePulse  insolar.PulseNumber
 		testJet      insolar.JetID
 	)
-	pulsesSlice := make([]insolar.PulseNumber, 3)
-	for i := 0; i < len(pulsesSlice); i++ {
-		pulsesSlice[i] = gen.PulseNumber()
-	}
-	sort.Slice(pulsesSlice, func(i, j int) bool {
-		return pulsesSlice[i] < pulsesSlice[j]
-	})
-
-	currentPulse = pulsesSlice[0]
-	nextPulse = pulsesSlice[1]
-	futurePulse = pulsesSlice[2]
+	currentPulse = insolar.GenesisPulse.PulseNumber + 10
+	nextPulse = insolar.GenesisPulse.PulseNumber + 20
+	futurePulse = insolar.GenesisPulse.PulseNumber + 30
 	testJet = insolar.ZeroJetID
 
 	err = jets.Update(ctx, currentPulse, true, testJet)
@@ -549,47 +535,4 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	err = jetKeeper.AddBackupConfirmation(ctx, futurePulse)
 	require.NoError(t, err)
 	require.Equal(t, futurePulse, jetKeeper.TopSyncPulse())
-}
-
-func Test_TruncateHead(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	testPulse := gen.PulseNumber()
-	nextPulse := gen.PulseNumber()
-	if nextPulse < testPulse {
-		testPulse, nextPulse = nextPulse, testPulse
-	}
-	ji_interface, jets, _ := initDB(t, testPulse)
-	ji := ji_interface.(*DBJetKeeper)
-
-	testJet := insolar.ZeroJetID
-
-	err := jets.Update(ctx, testPulse, true, testJet)
-	require.NoError(t, err)
-	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
-	require.NoError(t, err)
-	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
-	require.NoError(t, err)
-	err = ji.AddBackupConfirmation(ctx, testPulse)
-	require.NoError(t, err)
-
-	require.Equal(t, testPulse, ji.TopSyncPulse())
-
-	_, err = ji.get(testPulse)
-	require.NoError(t, err)
-
-	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
-	require.NoError(t, err)
-	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
-	require.NoError(t, err)
-
-	_, err = ji.get(nextPulse)
-	require.NoError(t, err)
-
-	err = ji.TruncateHead(ctx, nextPulse)
-	require.NoError(t, err)
-
-	_, err = ji.get(testPulse)
-	require.NoError(t, err)
-	_, err = ji.get(nextPulse)
-	require.EqualError(t, err, "value not found")
 }
