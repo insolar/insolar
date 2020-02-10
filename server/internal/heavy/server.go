@@ -23,7 +23,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -34,16 +34,18 @@ import (
 )
 
 type Server struct {
-	cfgPath        string
-	genesisCfgPath string
-	states         []application.GenesisContractState
+	cfgPath          string
+	genesisCfgPath   string
+	states           []genesis.GenesisContractState
+	nodeDomainParent string
 }
 
-func New(cfgPath string, genesisCfgPath string, states []application.GenesisContractState) *Server {
+func New(cfgPath string, genesisCfgPath string, states []genesis.GenesisContractState, nodeDomainParent string) *Server {
 	return &Server{
-		cfgPath:        cfgPath,
-		genesisCfgPath: genesisCfgPath,
-		states:         states,
+		cfgPath:          cfgPath,
+		genesisCfgPath:   genesisCfgPath,
+		states:           states,
+		nodeDomainParent: nodeDomainParent,
 	}
 }
 
@@ -63,7 +65,7 @@ func (s *Server) Serve() {
 	if err != nil {
 		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
 	}
-	var genesisCfg application.GenesisHeavyConfig
+	var genesisCfg genesis.GenesisHeavyConfig
 	err = json.Unmarshal(b, &genesisCfg)
 	if err != nil {
 		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
@@ -96,7 +98,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.states)
+	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.states, s.nodeDomainParent)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/bootstrap/contracts"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
@@ -106,8 +104,8 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		)
 	}
 
-	genesisID := application.GenesisRecord.ID()
-	genesisRecord := record.Genesis{Hash: application.GenesisRecord}
+	genesisID := GenesisRecord.ID()
+	genesisRecord := record.Genesis{Hash: GenesisRecord}
 	virtRec := record.Wrap(&genesisRecord)
 	rec := record.Material{
 		Virtual: virtRec,
@@ -139,7 +137,7 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 
 // Done saves genesis value. Should be called when all genesis steps finished properly.
 func (br *BaseRecord) Done(ctx context.Context) error {
-	return br.DB.Set(Key{}, application.GenesisRecord.Ref().Bytes())
+	return br.DB.Set(Key{}, GenesisRecord.Ref().Bytes())
 }
 
 // Genesis holds data and objects required for genesis on heavy node.
@@ -147,8 +145,10 @@ type Genesis struct {
 	ArtifactManager artifact.Manager
 	BaseRecord      *BaseRecord
 
-	DiscoveryNodes []application.DiscoveryNodeRegister
-	States         []application.GenesisContractState
+	DiscoveryNodes []DiscoveryNodeRegister
+	States         []GenesisContractState
+
+	NodeDomainParent string
 }
 
 // Start implements components.Starter.
@@ -200,10 +200,10 @@ func (g *Genesis) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *Genesis) storeContracts(ctx context.Context, states []application.GenesisContractState) error {
+func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState) error {
 	inslog := inslogger.FromContext(ctx)
 
-	states = append(states, contracts.NodeDomain())
+	states = append(states, NodeDomain(g.NodeDomainParent))
 
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)
@@ -215,7 +215,7 @@ func (g *Genesis) storeContracts(ctx context.Context, states []application.Genes
 	return nil
 }
 
-func (g *Genesis) activateContract(ctx context.Context, state application.GenesisContractState) (*insolar.Reference, error) {
+func (g *Genesis) activateContract(ctx context.Context, state GenesisContractState) (*insolar.Reference, error) {
 	name := state.Name
 	objRef := genesisrefs.GenesisRef(name)
 
@@ -233,7 +233,7 @@ func (g *Genesis) activateContract(ctx context.Context, state application.Genesi
 		return nil, errors.Wrapf(err, "failed to register '%v' contract", name)
 	}
 
-	parentRef := application.GenesisRecord.Ref()
+	parentRef := GenesisRecord.Ref()
 	if state.ParentName != "" {
 		parentRef = genesisrefs.GenesisRef(state.ParentName)
 	}

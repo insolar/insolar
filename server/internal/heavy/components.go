@@ -31,9 +31,8 @@ import (
 	"google.golang.org/grpc"
 
 	component "github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/genesis"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -111,7 +110,9 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, states []application.GenesisContractState) (*components, error) {
+func newComponents(
+	ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.GenesisHeavyConfig, states []genesis.GenesisContractState, nodeDomainParent string,
+) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -373,8 +374,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes: genesisCfg.DiscoveryNodes,
-			States:         states,
+			DiscoveryNodes:   genesisCfg.DiscoveryNodes,
+			States:           states,
+			NodeDomainParent: nodeDomainParent,
 		}
 	}
 

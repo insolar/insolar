@@ -37,8 +37,8 @@ var (
 	proxySources    = insolar.RootModule + "/application/proxy"
 	contractNames   = []string{
 		application.GenesisNameRootDomain,
-		application.GenesisNameNodeDomain,
-		application.GenesisNameNodeRecord,
+		genesisrefs.GenesisNameNodeDomain,
+		genesisrefs.GenesisNameNodeRecord,
 		application.GenesisNameMember,
 		application.GenesisNameWallet,
 		application.GenesisNameDeposit,

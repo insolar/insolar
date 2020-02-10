@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
@@ -179,7 +179,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
-			application.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
+			genesis.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)

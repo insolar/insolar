@@ -25,6 +25,7 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
@@ -201,14 +202,14 @@ func (g *Generator) makeHeavyGenesisConfig(
 	discoveryNodes []nodeInfo,
 	contractsConfig application.GenesisContractsConfig,
 ) error {
-	items := make([]application.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
+	items := make([]genesis.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
-		items = append(items, application.DiscoveryNodeRegister{
+		items = append(items, genesis.DiscoveryNodeRegister{
 			Role:      node.role,
 			PublicKey: node.publicKey,
 		})
 	}
-	cfg := &application.GenesisHeavyConfig{
+	cfg := &genesis.GenesisHeavyConfig{
 		DiscoveryNodes:  items,
 		ContractsConfig: contractsConfig,
 	}

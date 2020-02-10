@@ -293,8 +293,7 @@ func NewServer(
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			ContractsConfig: genesisCfg.ContractsConfig,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
 		}
 	}
 
