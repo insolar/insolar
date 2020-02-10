@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -39,11 +38,11 @@ import (
 type Generator struct {
 	config             *Config
 	certificatesOutDir string
-	contractsConfig    application.GenesisContractsConfig
+	contractsConfig    map[string]interface{}
 }
 
 // NewGenerator parses config file and creates new generator on success.
-func NewGenerator(configFile, certificatesOutDir string, contractsConfig application.GenesisContractsConfig) (*Generator, error) {
+func NewGenerator(configFile, certificatesOutDir string, contractsConfig map[string]interface{}) (*Generator, error) {
 	config, err := ParseConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -53,7 +52,7 @@ func NewGenerator(configFile, certificatesOutDir string, contractsConfig applica
 }
 
 // NewGeneratorWithConfig creates new Generator with provided config.
-func NewGeneratorWithConfig(config *Config, certificatesOutDir string, contractsConfig application.GenesisContractsConfig) *Generator {
+func NewGeneratorWithConfig(config *Config, certificatesOutDir string, contractsConfig map[string]interface{}) *Generator {
 	return &Generator{
 		config:             config,
 		certificatesOutDir: certificatesOutDir,
@@ -200,7 +199,7 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 
 func (g *Generator) makeHeavyGenesisConfig(
 	discoveryNodes []nodeInfo,
-	contractsConfig application.GenesisContractsConfig,
+	contractsConfig map[string]interface{},
 ) error {
 	items := make([]genesis.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
@@ -209,10 +208,12 @@ func (g *Generator) makeHeavyGenesisConfig(
 			PublicKey: node.publicKey,
 		})
 	}
-	cfg := &genesis.GenesisHeavyConfig{
-		DiscoveryNodes:  items,
-		ContractsConfig: contractsConfig,
+
+	cfg := map[string]interface{}{
+		"DiscoveryNodes":  items,
+		"ContractsConfig": contractsConfig,
 	}
+
 	b, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return errors.Wrapf(err, "failed to decode heavy config to json")

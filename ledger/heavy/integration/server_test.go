@@ -31,8 +31,7 @@ import (
 	"github.com/pkg/errors"
 
 	component "github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/genesis"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -128,7 +127,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig,
+	genesisCfg genesis.GenesisHeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.

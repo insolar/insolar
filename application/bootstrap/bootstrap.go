@@ -83,7 +83,7 @@ func (g *Generator) readMigrationAddresses() ([][]string, error) {
 //
 // 1. read application-related keys files.
 // 2. generates genesis contracts config for heavy node.
-func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (application.GenesisContractsConfig, error) {
+func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (map[string]interface{}, error) {
 	fmt.Printf("[ bootstrap ] config:\n%v\n", bootstrap.DumpAsJSON(g.config))
 
 	inslog := inslogger.FromContext(ctx)
@@ -91,24 +91,24 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 	inslog.Info("[ bootstrap ] read keys files")
 	rootPublicKey, err := secrets.GetPublicKeyFromFile(filepath.Join(g.config.MembersKeysDir, "root_member_keys.json"))
 	if err != nil {
-		return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get root keys")
+		return nil, errors.Wrap(err, "couldn't get root keys")
 	}
 
 	feePublicKey, err := secrets.GetPublicKeyFromFile(filepath.Join(g.config.MembersKeysDir, "fee_member_keys.json"))
 	if err != nil {
-		return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get fees keys")
+		return nil, errors.Wrap(err, "couldn't get fees keys")
 	}
 
 	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(
 		filepath.Join(g.config.MembersKeysDir, "migration_admin_member_keys.json"))
 	if err != nil {
-		return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get migration admin keys")
+		return nil, errors.Wrap(err, "couldn't get migration admin keys")
 	}
 	migrationDaemonPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
-			return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get migration daemon keys")
+			return nil, errors.Wrap(err, "couldn't get migration daemon keys")
 		}
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
@@ -118,7 +118,7 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 		k, err := secrets.GetPublicKeyFromFile(
 			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "network_incentives_")))
 		if err != nil {
-			return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get network incentives keys")
+			return nil, errors.Wrap(err, "couldn't get network incentives keys")
 		}
 		networkIncentivesPublicKeys = append(networkIncentivesPublicKeys, k)
 	}
@@ -128,7 +128,7 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 		k, err := secrets.GetPublicKeyFromFile(
 			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "application_incentives_")))
 		if err != nil {
-			return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get application incentives keys")
+			return nil, errors.Wrap(err, "couldn't get application incentives keys")
 		}
 		applicationIncentivesPublicKeys = append(applicationIncentivesPublicKeys, k)
 	}
@@ -138,7 +138,7 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 		k, err := secrets.GetPublicKeyFromFile(
 			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "foundation_")))
 		if err != nil {
-			return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get foundation keys")
+			return nil, errors.Wrap(err, "couldn't get foundation keys")
 		}
 		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
@@ -148,7 +148,7 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 		k, err := secrets.GetPublicKeyFromFile(
 			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "enterprise_")))
 		if err != nil {
-			return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get enterprise keys")
+			return nil, errors.Wrap(err, "couldn't get enterprise keys")
 		}
 		enterprisePublicKeys = append(enterprisePublicKeys, k)
 	}
@@ -160,7 +160,7 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 	inslog.Info("[ bootstrap ] read migration addresses ...")
 	migrationAddresses, err := g.readMigrationAddresses()
 	if err != nil {
-		return application.GenesisContractsConfig{}, errors.Wrap(err, "couldn't get migration addresses")
+		return nil, errors.Wrap(err, "couldn't get migration addresses")
 	}
 
 	vestingStep := g.config.VestingStepInPulses
@@ -168,23 +168,23 @@ func (g *Generator) CreateGenesisContractsConfig(ctx context.Context) (applicati
 		vestingStep = 60 * 60 * 24
 	}
 
-	return application.GenesisContractsConfig{
-		RootBalance:                     g.config.RootBalance,
-		MDBalance:                       g.config.MDBalance,
-		RootPublicKey:                   rootPublicKey,
-		FeePublicKey:                    feePublicKey,
-		MigrationAdminPublicKey:         migrationAdminPublicKey,
-		MigrationDaemonPublicKeys:       migrationDaemonPublicKeys,
-		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
-		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
-		FoundationPublicKeys:            foundationPublicKeys,
-		EnterprisePublicKeys:            enterprisePublicKeys,
-		MigrationAddresses:              migrationAddresses,
-		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
-		LockupPeriodInPulses:            g.config.LockupPeriodInPulses,
-		VestingStepInPulses:             vestingStep,
-		MAShardCount:                    g.config.MAShardCount,
-		PKShardCount:                    g.config.PKShardCount,
+	return map[string]interface{}{
+		"RootBalance":                     g.config.RootBalance,
+		"MDBalance":                       g.config.MDBalance,
+		"RootPublicKey":                   rootPublicKey,
+		"FeePublicKey":                    feePublicKey,
+		"MigrationAdminPublicKey":         migrationAdminPublicKey,
+		"MigrationDaemonPublicKeys":       migrationDaemonPublicKeys,
+		"NetworkIncentivesPublicKeys":     networkIncentivesPublicKeys,
+		"ApplicationIncentivesPublicKeys": applicationIncentivesPublicKeys,
+		"FoundationPublicKeys":            foundationPublicKeys,
+		"EnterprisePublicKeys":            enterprisePublicKeys,
+		"MigrationAddresses":              migrationAddresses,
+		"VestingPeriodInPulses":           g.config.VestingPeriodInPulses,
+		"LockupPeriodInPulses":            g.config.LockupPeriodInPulses,
+		"VestingStepInPulses":             vestingStep,
+		"MAShardCount":                    g.config.MAShardCount,
+		"PKShardCount":                    g.config.PKShardCount,
 	}, nil
 }
 

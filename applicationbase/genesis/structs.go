@@ -15,7 +15,6 @@
 package genesis
 
 import (
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -51,8 +50,7 @@ type GenesisContractState struct {
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
 type GenesisHeavyConfig struct {
 	// DiscoveryNodes is the list with discovery node info.
-	DiscoveryNodes  []DiscoveryNodeRegister
-	ContractsConfig application.GenesisContractsConfig
+	DiscoveryNodes []DiscoveryNodeRegister
 	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
 	Skip bool
 }

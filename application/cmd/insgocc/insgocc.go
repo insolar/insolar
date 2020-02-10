@@ -336,7 +336,7 @@ func main() {
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(
-		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins, genesisCompile())
+		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins)
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
