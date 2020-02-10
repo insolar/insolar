@@ -35,7 +35,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var db *StorageDB
+var db *PostgresStorageDB
 
 // TestMain does the before and after setup
 func TestMain(m *testing.M) {
@@ -64,7 +64,7 @@ func TestMain(m *testing.M) {
 	}
 	log.Infof("[TestMain] PostgreSQL database migration done, current schema version: %d", ver)
 
-	db = NewStorageDB(pool)
+	db = NewPostgresStorageDB(pool)
 
 	// Run all tests
 	code := m.Run()

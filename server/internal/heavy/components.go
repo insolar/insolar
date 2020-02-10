@@ -179,7 +179,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.PostgresDB
-		Nodes       *node.StorageDB
+		Nodes       *node.PostgresStorageDB
 		Pool        *pgxpool.Pool
 		Jets        *jet.DBStore
 	)
@@ -204,7 +204,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
 		Pulses = insolarPulse.NewPostgresDB(Pool)
-		Nodes = node.NewStorageDB(Pool)
+		Nodes = node.NewPostgresStorageDB(Pool)
 		Jets = jet.NewDBStore(Pool)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
