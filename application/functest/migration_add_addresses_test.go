@@ -40,7 +40,7 @@ func TestAddMigrationAddresses(t *testing.T) {
 		t.Skip(extraAddrsDir, "extra addresses dir already exists")
 	}
 
-	bootCfg, err := bootstrap.ParseConfig(filepath.Join(defaults.LaunchnetDir(), "bootstrap.yaml"))
+	bootCfg, err := bootstrap.ParseContractsConfig(filepath.Join(defaults.LaunchnetDir(), "bootstrap.yaml"))
 	require.NoError(t, err, "bootstrap config parse")
 
 	shardsCount := bootCfg.MAShardCount

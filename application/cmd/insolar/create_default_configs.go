@@ -39,7 +39,7 @@ func writePulsarConfig(outputDir string) {
 }
 
 func writeBootstrapConfig(outputDir string) {
-	raw, err := yaml.Marshal(bootstrap.Config{})
+	raw, err := yaml.Marshal(bootstrap.ContractsConfig{})
 	if err != nil {
 		panic(err)
 	}
