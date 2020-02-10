@@ -1,4 +1,5 @@
-// Copyright 2020 Insolar Network Ltd.
+///
+// Copyright 2020 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+///
 
 package main
 
@@ -336,7 +338,7 @@ func main() {
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(
-		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins)
+		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins, genesisCompile())
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
