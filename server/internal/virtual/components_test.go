@@ -55,6 +55,10 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
+		nil,
+		nil,
+		nil,
+		nil,
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)
