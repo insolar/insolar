@@ -105,7 +105,7 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	genesisCodes builtin.GenesisCodes,
+	builtinContracts builtin.GenesisCodes,
 
 ) (*component.Manager, func()) {
 	cm := component.NewManager(nil)
@@ -137,7 +137,7 @@ func initComponents(
 	artifactsClient := artifacts.NewClient(b)
 	cachedPulses := artifacts.NewPulseAccessorLRU(pulses, artifactsClient, cfg.LogicRunner.PulseLRUSize)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b, genesisCodes)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b, builtinContracts)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(

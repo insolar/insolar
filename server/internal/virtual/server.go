@@ -31,14 +31,14 @@ import (
 )
 
 type Server struct {
-	cfgPath      string
-	genesisCodes builtin.GenesisCodes
+	cfgPath          string
+	builtinContracts builtin.GenesisCodes
 }
 
-func New(cfgPath string, genesisCodes builtin.GenesisCodes) *Server {
+func New(cfgPath string, builtinContracts builtin.GenesisCodes) *Server {
 	return &Server{
-		cfgPath:      cfgPath,
-		genesisCodes: genesisCodes,
+		cfgPath:          cfgPath,
+		builtinContracts: builtinContracts,
 	}
 }
 
@@ -88,7 +88,7 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		s.genesisCodes,
+		s.builtinContracts,
 	)
 
 	var gracefulStop = make(chan os.Signal, 1)

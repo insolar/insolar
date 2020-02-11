@@ -56,7 +56,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		builtin.GenesisCodes{},
+		builtin.BuiltinContracts{},
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)

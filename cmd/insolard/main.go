@@ -77,13 +77,13 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 		s := server.NewLightServer(configPath)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		genesisCodes := builtin.GenesisCodes{
+		builtinContracts := builtin.GenesisCodes{
 			CodeRegistry:         appbuiltin.InitializeContractMethods(),
 			CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
 			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
 			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
 		}
-		s := server.NewVirtualServer(configPath, genesisCodes)
+		s := server.NewVirtualServer(configPath, builtinContracts)
 		s.Serve()
 	}
 }

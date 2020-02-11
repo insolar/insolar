@@ -73,21 +73,21 @@ type LogicRunner struct {
 
 	rpc *lrCommon.RPC
 
-	genesisCodes builtin.GenesisCodes
+	builtinContracts builtin.GenesisCodes
 }
 
 // NewLogicRunner is constructor for LogicRunner
 func NewLogicRunner(
-	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, genesisCodes builtin.GenesisCodes,
+	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, builtinContracts builtin.GenesisCodes,
 ) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:          cfg,
-		Publisher:    publisher,
-		Sender:       sender,
-		genesisCodes: genesisCodes,
+		Cfg:              cfg,
+		Publisher:        publisher,
+		Sender:           sender,
+		builtinContracts: builtinContracts,
 	}
 
 	return &res, nil
@@ -170,7 +170,7 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
-		lr.genesisCodes,
+		lr.builtinContracts,
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err
