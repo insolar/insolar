@@ -140,15 +140,18 @@ func (br *BaseRecord) Done(ctx context.Context) error {
 	return br.DB.Set(Key{}, GenesisRecord.Ref().Bytes())
 }
 
+type GenesisOptions struct {
+	States           []GenesisContractState
+	NodeDomainParent string
+}
+
 // Genesis holds data and objects required for genesis on heavy node.
 type Genesis struct {
 	ArtifactManager artifact.Manager
 	BaseRecord      *BaseRecord
 
 	DiscoveryNodes []DiscoveryNodeRegister
-	States         []GenesisContractState
-
-	NodeDomainParent string
+	GenesisOptions GenesisOptions
 }
 
 // Start implements components.Starter.
@@ -175,7 +178,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	inslog.Info("[genesis] store contracts")
-	err = g.storeContracts(ctx, g.States)
+	err = g.storeContracts(ctx, g.GenesisOptions.States)
 	if err != nil {
 		panic(fmt.Sprintf("[genesis] store contracts failed: %v", err))
 	}
@@ -203,7 +206,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState) error {
 	inslog := inslogger.FromContext(ctx)
 
-	states = append(states, NodeDomain(g.NodeDomainParent))
+	states = append(states, NodeDomain(g.GenesisOptions.NodeDomainParent))
 
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)

@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/builtin"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -72,7 +73,14 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
 		states, _ := initStates(configPath, genesisConfigPath)
-		s := server.NewHeavyServer(configPath, genesisConfigPath, states, application.GenesisNameRootDomain)
+		s := server.NewHeavyServer(
+			configPath,
+			genesisConfigPath,
+			genesis.GenesisOptions{
+				States:           states,
+				NodeDomainParent: application.GenesisNameRootDomain,
+			},
+		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(configPath)

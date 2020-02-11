@@ -49,6 +49,6 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, genesis.GenesisHeavyConfig{Skip: true}, nil, "")
+	_, err = newComponents(ctx, cfg, genesis.GenesisHeavyConfig{Skip: true}, genesis.GenesisOptions{})
 	require.NoError(t, err)
 }

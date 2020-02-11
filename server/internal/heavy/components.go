@@ -111,7 +111,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 }
 
 func newComponents(
-	ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.GenesisHeavyConfig, states []genesis.GenesisContractState, nodeDomainParent string,
+	ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.GenesisHeavyConfig, genesisOptions genesis.GenesisOptions,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -374,9 +374,8 @@ func newComponents(
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes:   genesisCfg.DiscoveryNodes,
-			States:           states,
-			NodeDomainParent: nodeDomainParent,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
+			GenesisOptions: genesisOptions,
 		}
 	}
 
