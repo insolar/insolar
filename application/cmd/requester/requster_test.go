@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http/httptest"
 	"os"
@@ -60,7 +59,6 @@ func (s *requesterSuiteTest) TearDownSuite() {
 func (s *requesterSuiteTest) TestRequester_HelpWorks() {
 	sout, _ := runCmd("--help")
 	assert.Contains(s.T(), sout, "Usage of")
-	fmt.Printf("%s", sout)
 }
 
 func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {
@@ -91,7 +89,6 @@ func (s *requesterSuiteTest) TestRequester_UserShouldPassMemberKey() {
 func (s *requesterSuiteTest) TestRequester_UserShouldPassRequestParams() {
 	sout, err := runCmd(getArgs(s.userKeyFile.Name(), s.ts.URL, "/path/to/nonexisting/requestparams", true, true)...)
 	assert.Error(s.T(), err)
-	println(sout)
 	assert.Contains(s.T(), sout, "Cannot unmarshal request")
 }
 
