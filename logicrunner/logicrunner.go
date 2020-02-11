@@ -73,29 +73,21 @@ type LogicRunner struct {
 
 	rpc *lrCommon.RPC
 
-	codeRegistry         map[string]insolar.ContractWrapper
-	codeRefRegistry      map[insolar.Reference]string
-	codeDescriptors      []artifacts.CodeDescriptor
-	prototypeDescriptors []artifacts.PrototypeDescriptor
+	genesisObjects builtin.GenesisCodes
 }
 
 // NewLogicRunner is constructor for LogicRunner
 func NewLogicRunner(
-	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, codeRegistry map[string]insolar.ContractWrapper,
-	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
-	prototypeDescriptors []artifacts.PrototypeDescriptor,
+	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, genesisObjects builtin.GenesisCodes,
 ) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:                  cfg,
-		Publisher:            publisher,
-		Sender:               sender,
-		codeRegistry:         codeRegistry,
-		codeRefRegistry:      codeRefRegistry,
-		codeDescriptors:      codeDescriptors,
-		prototypeDescriptors: prototypeDescriptors,
+		Cfg:            cfg,
+		Publisher:      publisher,
+		Sender:         sender,
+		genesisObjects: genesisObjects,
 	}
 
 	return &res, nil
@@ -178,10 +170,7 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
-		lr.codeRegistry,
-		lr.codeRefRegistry,
-		lr.codeDescriptors,
-		lr.prototypeDescriptors,
+		lr.genesisObjects,
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err

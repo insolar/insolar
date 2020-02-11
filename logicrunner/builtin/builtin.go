@@ -51,18 +51,23 @@ type BuiltIn struct {
 	PrototypeRefRegistry map[insolar.Reference]string
 }
 
+type GenesisCodes struct {
+	CodeRegistry         map[string]insolar.ContractWrapper
+	CodeRefRegistry      map[insolar.Reference]string
+	CodeDescriptors      []artifacts.CodeDescriptor
+	PrototypeDescriptors []artifacts.PrototypeDescriptor
+}
+
 // NewBuiltIn is an constructor
 func NewBuiltIn(
-	am artifacts.Client, stub LogicRunnerRPCStub, codeRegistry map[string]insolar.ContractWrapper,
-	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
-	prototypeDescriptors []artifacts.PrototypeDescriptor,
+	am artifacts.Client, stub LogicRunnerRPCStub, genesisObjects GenesisCodes,
 ) *BuiltIn {
-	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), codeDescriptors...)
+	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), genesisObjects.CodeDescriptors...)
 	for _, codeDescriptor := range fullCodeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), prototypeDescriptors...)
+	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), genesisObjects.PrototypeDescriptors...)
 	for _, prototypeDescriptor := range fullPrototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
@@ -70,11 +75,11 @@ func NewBuiltIn(
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
 	fullCodeRefRegistry := builtin.InitializeCodeRefs()
-	for k, v := range codeRefRegistry {
+	for k, v := range genesisObjects.CodeRefRegistry {
 		fullCodeRefRegistry[k] = v
 	}
 	fullCodeRegistry := builtin.InitializeContractMethods()
-	for k, v := range codeRegistry {
+	for k, v := range genesisObjects.CodeRegistry {
 		fullCodeRegistry[k] = v
 	}
 	return &BuiltIn{

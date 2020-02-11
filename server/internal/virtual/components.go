@@ -21,6 +21,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/insolar/insolar/logicrunner/builtin"
 
 	component "github.com/insolar/component-manager"
 
@@ -104,9 +105,7 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	codeRegistry map[string]insolar.ContractWrapper,
-	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
-	prototypeDescriptors []artifacts.PrototypeDescriptor,
+	genesisObjects builtin.GenesisCodes,
 
 ) (*component.Manager, func()) {
 	cm := component.NewManager(nil)
@@ -138,11 +137,7 @@ func initComponents(
 	artifactsClient := artifacts.NewClient(b)
 	cachedPulses := artifacts.NewPulseAccessorLRU(pulses, artifactsClient, cfg.LogicRunner.PulseLRUSize)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b, codeRegistry,
-		codeRefRegistry,
-		codeDescriptors,
-		prototypeDescriptors,
-	)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b, genesisObjects)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(

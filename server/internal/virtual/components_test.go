@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/builtin"
 )
 
 func TestComponents(t *testing.T) {
@@ -55,10 +56,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		nil,
-		nil,
-		nil,
-		nil,
+		builtin.GenesisCodes{},
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)

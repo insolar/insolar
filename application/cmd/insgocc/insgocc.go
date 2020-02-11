@@ -121,7 +121,7 @@ func getAppropriateContractDir(machineType insolar.MachineType, dir string) stri
 	} else if machineType == insolar.MachineTypeGoPlugin {
 		return path.Join(dir, "..", "proxy")
 	}
-	panic("unreachable")
+	panic(fmt.Sprintf("unknown machine type %v", machineType))
 }
 
 func mkdirIfNotExists(pathParts ...string) (string, error) {
@@ -330,7 +330,7 @@ func main() {
 		},
 	}
 	cmdGenerateBuiltins.Flags().StringVarP(
-		&importPath, "importPath", "i", "", "import path for builtin contracts, example: github.com/insolar/insolar/applicationbase/builtin/contract")
+		&importPath, "importPath", "i", "", "import path for builtin contracts packages, example: github.com/insolar/insolar/applicationbase/builtin/contract")
 	cmdGenerateBuiltins.Flags().StringVarP(
 		&contractsPath, "contractsPath", "c", "", "dir path to builtin contracts, example: applicationbase/builtin/contract")
 
