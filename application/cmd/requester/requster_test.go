@@ -1,0 +1,106 @@
+// Copyright 2020 Insolar Network Ltd.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +build requstertest
+
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
+)
+
+type requesterSuiteTest struct {
+	suite.Suite
+	ts          *httptest.Server
+	paramsFile  *os.File
+	userKeyFile *os.File
+}
+
+func (s *requesterSuiteTest) SetupSuite() {
+	s.ts = httptest.NewServer(handlers())
+	s.paramsFile = getRequestParamsFile()
+
+	tempFile, err := ioutil.TempFile("", "requester-test-")
+	if err != nil {
+		logFatal("failed open tmp paramsFile:", err)
+	}
+	userKeyPath := tempFile.Name()
+	writePrivateKeyToFile(userKeyPath)
+	s.userKeyFile = tempFile
+}
+
+func (s *requesterSuiteTest) TearDownSuite() {
+	s.ts.Close()
+
+	_ = s.paramsFile.Close()
+	_ = os.Remove(s.paramsFile.Name())
+
+	_ = s.userKeyFile.Close()
+	_ = os.Remove(s.userKeyFile.Name())
+}
+
+func (s *requesterSuiteTest) TestRequester_HelpWorks() {
+	sout, _ := runCmd("--help")
+	assert.Contains(s.T(), sout, "Usage of")
+	fmt.Printf("%s", sout)
+}
+
+func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {
+
+	sout, err := runCmd(getArgs(s.userKeyFile.Name(), s.ts.URL, s.paramsFile.Name(), true, true)...)
+	assert.NoError(s.T(), err)
+	assert.Contains(s.T(), sout, "requestReference")
+}
+
+func (s *requesterSuiteTest) TestRequester_UserShouldPassUrl() {
+	sout, err := runCmd(getArgs("/somePath", "", "someParams.json", true, true)...)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), sout, "URL parameter is incorrect")
+}
+
+func (s *requesterSuiteTest) TestRequester_UserShouldNotPassInvalidUrl() {
+	sout, err := runCmd(getArgs("/somePath", "http://localhost:-1", "someParams.json", true, true)...)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), sout, "URL parameter is incorrect")
+}
+
+func (s *requesterSuiteTest) TestRequester_UserShouldPassMemberKey() {
+	sout, err := runCmd(getArgs("/path/to/nonexisting/key", s.ts.URL, "someParams.json", true, true)...)
+	assert.Error(s.T(), err)
+	assert.Contains(s.T(), sout, "Member keys does not exists")
+}
+
+func (s *requesterSuiteTest) TestRequester_UserShouldPassRequestParams() {
+	sout, err := runCmd(getArgs(s.userKeyFile.Name(), s.ts.URL, "/path/to/nonexisting/requestparams", true, true)...)
+	assert.Error(s.T(), err)
+	println(sout)
+	assert.Contains(s.T(), sout, "Cannot unmarshal request")
+}
+
+func (s *requesterSuiteTest) TestRequester_UserCanPassRequestParamsJson() {
+	sout, err := runCmd(getArgs(s.userKeyFile.Name(), s.ts.URL, createMemberRequestExample, true, true)...)
+	assert.NoError(s.T(), err)
+	assert.Contains(s.T(), sout, "requestReference")
+}
+
+func TestAllRequesterTests(t *testing.T) {
+	suite.Run(t, new(requesterSuiteTest))
+}

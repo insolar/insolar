@@ -18,6 +18,7 @@ HEALTHCHECK = healthcheck
 KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
+REQUESTER= requester
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -105,7 +106,7 @@ vendor: ## update vendor dependencies
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
+build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL) $(REQUESTER)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -163,6 +164,10 @@ $(KEEPERD):
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
 	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
+
+.PHONY: $(REQUESTER)
+$(REQUESTER):
+	$(GOBUILD) -o $(BIN_DIR)/$(REQUESTER) application/cmd/requester/*.go
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
