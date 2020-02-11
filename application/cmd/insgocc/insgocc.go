@@ -242,24 +242,6 @@ func main() {
 	cmdWrapper.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 	cmdWrapper.Flags().BoolVarP(&panicIsLogicalError, "panic-logical", "p", false, "panics are logical errors (turned off by default)")
 
-	var cmdImports = &cobra.Command{
-		Use:   "imports [flags] <file name to process>",
-		Short: "Rewrite imports in contract file",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
-			if err != nil {
-				fmt.Println(errors.Wrap(err, "couldn't parse"))
-				os.Exit(1)
-			}
-
-			err = parsed.Write(output.writer)
-			checkError(err)
-		},
-	}
-	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
-	cmdImports.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
-
 	var (
 		importPath    string
 		contractsPath string
@@ -330,13 +312,13 @@ func main() {
 		},
 	}
 	cmdGenerateBuiltins.Flags().StringVarP(
-		&importPath, "importPath", "i", "", "import path for builtin contracts packages, example: github.com/insolar/insolar/applicationbase/builtin/contract")
+		&importPath, "importPath", "i", "", "import path for builtin contracts packages, example: github.com/insolar/insolar/application/builtin/contract")
 	cmdGenerateBuiltins.Flags().StringVarP(
-		&contractsPath, "contractsPath", "c", "", "dir path to builtin contracts, example: applicationbase/builtin/contract")
+		&contractsPath, "contractsPath", "c", "", "dir path to builtin contracts, example: application/builtin/contract")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(
-		cmdProxy, cmdWrapper, cmdImports, cmdGenerateBuiltins, genesisCompile())
+		cmdProxy, cmdWrapper, cmdGenerateBuiltins, genesisCompile())
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
