@@ -35,7 +35,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -178,14 +178,14 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	inslog.Info("[genesis] store contracts")
-	err = g.storeContracts(ctx, g.GenesisOptions.States)
+	err = g.storeContracts(ctx, g.GenesisOptions.States, g.GenesisOptions.NodeDomainParent)
 	if err != nil {
 		panic(fmt.Sprintf("[genesis] store contracts failed: %v", err))
 	}
 
 	inslog.Info("[genesis] store discovery nodes")
 	discoveryNodeManager := NewDiscoveryNodeManager(g.ArtifactManager)
-	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
+	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes, g.GenesisOptions.NodeDomainParent)
 	if err != nil {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
@@ -203,13 +203,13 @@ func (g *Genesis) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState) error {
+func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState, parentDomain string) error {
 	inslog := inslogger.FromContext(ctx)
 
 	states = append(states, NodeDomain(g.GenesisOptions.NodeDomainParent))
 
 	for _, conf := range states {
-		_, err := g.activateContract(ctx, conf)
+		_, err := g.activateContract(ctx, conf, parentDomain)
 		if err != nil {
 			return errors.Wrapf(err, "failed to activate contract %v", conf.Name)
 		}
@@ -218,7 +218,7 @@ func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractSt
 	return nil
 }
 
-func (g *Genesis) activateContract(ctx context.Context, state GenesisContractState) (*insolar.Reference, error) {
+func (g *Genesis) activateContract(ctx context.Context, state GenesisContractState, parentDomain string) (*insolar.Reference, error) {
 	name := state.Name
 	objRef := genesisrefs.GenesisRef(name)
 
@@ -253,7 +253,7 @@ func (g *Genesis) activateContract(ctx context.Context, state GenesisContractSta
 		return nil, errors.Wrapf(err, "failed to activate object for '%v'", name)
 	}
 
-	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, objRef, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, genesisrefs.GenesisRef(parentDomain), objRef, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to register result for '%v'", name)
 	}

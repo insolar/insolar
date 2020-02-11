@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/elliptic"
 	"github.com/insolar/x-crypto/x509"
@@ -112,4 +113,9 @@ func between(value string, a string, b string) string {
 		return value
 	}
 	return value[posFirst:posLast]
+}
+
+// Get reference on NodeDomain contract.
+func GetNodeDomain() insolar.Reference {
+	return genesisrefs.ContractNodeDomain
 }

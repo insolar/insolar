@@ -15,8 +15,8 @@
 package genesis
 
 import (
-	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 )
 

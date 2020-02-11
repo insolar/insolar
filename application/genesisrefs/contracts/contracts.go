@@ -33,8 +33,6 @@ import (
 	"github.com/insolar/insolar/application/builtin/contract/wallet"
 
 	"github.com/insolar/insolar/application/appfoundation"
-	maProxy "github.com/insolar/insolar/application/builtin/proxy/migrationshard"
-	pkProxy "github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/pulse"
@@ -204,17 +202,5 @@ func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) genesis.G
 			IsActive:              false,
 			MigrationDaemonMember: genesisrefs.ContractMigrationDaemonMembers[numberMigrationDaemon],
 		}),
-	}
-}
-
-func ContractPublicKeyShardRefs(pkShardCount int) {
-	for _, name := range genesisrefs.ContractPublicKeyNameShards(pkShardCount) {
-		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *pkProxy.PrototypeReference
-	}
-}
-
-func ContractMigrationAddressShardRefs(maShardCount int) {
-	for _, name := range genesisrefs.ContractMigrationAddressNameShards(maShardCount) {
-		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *maProxy.PrototypeReference
 	}
 }

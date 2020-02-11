@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -136,7 +136,7 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 			},
 			MajorityRule: g.config.MajorityRule,
 
-			RootDomainReference: genesisrefs.ContractRootDomain.String(),
+			// RootDomainReference: genesisrefs.ContractRootDomain.String(),
 		}
 		c.MinRoles.Virtual = g.config.MinRoles.Virtual
 		c.MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
