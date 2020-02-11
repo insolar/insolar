@@ -348,7 +348,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
-			BaseRecord: &genesis.BaseRecord{
+			IndexModifier:   indexes,
+			BaseRecord: &genesis.PostgresBaseRecord{
 				Pool:           Pool,
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
