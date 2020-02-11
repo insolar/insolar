@@ -60,14 +60,14 @@ type GenesisCodes struct {
 
 // NewBuiltIn is an constructor
 func NewBuiltIn(
-	am artifacts.Client, stub LogicRunnerRPCStub, genesisObjects GenesisCodes,
+	am artifacts.Client, stub LogicRunnerRPCStub, genesisCodes GenesisCodes,
 ) *BuiltIn {
-	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), genesisObjects.CodeDescriptors...)
+	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), genesisCodes.CodeDescriptors...)
 	for _, codeDescriptor := range fullCodeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), genesisObjects.PrototypeDescriptors...)
+	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), genesisCodes.PrototypeDescriptors...)
 	for _, prototypeDescriptor := range fullPrototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
@@ -75,11 +75,11 @@ func NewBuiltIn(
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
 	fullCodeRefRegistry := builtin.InitializeCodeRefs()
-	for k, v := range genesisObjects.CodeRefRegistry {
+	for k, v := range genesisCodes.CodeRefRegistry {
 		fullCodeRefRegistry[k] = v
 	}
 	fullCodeRegistry := builtin.InitializeContractMethods()
-	for k, v := range genesisObjects.CodeRegistry {
+	for k, v := range genesisCodes.CodeRegistry {
 		fullCodeRegistry[k] = v
 	}
 	return &BuiltIn{
