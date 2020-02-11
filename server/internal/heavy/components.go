@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -111,7 +112,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -431,6 +432,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err := Genesis.Start(ctx); err != nil {
 			logger.Fatalf("genesis failed on heavy with error: %v", err)
 		}
+	}
+
+	if genesisOnly {
+		logger.Info("Terminating, because --genesis-only flag was specified.")
+		os.Exit(0)
 	}
 
 	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
