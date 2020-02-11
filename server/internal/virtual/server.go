@@ -32,10 +32,10 @@ import (
 
 type Server struct {
 	cfgPath          string
-	builtinContracts builtin.GenesisCodes
+	builtinContracts builtin.BuiltinContracts
 }
 
-func New(cfgPath string, builtinContracts builtin.GenesisCodes) *Server {
+func New(cfgPath string, builtinContracts builtin.BuiltinContracts) *Server {
 	return &Server{
 		cfgPath:          cfgPath,
 		builtinContracts: builtinContracts,

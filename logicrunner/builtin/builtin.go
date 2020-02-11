@@ -51,7 +51,7 @@ type BuiltIn struct {
 	PrototypeRefRegistry map[insolar.Reference]string
 }
 
-type GenesisCodes struct {
+type BuiltinContracts struct {
 	CodeRegistry         map[string]insolar.ContractWrapper
 	CodeRefRegistry      map[insolar.Reference]string
 	CodeDescriptors      []artifacts.CodeDescriptor
@@ -60,7 +60,7 @@ type GenesisCodes struct {
 
 // NewBuiltIn is an constructor
 func NewBuiltIn(
-	am artifacts.Client, stub LogicRunnerRPCStub, builtinContracts GenesisCodes,
+	am artifacts.Client, stub LogicRunnerRPCStub, builtinContracts BuiltinContracts,
 ) *BuiltIn {
 	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), builtinContracts.CodeDescriptors...)
 	for _, codeDescriptor := range fullCodeDescriptors {

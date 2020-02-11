@@ -36,6 +36,6 @@ func NewHeavyServer(cfgPath string, gensisCfgPath string) Server {
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
-func NewVirtualServer(cfgPath string, builtinContracts builtin.GenesisCodes) Server {
+func NewVirtualServer(cfgPath string, builtinContracts builtin.BuiltinContracts) Server {
 	return virtual.New(cfgPath, builtinContracts)
 }

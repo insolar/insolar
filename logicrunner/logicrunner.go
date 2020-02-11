@@ -73,12 +73,12 @@ type LogicRunner struct {
 
 	rpc *lrCommon.RPC
 
-	builtinContracts builtin.GenesisCodes
+	builtinContracts builtin.BuiltinContracts
 }
 
 // NewLogicRunner is constructor for LogicRunner
 func NewLogicRunner(
-	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, builtinContracts builtin.GenesisCodes,
+	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, builtinContracts builtin.BuiltinContracts,
 ) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")

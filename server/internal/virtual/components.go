@@ -105,7 +105,7 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	builtinContracts builtin.GenesisCodes,
+	builtinContracts builtin.BuiltinContracts,
 
 ) (*component.Manager, func()) {
 	cm := component.NewManager(nil)
