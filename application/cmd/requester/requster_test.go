@@ -62,7 +62,6 @@ func (s *requesterSuiteTest) TestRequester_HelpWorks() {
 }
 
 func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {
-
 	sout, err := runCmd(getArgs(s.userKeyFile.Name(), s.ts.URL, s.paramsFile.Name(), true, true)...)
 	assert.NoError(s.T(), err)
 	assert.Contains(s.T(), sout, "requestReference")
