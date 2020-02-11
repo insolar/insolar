@@ -40,11 +40,11 @@ var (
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "path to member key paramsFile")
-	pflag.StringVarP(&apiURL, "url", "u", "", "api url. for example http://localhost:19101/api/rpc")
-	pflag.StringVarP(&inputRequestParams, "request", "r", "", "the request body or path to request paramsFile")
-	pflag.BoolVarP(&shouldPastePrivateKey, "autocompleteseed", "s", false, "should replace seed to correct value")
-	pflag.BoolVarP(&shouldPasteSeed, "autocompletekey", "p", false, "should replace publicKey to correct value")
+	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key paramsFile")
+	pflag.StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
+	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request paramsFile")
+	pflag.BoolVarP(&shouldPastePrivateKey, "autocompleteseed", "s", false, "Should replace seed to correct value")
+	pflag.BoolVarP(&shouldPasteSeed, "autocompletekey", "p", false, "Should replace publicKey to correct value")
 	pflag.Parse()
 }
 
