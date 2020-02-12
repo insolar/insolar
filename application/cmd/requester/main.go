@@ -61,19 +61,12 @@ func verifyParams() {
 		log.Fatal("Member keys does not exists")
 	}
 
-	// try to read as JSON format
-	keys, err := secrets.ReadKeysFile(memberKeysPath, false)
+	// try to read keys
+	keys, err := secrets.ReadXCryptoKeysFile(memberKeysPath, false)
 	if err != nil {
-		// try to read as a different format
-		keyPair, e := secrets.ReadXCryptoKeysFile(memberKeysPath, false)
-		if e != nil {
-			log.Fatal("Cannot parse member keys. ", e)
-		} else {
-			memberPrivateKey = keyPair.Private
-		}
-	} else {
-		memberPrivateKey = keys.Private
+		log.Fatal("Cannot parse member keys. ", err)
 	}
+	memberPrivateKey = keys.Private
 
 	if len(inputRequestParams) == 0 {
 		log.Fatal("Request parameters cannot be empty.")
@@ -83,7 +76,7 @@ func verifyParams() {
 		if err != nil {
 			log.Fatal("Cannot read request. ", err)
 		}
-		// save to inputRequestParams if we could read paramsFile for unmarshalling
+		// save to inputRequestParams if we could read params file for unmarshalling
 		inputRequestParams = string(fileContent)
 	}
 
