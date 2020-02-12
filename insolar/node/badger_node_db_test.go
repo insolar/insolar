@@ -60,7 +60,7 @@ func TestBadgerNodeStorageDB_All(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 		err = nodeStorage.Set(pulse, all)
 		require.NoError(t, err)
 
@@ -79,7 +79,7 @@ func TestBadgerNodeStorageDB_All(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 		err = nodeStorage.Set(pulse, nil)
 		require.NoError(t, err)
 
@@ -98,7 +98,7 @@ func TestBadgerNodeStorageDB_All(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 
 		result, err := nodeStorage.All(pulse)
 
@@ -141,7 +141,7 @@ func TestBadgerNodeStorageDB_InRole(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 		err = nodeStorage.Set(pulse, all)
 		require.NoError(t, err)
 		{
@@ -165,7 +165,7 @@ func TestBadgerNodeStorageDB_InRole(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 		err = nodeStorage.Set(pulse, nil)
 		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.NoError(t, err)
@@ -181,7 +181,7 @@ func TestBadgerNodeStorageDB_InRole(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
@@ -207,7 +207,7 @@ func TestBadgerNodeStorageDB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 
 		err = nodeStorage.Set(pulse, nodes)
 		require.NoError(t, err)
@@ -227,7 +227,7 @@ func TestBadgerNodeStorageDB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 
 		err = nodeStorage.Set(pulse, []insolar.Node{})
 		require.NoError(t, err)
@@ -247,7 +247,7 @@ func TestBadgerNodeStorageDB_Set(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		nodeStorage := NewStorageDB(db)
+		nodeStorage := NewBadgerStorageDB(db)
 
 		_ = nodeStorage.Set(pulse, nodes)
 		err = nodeStorage.Set(pulse, nodes)
@@ -268,7 +268,7 @@ func TestBadgerNodeStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewBadgerStorageDB(dbMock)
 
 	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
 	require.NoError(t, err)
@@ -287,7 +287,7 @@ func TestBadgerDropStorageDB_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	nodeStor := NewStorageDB(dbMock)
+	nodeStor := NewBadgerStorageDB(dbMock)
 
 	nodeSets := make([]struct {
 		nodes []insolar.Node
