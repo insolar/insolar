@@ -141,8 +141,8 @@ func (br *BaseRecord) Done(ctx context.Context) error {
 }
 
 type GenesisOptions struct {
-	States           []GenesisContractState
-	NodeDomainParent string
+	States       []GenesisContractState
+	ParentDomain string
 }
 
 // Genesis holds data and objects required for genesis on heavy node.
@@ -178,14 +178,14 @@ func (g *Genesis) Start(ctx context.Context) error {
 	}
 
 	inslog.Info("[genesis] store contracts")
-	err = g.storeContracts(ctx, g.GenesisOptions.States, g.GenesisOptions.NodeDomainParent)
+	err = g.storeContracts(ctx, g.GenesisOptions.States, g.GenesisOptions.ParentDomain)
 	if err != nil {
 		panic(fmt.Sprintf("[genesis] store contracts failed: %v", err))
 	}
 
 	inslog.Info("[genesis] store discovery nodes")
 	discoveryNodeManager := NewDiscoveryNodeManager(g.ArtifactManager)
-	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes, g.GenesisOptions.NodeDomainParent)
+	err = discoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes, g.GenesisOptions.ParentDomain)
 	if err != nil {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
@@ -206,7 +206,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState, parentDomain string) error {
 	inslog := inslogger.FromContext(ctx)
 
-	states = append(states, NodeDomain(g.GenesisOptions.NodeDomainParent))
+	states = append(states, NodeDomain(g.GenesisOptions.ParentDomain))
 
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf, parentDomain)

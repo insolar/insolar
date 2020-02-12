@@ -77,8 +77,8 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 			configPath,
 			genesisConfigPath,
 			genesis.GenesisOptions{
-				States:           states,
-				NodeDomainParent: application.GenesisNameRootDomain,
+				States:       states,
+				ParentDomain: application.GenesisNameRootDomain,
 			},
 		)
 		s.Serve()
