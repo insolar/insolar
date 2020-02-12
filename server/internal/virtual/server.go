@@ -22,32 +22,23 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/server/internal"
 	"github.com/insolar/insolar/version"
 )
 
 type Server struct {
-	cfgPath              string
-	codeRegistry         map[string]insolar.ContractWrapper
-	codeRefRegistry      map[insolar.Reference]string
-	codeDescriptors      []artifacts.CodeDescriptor
-	prototypeDescriptors []artifacts.PrototypeDescriptor
+	cfgPath          string
+	builtinContracts builtin.BuiltinContracts
 }
 
-func New(cfgPath string, codeRegistry map[string]insolar.ContractWrapper,
-	codeRefRegistry map[insolar.Reference]string, codeDescriptors []artifacts.CodeDescriptor,
-	prototypeDescriptors []artifacts.PrototypeDescriptor) *Server {
+func New(cfgPath string, builtinContracts builtin.BuiltinContracts) *Server {
 	return &Server{
-		cfgPath:              cfgPath,
-		codeRegistry:         codeRegistry,
-		codeRefRegistry:      codeRefRegistry,
-		codeDescriptors:      codeDescriptors,
-		prototypeDescriptors: prototypeDescriptors,
+		cfgPath:          cfgPath,
+		builtinContracts: builtinContracts,
 	}
 }
 
@@ -97,10 +88,7 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		s.codeRegistry,
-		s.codeRefRegistry,
-		s.codeDescriptors,
-		s.prototypeDescriptors,
+		s.builtinContracts,
 	)
 
 	var gracefulStop = make(chan os.Signal, 1)
