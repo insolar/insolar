@@ -1,4 +1,4 @@
-// Copyright 2020 Insolar Network Ltd.
+// Copyright 2016 The Linux Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package specs
 
-import (
-	"github.com/spf13/cobra"
-)
-
-func (app *appCtx) fixCommand() *cobra.Command {
-	var fixCmd = &cobra.Command{
-		Use:   "fix",
-		Short: "opens and closes badger database. Could fix 'Database was not properly closed' error.",
-		Run: func(_ *cobra.Command, _ []string) {
-			_, close := openDB(app.dataDir)
-			close()
-		},
-	}
-	return fixCmd
+// Versioned provides a struct with the manifest schemaVersion and mediaType.
+// Incoming content with unknown schema version can be decoded against this
+// struct to check the version.
+type Versioned struct {
+	// SchemaVersion is the image manifest schema that this image follows
+	SchemaVersion int `json:"schemaVersion"`
 }

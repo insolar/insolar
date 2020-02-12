@@ -48,7 +48,7 @@ func Test_FinalizePulse(t *testing.T) {
 			MigrationAdminPublicKey: testPk,
 		},
 	}
-	s, err := NewServer(ctx, cfg, heavyConfig, nil)
+	s, err := NewBadgerServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()
 

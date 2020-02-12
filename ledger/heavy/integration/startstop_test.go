@@ -40,7 +40,7 @@ func TestStartStop(t *testing.T) {
 			MigrationAdminPublicKey: testPk,
 		},
 	}
-	s, err := NewServer(context.Background(), cfg, heavyConfig, nil)
+	s, err := NewBadgerServer(context.Background(), cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	s.Stop()
 }

@@ -125,7 +125,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 	return nil
 }
 
-func NewServer(
+func NewBadgerServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	genesisCfg application.GenesisHeavyConfig,
@@ -166,9 +166,9 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *insolarPulse.DB
-		Jets        *jet.DBStore
-		Nodes       *node.StorageDB
+		Pulses      *insolarPulse.BadgerDB
+		Jets        *jet.BadgerDBStore
+		Nodes       *node.BadgerStorageDB
 		DB          *store.BadgerDB
 		DBRollback  *executor.DBRollback
 	)
@@ -180,9 +180,9 @@ func NewServer(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorageDB(DB)
-		Pulses = insolarPulse.NewDB(DB)
-		Jets = jet.NewDBStore(DB)
+		Nodes = node.NewBadgerStorageDB(DB)
+		Pulses = insolarPulse.NewBadgerDB(DB)
+		Jets = jet.NewBadgerDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
@@ -221,14 +221,14 @@ func NewServer(
 		PulseManager insolar.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
-		Records      *object.RecordDB
-		JetKeeper    *executor.DBJetKeeper
+		Records      *object.BadgerRecordDB
+		JetKeeper    *executor.BadgerDBJetKeeper
 	)
 	{
-		Records = object.NewRecordDB(DB)
-		indexes := object.NewIndexDB(DB, Records)
-		drops := drop.NewDB(DB)
-		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		Records = object.NewBadgerRecordDB(DB)
+		indexes := object.NewBadgerIndexDB(DB, Records)
+		drops := drop.NewBadgerDB(DB)
+		JetKeeper = executor.NewBadgerJetKeeper(Jets, DB, Pulses)
 		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 
 		sp := insolarPulse.NewStartPulse()
@@ -265,7 +265,6 @@ func NewServer(
 		h.JetModifier = Jets
 		h.JetAccessor = Jets
 		h.JetTree = Jets
-		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = ClientBus
@@ -284,7 +283,8 @@ func NewServer(
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
-			BaseRecord: &genesis.BaseRecord{
+			IndexModifier:   indexes,
+			BaseRecord: &genesis.BadgerBaseRecord{
 				DB:             DB,
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
