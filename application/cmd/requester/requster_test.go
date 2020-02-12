@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -39,7 +40,7 @@ func (s *requesterSuiteTest) SetupSuite() {
 
 	tempFile, err := ioutil.TempFile("", "requester-test-")
 	if err != nil {
-		logFatal("failed open tmp paramsFile:", err)
+		log.Fatal("failed open tmp paramsFile:", err)
 	}
 	userKeyPath := tempFile.Name()
 	writePrivateKeyToFile(userKeyPath)

@@ -40,30 +40,25 @@ var (
 )
 
 func parseInputParams() {
-	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key paramsFile")
+	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
 	pflag.StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
-	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request paramsFile")
-	pflag.BoolVarP(&shouldPastePrivateKey, "autocompleteseed", "s", false, "Should replace seed to correct value")
-	pflag.BoolVarP(&shouldPasteSeed, "autocompletekey", "p", false, "Should replace publicKey to correct value")
+	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
+	pflag.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", false, "Should replace seed to correct value")
+	pflag.BoolVarP(&shouldPastePrivateKey, "autocompletekey", "p", false, "Should replace publicKey to correct value")
 	pflag.Parse()
-}
-
-func logFatal(args ...interface{}) {
-	log.Fatal(args)
-	os.Exit(1)
 }
 
 func verifyParams() {
 	if len(apiURL) > 0 {
 		ok, err := isUrl(apiURL)
 		if !ok {
-			logFatal("URL parameter is incorrect. ", err)
+			log.Fatal("URL parameter is incorrect. ", err)
 		}
 	}
 
 	// verify that the member keys paramsFile is exist
 	if !isFileExists(memberKeysPath) {
-		logFatal("Member keys does not exists")
+		log.Fatal("Member keys does not exists")
 	}
 
 	// try to read as JSON format
@@ -72,7 +67,7 @@ func verifyParams() {
 		// try to read as a different format
 		keyPair, e := secrets.ReadXCryptoKeysFile(memberKeysPath, false)
 		if e != nil {
-			logFatal("Cannot parse member keys. ", e)
+			log.Fatal("Cannot parse member keys. ", e)
 		} else {
 			memberPrivateKey = keyPair.Private
 		}
@@ -81,21 +76,20 @@ func verifyParams() {
 	}
 
 	if len(inputRequestParams) == 0 {
-		logFatal("Request parameters cannot be empty.")
-	} else {
-		if isFileExists(inputRequestParams) {
-			fileContent, err := ioutil.ReadFile(inputRequestParams)
-			if err != nil {
-				logFatal("Cannot read request. ", err)
-			}
-			// save to inputRequestParams if we could read paramsFile for unmarshalling
-			inputRequestParams = string(fileContent)
-		}
-
-		err = json.Unmarshal([]byte(inputRequestParams), &request)
+		log.Fatal("Request parameters cannot be empty.")
+	}
+	if isFileExists(inputRequestParams) {
+		fileContent, err := ioutil.ReadFile(inputRequestParams)
 		if err != nil {
-			logFatal("Cannot unmarshal request. ["+inputRequestParams+"]", err)
+			log.Fatal("Cannot read request. ", err)
 		}
+		// save to inputRequestParams if we could read paramsFile for unmarshalling
+		inputRequestParams = string(fileContent)
+	}
+
+	err = json.Unmarshal([]byte(inputRequestParams), &request)
+	if err != nil {
+		log.Fatal("Cannot unmarshal request. ["+inputRequestParams+"]", err)
 	}
 }
 
@@ -118,7 +112,7 @@ func main() {
 
 	userConfig, e := createUserConfig(memberPrivateKey)
 	if e != nil {
-		logFatal(e)
+		log.Fatal(e)
 	}
 	if shouldPastePrivateKey {
 		request.Params.PublicKey = userConfig.PublicKey
@@ -133,7 +127,7 @@ func main() {
 	}
 
 	if err != nil {
-		logFatal(err)
+		log.Fatal(err)
 	}
 
 	print(string(response))

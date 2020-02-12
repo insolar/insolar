@@ -88,17 +88,17 @@ func getArgs(key, url, requestParams string, shouldPrivateKey, shouldSeed bool) 
 func writePrivateKeyToFile(pathToFile string) {
 	privKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
-		logFatal("Problems with generating of private key:", err)
+		log.Fatal("Problems with generating of private key:", err)
 	}
 
 	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
 	if err != nil {
-		logFatal("Problems with serialization of private key:", err)
+		log.Fatal("Problems with serialization of private key:", err)
 	}
 
 	pubKeyStr, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privKey))
 	if err != nil {
-		logFatal("Problems with serialization of public key:", err)
+		log.Fatal("Problems with serialization of public key:", err)
 	}
 
 	result, err := json.MarshalIndent(map[string]interface{}{
@@ -106,25 +106,25 @@ func writePrivateKeyToFile(pathToFile string) {
 		"public_key":  string(pubKeyStr),
 	}, "", "    ")
 	if err != nil {
-		logFatal("Problems with marshaling keys:", err)
+		log.Fatal("Problems with marshaling keys:", err)
 	}
 
 	err = ioutil.WriteFile(pathToFile, result, 0644)
 	if err != nil {
-		logFatal("Cannot write to temp paramsFile", err)
+		log.Fatal("Cannot write to temp paramsFile", err)
 	}
 }
 
 func getRequestParamsFile() *os.File {
 	tempFile, err := ioutil.TempFile("", "requester-test-params-")
 	if err != nil {
-		logFatal("failed open tmp paramsFile:", err)
+		log.Fatal("failed open tmp paramsFile:", err)
 	}
 	filePath := tempFile.Name()
 
 	err = ioutil.WriteFile(filePath, []byte(createMemberRequestExample), 0644)
 	if err != nil {
-		logFatal("Cannot write to temp paramsFile", err)
+		log.Fatal("Cannot write to temp paramsFile", err)
 	}
 	return tempFile
 }
