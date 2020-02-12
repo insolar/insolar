@@ -30,13 +30,13 @@ import (
 )
 
 var (
-	memberKeysPath        string
-	apiURL                string
-	inputRequestParams    string
-	shouldPasteSeed       bool
-	shouldPastePrivateKey bool
-	memberPrivateKey      crypto.PrivateKey
-	request               *requester.ContractRequest
+	memberKeysPath       string
+	apiURL               string
+	inputRequestParams   string
+	shouldPasteSeed      bool
+	shouldPastePublicKey bool
+	memberPrivateKey     crypto.PrivateKey
+	request              *requester.ContractRequest
 )
 
 func parseInputParams() {
@@ -44,7 +44,7 @@ func parseInputParams() {
 	pflag.StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
 	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
 	pflag.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", false, "Should replace seed to correct value")
-	pflag.BoolVarP(&shouldPastePrivateKey, "autocompletekey", "p", false, "Should replace publicKey to correct value")
+	pflag.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", false, "Should replace publicKey to correct value")
 	pflag.Parse()
 }
 
@@ -107,7 +107,7 @@ func main() {
 	if e != nil {
 		log.Fatal(e)
 	}
-	if shouldPastePrivateKey {
+	if shouldPastePublicKey {
 		request.Params.PublicKey = userConfig.PublicKey
 	}
 
