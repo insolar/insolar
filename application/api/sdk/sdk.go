@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package sdk
 
@@ -23,10 +21,12 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application"
@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 type ringBuffer struct {
@@ -107,17 +106,18 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return nil, errors.Wrap(err, "failed to get info")
 	}
 
-	rootMember, err := getMember(memberKeysDirPath+"root_member_keys.json", response.RootMember)
+	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response.RootMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get root member")
 	}
 
-	migrationAdminMember, err := getMember(memberKeysDirPath+"migration_admin_member_keys.json", response.MigrationAdminMember)
+	migrationAdminMember, err := getMember(
+		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response.MigrationAdminMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
-	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.FeeMember)
+	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response.FeeMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get fee member")
 	}
@@ -138,7 +138,8 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 	}
 
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
-		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
+		m, err := getMember(
+			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))
 		}
@@ -227,20 +228,18 @@ func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
 }
 
 func createUserConfig(callerMemberReference string) (*requester.UserConfigJSON, error) {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privateKey, err := ks.GeneratePrivateKey()
+	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate private key")
 	}
 
-	privateKeyBytes, err := ks.ExportPrivateKeyPEM(privateKey)
+	privateKeyBytes, err := secrets.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to export private key")
 	}
 	privateKeyStr := string(privateKeyBytes)
 
-	publicKey, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
+	publicKey, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privateKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to extract public key")
 	}

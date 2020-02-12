@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package secrets
 
@@ -45,15 +43,6 @@ func GenerateKeyPair() (*KeyPair, error) {
 		Private: privKey,
 		Public:  ks.ExtractPublicKey(privKey),
 	}, nil
-}
-
-// GetPublicKeyFromFile reads private/public keys pair from json file and return public key
-func GetPublicKeyFromFile(file string) (string, error) {
-	pair, err := ReadKeysFile(file, true)
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't get keys")
-	}
-	return platformpolicy.MustPublicKeyToString(pair.Public), nil
 }
 
 // ReadKeysFile reads private/public keys pair from json file.

@@ -32,7 +32,7 @@ local image_params = params.insolar.image;
 						"command": [
 							"/bin/sh",
 							"-c",
-							"/go/bin/insolar gen-key-pair > /opt/insolar/config/pulsar_keys.json;"
+							"/go/bin/insolar gen-key-pair --target=node > /opt/insolar/config/pulsar_keys.json;"
 						],
 						"env": [
 							{

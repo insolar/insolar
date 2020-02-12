@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package requester
 
 import (
-	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/x-crypto"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/pkg/errors"
 )
 
@@ -64,21 +62,19 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 	}
 
-	ks := platformpolicy.NewKeyProcessor()
-
 	if cfgJSON.PrivateKey == "" {
-		privKey, err := ks.GeneratePrivateKey()
+		privKey, err := secrets.GeneratePrivateKeyEthereum()
 		if err != nil {
 			return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 		}
-		privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+		privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 		}
 		cfgJSON.PrivateKey = string(privKeyStr)
 	}
 
-	cfgJSON.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(cfgJSON.PrivateKey))
+	cfgJSON.privateKeyObject, err = secrets.ImportPrivateKeyPEM([]byte(cfgJSON.PrivateKey))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] Problem with reading private key")
 	}
@@ -102,7 +98,6 @@ func CreateUserConfig(caller string, privKey string, publicKey string) (*UserCon
 	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller, PublicKey: publicKey}
 	var err error
 
-	ks := platformpolicy.NewKeyProcessor()
-	userConfig.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(privKey))
+	userConfig.privateKeyObject, err = secrets.ImportPrivateKeyPEM([]byte(privKey))
 	return &userConfig, err
 }

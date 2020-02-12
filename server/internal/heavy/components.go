@@ -1,5 +1,4 @@
-//
-// Copyright 2020 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package heavy
 
@@ -119,7 +117,8 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 func initWithPostgres(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig) (*components, error) {
+	genesisCfg application.GenesisHeavyConfig,
+	genesisOnly bool) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -466,6 +465,11 @@ func initWithPostgres(
 		}
 	}
 
+	if genesisOnly {
+		logger.Info("Terminating, because --genesis-only flag was specified.")
+		os.Exit(0)
+	}
+
 	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
 
 	return c, nil
@@ -474,7 +478,7 @@ func initWithPostgres(
 func initWithBadger(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig) (*components, error) {
+	genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -795,17 +799,22 @@ func initWithBadger(
 		}
 	}
 
+	if genesisOnly {
+		logger.Info("Terminating, because --genesis-only flag was specified.")
+		os.Exit(0)
+	}
+
 	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
 
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOnly)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOnly)
 }
 
 func (c *components) Start(ctx context.Context) error {

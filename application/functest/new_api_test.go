@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 // +build functest
 
@@ -26,9 +24,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
@@ -171,8 +168,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	memberForSign, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	ks := platformpolicy.NewKeyProcessor()
-	privateKey, err := ks.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
+	privateKey, err := secrets.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
 	signature, err := requester.Sign(privateKey, dataToSign)
 	require.NoError(t, err)
 

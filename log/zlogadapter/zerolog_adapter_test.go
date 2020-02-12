@@ -1,27 +1,26 @@
-///
-//    Copyright 2019 Insolar Technologies
+// Copyright 2020 Insolar Network Ltd.
 //
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//        http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-///
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package zlogadapter
 
 import (
 	"bytes"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/logadapter"
 	"sync"
 	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logadapter"
 
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +46,7 @@ func TestZeroLogAdapter_CallerInfoWithFunc(t *testing.T) {
 	log.Error("test")
 
 	s := buf.String()
-	require.Contains(t, s, "zerolog_adapter_test.go:47")
+	require.Contains(t, s, "zerolog_adapter_test.go:46")
 	require.Contains(t, s, "TestZeroLogAdapter_CallerInfoWithFunc")
 }
 
@@ -73,7 +72,7 @@ func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 	log.Error("test")
 
 	s := buf.String()
-	require.Contains(t, s, "zerolog_adapter_test.go:73")
+	require.Contains(t, s, "zerolog_adapter_test.go:72")
 }
 
 func TestZeroLogAdapter_InheritFields(t *testing.T) {

@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package log
 
@@ -60,7 +58,7 @@ func TestLog_ZerologCaller(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
+	assert.Regexp(t, "log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
@@ -82,7 +80,7 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
+	assert.Regexp(t, "log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
@@ -104,7 +102,7 @@ func TestLog_GlobalCaller(t *testing.T) {
 
 	s := b.String()
 	lf := logFields(t, []byte(s))
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Regexp(t, "log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 	assert.NotContains(t, s, "test2shouldNotBeThere")
 }
@@ -126,7 +124,7 @@ func TestLog_GlobalCallerWithFunc(t *testing.T) {
 
 	s := b.String()
 	lf := logFields(t, []byte(s))
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Regexp(t, "log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains func name")
 	assert.NotContains(t, s, "test2shouldNotBeThere")
 }

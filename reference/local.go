@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package reference
 
@@ -173,7 +171,7 @@ func (p *byteWriter) isFull() bool {
 	return int(p.o) >= p.v.len()
 }
 
-// Encoder encodes Local to string with chosen encoder.
+// Encode encodes Local to string with chosen encoder.
 func (v Local) Encode(enc Encoder) string {
 	repr, err := enc.EncodeRecord(&v)
 	if err != nil {
@@ -274,7 +272,7 @@ func (v *Local) UnmarshalBinary(data []byte) error {
 
 func (v *Local) Unmarshal(data []byte) error {
 	if len(data) < LocalBinarySize {
-		return errors.New("not enough bytes to unmarshal reference.Global")
+		return errors.New("not enough bytes to unmarshal reference.Local")
 	}
 
 	writer := v.asWriter()

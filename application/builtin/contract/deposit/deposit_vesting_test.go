@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package deposit
 
@@ -27,13 +25,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const days = 1827
+const (
+	days       = 1096
+	multiplier = 3
+)
 
 func TestVestingCoeffs(t *testing.T) {
 	exp := make([]float64, days)
 	var expTotal float64
 	for i := 0; i < days; i++ {
-		exp[i] = math.Pow(float64(days), float64(i+1)/float64(days))
+		exp[i] = math.Pow(float64(days*multiplier), float64(i+1)/float64(days)) / float64(days*multiplier)
 		expTotal += exp[i]
 	}
 
@@ -55,6 +56,7 @@ func TestVestingCoeffs(t *testing.T) {
 		coeffInt, _ := coeff.Int(nil)
 		expectedCoeff, ok := new(big.Int).SetString(VestingCoeffs[i], 10)
 		require.True(t, ok)
+		// fmt.Printf("\"%d\",\n", coeffInt)
 		assert.Truef(t, expectedCoeff.Cmp(coeffInt) == 0, "step: %d, expected: %s actual: %s", i, expectedCoeff.String(), coeffInt.String())
 	}
 }
@@ -103,8 +105,8 @@ func TestVestingCoeffs_Table(t *testing.T) {
 func TestVestedByNow_min_amount(t *testing.T) {
 	amount := big.NewInt(1)
 	zero := big.NewInt(0)
-	for i := uint64(0); i <= 1825; i++ {
-		assert.Equal(t, zero, VestedByNow(amount, i, 1826))
+	for i := uint64(0); i <= 1094; i++ {
+		assert.Equal(t, zero, VestedByNow(amount, i, 1096))
 	}
-	assert.Equal(t, amount, VestedByNow(amount, 1826, 1826))
+	assert.Equal(t, amount, VestedByNow(amount, 1095, 1096))
 }

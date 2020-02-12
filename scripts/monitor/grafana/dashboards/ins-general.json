@@ -16,9 +16,105 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1575642502578,
+  "iteration": 1579016737103,
   "links": [],
   "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorPostfix": false,
+      "colorPrefix": false,
+      "colorValue": true,
+      "colors": [
+        "#d44a3a",
+        "rgba(237, 129, 40, 0.89)",
+        "#299c46"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 54,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false,
+        "ymax": null,
+        "ymin": null
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "insolar_is_available{installation=\"$installation\"}",
+          "instant": true,
+          "legendFormat": "{{ installation }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": "1,1",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        },
+        {
+          "op": "=",
+          "text": "unavailable",
+          "value": "0"
+        },
+        {
+          "op": "=",
+          "text": "available",
+          "value": "1"
+        }
+      ],
+      "valueName": "current"
+    },
     {
       "cacheTimeout": null,
       "colorBackground": false,
@@ -40,7 +136,7 @@
         "h": 2,
         "w": 4,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "id": 34,
       "interval": null,
@@ -114,7 +210,7 @@
         "h": 5,
         "w": 7,
         "x": 4,
-        "y": 0
+        "y": 1
       },
       "id": 20,
       "legend": {
@@ -211,7 +307,7 @@
         "h": 5,
         "w": 6,
         "x": 11,
-        "y": 0
+        "y": 1
       },
       "id": 31,
       "legend": {
@@ -298,7 +394,7 @@
         "h": 5,
         "w": 7,
         "x": 17,
-        "y": 0
+        "y": 1
       },
       "id": 28,
       "legend": {
@@ -395,7 +491,7 @@
         "h": 3,
         "w": 2,
         "x": 0,
-        "y": 2
+        "y": 3
       },
       "id": 46,
       "interval": null,
@@ -479,7 +575,7 @@
         "h": 3,
         "w": 2,
         "x": 2,
-        "y": 2
+        "y": 3
       },
       "id": 52,
       "interval": null,
@@ -552,7 +648,7 @@
         "h": 6,
         "w": 6,
         "x": 0,
-        "y": 5
+        "y": 6
       },
       "id": 26,
       "legend": {
@@ -653,7 +749,7 @@
         "h": 6,
         "w": 7,
         "x": 6,
-        "y": 5
+        "y": 6
       },
       "id": 36,
       "legend": {
@@ -738,7 +834,7 @@
         "h": 6,
         "w": 6,
         "x": 13,
-        "y": 5
+        "y": 6
       },
       "id": 38,
       "legend": {
@@ -828,7 +924,7 @@
         "h": 6,
         "w": 5,
         "x": 19,
-        "y": 5
+        "y": 6
       },
       "id": 40,
       "legend": {
@@ -913,7 +1009,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 12
       },
       "id": 48,
       "legend": {
@@ -999,7 +1095,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 12
       },
       "id": 50,
       "legend": {
@@ -1093,7 +1189,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 18
       },
       "id": 42,
       "legend": {
@@ -1123,7 +1219,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", host=~\".*.br20.insolar.io\"}[1m])) by (host)",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", installation=\"$installation\"}[1m])) by (host)",
           "legendFormat": "{{ host }}",
           "refId": "A"
         }
@@ -1180,7 +1276,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 18
       },
       "id": 43,
       "legend": {
@@ -1210,7 +1306,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "1 - node_memory_MemAvailable_bytes{host=~\".*.br20.insolar.io\"} / node_memory_MemTotal_bytes",
+          "expr": "1 - node_memory_MemAvailable_bytes{installation=\"$installation\"} / node_memory_MemTotal_bytes",
           "legendFormat": "{{ host }}",
           "refId": "A"
         }
@@ -1267,7 +1363,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 18
       },
       "id": 44,
       "legend": {
@@ -1297,7 +1393,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(1 - ((node_filesystem_avail_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'}) / node_filesystem_size_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'})) by (host)",
+          "expr": "sum(1 - ((node_filesystem_avail_bytes{installation=\"$installation\",device!~'rootfs'}) / node_filesystem_size_bytes{installation=\"$installation\",device!~'rootfs'})) by (host)",
           "legendFormat": "{{ host }}",
           "refId": "B"
         }

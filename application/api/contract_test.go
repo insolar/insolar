@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package api
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/insolar/secrets"
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/gojuno/minimock/v3"
 	"github.com/pkg/errors"
@@ -38,7 +38,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -52,13 +51,12 @@ func TestTimeoutSuite(t *testing.T) {
 	defer mc.Wait(17 * time.Second)
 	defer mc.Finish()
 
-	ks := platformpolicy.NewKeyProcessor()
-	sKey, err := ks.GeneratePrivateKey()
+	sKey, err := secrets.GeneratePrivateKeyEthereum()
 	require.NoError(t, err)
-	sKeyString, err := ks.ExportPrivateKeyPEM(sKey)
+	sKeyString, err := secrets.ExportPrivateKeyPEM(sKey)
 	require.NoError(t, err)
-	pKey := ks.ExtractPublicKey(sKey)
-	pKeyString, err := ks.ExportPublicKeyPEM(pKey)
+	pKey := secrets.ExtractPublicKey(sKey)
+	pKeyString, err := secrets.ExportPublicKeyPEM(pKey)
 	require.NoError(t, err)
 
 	userRef := gen.Reference().String()

@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package bootstrap
 
@@ -24,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -63,7 +62,7 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 }
 
 func (g *Generator) readMigrationAddresses() ([][]string, error) {
-	file := g.config.MembersKeysDir + "migration_addresses.json"
+	file := filepath.Join(g.config.MembersKeysDir, "migration_addresses.json")
 	result := make([][]string, g.config.MAShardCount)
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -98,17 +97,18 @@ func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
 	inslog.Info("[ bootstrap ] read keys files")
-	rootPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "root_member_keys.json")
+	rootPublicKey, err := secrets.GetPublicKeyFromFile(filepath.Join(g.config.MembersKeysDir, "root_member_keys.json"))
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
 
-	feePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
+	feePublicKey, err := secrets.GetPublicKeyFromFile(filepath.Join(g.config.MembersKeysDir, "fee_member_keys.json"))
 	if err != nil {
 		return errors.Wrap(err, "couldn't get fees keys")
 	}
 
-	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
+	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(
+		filepath.Join(g.config.MembersKeysDir, "migration_admin_member_keys.json"))
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
@@ -123,7 +123,8 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	networkIncentivesPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountNetworkIncentivesMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
+		k, err := secrets.GetPublicKeyFromFile(
+			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "network_incentives_")))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get network incentives keys")
 		}
@@ -132,7 +133,8 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	applicationIncentivesPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountApplicationIncentivesMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
+		k, err := secrets.GetPublicKeyFromFile(
+			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "application_incentives_")))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get application incentives keys")
 		}
@@ -141,25 +143,18 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	foundationPublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountFoundationMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
+		k, err := secrets.GetPublicKeyFromFile(
+			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "foundation_")))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get foundation keys")
 		}
 		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
 
-	fundsPublicKeys := []string{}
-	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
-		if err != nil {
-			return errors.Wrap(err, "couldn't get funds keys")
-		}
-		fundsPublicKeys = append(fundsPublicKeys, k)
-	}
-
 	enterprisePublicKeys := []string{}
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
-		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
+		k, err := secrets.GetPublicKeyFromFile(
+			filepath.Join(g.config.MembersKeysDir, GetFundPath(i, "enterprise_")))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get enterprise keys")
 		}
@@ -230,7 +225,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
 		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
 		FoundationPublicKeys:            foundationPublicKeys,
-		FundsPublicKeys:                 fundsPublicKeys,
 		EnterprisePublicKeys:            enterprisePublicKeys,
 		MigrationAddresses:              migrationAddresses,
 		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,

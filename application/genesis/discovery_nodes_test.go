@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package genesis
 
@@ -84,7 +82,9 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
 		ref := genesisrefs.GenesisRef(pKey)
-		expectIndexMap[pKey] = ref.String()
+		canonicalKey, err := foundation.ExtractCanonicalPublicKey(pKey)
+		require.NoError(t, err, "extracting canonical pk failed, current value %v "+pKey)
+		expectIndexMap[canonicalKey] = ref.String()
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)
 		require.NoError(t, err, "nodeInfo object not found for public key: "+pKey)

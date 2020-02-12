@@ -156,6 +156,7 @@ clear_dirs()
 {
     echo "clear_dirs() starts ..."
     set -x
+    rm -rfv ${CONFIGS_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     rm -rfv ${CONTRACTS_PLUGINS_DIR}
@@ -228,44 +229,44 @@ rebuild_binaries()
 generate_pulsar_keys()
 {
     echo "generate pulsar keys: ${PULSAR_KEYS}"
-    bin/insolar gen-key-pair > ${PULSAR_KEYS}
+    bin/insolar gen-key-pair --target=node > ${PULSAR_KEYS}
 }
 
 generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}root_member_keys.json
 
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}fee_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=node > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
     done
 
     for (( b = 0; b < 140; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
     done
 
     for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
 
     for (( b = 0; b < 1; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}funds_${b}_member_keys.json
     done
 
     for (( b = 0; b < 8; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
     done
 }
 
@@ -495,6 +496,12 @@ handle_sigchld()
 }
 
 trap 'handle_sigchld' SIGCHLD
+
+echo "Running genesis before actually starting any nodes (consensus may fail if genesis takes long)"
+$INSOLARD \
+    --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
+    --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --genesis-only
 
 echo "start heavy node"
 set -x

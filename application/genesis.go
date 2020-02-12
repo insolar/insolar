@@ -1,5 +1,4 @@
-///
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
 
 package application
 
@@ -61,17 +59,15 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 2
 
-	GenesisAmountFundsMembers                 = 1
-	GenesisAmountEnterpriseMembers            = 8
-	GenesisAmountNetworkIncentivesMembers     = 140
-	GenesisAmountApplicationIncentivesMembers = 40
-	GenesisAmountFoundationMembers            = 40
+	GenesisAmountEnterpriseMembers            = 1
+	GenesisAmountNetworkIncentivesMembers     = 20
+	GenesisAmountApplicationIncentivesMembers = 20
+	GenesisAmountFoundationMembers            = 20
 
-	DefaultDistributionAmount           = "1000000000000000000"
-	EnterpriseDistributionAmount        = "500000000000000000"
-	FoundationDistributionAmount        = "250000000000000000" // = 1kkk / FoundationDistributionPeriods
-	AppIncentivesDistributionAmount     = "250000000000000000" // = 1kkk / AppIncentivesDistributionPeriods
-	NetworkIncentivesDistributionAmount = "500000000000000000" // = 7kkk / NetworkIncentivesDistributionPeriods
+	EnterpriseDistributionAmount        = "2000000000000000000"
+	FoundationDistributionAmount        = "50000000000000000"
+	AppIncentivesDistributionAmount     = "50000000000000000"
+	NetworkIncentivesDistributionAmount = "50000000000000000"
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -105,13 +101,6 @@ var GenesisNameApplicationIncentivesMembers = func() (result [GenesisAmountAppli
 var GenesisNameFoundationMembers = func() (result [GenesisAmountFoundationMembers]string) {
 	for i := 0; i < GenesisAmountFoundationMembers; i++ {
 		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameMember
-	}
-	return
-}()
-
-var GenesisNameFundsMembers = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameMember
 	}
 	return
 }()
@@ -165,13 +154,6 @@ var GenesisNameFoundationWallets = func() (result [GenesisAmountFoundationMember
 	return
 }()
 
-var GenesisNameFundsWallets = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameWallet
-	}
-	return
-}()
-
 var GenesisNameEnterpriseWallets = func() (result [GenesisAmountEnterpriseMembers]string) {
 	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
 		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameWallet
@@ -200,12 +182,6 @@ var GenesisNameFoundationAccounts = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-var GenesisNameFundsAccounts = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameAccount
-	}
-	return
-}()
 var GenesisNameEnterpriseAccounts = func() (result [GenesisAmountEnterpriseMembers]string) {
 	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
 		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameAccount
@@ -244,23 +220,40 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance                     string
-	MDBalance                       string
-	RootPublicKey                   string
-	FeePublicKey                    string
-	MigrationAdminPublicKey         string
-	MigrationDaemonPublicKeys       []string
-	VestingPeriodInPulses           int64
-	LockupPeriodInPulses            int64
-	VestingStepInPulses             int64
-	MigrationAddresses              [][]string
-	FundsPublicKeys                 []string
-	EnterprisePublicKeys            []string
-	NetworkIncentivesPublicKeys     []string
+	// RootBalance is a balance of Root Member.
+	RootBalance string
+	// MDBalance is a balance of Migration Daemon.
+	MDBalance string
+	// RootPublicKey is public key of Root Member.
+	RootPublicKey string
+	// FeePublicKey is public key of Fee Member.
+	FeePublicKey string
+	// MigrationAdminPublicKey is public key of Migration Admin.
+	MigrationAdminPublicKey string
+	// MigrationDaemonPublicKeys is a public keys array of Migration Daemon members.
+	MigrationDaemonPublicKeys []string
+	// VestingPeriodInPulses is a vesting period measured with pulses.
+	VestingPeriodInPulses int64
+	// LockupPeriodInPulses is a lockup period before vesting measured with pulses.
+	LockupPeriodInPulses int64
+	// VestingStepInPulses is a one vesting step measured with pulses.
+	VestingStepInPulses int64
+	// MigrationAddresses are migration addresses array per shard where index array is a shard index.
+	MigrationAddresses [][]string
+	// FundsPublicKeys is a public keys array of Funds members.
+	FundsPublicKeys []string
+	// EnterprisePublicKeys is a public keys array of Enterprise members.
+	EnterprisePublicKeys []string
+	// NetworkIncentivesPublicKeys is a public keys array of Network Incentives members.
+	NetworkIncentivesPublicKeys []string
+	// ApplicationIncentivesPublicKeys is a public keys array of Application Incentives members.
 	ApplicationIncentivesPublicKeys []string
-	FoundationPublicKeys            []string
-	PKShardCount                    int
-	MAShardCount                    int
+	// FoundationPublicKeys is a public keys array of Foundation members.
+	FoundationPublicKeys []string
+	// PKShardCount is a primary keys shards count.
+	PKShardCount int
+	// MAShardCount is a migration addresses shards count.
+	MAShardCount int
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

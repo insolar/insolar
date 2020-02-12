@@ -1,4 +1,4 @@
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 // +build functest
 
@@ -32,6 +31,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/insolar/secrets"
 
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/application/api/requester"
@@ -419,19 +419,17 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 }
 
 func newUserWithKeys() (*launchnet.User, error) {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privateKey, err := ks.GeneratePrivateKey()
+	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, err
 	}
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	publicKey := ks.ExtractPublicKey(privateKey)
-	pubKeyStr, err := ks.ExportPublicKeyPEM(publicKey)
+	publicKey := secrets.ExtractPublicKey(privateKey)
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -709,4 +707,16 @@ func hasSubstring(trace []string, expected string) bool {
 		}
 	}
 	return found
+}
+
+func generateNodePublicKey(t *testing.T) string {
+	ks := platformpolicy.NewKeyProcessor()
+
+	privKey, err := ks.GeneratePrivateKey()
+	require.NoError(t, err)
+
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	require.NoError(t, err)
+
+	return string(pubKeyStr)
 }

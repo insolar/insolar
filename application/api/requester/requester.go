@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package requester
 
 import (
 	"bytes"
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
@@ -32,6 +26,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/rand"
+	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/pkg/errors"
 

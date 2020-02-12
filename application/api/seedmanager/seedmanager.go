@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package seedmanager
 
@@ -24,10 +22,10 @@ import (
 )
 
 // DefaultTTL is default time period for deleting expired seeds
-const DefaultTTL = 5 * time.Second
+const DefaultTTL = 600 * time.Second
 
 // DefaultCleanPeriod default time period for launching cleaning goroutine
-const DefaultCleanPeriod = 5 * time.Second
+const DefaultCleanPeriod = 60 * time.Second
 
 type storedSeed struct {
 	ts    time.Time

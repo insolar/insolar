@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package defaults
 
@@ -29,6 +27,11 @@ func ArtifactsDir() string {
 // LaunchnetDir returns path of launchnet's artifacts dir.
 func LaunchnetDir() string {
 	return envVarWithDefault("LAUNCHNET_BASE_DIR", filepath.Join(ArtifactsDir(), "launchnet"))
+}
+
+// LaunchnetConfigDir returns path of launchnet's configs dir.
+func LaunchnetConfigDir() string {
+	return filepath.Join(LaunchnetDir(), "configs")
 }
 
 // LaunchnetDiscoveryNodesLogsDir returns path to dir with launchnet's discovery nodes logs.

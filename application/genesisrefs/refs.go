@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package genesisrefs
 
@@ -105,17 +103,6 @@ func init() {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
 	}
 
-	// Funds
-	for _, el := range application.GenesisNameFundsMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
-	}
-	for _, el := range application.GenesisNameFundsWallets {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
-	}
-	for _, el := range application.GenesisNameFundsAccounts {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
-	}
-
 	// Enterprise
 	for _, el := range application.GenesisNameEnterpriseMembers {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
@@ -203,14 +190,6 @@ var (
 		return
 	}()
 
-	// ContractFundsMembers is the funds members contracts references.
-	ContractFundsMembers = func() (result [application.GenesisAmountFundsMembers]insolar.Reference) {
-		for i, name := range application.GenesisNameFundsMembers {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
 	// ContractEnterpriseMembers is the enterprise members contracts references.
 	ContractEnterpriseMembers = func() (result [application.GenesisAmountEnterpriseMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameEnterpriseMembers {
@@ -238,14 +217,6 @@ var (
 	// ContractFoundationWallets is the foundation members contracts references.
 	ContractFoundationWallets = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationWallets {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
-	// ContractFundsWallets is the funds members contracts references.
-	ContractFundsWallets = func() (result [application.GenesisAmountFundsMembers]insolar.Reference) {
-		for i, name := range application.GenesisNameFundsWallets {
 			result[i] = GenesisRef(name)
 		}
 		return
@@ -302,14 +273,6 @@ var (
 	// ContractFoundationAccounts is the foundation accounts contracts references.
 	ContractFoundationAccounts = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationAccounts {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
-	// ContractFundsAccounts is the funds accounts contracts references.
-	ContractFundsAccounts = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
-		for i, name := range application.GenesisNameFundsAccounts {
 			result[i] = GenesisRef(name)
 		}
 		return

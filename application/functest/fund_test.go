@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 // +build functest
 
@@ -24,10 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/application/testutils/launchnet"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFoundationMemberCreate(t *testing.T) {
@@ -50,7 +49,7 @@ func TestEnterpriseMemberCreate(t *testing.T) {
 
 func TestNetworkIncentivesMemberCreate(t *testing.T) {
 	// for speed up test check only last member
-	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers - 1]
+	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
 
 	err := verifyFundsMembersAndDeposits(t, m, application.NetworkIncentivesDistributionAmount)
 	if err != nil {
@@ -61,15 +60,6 @@ func TestNetworkIncentivesMemberCreate(t *testing.T) {
 func TestApplicationIncentivesMemberCreate(t *testing.T) {
 	for _, m := range launchnet.ApplicationIncentives {
 		err := verifyFundsMembersAndDeposits(t, m, application.AppIncentivesDistributionAmount)
-		if err != nil {
-			require.NoError(t, err)
-		}
-	}
-}
-
-func TestFundsMemberCreate(t *testing.T) {
-	for _, m := range launchnet.Funds {
-		err := verifyFundsMembersExist(t, m, application.DefaultDistributionAmount)
 		if err != nil {
 			require.NoError(t, err)
 		}
@@ -95,7 +85,7 @@ func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.User, expectedBal
 
 func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 	// for speed up test check only last member
-	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers - 1]
+	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
 
 	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	require.NoError(t, err)
