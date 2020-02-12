@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package executor
 
@@ -58,7 +56,9 @@ type HeavyReplicatorDefault struct {
 	pulseCalculator pulse.Calculator
 	drops           drop.Modifier
 	keeper          JetKeeper
+	backuper        BackupMaker
 	jets            jet.Modifier
+	gcRunner        GCRunInfo
 
 	syncWaitingData chan *payload.Replication
 }
@@ -71,7 +71,9 @@ func NewHeavyReplicatorDefault(
 	pulseCalculator pulse.Calculator,
 	drops drop.Modifier,
 	keeper JetKeeper,
+	backuper BackupMaker,
 	jets jet.Modifier,
+	gcRunner GCRunInfo,
 ) *HeavyReplicatorDefault {
 	return &HeavyReplicatorDefault{
 		records:         records,
@@ -80,10 +82,12 @@ func NewHeavyReplicatorDefault(
 		pulseCalculator: pulseCalculator,
 		drops:           drops,
 		keeper:          keeper,
+		backuper:        backuper,
 		jets:            jets,
 
 		syncWaitingData: make(chan *payload.Replication),
 		done:            make(chan struct{}),
+		gcRunner:        gcRunner,
 	}
 }
 
@@ -152,7 +156,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		logger.Debug("heavy replicator finalize pulse")
-		FinalizePulse(ctx, h.pulseCalculator, h.keeper, h.indexes, msg.Drop.Pulse)
+		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse, h.gcRunner)
 
 		logger.Info("heavy replicator stops replication")
 	}

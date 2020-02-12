@@ -29,8 +29,8 @@ type BadgerStorageDB struct {
 	db *store.BadgerDB
 }
 
-// NewStorageDB create new instance of BadgerStorageDB.
-func NewStorageDB(db *store.BadgerDB) *BadgerStorageDB {
+// NewBadgerStorageDB create new instance of BadgerStorageDB.
+func NewBadgerStorageDB(db *store.BadgerDB) *BadgerStorageDB {
 	return &BadgerStorageDB{db: db}
 }
 

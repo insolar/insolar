@@ -74,6 +74,9 @@ type Ledger struct {
 
 	// FilamentCacheLimit holds the limit for cache items for an object
 	FilamentCacheLimit int
+
+	// IsPostgresBase indicates that heavy uses Postgres as a database
+	IsPostgresBase bool
 }
 
 // Backup holds configuration for backuping.
@@ -146,5 +149,6 @@ func NewLedger() Ledger {
 		CleanerDelay:             3,    // 3 pulses
 		MaxNotificationsPerPulse: 100,  // 100 objects
 		FilamentCacheLimit:       3000, // 3000 records for every object
+		IsPostgresBase:           false,
 	}
 }

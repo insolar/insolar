@@ -21,13 +21,18 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
 	"github.com/insolar/component-manager"
@@ -62,6 +67,14 @@ import (
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
 )
+
+type badgerLogger struct {
+	insolar.Logger
+}
+
+func (b badgerLogger) Warningf(fmt string, args ...interface{}) {
+	b.Warnf(fmt, args...)
+}
 
 type components struct {
 	cmp         *component.Manager
@@ -103,7 +116,365 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
+func initWithPostgres(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	genesisCfg application.GenesisHeavyConfig) (*components, error) {
+	// Cryptography.
+	var (
+		KeyProcessor  insolar.KeyProcessor
+		CryptoScheme  insolar.PlatformCryptographyScheme
+		CryptoService insolar.CryptographyService
+		CertManager   insolar.CertificateManager
+	)
+	{
+		var err error
+		// Private key storage.
+		ks, err := keystore.NewKeyStore(cfg.KeysPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load KeyStore")
+		}
+		// Public key manipulations.
+		KeyProcessor = platformpolicy.NewKeyProcessor()
+		// Platform cryptography.
+		CryptoScheme = platformpolicy.NewPlatformCryptographyScheme()
+		// Sign, verify, etc.
+		CryptoService = cryptography.NewCryptographyService()
+
+		c := component.NewManager(nil)
+		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
+
+		publicKey, err := CryptoService.GetPublicKey()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve node public key")
+		}
+
+		// Node certificate.
+		CertManager, err = certificate.NewManagerReadCertificate(publicKey, KeyProcessor, cfg.CertificatePath)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start Certificate")
+		}
+	}
+
+	c := &components{}
+	c.cmp = component.NewManager(nil)
+	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
+	c.NodeRole = CertManager.GetCertificate().GetRole().String()
+
+	logger := inslogger.FromContext(ctx)
+
+	// Watermill stuff.
+	var (
+		wmLogger   *logwatermill.WatermillLogAdapter
+		publisher  watermillMsg.Publisher
+		subscriber watermillMsg.Subscriber
+	)
+	{
+		wmLogger = logwatermill.NewWatermillLogAdapter(logger)
+		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		subscriber = pubsub
+		publisher = pubsub
+		// Wrapped watermill publisher for introspection.
+		publisher = internal.PublisherWrapper(ctx, c.cmp, cfg.Introspection, publisher)
+	}
+
+	// Network.
+	var (
+		NetworkService *servicenetwork.ServiceNetwork
+	)
+	{
+		var err error
+		// External communication.
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, c.cmp)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start Network")
+		}
+	}
+
+	// Storage.
+	var (
+		Coordinator    jet.Coordinator
+		PulsesPostgres *insolarPulse.PostgresDB
+		NodesPostgres  *node.PostgresStorageDB
+		Pool           *pgxpool.Pool
+		JetsPostgres   *jet.PostgresDBStore
+	)
+	{
+
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
+		c.PlatformCryptographyScheme = CryptoScheme
+		Coordinator = c
+
+		Pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
+		if err != nil {
+			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
+		}
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(errors.Wrap(err, "os.Getwd failed"))
+		}
+		path := cfg.Ledger.PostgreSQL.MigrationPath
+		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
+		ver, err := migration.MigrateDatabase(ctx, Pool, path)
+		if err != nil {
+			panic(errors.Wrap(err, "Unable to migrate database"))
+		}
+		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
+
+		PulsesPostgres = insolarPulse.NewPostgresDB(Pool)
+		NodesPostgres = node.NewPostgresStorageDB(Pool)
+		JetsPostgres = jet.NewPostgresDBStore(Pool)
+
+		c.PulseCalculator = PulsesPostgres
+		c.PulseAccessor = PulsesPostgres
+		c.JetAccessor = JetsPostgres
+		c.Nodes = NodesPostgres
+	}
+
+	// Communication.
+	var (
+		WmBus *bus.Bus
+	)
+	{
+		WmBus = bus.NewBus(cfg.Bus, publisher, PulsesPostgres, Coordinator, CryptoScheme)
+		WmBus = bus.NewBus(
+			cfg.Bus,
+			publisher,
+			PulsesPostgres,
+			Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester           *contractrequester.ContractRequester
+		ArtifactsClient     = artifacts.NewClient(WmBus)
+		AvailabilityChecker = api.NewNetworkChecker(cfg.AvailabilityChecker)
+		APIWrapper          *api.RunnerWrapper
+	)
+	{
+		var err error
+		Requester, err = contractrequester.New(
+			WmBus,
+			PulsesPostgres,
+			Coordinator,
+			CryptoScheme,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
+		}
+
+		API, err := api.NewRunner(
+			&cfg.APIRunner,
+			CertManager,
+			Requester,
+			NetworkService,
+			NetworkService,
+			PulsesPostgres,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+			AvailabilityChecker,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
+
+		AdminAPIRunner, err := api.NewRunner(
+			&cfg.AdminAPIRunner,
+			CertManager,
+			Requester,
+			NetworkService,
+			NetworkService,
+			PulsesPostgres,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+			AvailabilityChecker,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
+		}
+
+		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
+	}
+
+	metricsComp := metrics.NewMetrics(
+		cfg.Metrics,
+		metrics.GetInsolarRegistry(c.NodeRole),
+		c.NodeRole,
+	)
+
+	var (
+		PulseManager *pulsemanager.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
+
+		RecordsPostgres   *object.PostgresRecordDB
+		IndexesPostgres   *object.PostgresIndexDB
+		DropPostgres      *drop.PostgresDB
+		PostgresJetKeeper *executor.PostgresDBJetKeeper
+	)
+	{
+		RecordsPostgres = object.NewPostgresRecordDB(Pool)
+		IndexesPostgres = object.NewPostgresIndexDB(Pool, RecordsPostgres)
+		DropPostgres = drop.NewPostgresDB(Pool)
+		PostgresJetKeeper = executor.NewPostgresJetKeeper(JetsPostgres, Pool, PulsesPostgres)
+
+		c.rollback = executor.NewDBRollback(
+			PostgresJetKeeper,
+			DropPostgres,
+			RecordsPostgres,
+			IndexesPostgres,
+			JetsPostgres,
+			PulsesPostgres,
+			PostgresJetKeeper,
+			NodesPostgres)
+
+		c.stateKeeper = executor.NewInitialStateKeeper(
+			PostgresJetKeeper,
+			JetsPostgres,
+			Coordinator,
+			IndexesPostgres,
+			DropPostgres)
+
+		sp := insolarPulse.NewStartPulse()
+
+		PulseManager = pulsemanager.NewPulseManager(Requester.FlowDispatcher)
+		PulseManager.NodeNet = NetworkService
+
+		PulseManager.NodeSetter = NodesPostgres
+		PulseManager.Nodes = NodesPostgres
+		PulseManager.PulseAppender = PulsesPostgres
+		PulseManager.PulseAccessor = PulsesPostgres
+		PulseManager.JetModifier = JetsPostgres
+		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(PostgresJetKeeper, PulsesPostgres, cfg.Ledger.LightChainLimit)
+
+		replicator := executor.NewHeavyReplicatorDefault(
+			RecordsPostgres,
+			IndexesPostgres,
+			CryptoScheme,
+			PulsesPostgres,
+			DropPostgres,
+			PostgresJetKeeper,
+			&executor.PostgresBackupMaker{},
+			JetsPostgres,
+			&executor.PostgresGCRunInfo{},
+		)
+		c.replicator = replicator
+
+		PulseManager.StartPulse = sp
+
+		h := handler.New(cfg.Ledger, &executor.PostgresGCRunInfo{})
+		h.RecordAccessor = RecordsPostgres
+		h.RecordModifier = RecordsPostgres
+		h.JetCoordinator = Coordinator
+		h.IndexAccessor = IndexesPostgres
+		h.IndexModifier = IndexesPostgres
+		h.DropModifier = DropPostgres
+		h.PCS = CryptoScheme
+		h.PulseAccessor = PulsesPostgres
+		h.PulseCalculator = PulsesPostgres
+		h.StartPulse = sp
+		h.JetModifier = JetsPostgres
+		h.JetAccessor = JetsPostgres
+		h.JetTree = JetsPostgres
+		h.JetKeeper = PostgresJetKeeper
+		h.InitialStateReader = c.stateKeeper
+		h.Sender = WmBus
+		h.Replicator = replicator
+
+		Handler = h
+
+		artifactManager := &artifact.Scope{
+			PulseNumber:    pulse.MinTimePulse,
+			PCS:            CryptoScheme,
+			RecordAccessor: RecordsPostgres,
+			RecordModifier: RecordsPostgres,
+			IndexModifier:  IndexesPostgres,
+			IndexAccessor:  IndexesPostgres,
+		}
+		Genesis = &genesis.Genesis{
+			ArtifactManager: artifactManager,
+			IndexModifier:   IndexesPostgres,
+			BaseRecord: &genesis.PostgresBaseRecord{
+				Pool:           Pool,
+				DropModifier:   DropPostgres,
+				PulseAppender:  PulsesPostgres,
+				PulseAccessor:  PulsesPostgres,
+				RecordModifier: RecordsPostgres,
+				IndexModifier:  IndexesPostgres,
+			},
+
+			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
+			ContractsConfig: genesisCfg.ContractsConfig,
+		}
+	}
+
+	// Exporter
+	var (
+		recordExporter *exporter.RecordServer
+		pulseExporter  *exporter.PulseServer
+	)
+	{
+		recordExporter = exporter.NewRecordServer(PulsesPostgres, RecordsPostgres, RecordsPostgres, PostgresJetKeeper)
+		pulseExporter = exporter.NewPulseServer(PulsesPostgres, PostgresJetKeeper, NodesPostgres)
+
+		grpcServer := grpc.NewServer()
+		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
+
+		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to open port for Exporter")
+		}
+
+		go func() {
+			if err := grpcServer.Serve(lis); err != nil {
+				panic(fmt.Errorf("exporter failed to serve: %s", err))
+			}
+		}()
+	}
+
+	c.cmp.Inject(
+		WmBus,
+		Handler,
+		PulseManager,
+		JetsPostgres,
+		PulsesPostgres,
+		Coordinator,
+		metricsComp,
+		Requester,
+		ArtifactsClient,
+		APIWrapper,
+		AvailabilityChecker,
+		KeyProcessor,
+		CryptoScheme,
+		CryptoService,
+		CertManager,
+		NetworkService,
+		publisher,
+	)
+	err := c.cmp.Init(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init components")
+	}
+
+	if !genesisCfg.Skip {
+		if err := Genesis.Start(ctx); err != nil {
+			logger.Fatalf("genesis failed on heavy with error: %v", err)
+		}
+	}
+
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
+
+	return c, nil
+}
+
+func initWithBadger(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	genesisCfg application.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -178,34 +549,35 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *insolarPulse.PostgresDB
-		Nodes       *node.PostgresStorageDB
-		Pool        *pgxpool.Pool
-		Jets        *jet.PostgresDBStore
+		Pulses      *insolarPulse.BadgerDB
+		Nodes       *node.BadgerStorageDB
+		DB          *store.BadgerDB
+		Jets        *jet.BadgerDBStore
 	)
 	{
 		var err error
-
-		Pool, err = pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
+		startTime := time.Now()
+		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
 		if err != nil {
-			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
+			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
 		}
-
-		cwd, err := os.Getwd()
+		options := badger.DefaultOptions(fullDataDirectoryPath)
+		options.Logger = badgerLogger{Logger: logger.WithField("component", "badger")}
+		DB, err = store.NewBadgerDB(
+			options,
+			store.ValueLogDiscardRatio(cfg.Ledger.Storage.BadgerValueLogGCDiscardRatio),
+			store.OpenAndCloseBadgerOnStart(true),
+		)
 		if err != nil {
-			panic(errors.Wrap(err, "os.Getwd failed"))
+			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		path := cfg.Ledger.PostgreSQL.MigrationPath
-		logger.Infof("About to run PostgreSQL migration, cwd = %s, migration path = %s", cwd, path)
-		ver, err := migration.MigrateDatabase(ctx, Pool, path)
-		if err != nil {
-			panic(errors.Wrap(err, "Unable to migrate database"))
-		}
-		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
+		Nodes = node.NewBadgerStorageDB(DB)
+		Pulses = insolarPulse.NewBadgerDB(DB)
+		Jets = jet.NewBadgerDBStore(DB)
 
-		Pulses = insolarPulse.NewPostgresDB(Pool)
-		Nodes = node.NewPostgresStorageDB(Pool)
-		Jets = jet.NewPostgresDBStore(Pool)
+		timeBadgerStarted := time.Since(startTime)
+		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
+		logger.Info("badger starts in ", timeBadgerStarted)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
@@ -289,16 +661,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager *pulsemanager.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
-		Records      *object.PostgresRecordDB
-		JetKeeper    *executor.PostgresDBJetKeeper
+		Records      *object.BadgerRecordDB
+		JetKeeper    *executor.BadgerDBJetKeeper
 	)
 	{
-		Records = object.NewPostgresRecordDB(Pool)
-		indexes := object.NewPostgresIndexDB(Pool, Records)
-		drops := drop.NewPostgresDB(Pool)
-		JetKeeper = executor.NewPostgresJetKeeper(Jets, Pool, Pulses)
+		Records = object.NewBadgerRecordDB(DB)
+		indexes := object.NewBadgerIndexDB(DB, Records)
+		drops := drop.NewBadgerDB(DB)
+		JetKeeper = executor.NewBadgerJetKeeper(Jets, DB, Pulses)
 
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger, JetKeeper.TopSyncPulse(), DB)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed create backuper")
+		}
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes, backupMaker)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := insolarPulse.NewStartPulse()
@@ -313,10 +690,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		PulseManager.StartPulse = sp
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, Jets)
+		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 		c.replicator = replicator
 
-		h := handler.New(cfg.Ledger)
+		h := handler.New(cfg.Ledger, gcRunInfo)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
@@ -330,9 +708,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetModifier = Jets
 		h.JetAccessor = Jets
 		h.JetTree = Jets
-		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.InitialStateReader = c.stateKeeper
+		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 		h.Replicator = replicator
 
@@ -348,9 +726,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
-			IndexModifier:   indexes,
-			BaseRecord: &genesis.PostgresBaseRecord{
-				Pool:           Pool,
+			BaseRecord: &genesis.BadgerBaseRecord{
+				DB:             DB,
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
 				PulseAccessor:  Pulses,
@@ -421,6 +798,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
 
 	return c, nil
+}
+
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig) (*components, error) {
+	if cfg.Ledger.IsPostgresBase {
+		return initWithPostgres(ctx, cfg, genesisCfg)
+	}
+
+	return initWithBadger(ctx, cfg, genesisCfg)
 }
 
 func (c *components) Start(ctx context.Context) error {

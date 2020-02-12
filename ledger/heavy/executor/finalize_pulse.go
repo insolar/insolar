@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package executor
 
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.opencensus.io/stats"
 
@@ -27,6 +26,71 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
+
+type GCRunner interface {
+	// RunValueGC run badger values garbage collection
+	RunValueGC(ctx context.Context)
+}
+
+type PostgresGCRunInfo struct {
+}
+
+func (p *PostgresGCRunInfo) RunValueGC(ctx context.Context) {
+}
+
+func (p *PostgresGCRunInfo) RunGCIfNeeded(ctx context.Context) <-chan struct{} {
+	c := make(chan struct{}, 1)
+	c <- struct{}{}
+	return c
+}
+
+type GCRunInfo interface {
+	RunGCIfNeeded(ctx context.Context) <-chan struct{}
+}
+
+type BadgerGCRunInfo struct {
+	runner GCRunner
+	// runFrequency is period of running gc (in number of pulses)
+	runFrequency uint
+
+	callCounter uint
+	tryLock     chan struct{}
+}
+
+func NewBadgerGCRunInfo(runner GCRunner, runFrequency uint) *BadgerGCRunInfo {
+	tryLock := make(chan struct{}, 1)
+	tryLock <- struct{}{}
+	return &BadgerGCRunInfo{
+		runner:       runner,
+		runFrequency: runFrequency,
+		tryLock:      tryLock,
+	}
+}
+
+func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan struct{}) {
+	done := make(chan struct{}, 1)
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+		select {
+		case v := <-b.tryLock:
+			b.callCounter++
+			if (b.runFrequency > 0) && (b.callCounter >= b.runFrequency) && (b.callCounter%b.runFrequency == 0) {
+				startedAt := time.Now().Second()
+				b.runner.RunValueGC(ctx)
+				stats.Record(ctx, statBadgerValueGCTime.M(int64(time.Now().Second()-startedAt)))
+			} else {
+				inslogger.FromContext(ctx).Info("values GC is not called")
+			}
+			b.tryLock <- v
+		default:
+			inslogger.FromContext(ctx).Info("values GC in progress. Skip It")
+		}
+	}()
+
+	return done
+}
 
 func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, pulseToFinalize insolar.PulseNumber) bool {
 	logger := inslogger.FromContext(ctx)
@@ -50,10 +114,10 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 }
 
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, pulses pulse.Calculator, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner GCRunInfo) {
 	finPulse := &newPulse
 	for {
-		finPulse = finalizePulseStep(ctx, pulses, jetKeeper, indexes, *finPulse)
+		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse, gcRunner)
 		if finPulse == nil {
 			break
 		}
@@ -62,7 +126,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, jetKeeper JetKe
 
 var finalizationLock sync.Mutex
 
-func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber) *insolar.PulseNumber {
+func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber, gcRunner GCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"pulse_to_finalize": pulseToFinalize,
 	})
@@ -76,6 +140,21 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, jetKeeper J
 
 	// record all jets count
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, pulseToFinalize)))))
+
+	startedAt := time.Now()
+	logger.Infof("finalizePulseStep: calling backuperr.MakeBackup()...")
+	bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
+	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
+		logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
+	}
+	logger.Infof("finalizePulseStep: MakeBackup() done!")
+
+	stats.Record(ctx, statBackupTime.M(time.Since(startedAt).Nanoseconds()))
+
+	if bkpError == ErrAlreadyDone {
+		logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
+		return nil
+	}
 
 	logger.Info("finalizePulseStep: before getting lock")
 	finalizationLock.Lock()
@@ -101,6 +180,11 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, jetKeeper J
 
 	logger.Infof("finalizePulseStep: pulse completely finalized ( drops + hots + backup )")
 	stats.Record(ctx, statFinalizedPulse.M(int64(pulseToFinalize)))
+
+	// We run value GC here ( and only here ) implicitly since we want to
+	// exclude running GC during process of backup-replication
+	// Skip return value - we don't want to wait completion
+	_ = gcRunner.RunGCIfNeeded(ctx)
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {

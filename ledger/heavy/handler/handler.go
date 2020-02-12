@@ -1,5 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package handler
 
@@ -43,7 +41,8 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	cfg configuration.Ledger
+	cfg      configuration.Ledger
+	gcRunner executor.GCRunInfo
 
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -58,13 +57,13 @@ type Handler struct {
 	JetModifier        jet.Modifier
 	JetAccessor        jet.Accessor
 	JetKeeper          executor.JetKeeper
+	BackupMaker        executor.BackupMaker
 	InitialStateReader executor.InitialStateAccessor
 
 	Sender          bus.Sender
 	StartPulse      pulse.StartPulse
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
-	DropDB          *drop.PostgresDB
 
 	Replicator executor.HeavyReplicator
 
@@ -72,9 +71,10 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New(cfg configuration.Ledger) *Handler {
+func New(cfg configuration.Ledger, gcRunner executor.GCRunInfo) *Handler {
 	h := &Handler{
-		cfg: cfg,
+		cfg:      cfg,
+		gcRunner: gcRunner,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -312,6 +312,6 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	executor.FinalizePulse(ctx, h.PulseCalculator, h.JetKeeper, h.IndexModifier, confirm.Pulse)
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse, h.gcRunner)
 	logger.Info("handleGotHotConfirmation finish. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 }
