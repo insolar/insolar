@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build slowtest
+
 package exporter
 
 import (
@@ -39,6 +41,8 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
 )
+
+// TODO: POSTGRES -> Badger
 
 var (
 	poolLock     sync.Mutex

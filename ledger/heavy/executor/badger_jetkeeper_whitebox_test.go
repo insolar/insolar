@@ -37,7 +37,7 @@ func BadgerDefaultOptions(dir string) badger.Options {
 	return ops
 }
 
-func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
+func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *store.BadgerDB, *jet.BadgerDBStore, *pulse.BadgerDB) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 
@@ -47,15 +47,15 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *st
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
-	jets := jet.NewDBStore(db)
-	pulses := pulse.NewDB(db)
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(db)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetKeeper := NewJetKeeper(jets, db, pulses)
+	jetKeeper := NewBadgerJetKeeper(jets, db, pulses)
 
 	return jetKeeper, tmpdir, db, jets, pulses
 }
@@ -99,7 +99,7 @@ func Test_TruncateHead(t *testing.T) {
 	_, err = db.Get(jetKeeperKey(nextPulse))
 	require.NoError(t, err)
 
-	err = ji.(*DBJetKeeper).TruncateHead(ctx, nextPulse)
+	err = ji.(*BadgerDBJetKeeper).TruncateHead(ctx, nextPulse)
 	require.NoError(t, err)
 
 	_, err = db.Get(jetKeeperKey(testPulse))

@@ -54,7 +54,7 @@ func TestPulse_Components(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
-	dbStorage := pulse.NewDB(db)
+	dbStorage := pulse.NewBadgerDB(db)
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
