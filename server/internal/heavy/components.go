@@ -200,12 +200,12 @@ func initWithPostgres(
 		JetsPostgres   *jet.PostgresDBStore
 	)
 	{
-
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PlatformCryptographyScheme = CryptoScheme
 		Coordinator = c
 
-		Pool, err := pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
+		var err error
+		Pool, err = pgxpool.Connect(context.Background(), cfg.Ledger.PostgreSQL.URL)
 		if err != nil {
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
