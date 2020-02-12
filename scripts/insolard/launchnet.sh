@@ -479,6 +479,12 @@ fi
 
 trap 'handle_sigchld' SIGCHLD
 
+echo "Running genesis before actually starting any nodes (consensus may fail if genesis takes long)"
+$INSOLARD \
+    --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
+    --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --genesis-only
+
 echo "start heavy node"
 set -x
 $INSOLARD \

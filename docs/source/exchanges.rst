@@ -1,8 +1,8 @@
 .. _exchanges:
 
-======================
-Integrate With MainNet
-======================
+=====================
+Explore the Use Cases
+=====================
 
 In short, to integrate with Insolar MainNet, do the following:
 

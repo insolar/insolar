@@ -31,8 +31,8 @@ func NewLightServer(cfgPath string) Server {
 	return light.New(cfgPath)
 }
 
-func NewHeavyServer(cfgPath string, gensisCfgPath string, genesisOptions genesis.GenesisOptions) Server {
-	return heavy.New(cfgPath, gensisCfgPath, genesisOptions)
+func NewHeavyServer(cfgPath string, gensisCfgPath string, genesisOptions genesis.GenesisOptions, genesisOnly bool) Server {
+	return heavy.New(cfgPath, gensisCfgPath, genesisOptions, genesisOnly)
 }
 
 func NewVirtualServer(cfgPath string, codeRegistry map[string]insolar.ContractWrapper,

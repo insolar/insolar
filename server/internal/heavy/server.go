@@ -37,13 +37,15 @@ type Server struct {
 	cfgPath        string
 	genesisCfgPath string
 	genesisOptions genesis.GenesisOptions
+	genesisOnly    bool
 }
 
-func New(cfgPath string, genesisCfgPath string, genesisOptions genesis.GenesisOptions) *Server {
+func New(cfgPath string, genesisCfgPath string, genesisOptions genesis.GenesisOptions, genesisOnly bool) *Server {
 	return &Server{
 		cfgPath:        cfgPath,
 		genesisCfgPath: genesisCfgPath,
 		genesisOptions: genesisOptions,
+		genesisOnly:    genesisOnly,
 	}
 }
 
@@ -96,7 +98,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.genesisOptions)
+	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.genesisOptions, s.genesisOnly)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

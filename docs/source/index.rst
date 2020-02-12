@@ -9,12 +9,12 @@ Insolar Documentation
 
 Welcome to Insolar documentation.
 
-Explore Insolar technologies and MainNet API references, run Insolar locally, or learn how to swap INS to XNS.
-
 .. _quick_start:
 
 Developers: Start With a Guide
 ------------------------------
+
+If you are a developer, explore Insolar technologies and run Insolar locally for testing purposes.
 
 .. raw:: html
 
@@ -45,8 +45,10 @@ Go through step-by-step instructions.
 
 .. rst-class:: reg-text
 
-Exchanges: Explore the API
---------------------------
+Exchange and Wallet Developers: Integrate With Insolar
+-------------------------------------------------------
+
+If you are an exchange or you wish to implement your own wallet for Insolar MainNet, explore the API references and build an API requester.
 
 .. raw:: html
 
@@ -54,8 +56,8 @@ Exchanges: Explore the API
 
 .. rst-class:: column column2
 
-:ref:`Integrate with MainNet <exchanges>`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:ref:`Explore the use cases <exchanges>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Learn what APIs to invoke and in what sequences.
 
@@ -87,6 +89,8 @@ Read-only API provided by an Observer service that pulls information from the ne
 Users: Swap INS to XNS
 ----------------------
 
+If you are a user, learn how to swap the token for the coin.
+
 .. raw:: html
 
    <div class="reduced-width">
@@ -116,7 +120,7 @@ In the MainNet.
 
 .. toctree::
    :hidden:
-   :caption: Exchanges
+   :caption: Exchange and Wallet Developers
 
    exchanges
    requester
