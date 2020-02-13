@@ -9,7 +9,7 @@ env:
 jobs:
   test-func:
     runs-on: self-hosted
-    name: test-func
+    name: test-func-postgresql
     steps:
       - name: checkout code
         uses: actions/checkout@master
