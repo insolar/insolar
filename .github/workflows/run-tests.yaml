@@ -47,7 +47,7 @@ jobs:
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
           make functest
-      - name: test_func_badger
+      - name: test_func_postgresql
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
-          make functest
+          POSTGRES_ENABLE=1 make functest
