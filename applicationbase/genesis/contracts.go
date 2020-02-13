@@ -12,24 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package application
+package genesis
 
 import (
-	"encoding/hex"
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/insolar"
 )
 
-var (
-	genesisIDHex  = "00010001ac000000000000000000000000000000000000000000000000000000"
-	genesisRefHex = genesisIDHex + genesisIDHex
-)
-
-func TestGenesisRecordID(t *testing.T) {
-	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis ID should always be the same")
+func NodeDomain(parentName string) ContractState {
+	nd, _ := nodedomain.NewNodeDomain()
+	return ContractState{
+		Name:       genesisrefs.GenesisNameNodeDomain,
+		Prototype:  genesisrefs.GenesisNameNodeDomain,
+		ParentName: parentName,
+		Memory:     MustGenMemory(nd),
+	}
 }
 
-func TestReference(t *testing.T) {
-	require.Equal(t, genesisRefHex, hex.EncodeToString(GenesisRecord.Ref().Bytes()), "genesisRef should always be the same")
+func MustGenMemory(data interface{}) []byte {
+	b, err := insolar.Serialize(data)
+	if err != nil {
+		panic("failed to serialize contract data")
+	}
+	return b
 }

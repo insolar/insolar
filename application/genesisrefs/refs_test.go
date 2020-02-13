@@ -45,11 +45,11 @@ func TestReferences(t *testing.T) {
 			got:    ContractRootDomain,
 			expect: "insolar:1AAEAAciWtcmPVgAcaIvICkgnSsJmp4Clp650xOHjYks",
 		},
-		application.GenesisNameNodeDomain: {
+		GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
 			expect: "insolar:1AAEAAUdxJyWoY-IjQatMYpOk51MZx9tEThkqd1dSB1U",
 		},
-		application.GenesisNameNodeRecord: {
+		GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
 			expect: "insolar:1AAEAAQy4dc1JKDJGNd5YfU7ow3DFrW_9j7v772siVMQ",
 		},

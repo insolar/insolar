@@ -34,9 +34,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/genesis"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -117,8 +116,10 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 func initWithPostgres(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig,
-	genesisOnly bool) (*components, error) {
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -405,8 +406,8 @@ func initWithPostgres(
 				IndexModifier:  IndexesPostgres,
 			},
 
-			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			ContractsConfig: genesisCfg.ContractsConfig,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
+			GenesisOptions: genesisOptions,
 		}
 	}
 
@@ -478,7 +479,10 @@ func initWithPostgres(
 func initWithBadger(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -740,8 +744,8 @@ func initWithBadger(
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			ContractsConfig: genesisCfg.ContractsConfig,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
+			GenesisOptions: genesisOptions,
 		}
 	}
 
@@ -810,12 +814,12 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOnly)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOnly)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
 }
 
 func (c *components) Start(ctx context.Context) error {

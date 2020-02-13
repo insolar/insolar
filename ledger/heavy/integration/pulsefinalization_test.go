@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -37,17 +37,7 @@ func Test_FinalizePulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	testPk := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwDcgWZ1SbG+nbiXZkmYUZEfk2nkk\n1PEmEWoj4g6DLEkdaQVorOkqlloEz1zXclQaAE1S8i3F7OFNrNxLkm34ow==\n-----END PUBLIC KEY-----\n"
-	heavyConfig := application.GenesisHeavyConfig{
-		ContractsConfig: application.GenesisContractsConfig{
-			PKShardCount:            10,
-			MAShardCount:            10,
-			MigrationAddresses:      make([][]string, 10),
-			RootPublicKey:           testPk,
-			FeePublicKey:            testPk,
-			MigrationAdminPublicKey: testPk,
-		},
-	}
+	heavyConfig := genesis.HeavyConfig{}
 	s, err := NewBadgerServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()
