@@ -5,10 +5,11 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
+  GOPATH: ${{github.workspace}}/go
 jobs:
-  test-func:
+  test-func-pgsql:
     runs-on: self-hosted
-    name: test-func-postgresql
+    name: test-func-pgsql
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -20,12 +21,8 @@ jobs:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-        env:
-          GOPATH: ${{env.GITHUB_WORKSPACE}}/go
       - name: test_func
         run: |
           make build
           POSTGRES_ENABLE=1 make functest
-        working-directory: ${{env.GITHUB_WORKSPACE}}/go/src/github.com/insolar/insolar
-        env:
-          GOPATH: ${{env.GITHUB_WORKSPACE}}/go
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
