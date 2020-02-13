@@ -20,9 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NodeDomain(parentName string) GenesisContractState {
+func NodeDomain(parentName string) ContractState {
 	nd, _ := nodedomain.NewNodeDomain()
-	return GenesisContractState{
+	return ContractState{
 		Name:       genesisrefs.GenesisNameNodeDomain,
 		Prototype:  genesisrefs.GenesisNameNodeDomain,
 		ParentName: parentName,

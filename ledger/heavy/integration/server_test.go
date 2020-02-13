@@ -127,7 +127,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 func NewServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg genesis.GenesisHeavyConfig,
+	genesisCfg genesis.HeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.

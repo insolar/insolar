@@ -1,4 +1,4 @@
-// Copyright 2020 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ const (
 	FoundationVestingStep     = 0
 )
 
-func initStates(configPath, genesisConfigPath string) ([]genesis.GenesisContractState, error) {
+func initStates(configPath, genesisConfigPath string) ([]genesis.ContractState, error) {
 	cfgHolder := configuration.NewHolder()
 	var err error
 	if len(configPath) != 0 {
@@ -73,7 +73,7 @@ func initStates(configPath, genesisConfigPath string) ([]genesis.GenesisContract
 	}
 	err = json.Unmarshal(b, &config)
 	if err != nil {
-		log.Fatalf("failed to pares genesis configuration from file: %v", genesisConfigPath)
+		log.Fatalf("failed to parse genesis configuration from file: %v", genesisConfigPath)
 	}
 
 	contractsConfig := config.ContractsConfig
@@ -88,7 +88,7 @@ func initStates(configPath, genesisConfigPath string) ([]genesis.GenesisContract
 	genesisrefs.ContractPublicKeyShardRefs(contractsConfig.PKShardCount)
 
 	// Hint: order matters, because of dependency contracts on each other.
-	states := []genesis.GenesisContractState{
+	states := []genesis.ContractState{
 		contracts.RootDomain(contractsConfig.PKShardCount),
 		contracts.GetMemberGenesisContractState(contractsConfig.RootPublicKey, application.GenesisNameRootMember, application.GenesisNameRootDomain, genesisrefs.ContractRootWallet),
 		contracts.GetMemberGenesisContractState(contractsConfig.MigrationAdminPublicKey, application.GenesisNameMigrationAdminMember, application.GenesisNameRootDomain, genesisrefs.ContractMigrationWallet),

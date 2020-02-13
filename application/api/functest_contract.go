@@ -138,7 +138,7 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 		return errors.Wrap(err, "can't get current pulse")
 	}
 
-	base := genesis.GenesisRecord.Ref()
+	base := genesis.Record.Ref()
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
 			Method:          args.Method,

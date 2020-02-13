@@ -104,8 +104,8 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 		)
 	}
 
-	genesisID := GenesisRecord.ID()
-	genesisRecord := record.Genesis{Hash: GenesisRecord}
+	genesisID := Record.ID()
+	genesisRecord := record.Genesis{Hash: Record}
 	virtRec := record.Wrap(&genesisRecord)
 	rec := record.Material{
 		Virtual: virtRec,
@@ -137,11 +137,11 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 
 // Done saves genesis value. Should be called when all genesis steps finished properly.
 func (br *BaseRecord) Done(ctx context.Context) error {
-	return br.DB.Set(Key{}, GenesisRecord.Ref().Bytes())
+	return br.DB.Set(Key{}, Record.Ref().Bytes())
 }
 
-type GenesisOptions struct {
-	States       []GenesisContractState
+type Options struct {
+	States       []ContractState
 	ParentDomain string
 }
 
@@ -151,7 +151,7 @@ type Genesis struct {
 	BaseRecord      *BaseRecord
 
 	DiscoveryNodes []DiscoveryNodeRegister
-	GenesisOptions GenesisOptions
+	GenesisOptions Options
 }
 
 // Start implements components.Starter.
@@ -203,7 +203,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractState, parentDomain string) error {
+func (g *Genesis) storeContracts(ctx context.Context, states []ContractState, parentDomain string) error {
 	inslog := inslogger.FromContext(ctx)
 
 	states = append(states, NodeDomain(g.GenesisOptions.ParentDomain))
@@ -218,7 +218,7 @@ func (g *Genesis) storeContracts(ctx context.Context, states []GenesisContractSt
 	return nil
 }
 
-func (g *Genesis) activateContract(ctx context.Context, state GenesisContractState, parentDomain string) (*insolar.Reference, error) {
+func (g *Genesis) activateContract(ctx context.Context, state ContractState, parentDomain string) (*insolar.Reference, error) {
 	name := state.Name
 	objRef := genesisrefs.GenesisRef(name)
 
@@ -236,7 +236,7 @@ func (g *Genesis) activateContract(ctx context.Context, state GenesisContractSta
 		return nil, errors.Wrapf(err, "failed to register '%v' contract", name)
 	}
 
-	parentRef := GenesisRecord.Ref()
+	parentRef := Record.Ref()
 	if state.ParentName != "" {
 		parentRef = genesisrefs.GenesisRef(state.ParentName)
 	}

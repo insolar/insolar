@@ -20,8 +20,9 @@ import (
 	"path/filepath"
 
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/builtin"
+	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -38,16 +39,18 @@ func main() {
 	var (
 		configPath        string
 		genesisConfigPath string
+		genesisOnly       bool
 	)
 
 	var rootCmd = &cobra.Command{
 		Use: "insolard",
 		Run: func(_ *cobra.Command, _ []string) {
-			runInsolardServer(configPath, genesisConfigPath)
+			runInsolardServer(configPath, genesisConfigPath, genesisOnly)
 		},
 	}
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
+	rootCmd.Flags().BoolVarP(&genesisOnly, "genesis-only", "", false, "run only genesis and then terminate")
 	rootCmd.AddCommand(version.GetCommand("insolard"))
 	err := rootCmd.Execute()
 	if err != nil {
@@ -58,7 +61,7 @@ func main() {
 // psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
 var psAgentLauncher = func() error { return nil }
 
-func runInsolardServer(configPath string, genesisConfigPath string) {
+func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly bool) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	role, err := readRole(configPath)
@@ -76,24 +79,24 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 		s := server.NewHeavyServer(
 			configPath,
 			genesisConfigPath,
-			genesis.GenesisOptions{
+			genesis.Options{
 				States:       states,
 				ParentDomain: application.GenesisNameRootDomain,
 			},
+			genesisOnly,
 		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(configPath)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		codeRegistry := builtin.InitializeContractMethods()
-		codeRefRegistry := builtin.InitializeCodeRefs()
-		codeDescriptors := builtin.InitializeCodeDescriptors()
-		prototypeDescriptors := builtin.InitializePrototypeDescriptors()
-		s := server.NewVirtualServer(configPath, codeRegistry,
-			codeRefRegistry,
-			codeDescriptors,
-			prototypeDescriptors)
+		builtinContracts := builtin.BuiltinContracts{
+			CodeRegistry:         appbuiltin.InitializeContractMethods(),
+			CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
+			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
+			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
+		}
+		s := server.NewVirtualServer(configPath, builtinContracts)
 		s.Serve()
 	}
 }
