@@ -33,8 +33,8 @@ import (
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar/secrets"
 
-	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"

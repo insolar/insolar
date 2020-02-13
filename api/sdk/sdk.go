@@ -29,9 +29,9 @@ import (
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"

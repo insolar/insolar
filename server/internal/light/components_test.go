@@ -36,8 +36,8 @@ func TestComponents(t *testing.T) {
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
-	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
-	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+	cfg.APIRunner.SwaggerPath = "../../../api/spec/api-exported.yaml"
+	cfg.AdminAPIRunner.SwaggerPath = "../../../api/spec/api-exported.yaml"
 
 	_, err := newComponents(ctx, cfg, nil)
 	require.NoError(t, err)

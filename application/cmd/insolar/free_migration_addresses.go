@@ -19,7 +19,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/api/sdk"
 )
 
 var shardsAtOneTime = 10

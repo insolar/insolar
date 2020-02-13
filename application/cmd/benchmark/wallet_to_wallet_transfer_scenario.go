@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/api/sdk"
 )
 
 const transferAmount = 101

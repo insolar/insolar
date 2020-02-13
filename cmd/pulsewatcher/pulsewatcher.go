@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"

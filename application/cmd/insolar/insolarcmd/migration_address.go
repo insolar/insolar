@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 

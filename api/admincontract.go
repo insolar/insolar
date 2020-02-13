@@ -17,8 +17,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/insolar/insolar/application/api/instrumenter"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/instrumenter"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/rpc/v2"

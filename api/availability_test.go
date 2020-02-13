@@ -26,13 +26,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 )
 
-func waitForStatus(t *testing.T, nc *api.NetworkChecker, expected bool) {
+func waitForStatus(t *testing.T, nc *NetworkChecker, expected bool) {
 	ctx := context.Background()
 	var available bool
 	for i := 0; i < 10; i++ {
@@ -83,7 +82,7 @@ func TestAvailabilityChecker_UpdateStatus(t *testing.T) {
 		CheckPeriod:    checkPeriod,
 	}
 
-	nc := api.NewNetworkChecker(config)
+	nc := NewNetworkChecker(config)
 	require.False(t, nc.IsAvailable(ctx))
 
 	defer nc.Stop()

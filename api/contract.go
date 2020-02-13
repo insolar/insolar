@@ -21,14 +21,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/insolar/insolar/api/instrumenter"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/x-crypto/sha256"
 
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/api/instrumenter"
-	"github.com/insolar/insolar/application/api/requester"
-	"github.com/insolar/insolar/application/api/seedmanager"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"

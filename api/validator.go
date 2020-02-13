@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/rpc/v2/json2"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 

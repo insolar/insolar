@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 
 	"sync"
 )

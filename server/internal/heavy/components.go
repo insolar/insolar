@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc"
 
 	component "github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application/api"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"

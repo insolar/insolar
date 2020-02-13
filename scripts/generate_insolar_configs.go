@@ -153,13 +153,13 @@ func main() {
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
-		conf.APIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+		conf.APIRunner.SwaggerPath = "api/spec/api-exported.yaml"
 
 		conf.AvailabilityChecker.Enabled = true
 		conf.AvailabilityChecker.KeeperURL = "http://127.0.0.1:12012/check"
 
 		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
-		conf.AdminAPIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+		conf.AdminAPIRunner.SwaggerPath = "api/spec/api-exported.yaml"
 
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
 		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
