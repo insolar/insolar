@@ -53,7 +53,7 @@ func TestDBRollback_TruncateReturnError(t *testing.T) {
 	require.Contains(t, err.Error(), testError.Error(), err)
 }
 
-func TestDBRollback_HappyPath(t *testing.T) {
+func TestDBRollback_HappyPath_Badger(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1
 	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
@@ -98,7 +98,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return iterMock
 	})
 
-	drops := drop.NewDB(db)
+	drops := drop.NewBadgerDB(db)
 
 	records := NewHeadTruncaterMock(t)
 	records.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
@@ -106,10 +106,10 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return nil
 	})
 
-	indexes := object.NewIndexDB(db, nil)
+	indexes := object.NewBadgerIndexDB(db, nil)
 
-	jets := jet.NewDBStore(db)
-	pulses := pulse.NewDB(badger)
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(badger)
 
 	nodes := NewHeadTruncaterMock(t)
 	nodes.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {

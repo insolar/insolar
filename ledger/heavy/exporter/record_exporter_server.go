@@ -120,7 +120,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		}
 		numSent++
 	}
-	logger.Info("exported %d record", numSent)
+	logger.Infof("exported %d record", numSent)
 
 	return nil
 }

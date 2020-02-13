@@ -1,0 +1,17 @@
+go_import_path: github.com/ory/dockertest/v3
+
+language: go
+
+services:
+  - docker
+
+go:
+  - 1.13
+
+before_install:
+  - go get github.com/mattn/goveralls
+
+script:
+  - go vet -x .
+  - go test -covermode=atomic -coverprofile="cover.out" .
+  - goveralls -coverprofile="cover.out"

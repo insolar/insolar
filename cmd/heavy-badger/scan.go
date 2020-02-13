@@ -175,7 +175,7 @@ func (dbs *dbScanner) getAllPulses() (pulses []insolar.Pulse) {
 	}
 	ctx := context.Background()
 
-	var pulseStore = pulsedb.NewDB(dbs.db)
+	var pulseStore = pulsedb.NewBadgerDB(dbs.db)
 	p, err := pulseStore.Latest(ctx)
 	pulses = append(pulses, p)
 	if err == pulsedb.ErrNotFound {
