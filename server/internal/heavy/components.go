@@ -730,6 +730,7 @@ func initWithBadger(
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
+			IndexModifier:   indexes,
 			BaseRecord: &genesis.BadgerBaseRecord{
 				DB:             DB,
 				DropModifier:   drops,
