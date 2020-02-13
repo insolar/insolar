@@ -94,7 +94,7 @@ build_logger()
 kill_port()
 {
     port=$1
-    pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
+    pids=$(lsof -i :$port 2>/dev/null | grep "LISTEN\|UDP" | awk '{print $2}')
     for pid in $pids
     do
         echo -n "killing pid $pid at "
