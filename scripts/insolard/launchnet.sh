@@ -471,23 +471,25 @@ if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
   build_logger
 fi
 
-# Terminate running PostgreSQL container if there is one
-docker stop insolar-postgresql || true
-docker rm insolar-postgresql || true
-# Build PostgreSQL Docker image with custom postgresql.conf
-OLD_PWD=`pwd`
-echo "pwd: $OLD_PWD"
-cd scripts/insolard/postgresql-docker
-docker build --no-cache -t insolar-functests-postgresql .
-cd $OLD_PWD
-# Start a new PostgreSQL container
-docker run -d --name insolar-postgresql -e POSTGRES_DB=insolar -e POSTGRES_PASSWORD=s3cr3t -p 5432:5432 insolar-functests-postgresql:latest
-# Make sure PostgreSQL is up
-until bash -c "PGPASSWORD=s3cr3t docker exec -t insolar-postgresql psql -h localhost -U postgres insolar -c 'SELECT 1;'"
-do
-  echo "PostgreSQL is not up yet, retrying..."
-  sleep 1
-done
+if [[ "$POSTGRES_ENABLE" == "1" ]]; then
+  # Terminate running PostgreSQL container if there is one
+  docker stop insolar-postgresql || true
+  docker rm insolar-postgresql || true
+  # Build PostgreSQL Docker image with custom postgresql.conf
+  OLD_PWD=`pwd`
+  echo "pwd: $OLD_PWD"
+  cd scripts/insolard/postgresql-docker
+  docker build --no-cache -t insolar-functests-postgresql .
+  cd $OLD_PWD
+  # Start a new PostgreSQL container
+  docker run -d --name insolar-postgresql -e POSTGRES_DB=insolar -e POSTGRES_PASSWORD=s3cr3t -p 5432:5432 insolar-functests-postgresql:latest
+  # Make sure PostgreSQL is up
+  until bash -c "PGPASSWORD=s3cr3t docker exec -t insolar-postgresql psql -h localhost -U postgres insolar -c 'SELECT 1;'"
+  do
+    echo "PostgreSQL is not up yet, retrying..."
+    sleep 1
+  done
+fi
 
 handle_sigchld()
 {
