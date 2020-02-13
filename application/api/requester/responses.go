@@ -93,17 +93,6 @@ type StatusResponse struct {
 	StartTime          time.Time `json:"startTime"`
 }
 
-// InfoResponse represents response from rpc on network.getInfo method
-// type InfoResponse struct {
-// 	RootDomain             string   `json:"rootDomain"`
-// 	RootMember             string   `json:"rootMember"`
-// 	MigrationAdminMember   string   `json:"migrationAdminMember"`
-// 	FeeMember              string   `json:"feeMember"`
-// 	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
-// 	NodeDomain             string   `json:"nodeDomain"`
-// 	TraceID                string   `json:"traceID"`
-// }
-
 type rpcInfoResponse struct {
 	Response
 	Result map[string]interface{} `json:"result"`
