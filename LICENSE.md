@@ -1,6 +1,6 @@
 ## Insolar License version 1.0
 
-https://github.com/insolar/insolar/blob/master/network/LICENSE.md
+https://github.com/insolar/insolar/blob/master/LICENSE.md
 
 ### Acceptance
 
