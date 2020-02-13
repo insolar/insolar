@@ -275,7 +275,6 @@ var defaultInsloardConf *configuration.Configuration
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
 		fmt.Println("[newDefaultInsolardConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
-		time.Sleep(10 * time.Second)
 		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
 			fmt.Println("[newDefaultInsolardConfig] Using PostgreSQL config")
 			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)

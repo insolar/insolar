@@ -1,4 +1,4 @@
-name: pull_request_func
+name: pull_request_func_badger
 on:
   pull_request:
 env:
@@ -22,5 +22,5 @@ jobs:
       - name: test_func
         run: |
           make build
-          make functest
+          POSTGRES_ENABLE=1 make functest
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
