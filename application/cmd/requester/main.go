@@ -23,8 +23,12 @@ import (
 	"os"
 
 	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/secrets"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/log/logadapter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -35,6 +39,7 @@ var (
 	inputRequestParams   string
 	shouldPasteSeed      bool
 	shouldPastePublicKey bool
+	verbose              bool
 	memberPrivateKey     crypto.PrivateKey
 	request              *requester.ContractRequest
 )
@@ -45,6 +50,7 @@ func parseInputParams() {
 	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
 	pflag.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
 	pflag.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
+	pflag.BoolVarP(&verbose, "verbose", "v", false, "Print request information")
 	pflag.Parse()
 }
 
@@ -69,7 +75,7 @@ func verifyParams() {
 	memberPrivateKey = keys.Private
 
 	if len(inputRequestParams) == 0 {
-		log.Fatal("Request parameters cannot be empty.")
+		log.Fatal("Request parameters cannot be empty")
 	}
 	if isFileExists(inputRequestParams) {
 		fileContent, err := ioutil.ReadFile(inputRequestParams)
@@ -99,31 +105,23 @@ func isFileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-func main() {
-	parseInputParams()
-	verifyParams()
-
-	userConfig, e := createUserConfig(memberPrivateKey)
-	if e != nil {
-		log.Fatal(e)
-	}
-	if shouldPastePublicKey {
-		request.Params.PublicKey = userConfig.PublicKey
-	}
-
-	var response []byte
-	var err error
-	if shouldPasteSeed {
-		response, err = requester.Send(context.Background(), apiURL, userConfig, &request.Params)
+func getContextWithLogger() context.Context {
+	cfg := configuration.NewLog()
+	ctx := context.Background()
+	cfg.Formatter = "text"
+	if verbose {
+		cfg.Level = insolar.DebugLevel.String()
 	} else {
-		response, err = requester.SendWithSeed(context.Background(), apiURL, userConfig, &request.Params, request.Params.Seed)
+		cfg.Level = insolar.WarnLevel.String()
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	defaultCfg := logadapter.DefaultLoggerSettings()
+	defaultCfg.Instruments.CallerMode = insolar.NoCallerField
+	defaultCfg.Instruments.MetricsMode = insolar.NoLogMetrics
+	logger, _ := log.NewLogExt(cfg, defaultCfg, 0)
+	ctx = inslogger.SetLogger(ctx, logger)
 
-	print(string(response))
+	return ctx
 }
 
 func createUserConfig(privateKey crypto.PrivateKey) (*requester.UserConfigJSON, error) {
@@ -140,4 +138,33 @@ func createUserConfig(privateKey crypto.PrivateKey) (*requester.UserConfigJSON, 
 	publicKeyStr := string(publicKey)
 
 	return requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
+}
+
+func main() {
+	parseInputParams()
+	verifyParams()
+	ctx := getContextWithLogger()
+	requester.SetVerbose(verbose)
+
+	userConfig, e := createUserConfig(memberPrivateKey)
+	if e != nil {
+		log.Fatal(e)
+	}
+	if shouldPastePublicKey {
+		request.Params.PublicKey = userConfig.PublicKey
+	}
+
+	var response []byte
+	var err error
+	if shouldPasteSeed {
+		response, err = requester.Send(ctx, apiURL, userConfig, &request.Params)
+	} else {
+		response, err = requester.SendWithSeed(ctx, apiURL, userConfig, &request.Params, request.Params.Seed)
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	print(string(response))
 }

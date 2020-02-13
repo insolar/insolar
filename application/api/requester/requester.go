@@ -17,17 +17,19 @@ package requester
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 	"time"
 
-	"github.com/insolar/x-crypto"
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/rand"
 	"github.com/insolar/x-crypto/sha256"
@@ -118,7 +120,7 @@ func GetResponseBodyContract(url string, postP ContractRequest, signature string
 	if err != nil {
 		return nil, err
 	}
-	return doReq(req)
+	return doReq(context.Background(), req)
 }
 
 func MakeContractRequest(url string, postP ContractRequest, signature string) (*http.Request, error) {
@@ -155,7 +157,7 @@ func GetResponseBodyPlatform(url string, method string, params interface{}) ([]b
 		return nil, errors.Wrap(err, "problem with preparing platform request")
 	}
 
-	return doReq(req)
+	return doReq(context.Background(), req)
 }
 
 func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
@@ -173,7 +175,16 @@ func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
 	return req, jsonValue, nil
 }
 
-func doReq(req *http.Request) ([]byte, error) {
+func doReq(ctx context.Context, req *http.Request) ([]byte, error) {
+	if verbose {
+		requestDump, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			verboseInfo(ctx, "Could not dump HTTP request")
+			verboseInfo(ctx, err.Error())
+		} else {
+			verboseInfo(ctx, fmt.Sprintf("\n-----> %s\n--> END\n", requestDump))
+		}
+	}
 	postResp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with sending request")
@@ -181,6 +192,15 @@ func doReq(req *http.Request) ([]byte, error) {
 
 	if postResp == nil {
 		return nil, errors.New("response is nil")
+	}
+	if verbose {
+		requestDump, err := httputil.DumpResponse(postResp, true)
+		if err != nil {
+			verboseInfo(ctx, "Could not dump HTTP response")
+			verboseInfo(ctx, err.Error())
+		} else {
+			verboseInfo(ctx, fmt.Sprintf("\n<----- %s\n<-- END\n\n", requestDump))
+		}
 	}
 
 	defer postResp.Body.Close()
@@ -225,7 +245,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, para
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with creating target request")
 	}
-	b, err := doReq(req)
+	b, err := doReq(ctx, req)
 	return b, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 }
 
