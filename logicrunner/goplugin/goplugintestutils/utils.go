@@ -179,7 +179,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
-			genesis.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
+			genesis.Record.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)

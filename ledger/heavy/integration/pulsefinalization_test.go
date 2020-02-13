@@ -37,7 +37,7 @@ func Test_FinalizePulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	heavyConfig := genesis.GenesisHeavyConfig{}
+	heavyConfig := genesis.HeavyConfig{}
 	s, err := NewServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()

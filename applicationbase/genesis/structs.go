@@ -18,18 +18,18 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type genesisBinary []byte
+type binary []byte
 
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
+// Record is initial chain record.
+var Record binary = []byte{0xAC}
 
 // ID returns genesis record id.
-func (r genesisBinary) ID() insolar.ID {
+func (r binary) ID() insolar.ID {
 	return *insolar.NewID(insolar.GenesisPulse.PulseNumber, r)
 }
 
 // Ref returns genesis record reference.
-func (r genesisBinary) Ref() insolar.Reference {
+func (r binary) Ref() insolar.Reference {
 	return *insolar.NewReference(r.ID())
 }
 
@@ -39,16 +39,16 @@ type DiscoveryNodeRegister struct {
 	PublicKey string
 }
 
-// GenesisContractState carries data required for contract object creation via genesis.
-type GenesisContractState struct {
+// ContractState carries data required for contract object creation via genesis.
+type ContractState struct {
 	Name       string
 	Prototype  string
 	ParentName string
 	Memory     []byte
 }
 
-// GenesisHeavyConfig carries data required for initial genesis on heavy node.
-type GenesisHeavyConfig struct {
+// HeavyConfig carries data required for initial genesis on heavy node.
+type HeavyConfig struct {
 	// DiscoveryNodes is the list with discovery node info.
 	DiscoveryNodes []DiscoveryNodeRegister
 	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.

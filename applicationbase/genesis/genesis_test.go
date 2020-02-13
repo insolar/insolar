@@ -25,7 +25,7 @@ import (
 
 func TestGenesisRecordMarshalUnmarshal(t *testing.T) {
 	genIn := record.Genesis{
-		Hash: GenesisRecord,
+		Hash: Record,
 	}
 
 	virtGenIn := record.Wrap(&genIn)

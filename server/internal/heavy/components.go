@@ -114,8 +114,8 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 func newComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg genesis.GenesisHeavyConfig,
-	genesisOptions genesis.GenesisOptions,
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
 	genesisOnly bool,
 ) (*components, error) {
 	// Cryptography.

@@ -57,7 +57,7 @@ func readMigrationAddresses(config *ContractsConfig) ([][]string, error) {
 	return result, nil
 }
 
-// Run generates bootstrap data.
+// CreateGenesisContractsConfig generates bootstrap data.
 //
 // 1. read application-related keys files.
 // 2. generates genesis contracts config for heavy node.

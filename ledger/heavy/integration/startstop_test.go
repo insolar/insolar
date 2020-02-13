@@ -28,7 +28,7 @@ import (
 func TestStartStop(t *testing.T) {
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-	heavyConfig := genesis.GenesisHeavyConfig{}
+	heavyConfig := genesis.HeavyConfig{}
 	s, err := NewServer(context.Background(), cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	s.Stop()

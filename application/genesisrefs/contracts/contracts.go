@@ -40,9 +40,9 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-func RootDomain(pkShardCount int) genesis.GenesisContractState {
+func RootDomain(pkShardCount int) genesis.ContractState {
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       application.GenesisNameRootDomain,
 		Prototype:  application.GenesisNameRootDomain,
 		ParentName: "",
@@ -53,7 +53,7 @@ func RootDomain(pkShardCount int) genesis.GenesisContractState {
 	}
 }
 
-func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) genesis.GenesisContractState {
+func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) genesis.ContractState {
 	m, err := member.New(publicKey, "", *insolar.NewEmptyReference())
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
@@ -61,7 +61,7 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 
 	m.Wallet = walletRef
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameMember,
 		ParentName: parent,
@@ -69,13 +69,13 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 	}
 }
 
-func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) genesis.GenesisContractState {
+func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) genesis.ContractState {
 	w, err := wallet.New(accountRef)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
 	}
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameWallet,
 		ParentName: parent,
@@ -83,8 +83,8 @@ func GetWalletGenesisContractState(name string, parent string, accountRef insola
 	}
 }
 
-func GetPreWalletGenesisContractState(name string, parent string, accounts foundation.StableMap, deposits foundation.StableMap) genesis.GenesisContractState {
-	return genesis.GenesisContractState{
+func GetPreWalletGenesisContractState(name string, parent string, accounts foundation.StableMap, deposits foundation.StableMap) genesis.ContractState {
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameWallet,
 		ParentName: parent,
@@ -95,13 +95,13 @@ func GetPreWalletGenesisContractState(name string, parent string, accounts found
 	}
 }
 
-func GetAccountGenesisContractState(balance string, name string, parent string) genesis.GenesisContractState {
+func GetAccountGenesisContractState(balance string, name string, parent string) genesis.ContractState {
 	w, err := account.New(balance)
 	if err != nil {
 		panic("failed to create ` " + name + "` account instance")
 	}
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameAccount,
 		ParentName: parent,
@@ -109,13 +109,13 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 	}
 }
 
-func GetCostCenterGenesisContractState() genesis.GenesisContractState {
+func GetCostCenterGenesisContractState() genesis.ContractState {
 	cc, err := costcenter.New(&genesisrefs.ContractFeeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       application.GenesisNameCostCenter,
 		Prototype:  application.GenesisNameCostCenter,
 		ParentName: application.GenesisNameRootDomain,
@@ -123,13 +123,13 @@ func GetCostCenterGenesisContractState() genesis.GenesisContractState {
 	}
 }
 
-func GetPKShardGenesisContractState(name string, members foundation.StableMap) genesis.GenesisContractState {
+func GetPKShardGenesisContractState(name string, members foundation.StableMap) genesis.ContractState {
 	s, err := pkshard.New(members)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNamePKShard,
 		ParentName: application.GenesisNameRootDomain,
@@ -137,13 +137,13 @@ func GetPKShardGenesisContractState(name string, members foundation.StableMap) g
 	}
 }
 
-func GetMigrationShardGenesisContractState(name string, migrationAddresses []string) genesis.GenesisContractState {
+func GetMigrationShardGenesisContractState(name string, migrationAddresses []string) genesis.ContractState {
 	s, err := migrationshard.New(migrationAddresses)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameMigrationShard,
 		ParentName: application.GenesisNameRootDomain,
@@ -151,8 +151,8 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) genesis.GenesisContractState {
-	return genesis.GenesisContractState{
+func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) genesis.ContractState {
+	return genesis.ContractState{
 		Name:       application.GenesisNameMigrationAdmin,
 		Prototype:  application.GenesisNameMigrationAdmin,
 		ParentName: application.GenesisNameRootDomain,
@@ -175,8 +175,8 @@ func GetDepositGenesisContractState(
 	vestingType appfoundation.VestingType,
 	pulseDepositUnHold insolar.PulseNumber,
 	name string, parent string,
-) genesis.GenesisContractState {
-	return genesis.GenesisContractState{
+) genesis.ContractState {
+	return genesis.ContractState{
 		Name:       name,
 		Prototype:  application.GenesisNameDeposit,
 		ParentName: parent,
@@ -194,9 +194,9 @@ func GetDepositGenesisContractState(
 	}
 }
 
-func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) genesis.GenesisContractState {
+func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) genesis.ContractState {
 
-	return genesis.GenesisContractState{
+	return genesis.ContractState{
 		Name:       application.GenesisNameMigrationDaemons[numberMigrationDaemon],
 		Prototype:  application.GenesisNameMigrationDaemon,
 		ParentName: application.GenesisNameRootDomain,

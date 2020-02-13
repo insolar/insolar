@@ -79,7 +79,7 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		s := server.NewHeavyServer(
 			configPath,
 			genesisConfigPath,
-			genesis.GenesisOptions{
+			genesis.Options{
 				States:           states,
 				NodeDomainParent: application.GenesisNameRootDomain,
 			},

@@ -32,8 +32,8 @@ func NewLightServer(cfgPath string) Server {
 }
 
 // NewHeavyServer creates instance of Server for node with Heavy role
-func NewHeavyServer(cfgPath string, gensisCfgPath string, genesisOptions genesis.GenesisOptions, genesisOnly bool) Server {
-	return heavy.New(cfgPath, gensisCfgPath, genesisOptions, genesisOnly)
+func NewHeavyServer(cfgPath string, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) Server {
+	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
