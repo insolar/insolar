@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/application/cmd/requester/cmd"
 	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -59,7 +60,7 @@ func (s *requesterSuiteTest) TearDownSuite() {
 
 func (s *requesterSuiteTest) TestRequester_HelpWorks() {
 	sout, _ := runCmd("--help")
-	assert.Contains(s.T(), sout, applicationShortDescription)
+	assert.Contains(s.T(), sout, cmd.ApplicationShortDescription)
 }
 
 func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {
