@@ -22,7 +22,9 @@ jobs:
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: test_func
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        env:
+          POSTGRES_ENABLE: 1
         run: |
           make build
-          POSTGRES_ENABLE=1 make functest
-        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+          make functest
