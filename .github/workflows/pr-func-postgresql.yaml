@@ -1,4 +1,4 @@
-name: pull_request_func_badger
+name: pull_request_func_postgresql
 on:
   pull_request:
 env:
