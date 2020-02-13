@@ -61,7 +61,8 @@ var (
 	keeperdConfigTmpl = "scripts/insolard/keeperd_template.yaml"
 	keeperdFileName   = withBaseDir("keeperd.yaml")
 
-	insolardDefaultsConfig = "scripts/insolard/defaults/insolard.yaml"
+	insolardDefaultsConfigWithBadger   = "scripts/insolard/defaults/insolard_badger.yaml"
+	insolardDefaultsConfigWithPostgres = "scripts/insolard/defaults/insolard_postgres.yaml"
 )
 
 var (
@@ -266,8 +267,15 @@ var defaultInsloardConf *configuration.Configuration
 
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
-		holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfig).MustInit(true)
-		defaultInsloardConf = &holder.Configuration
+
+		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)
+			defaultInsloardConf = &holder.Configuration
+		} else {
+			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithBadger).MustInit(true)
+			defaultInsloardConf = &holder.Configuration
+		}
+
 	}
 	return *defaultInsloardConf
 }

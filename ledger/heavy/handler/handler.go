@@ -42,7 +42,7 @@ import (
 // Handler is a base struct for heavy's methods
 type Handler struct {
 	cfg      configuration.Ledger
-	gcRunner *executor.BadgerGCRunInfo
+	gcRunner executor.GCRunInfo
 
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -64,7 +64,6 @@ type Handler struct {
 	StartPulse      pulse.StartPulse
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
-	DropDB          *drop.DB
 
 	Replicator executor.HeavyReplicator
 
@@ -72,7 +71,7 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New(cfg configuration.Ledger, gcRunner *executor.BadgerGCRunInfo) *Handler {
+func New(cfg configuration.Ledger, gcRunner executor.GCRunInfo) *Handler {
 	h := &Handler{
 		cfg:      cfg,
 		gcRunner: gcRunner,
