@@ -2,4 +2,4 @@ metrics:
   zpagesenabled: false
 ledger:
   lightchainlimit: 15
-  is_postgres_base: false
+  ispostgresbase: false

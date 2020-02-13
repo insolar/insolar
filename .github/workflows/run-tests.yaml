@@ -43,7 +43,11 @@ jobs:
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
           make test_slow
-      - name: test_func
+      - name: test_func_badger
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          make functest
+      - name: test_func_badger
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
           make functest
