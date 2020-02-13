@@ -19,6 +19,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	appbuiltin "github.com/insolar/insolar/application/builtin"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -77,7 +79,13 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		s := server.NewLightServer(configPath)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		s := server.NewVirtualServer(configPath)
+		builtinContracts := builtin.BuiltinContracts{
+			CodeRegistry:         appbuiltin.InitializeContractMethods(),
+			CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
+			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
+			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
+		}
+		s := server.NewVirtualServer(configPath, builtinContracts)
 		s.Serve()
 	}
 }
