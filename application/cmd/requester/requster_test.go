@@ -59,7 +59,7 @@ func (s *requesterSuiteTest) TearDownSuite() {
 
 func (s *requesterSuiteTest) TestRequester_HelpWorks() {
 	sout, _ := runCmd("--help")
-	assert.Contains(s.T(), sout, "Usage of")
+	assert.Contains(s.T(), sout, applicationShortDescription)
 }
 
 func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {

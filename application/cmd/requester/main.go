@@ -30,8 +30,10 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/log/logadapter"
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 )
+
+const applicationShortDescription string = "The requester is a simple CLI for sending requests to Insolar Platform"
 
 var (
 	memberKeysPath       string
@@ -44,14 +46,13 @@ var (
 	request              *requester.ContractRequest
 )
 
-func parseInputParams() {
-	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
-	pflag.StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
-	pflag.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
-	pflag.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
-	pflag.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
-	pflag.BoolVarP(&verbose, "verbose", "v", false, "Print request information")
-	pflag.Parse()
+func parseInputParams(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
+	cmd.Flags().StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
+	cmd.Flags().StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
+	cmd.Flags().BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
+	cmd.Flags().BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Print request information")
 }
 
 func verifyParams() {
@@ -140,31 +141,48 @@ func createUserConfig(privateKey crypto.PrivateKey) (*requester.UserConfigJSON, 
 	return requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
 }
 
+func getRequesterCommand() *cobra.Command {
+	var rootCmd = &cobra.Command{
+		Use:   "requester",
+		Short: applicationShortDescription,
+		Run: func(_ *cobra.Command, _ []string) {
+
+			verifyParams()
+			ctx := getContextWithLogger()
+			requester.SetVerbose(verbose)
+
+			userConfig, e := createUserConfig(memberPrivateKey)
+			if e != nil {
+				log.Fatal(e)
+			}
+			if shouldPastePublicKey {
+				request.Params.PublicKey = userConfig.PublicKey
+			}
+
+			var response []byte
+			var err error
+			if shouldPasteSeed {
+				response, err = requester.Send(ctx, apiURL, userConfig, &request.Params)
+			} else {
+				response, err = requester.SendWithSeed(ctx, apiURL, userConfig, &request.Params, request.Params.Seed)
+			}
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			print(string(response))
+		},
+	}
+
+	return rootCmd
+}
+
 func main() {
-	parseInputParams()
-	verifyParams()
-	ctx := getContextWithLogger()
-	requester.SetVerbose(verbose)
-
-	userConfig, e := createUserConfig(memberPrivateKey)
-	if e != nil {
-		log.Fatal(e)
-	}
-	if shouldPastePublicKey {
-		request.Params.PublicKey = userConfig.PublicKey
-	}
-
-	var response []byte
-	var err error
-	if shouldPasteSeed {
-		response, err = requester.Send(ctx, apiURL, userConfig, &request.Params)
-	} else {
-		response, err = requester.SendWithSeed(ctx, apiURL, userConfig, &request.Params, request.Params.Seed)
-	}
-
+	rootCmd := getRequesterCommand()
+	parseInputParams(rootCmd)
+	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("requester execution failed:", err)
 	}
-
-	print(string(response))
 }
