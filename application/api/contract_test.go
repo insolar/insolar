@@ -95,6 +95,7 @@ func TestTimeoutSuite(t *testing.T) {
 		nil,
 		nil,
 		checker,
+		nil,
 	)
 	require.NoError(t, err)
 	defer api.Stop(ctx)

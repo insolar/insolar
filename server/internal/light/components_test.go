@@ -39,6 +39,6 @@ func TestComponents(t *testing.T) {
 	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
 	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
 
-	_, err := newComponents(ctx, cfg)
+	_, err := newComponents(ctx, cfg, nil)
 	require.NoError(t, err)
 }

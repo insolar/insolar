@@ -25,7 +25,7 @@ import (
 func TestGetInfo(t *testing.T) {
 	info := getInfo(t)
 	require.NotNil(t, info)
-	require.NotEqual(t, "", info.RootDomain)
-	require.NotEqual(t, "", info.RootMember)
-	require.NotEqual(t, "", info.NodeDomain)
+	require.NotEqual(t, "", info["rootDomain"])
+	require.NotEqual(t, "", info["rootMember"])
+	require.NotEqual(t, "", info["nodeDomain"])
 }

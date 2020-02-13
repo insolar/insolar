@@ -27,16 +27,22 @@ type Server interface {
 }
 
 // NewLightServer creates instance of Server for node with Light role
-func NewLightServer(cfgPath string) Server {
-	return light.New(cfgPath)
+func NewLightServer(cfgPath string, apiInfoResponse map[string]interface{}) Server {
+	return light.New(cfgPath, apiInfoResponse)
 }
 
 // NewHeavyServer creates instance of Server for node with Heavy role
-func NewHeavyServer(cfgPath string, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) Server {
-	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly)
+func NewHeavyServer(
+	cfgPath string,
+	genesisCfgPath string,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+	apiInfoResponse map[string]interface{},
+) Server {
+	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly, apiInfoResponse)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
-func NewVirtualServer(cfgPath string, builtinContracts builtin.BuiltinContracts) Server {
-	return virtual.New(cfgPath, builtinContracts)
+func NewVirtualServer(cfgPath string, builtinContracts builtin.BuiltinContracts, apiInfoResponse map[string]interface{}) Server {
+	return virtual.New(cfgPath, builtinContracts, apiInfoResponse)
 }

@@ -89,16 +89,9 @@ type getSeedResponse struct {
 	} `json:"result"`
 }
 
-type infoResponse struct {
-	RootDomain string `json:"RootDomain"`
-	RootMember string `json:"RootMember"`
-	NodeDomain string `json:"NodeDomain"`
-	TraceID    string `json:"TraceID"`
-}
-
 type rpcInfoResponse struct {
 	RPCResponse
-	Result infoResponse `json:"result"`
+	Result map[string]interface{} `json:"result"`
 }
 
 type statusResponse struct {
@@ -273,7 +266,7 @@ func getSeed(t testing.TB) string {
 	return getSeedResponse.Result.Seed
 }
 
-func getInfo(t testing.TB) infoResponse {
+func getInfo(t testing.TB) map[string]interface{} {
 	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.getInfo",

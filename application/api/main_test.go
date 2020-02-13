@@ -32,25 +32,25 @@ type MainAPISuite struct {
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
-	_, err := NewRunner(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err := NewRunner(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "config is nil")
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	cfg := configuration.APIRunner{}
-	_, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
-	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "Missing openAPI spec file path")
 
 	cfg.SwaggerPath = "spec/api-exported.yaml"
-	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.NoError(err)
 	suite.NoError(runner.Stop(context.Background()))
 }
@@ -60,7 +60,7 @@ func TestMainTestSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
 	cfg.SwaggerPath = "spec/api-exported.yaml"
-	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	require.NoError(t, err, "new runner constructor")
 
 	cm := certificate.NewCertificateManager(&certificate.Certificate{})

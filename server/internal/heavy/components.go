@@ -117,6 +117,7 @@ func newComponents(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiInfoResponse map[string]interface{},
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -270,6 +271,7 @@ func newComponents(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -286,6 +288,7 @@ func newComponents(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")

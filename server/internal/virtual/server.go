@@ -33,12 +33,14 @@ import (
 type Server struct {
 	cfgPath          string
 	builtinContracts builtin.BuiltinContracts
+	apiInfoResponse  map[string]interface{}
 }
 
-func New(cfgPath string, builtinContracts builtin.BuiltinContracts) *Server {
+func New(cfgPath string, builtinContracts builtin.BuiltinContracts, apiInfoResponse map[string]interface{}) *Server {
 	return &Server{
 		cfgPath:          cfgPath,
 		builtinContracts: builtinContracts,
+		apiInfoResponse:  apiInfoResponse,
 	}
 }
 
@@ -89,6 +91,7 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyProcessor,
 		certManager,
 		s.builtinContracts,
+		s.apiInfoResponse,
 	)
 
 	var gracefulStop = make(chan os.Signal, 1)
