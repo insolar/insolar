@@ -38,7 +38,7 @@ func Test_FinalizePulse(t *testing.T) {
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
 	heavyConfig := genesis.HeavyConfig{}
-	s, err := NewServer(ctx, cfg, heavyConfig, nil)
+	s, err := NewBadgerServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()
 

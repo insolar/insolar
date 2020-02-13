@@ -336,17 +336,17 @@ func TestBackup_FullCycle(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewDB(db)
+	pulsesDB := pulse.NewBadgerDB(db)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetsDB := jet.NewDBStore(db)
+	jetsDB := jet.NewBadgerDBStore(db)
 	err = jetsDB.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+	jetKeeper := executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 
 	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
@@ -363,7 +363,7 @@ func TestBackup_FullCycle(t *testing.T) {
 	require.NoError(t, err)
 	defer recoveredDB.Stop(context.Background())
 
-	recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+	recoveredJetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(recoveredDB), recoveredDB, pulse.NewBadgerDB(recoveredDB))
 
 	// pulse must be finalized when prepare_backup complete without error
 	require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
@@ -402,17 +402,17 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewDB(db)
+	pulsesDB := pulse.NewBadgerDB(db)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetsDB := jet.NewDBStore(db)
+	jetsDB := jet.NewBadgerDBStore(db)
 	err = jetsDB.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+	jetKeeper := executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 
 	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
@@ -439,9 +439,9 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		defer db.Stop(ctx)
 
 		// -------------------- finalize pulse
-		pulsesDB = pulse.NewDB(db)
-		jetsDB = jet.NewDBStore(db)
-		jetKeeper = executor.NewJetKeeper(jetsDB, db, pulsesDB)
+		pulsesDB = pulse.NewBadgerDB(db)
+		jetsDB = jet.NewBadgerDBStore(db)
+		jetKeeper = executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 		jetKeeper.AddBackupConfirmation(ctx, testPulse)
 		require.Equal(t, testPulse, jetKeeper.TopSyncPulse())
 
@@ -470,7 +470,10 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		defer recoveredDB.Stop(context.Background())
 
 		// check that db is ok
-		recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+		recoveredJetKeeper := executor.NewBadgerJetKeeper(
+			jet.NewBadgerDBStore(recoveredDB),
+			recoveredDB,
+			pulse.NewBadgerDB(recoveredDB))
 
 		// pulse must be finalized when prepare_backup complete without error
 		require.Equal(t, nextPulse, recoveredJetKeeper.TopSyncPulse())

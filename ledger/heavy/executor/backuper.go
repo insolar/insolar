@@ -336,3 +336,11 @@ func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.Puls
 
 	return nil
 }
+
+type PostgresBackupMaker struct {
+}
+
+func (p PostgresBackupMaker) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	// because the method is a stub-method, it just returns nil
+	return nil
+}

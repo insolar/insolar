@@ -58,7 +58,7 @@ type HeavyReplicatorDefault struct {
 	keeper          JetKeeper
 	backuper        BackupMaker
 	jets            jet.Modifier
-	gcRunner        *BadgerGCRunInfo
+	gcRunner        GCRunInfo
 
 	syncWaitingData chan *payload.Replication
 }
@@ -73,7 +73,7 @@ func NewHeavyReplicatorDefault(
 	keeper JetKeeper,
 	backuper BackupMaker,
 	jets jet.Modifier,
-	gcRunner *BadgerGCRunInfo,
+	gcRunner GCRunInfo,
 ) *HeavyReplicatorDefault {
 	return &HeavyReplicatorDefault{
 		records:         records,
