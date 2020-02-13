@@ -15,6 +15,7 @@
 package server
 
 import (
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/server/internal/heavy"
 	"github.com/insolar/insolar/server/internal/light"
 	"github.com/insolar/insolar/server/internal/virtual"
@@ -24,14 +25,14 @@ type Server interface {
 	Serve()
 }
 
-func NewLightServer(cfgPath string) Server {
-	return light.New(cfgPath)
+func NewLightServer(cfgHolder *configuration.Holder) Server {
+	return light.New(cfgHolder)
 }
 
-func NewHeavyServer(cfgPath string, gensisCfgPath string) Server {
-	return heavy.New(cfgPath, gensisCfgPath)
+func NewHeavyServer(cfgHolder *configuration.Holder, gensisCfgPath string) Server {
+	return heavy.New(cfgHolder, gensisCfgPath)
 }
 
-func NewVirtualServer(cfgPath string) Server {
-	return virtual.New(cfgPath)
+func NewVirtualServer(cfgHolder *configuration.Holder) Server {
+	return virtual.New(cfgHolder)
 }

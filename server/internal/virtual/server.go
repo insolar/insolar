@@ -30,37 +30,27 @@ import (
 )
 
 type Server struct {
-	cfgPath string
+	cfgHolder *configuration.Holder
 }
 
-func New(cfgPath string) *Server {
+func New(cfgHolder *configuration.Holder) *Server {
 	return &Server{
-		cfgPath: cfgPath,
+		cfgHolder: cfgHolder,
 	}
 }
 
 func (s *Server) Serve() {
-	cfgHolder := configuration.NewHolder()
 	var err error
-	if len(s.cfgPath) != 0 {
-		err = cfgHolder.LoadFromFile(s.cfgPath)
-	} else {
-		err = cfgHolder.Load()
-	}
-	if err != nil {
-		log.Warn("failed to load configuration from file: ", err.Error())
-	}
-
-	cfg := &cfgHolder.Configuration
+	cfg := s.cfgHolder.Configuration
 
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))
 
 	ctx := context.Background()
-	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
+	bootstrapComponents := initBootstrapComponents(ctx, cfg)
 	certManager := initCertificateManager(
 		ctx,
-		*cfg,
+		cfg,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
@@ -79,7 +69,7 @@ func (s *Server) Serve() {
 
 	cm, stopWatermill := initComponents(
 		ctx,
-		*cfg,
+		cfg,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.PlatformCryptographyScheme,
 		bootstrapComponents.KeyStore,

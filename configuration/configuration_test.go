@@ -16,28 +16,49 @@ package configuration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
 func TestConfiguration_Load_Default(t *testing.T) {
-	holder := NewHolder()
-	err := holder.LoadFromFile("testdata/default.yml")
+	holder := NewHolder("testdata/default.yml")
+	err := holder.Load()
 	require.NoError(t, err)
 
 	cfg := NewConfiguration()
+	fmt.Println(ToString(cfg))
 	require.Equal(t, cfg, holder.Configuration)
 }
 
+func TestConfiguration_DoubleLoad(t *testing.T) {
+	holder := NewHolder("testdata/default.yml")
+	err := holder.Load()
+	require.NoError(t, err)
+
+	holder2 := NewHolder("testdata/default.yml")
+	err = holder2.Load()
+	require.NoError(t, err)
+	require.Equal(t, holder2.Configuration, holder.Configuration)
+}
+
+func TestConfiguration_GlobalLoad(t *testing.T) {
+	holder := NewHolder("testdata/default.yml")
+	err := holder.Load()
+	require.NoError(t, err)
+
+	require.NoError(t, os.Setenv("INSOLAR_LOG_LEVEL", "error"))
+	holder2 := NewHolderGlobal("").MustLoad()
+	require.NoError(t, os.Unsetenv("INSOLAR_LOG_LEVEL"))
+	require.Equal(t, "error", holder2.Configuration.Log.Level)
+
+}
+
 func TestConfiguration_Load_Changed(t *testing.T) {
-	holder := NewHolder()
-	err := holder.LoadFromFile("testdata/changed.yml")
+	holder := NewHolder("testdata/changed.yml")
+	err := holder.Load()
 	require.NoError(t, err)
 
 	cfg := NewConfiguration()
@@ -47,37 +68,17 @@ func TestConfiguration_Load_Changed(t *testing.T) {
 	require.Equal(t, cfg, holder.Configuration)
 }
 
-func TestConfiguration_Save_Default(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	newConfigurationPath := path.Join(dir, "insolar.yml")
-
-	holder := NewHolder()
-	holder.Configuration.Host.Transport.FixedPublicAddress = "192.168.1.1"
-	err = holder.SaveAs(newConfigurationPath)
-	require.NoError(t, err)
-
-	holder2 := NewHolder()
-	err = holder2.LoadFromFile(newConfigurationPath)
-	require.NoError(t, err)
-
-	require.Nil(t, holder2.viper.Get("insolar"))
-	require.Equal(t, holder.Configuration, holder2.Configuration)
-}
-
 func TestConfiguration_Load_Invalid(t *testing.T) {
-	holder := NewHolder()
-	err := holder.LoadFromFile("testdata/invalid.yml")
+	holder := NewHolder("testdata/invalid.yml")
+	err := holder.Load()
 	require.Error(t, err)
 }
 
 func TestConfiguration_LoadEnv(t *testing.T) {
-	holder := NewHolder()
+	holder := NewHolder("testdata/default.yml")
 
 	require.NoError(t, os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555"))
-	err := holder.LoadFromFile("testdata/default.yml")
+	err := holder.Load()
 	require.NoError(t, err)
 	require.NoError(t, os.Unsetenv("INSOLAR_HOST_TRANSPORT_ADDRESS"))
 
@@ -88,52 +89,28 @@ func TestConfiguration_LoadEnv(t *testing.T) {
 	require.Equal(t, "127.0.0.1:0", defaultCfg.Host.Transport.Address)
 }
 
-func TestConfiguration_Init(t *testing.T) {
+func TestConfiguration_Load_EmptyPath(t *testing.T) {
 	var (
 		holder *Holder
 		err    error
 	)
-	holder, err = NewHolder().Init(false)
-	require.NoError(t, err)
-	require.NotNil(t, holder)
-
-	holder = NewHolder().MustInit(false)
-	require.NotNil(t, holder)
-
-	holder, err = NewHolder().Init(true)
+	holder = NewHolder("")
+	err = holder.Load()
 	require.Error(t, err)
-	require.IsType(t, viper.ConfigFileNotFoundError{}, err)
-	require.Nil(t, holder)
 
-	require.Panics(t, func() { NewHolder().MustInit(true) })
+	require.Panics(t, func() { NewHolder("").MustLoad() })
 }
 
-func TestConfiguration_WithFilePaths(t *testing.T) {
-	okCases := [][]string{
-		{"testdata/changed.yml"},
-		{"testdata/default.yml"},
-		{"testdata/changed.yml", "testdata/default.yml"},
-		{"testdata/changed.yml", "testdata/changed.yml"},
-		{"testdata/default.yml", "testdata/default.yml"},
-		{"notexists", "notexists.yaml", "testdata/default.yml", "testdata/default.yml"},
-	}
-	for _, tCase := range okCases {
-		holder, err := NewHolderWithFilePaths(tCase...).Init(true)
-		require.NoErrorf(t, err, "case: %#v", tCase)
-		require.NotNil(t, holder)
-	}
+func TestConfiguration_Load_ENVOverridesEmpty(t *testing.T) {
+	var (
+		holder *Holder
+		err    error
+	)
+	holder = NewHolder("")
+	err = holder.Load()
+	require.Error(t, err)
 
-	failCases := [][]string{
-		{"testdata/invalid.yml"},
-		{"nonexists"},
-		{"notexists", "notexists"},
-		{"testdata/default.yml", "testdata/invalid.yml"},
-	}
-	for _, tCase := range failCases {
-		holder, err := NewHolderWithFilePaths(tCase...).Init(true)
-		require.Errorf(t, err, "case: %#v", tCase)
-		require.Nil(t, holder)
-	}
+	require.Panics(t, func() { NewHolder("").MustLoad() })
 }
 
 func TestMain(m *testing.M) {

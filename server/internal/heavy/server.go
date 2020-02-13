@@ -34,29 +34,18 @@ import (
 )
 
 type Server struct {
-	cfgPath        string
+	cfgHolder      *configuration.Holder
 	genesisCfgPath string
 }
 
-func New(cfgPath string, genesisCfgPath string) *Server {
+func New(cfgHolder *configuration.Holder, genesisCfgPath string) *Server {
 	return &Server{
-		cfgPath:        cfgPath,
+		cfgHolder:      cfgHolder,
 		genesisCfgPath: genesisCfgPath,
 	}
 }
 
 func (s *Server) Serve() {
-	cfgHolder := configuration.NewHolder()
-	var err error
-	if len(s.cfgPath) != 0 {
-		err = cfgHolder.LoadFromFile(s.cfgPath)
-	} else {
-		err = cfgHolder.Load()
-	}
-	if err != nil {
-		log.Fatalf("failed to load configuration: %v", err.Error())
-	}
-
 	b, err := ioutil.ReadFile(s.genesisCfgPath)
 	if err != nil {
 		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
@@ -67,10 +56,10 @@ func (s *Server) Serve() {
 		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
 	}
 
-	cfg := &cfgHolder.Configuration
+	cfg := s.cfgHolder.Configuration
 
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))
 
 	var (
 		ctx         = context.Background()
@@ -82,7 +71,7 @@ func (s *Server) Serve() {
 			nodeRole      = "heavy_material"
 			nodeReference = ""
 		)
-		certManager, err := initTemporaryCertificateManager(ctx, cfg)
+		certManager, err := initTemporaryCertificateManager(ctx, &cfg)
 		if err != nil {
 			log.Warn("Failed to initialize nodeRef, nodeRole fields: ", err.Error())
 		} else {
@@ -94,7 +83,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, genesisCfg)
+	cmp, err := newComponents(ctx, cfg, genesisCfg)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

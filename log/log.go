@@ -166,8 +166,7 @@ func InitTicker() {
 
 // GlobalLogger creates global logger with correct skipCallNumber
 func createNoConfigGlobalLogger() {
-	holder := configuration.NewHolder().MustInit(false)
-	logCfg := holder.Configuration.Log
+	logCfg := configuration.NewConfiguration().Log
 
 	// enforce buffer-less for a non-configured logger
 	logCfg.BufferSize = 0

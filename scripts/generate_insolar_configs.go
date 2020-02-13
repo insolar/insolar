@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/application/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
@@ -101,12 +100,11 @@ func writeGorundPorts(gorundPorts [][]string) {
 func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configuration) {
 	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
 	for index, conf := range insolardConfigs {
-		data, err := yaml.Marshal(conf)
-		check("Can't Marshal insolard config", err)
+		data := configuration.ToString(conf)
 
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
 		fileName = filepath.Join(dir, fileName)
-		err = createFileWithDir(fileName, string(data))
+		err := createFileWithDir(fileName, data)
 		check("failed to create insolard config: "+fileName, err)
 	}
 }
@@ -266,7 +264,7 @@ var defaultInsloardConf *configuration.Configuration
 
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
-		holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfig).MustInit(true)
+		holder := configuration.NewHolder(insolardDefaultsConfig).MustLoad()
 		defaultInsloardConf = &holder.Configuration
 	}
 	return *defaultInsloardConf

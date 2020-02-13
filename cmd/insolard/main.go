@@ -58,7 +58,11 @@ var psAgentLauncher = func() error { return nil }
 func runInsolardServer(configPath string, genesisConfigPath string) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
-	role, err := readRole(configPath)
+	holder, err := readConfig(configPath)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to load configuration"))
+	}
+	role, err := readRole(holder)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
@@ -69,35 +73,33 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		s := server.NewHeavyServer(configPath, genesisConfigPath)
+		s := server.NewHeavyServer(holder, genesisConfigPath)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(configPath)
+		s := server.NewLightServer(holder)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		s := server.NewVirtualServer(configPath)
+		s := server.NewVirtualServer(holder)
 		s.Serve()
 	}
 }
 
-func readRole(path string) (insolar.StaticRole, error) {
-	var err error
-	cfg := configuration.NewHolder()
-	if len(path) != 0 {
-		err = cfg.LoadFromFile(path)
-	} else {
-		err = cfg.Load()
-	}
+func readConfig(path string) (*configuration.Holder, error) {
+	cfg := configuration.NewHolder(path)
+	err := cfg.Load()
 	if err != nil {
-		return insolar.StaticRoleUnknown, errors.Wrap(err, "failed to load configuration from file")
+		return nil, errors.Wrap(err, "failed to load configuration")
 	}
+	return cfg, nil
+}
 
-	data, err := ioutil.ReadFile(filepath.Clean(cfg.Configuration.CertificatePath))
+func readRole(holder *configuration.Holder) (insolar.StaticRole, error) {
+	data, err := ioutil.ReadFile(filepath.Clean(holder.Configuration.CertificatePath))
 	if err != nil {
 		return insolar.StaticRoleUnknown, errors.Wrapf(
 			err,
 			"failed to read certificate from: %s",
-			cfg.Configuration.CertificatePath,
+			holder.Configuration.CertificatePath,
 		)
 	}
 	cert := certificate.AuthorizationCertificate{}

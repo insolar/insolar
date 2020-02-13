@@ -16,13 +16,14 @@ package configuration
 
 import (
 	"fmt"
-	"path/filepath"
-	"reflect"
-	"strings"
 
-	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/insolar/insconfig"
+	"gopkg.in/yaml.v2"
 )
+
+const InsolarEnvPrefix string = "insolar"
+
+var GlobalHolder *Holder = nil
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
@@ -43,6 +44,10 @@ type Configuration struct {
 	Bus                 Bus
 }
 
+func (c Configuration) GetConfig() interface{} {
+	return &c
+}
+
 // PulsarConfiguration contains configuration params for the pulsar node
 type PulsarConfiguration struct {
 	Log      Log
@@ -55,7 +60,7 @@ type PulsarConfiguration struct {
 // Holder provides methods to manage configuration
 type Holder struct {
 	Configuration Configuration
-	viper         *viper.Viper
+	Params        insconfig.Params
 }
 
 // NewConfiguration creates new default configuration
@@ -92,138 +97,59 @@ func NewPulsarConfiguration() PulsarConfiguration {
 	}
 }
 
-// MustInit wrapper around Init function which panics on error.
-func (h *Holder) MustInit(required bool) *Holder {
-	_, err := h.Init(required)
+type stringPathGetter struct {
+	Path string
+}
+
+func (g *stringPathGetter) GetConfigPath() string {
+	return g.Path
+}
+
+// MustLoad wrapper around Load function which panics on error.
+func (h *Holder) MustLoad() *Holder {
+	err := h.Load()
 	if err != nil {
 		panic(err)
 	}
 	return h
 }
 
-// Init init all configuration data from config file and environment.
-//
-// Does not fail on not found config file if the 'required' flag set to false.
-func (h *Holder) Init(required bool) (*Holder, error) {
-	err := h.Load()
-	if err != nil {
-		if required {
-			return nil, err
-		}
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
-		}
-		// read env vars if config file is not required and viper failed to load it.
-		h.viper.AutomaticEnv()
-		if err = h.viper.Unmarshal(&h.Configuration); err != nil {
-			return nil, err
-		}
+// NewHolder creates new Holder with config path
+func NewHolder(path string) *Holder {
+	params := insconfig.Params{
+		ConfigStruct:     Configuration{},
+		EnvPrefix:        InsolarEnvPrefix,
+		ConfigPathGetter: &stringPathGetter{Path: path},
+		FileRequired:     false,
 	}
-	return h, nil
+	holder := &Holder{Configuration: Configuration{}, Params: params}
+
+	GlobalHolder = holder
+	return holder
 }
 
-func (h *Holder) registerDefaultValue(val reflect.Value, parts ...string) {
-	variablePath := strings.ToLower(strings.Join(parts, "."))
-
-	h.viper.SetDefault(variablePath, val.Interface())
-}
-
-func (h *Holder) registerDifferentValue(val reflect.Value, parts ...string) {
-	variablePath := strings.Join(parts, ".")
-	previousValue := h.viper.Get(variablePath)
-
-	if !reflect.DeepEqual(previousValue, val.Interface()) {
-		h.viper.Set(variablePath, val.Interface())
+// Returns global holder if exists
+func NewHolderGlobal(path string) *Holder {
+	// todo refactor this
+	if GlobalHolder != nil {
+		return GlobalHolder
 	}
+	return NewHolder(path)
 }
 
-func (h *Holder) recurseCallInLeaf(cb func(reflect.Value, ...string), iface interface{}, parts ...string) {
-	fldV := reflect.ValueOf(iface)
-	fldT := reflect.TypeOf(iface)
-
-	for fldPos := 0; fldPos < fldV.NumField(); fldPos++ {
-		fldName, fldValue := fldT.Field(fldPos).Name, fldV.Field(fldPos)
-
-		path := append(parts, fldName)
-
-		switch fldValue.Kind() {
-		case reflect.Struct:
-			h.recurseCallInLeaf(cb, fldValue.Interface(), path...)
-		default:
-			cb(fldValue, path...)
-		}
-	}
-}
-
-// NewHolder creates new Holder with default configuration
-func NewHolder() *Holder {
-	cfg := NewConfiguration()
-	holder := &Holder{Configuration: cfg, viper: viper.New()}
-
-	holder.viper.SetConfigName(".insolar")
-	holder.viper.AddConfigPath(".")
-	holder.viper.SetConfigType("yml")
-
-	return holder.defaults()
-}
-
-// NewHolderWithFilePaths creates new holder with possible configuration files paths.
-func NewHolderWithFilePaths(files ...string) *Holder {
-	cfg := NewConfiguration()
-	holder := &Holder{Configuration: cfg, viper: viper.New()}
-
-	holder.viper.SetConfigType("yml")
-	for _, f := range files {
-		dir, file := filepath.Split(f)
-		if len(dir) == 0 {
-			dir = "."
-		}
-		file = file[:len(file)-len(filepath.Ext(file))]
-
-		holder.viper.AddConfigPath(dir)
-		holder.viper.SetConfigName(file)
-	}
-
-	return holder.defaults()
-}
-
-func (h *Holder) defaults() *Holder {
-	h.recurseCallInLeaf(h.registerDefaultValue, h.Configuration)
-
-	h.viper.AutomaticEnv()
-	h.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	h.viper.SetEnvPrefix("insolar")
-	return h
-}
-
-// Load method reads configuration from default file path
+// Load method reads configuration from params file path
 func (h *Holder) Load() error {
-	err := h.viper.ReadInConfig()
+	insConfigurator := insconfig.NewInsConfigurator(h.Params)
+	parsedConf, err := insConfigurator.Load()
 	if err != nil {
 		return err
 	}
-
-	return h.viper.Unmarshal(&h.Configuration)
+	cfg := parsedConf.(*Configuration)
+	h.Configuration = *cfg
+	return nil
 }
 
-// LoadFromFile method reads configuration from particular file path
-func (h *Holder) LoadFromFile(path string) error {
-	h.viper.SetConfigFile(path)
-	return h.Load()
-}
-
-// Save method writes configuration to default file path
-func (h *Holder) Save() error {
-	h.recurseCallInLeaf(h.registerDifferentValue, h.Configuration)
-	return h.viper.WriteConfig()
-}
-
-// SaveAs method writes configuration to particular file path
-func (h *Holder) SaveAs(path string) error {
-	h.recurseCallInLeaf(h.registerDifferentValue, h.Configuration)
-	return h.viper.WriteConfigAs(path)
-}
-
+// Deprecated
 // ToString converts any configuration struct to yaml string
 func ToString(in interface{}) string {
 	d, err := yaml.Marshal(in)
