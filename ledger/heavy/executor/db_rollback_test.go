@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-// TODO: POSTGRES
 func TestDBRollback_TruncateReturnError(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1
@@ -54,7 +53,7 @@ func TestDBRollback_TruncateReturnError(t *testing.T) {
 	require.Contains(t, err.Error(), testError.Error(), err)
 }
 
-func TestDBRollback_HappyPath(t *testing.T) {
+func TestDBRollback_HappyPath_Badger(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1
 	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {

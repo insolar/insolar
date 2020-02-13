@@ -42,8 +42,6 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-// TODO: POSTGRES -> Badger
-
 var (
 	poolLock     sync.Mutex
 	globalPgPool *pgxpool.Pool
