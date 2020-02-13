@@ -5,14 +5,16 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
-  GOPATH: /home/admin/actions-runner/_work/insolar/go
+  GOPATH: ${{github.workspace}}/go
 jobs:
-  test-func:
+  test-func-pgsql:
     runs-on: self-hosted
-    name: test-func-postgresql
+    name: test-func-pgsql
     steps:
       - name: checkout code
         uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
       - name: set up go ${{env.GO_VERSION}}
         uses: actions/setup-go@v1
         with:
