@@ -1,14 +1,15 @@
-name: pull_request_func
+name: pull_request_func_postgresql
 on:
   pull_request:
 env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
+  GOPATH: /home/admin/actions-runner/_work/insolar/go
 jobs:
   test-func:
     runs-on: self-hosted
-    name: test-func
+    name: test-func-postgresql
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -21,4 +22,5 @@ jobs:
       - name: test_func
         run: |
           make build
-          make functest
+          POSTGRES_ENABLE=1 make functest
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar

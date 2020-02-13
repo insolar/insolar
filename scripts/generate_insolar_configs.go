@@ -104,9 +104,12 @@ func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configurat
 }
 
 func main() {
+	fmt.Println("[main] about to call parseInputParams()")
 	parseInputParams()
 
+	fmt.Println("[main] about to call mustMakeDir()")
 	mustMakeDir(outputDir)
+	fmt.Println("[main] about to call writeGenesisConfig()")
 	writeGenesisConfig()
 
 	bootstrapConf, err := bootstrap.ParseConfig(bootstrapFileName)
@@ -120,6 +123,8 @@ func main() {
 	promVars := &promConfigVars{
 		Jobs: map[string][]string{},
 	}
+
+	fmt.Println("[main] about to enter for loop which calls newDefaultInsolardConfig() first time")
 
 	// process discovery nodes
 	for index, node := range bootstrapConf.DiscoveryNodes {
@@ -171,6 +176,8 @@ func main() {
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
+
+	fmt.Println("[main] leaving the loop which calls newDefaultInsolardConfig() first time")
 
 	// process extra nodes
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
@@ -258,11 +265,13 @@ var defaultInsloardConf *configuration.Configuration
 
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
-
+		fmt.Println("[newDefaultInsolardConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
 		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+			fmt.Println("[newDefaultInsolardConfig] Using PostgreSQL config")
 			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)
 			defaultInsloardConf = &holder.Configuration
 		} else {
+			fmt.Println("[newDefaultInsolardConfig] Using Badger config")
 			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithBadger).MustInit(true)
 			defaultInsloardConf = &holder.Configuration
 		}
