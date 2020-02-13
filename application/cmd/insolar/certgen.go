@@ -169,7 +169,7 @@ func (g *certGen) getUserConfig() *requester.UserConfigJSON {
 	checkError("Failed to read root config:", err)
 	info, err := requester.Info(g.API)
 	checkError("Failed to execute info request to API:", err)
-	userCfg.Caller = info.RootMember
+	userCfg.Caller = info["rootMember"].(string)
 
 	return userCfg
 }

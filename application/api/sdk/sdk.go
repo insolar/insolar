@@ -106,18 +106,18 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return nil, errors.Wrap(err, "failed to get info")
 	}
 
-	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response.RootMember)
+	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response["rootMember"].(string))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get root member")
 	}
 
 	migrationAdminMember, err := getMember(
-		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response.MigrationAdminMember)
+		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response["migrationAdminMember"].(string))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
-	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response.FeeMember)
+	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response["feeMember"].(string))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get fee member")
 	}
@@ -133,13 +133,13 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		options:                options,
 	}
 
-	if len(response.MigrationDaemonMembers) < application.GenesisAmountMigrationDaemonMembers {
+	if len(response["migrationDaemonMembers"].([]interface{})) < application.GenesisAmountMigrationDaemonMembers {
 		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", application.GenesisAmountActiveMigrationDaemonMembers))
 	}
 
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
 		m, err := getMember(
-			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response.MigrationDaemonMembers[i])
+			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response["migrationDaemonMembers"].([]interface{})[i].(string))
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))
 		}

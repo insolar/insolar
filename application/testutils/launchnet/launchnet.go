@@ -108,7 +108,7 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info *requester.InfoResponse
+var info map[string]interface{}
 var Root User
 var MigrationAdmin User
 var FeeMember User
@@ -538,8 +538,8 @@ func setup() error {
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	Root.Ref = info.RootMember
-	MigrationAdmin.Ref = info.MigrationAdminMember
+	Root.Ref = info["rootMember"].(string)
+	MigrationAdmin.Ref = info["migrationAdminMember"].(string)
 
 	return nil
 }

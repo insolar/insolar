@@ -276,7 +276,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	info, err := requester.Info(sendURL)
 	check("Problems with obtaining info", err)
 
-	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey, cfg.PublicKey)
+	ucfg, err := requester.CreateUserConfig(info["rootMember"].(string), cfg.PrivateKey, cfg.PublicKey)
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
@@ -389,10 +389,10 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
-			userCfg.Caller = info.RootMember
+			userCfg.Caller = info["rootMember"].(string)
 		}
 		if maAsCaller {
-			userCfg.Caller = info.MigrationAdminMember
+			userCfg.Caller = info["migrationAdminMember"].(string)
 			reqCfg.PublicKey = userCfg.PublicKey
 		}
 	}
@@ -410,10 +410,10 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 func getInfo(url string) {
 	info, err := requester.Info(url)
 	check("[ sendRequest ]", err)
-	fmt.Printf("TraceID    : %s\n", info.TraceID)
-	fmt.Printf("RootMember : %s\n", info.RootMember)
-	fmt.Printf("NodeDomain : %s\n", info.NodeDomain)
-	fmt.Printf("RootDomain : %s\n", info.RootDomain)
+	fmt.Printf("TraceID    : %s\n", info["traceID"].(string))
+	fmt.Printf("RootMember : %s\n", info["rootMember"].(string))
+	fmt.Printf("NodeDomain : %s\n", info["nodeDomain"].(string))
+	fmt.Printf("RootDomain : %s\n", info["rootDomain"].(string))
 }
 
 func check(msg string, err error) {

@@ -44,7 +44,11 @@ const TESTREFERENCE = "insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI"
 const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
-var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
+var testInfoResponse = map[string]interface{}{
+	"rootMember": "root_member_ref",
+	"rootDomain": "root_domain_ref",
+	"nodeDomain": "node_domain_ref",
+}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
 func writeReponse(response http.ResponseWriter, answer interface{}) {
@@ -246,7 +250,7 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 func TestInfo(t *testing.T) {
 	resp, err := Info(URL)
 	require.NoError(t, err)
-	require.Equal(t, resp, &testInfoResponse)
+	require.Equal(t, resp, testInfoResponse)
 }
 
 func TestStatus(t *testing.T) {

@@ -305,7 +305,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Para
 }
 
 // Info makes rpc request to network.getInfo method and extracts it
-func Info(url string) (*InfoResponse, error) {
+func Info(url string) (map[string]interface{}, error) {
 	body, err := GetResponseBodyPlatform(url, "network.getInfo", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
@@ -321,7 +321,7 @@ func Info(url string) (*InfoResponse, error) {
 		return nil, infoResp.Error
 	}
 
-	return &infoResp.Result, nil
+	return infoResp.Result, nil
 }
 
 // Status makes rpc request to node.getStatus method and extracts it
