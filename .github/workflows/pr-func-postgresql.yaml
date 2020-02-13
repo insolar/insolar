@@ -5,7 +5,7 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
-  GOPATH: ${{env.GITHUB_WORKSPACE}}/go
+  GOPATH: $GITHUB_WORKSPACE/go
 jobs:
   test-func:
     runs-on: self-hosted
