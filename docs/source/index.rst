@@ -1,42 +1,133 @@
 .. Insolar documentation master file, created by
    sphinx-quickstart on Tue May 14 19:35:14 2019.
 
+.. raw:: html
+   :file: landing-page.html
+
 Insolar Documentation
 =====================
 
 Welcome to Insolar documentation.
 
-Insolar Platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily. Whether a minimum viable product or full-scale production software, Insolar builds and integrates applications for your enterprise's existing systems.
-
-Insolar’s vision is to facilitate seamless low friction interactions between companies by distributing trust, thus accelerating and opening up new opportunities for innovation and value creation.
-
 .. _quick_start:
 
-Quick Start
-===========
+Developers: Start With a Guide
+------------------------------
 
-To take a deep dive into Insolar technologies, start with the :ref:`Understanding Insolar <basics>` section and take a look at the :ref:`Architecture <architecture>`.
+If you are a developer, explore Insolar technologies and run Insolar locally for testing purposes.
 
-To test token migration during the testing period of Insolar MainNet, go thought the :ref:`migration test steps <migration_test>`.
+.. raw:: html
 
-To integrate with Insolar, go through :ref:`step-by-step instructions <integration>`.
+   <div class="reduced-width">
 
-.. _toc:
+.. rst-class:: column column2
 
-Table of Contents
-=================
+:ref:`Understand Insolar <basics>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Learn the basics.
+
+.. rst-class:: column column2
+
+:ref:`Explore the architecture <architecture>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Take a deep dive.
+
+.. rst-class:: column column2
+
+:ref:`Set up Insolar network locally <integration>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Go through step-by-step instructions.
+
+.. rst-class:: row
+
+.. rst-class:: reg-text
+
+Exchange and Wallet Developers: Integrate With Insolar
+-------------------------------------------------------
+
+If you are an exchange or you wish to implement your own wallet for Insolar MainNet, explore the API references and build an API requester.
+
+.. raw:: html
+
+   <div class="reduced-width">
+
+.. rst-class:: column column2
+
+:ref:`Explore the use cases <exchanges>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Learn what APIs to invoke and in what sequences.
+
+.. rst-class:: column column2
+
+:ref:`Build an API requester <building_requester>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Learn how to form and sign requests to MainNet API.
+
+.. rst-class:: column column2
+
+`MainNet API <https://apidocs.insolar.io/platform/latest>`_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+API for creating members and transactions on the network.
+
+.. rst-class:: column column2
+
+`MainNet read-only API <https://apidocs.insolar.io/observer/latest>`_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Read-only API provided by an Observer service that pulls information from the network.
+
+.. rst-class:: row
+
+.. rst-class:: reg-text
+
+Users: Swap INS to XNS
+----------------------
+
+If you are a user, learn how to swap the token for the coin.
+
+.. raw:: html
+
+   <div class="reduced-width">
+
+.. rst-class:: column column2
+
+:ref:`Test the swap <migration_test>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the TestNet.
+
+.. rst-class:: column column2
+
+:ref:`Perform the swap <swap>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In the MainNet.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Overview
+   :hidden:
+   :caption: Developers
 
    basics
    architecture
+   integration
    glossary
- 
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Integration
+   :hidden:
+   :caption: Exchange and Wallet Developers
+
+   exchanges
+   requester
+
+.. toctree::
+   :hidden:
+   :caption: Users
 
    migration-test
-   integration
+   swap

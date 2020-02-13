@@ -1,5 +1,4 @@
-//
-// Copyright 2020 Insolar Technologies GmbH
+// Copyright 2020 Insolar Network Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 // +build functest
 
@@ -40,7 +38,7 @@ func TestAddMigrationAddresses(t *testing.T) {
 		t.Skip(extraAddrsDir, "extra addresses dir already exists")
 	}
 
-	bootCfg, err := bootstrap.ParseConfig(filepath.Join(defaults.LaunchnetDir(), "bootstrap.yaml"))
+	bootCfg, err := bootstrap.ParseContractsConfig(filepath.Join(defaults.LaunchnetDir(), "bootstrap.yaml"))
 	require.NoError(t, err, "bootstrap config parse")
 
 	shardsCount := bootCfg.MAShardCount

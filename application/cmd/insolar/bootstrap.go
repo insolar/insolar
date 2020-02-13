@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/insolar/insolar/application/bootstrap"
+	basebootstrap "github.com/insolar/insolar/applicationbase/bootstrap"
 )
 
 func bootstrapCommand() *cobra.Command {
@@ -31,11 +32,16 @@ func bootstrapCommand() *cobra.Command {
 		Use:   "bootstrap",
 		Short: "creates files required for new network (keys, genesis config)",
 		Run: func(cmd *cobra.Command, args []string) {
-			gen, err := bootstrap.NewGenerator(configPath, certificatesOutDir)
-			check("bootstrap failed to start", err)
+			ctx := context.Background()
 
-			err = gen.Run(context.Background())
-			check("bootstrap failed", err)
+			contractsConfig, err := bootstrap.CreateGenesisContractsConfig(ctx, configPath)
+			check("failed to create genesis contracts config", err)
+
+			gen, err := basebootstrap.NewGenerator(configPath, certificatesOutDir, contractsConfig)
+			check("base bootstrap failed to start", err)
+
+			err = gen.Run(ctx)
+			check("base bootstrap failed", err)
 		},
 	}
 	c.Flags().StringVarP(

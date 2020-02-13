@@ -310,6 +310,7 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 	return nil
 }
 
+// TruncateHead remove all records starting with 'from'
 func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -333,5 +334,13 @@ func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.Puls
 		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
 	}
 
+	return nil
+}
+
+type PostgresBackupMaker struct {
+}
+
+func (p PostgresBackupMaker) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	// because the method is a stub-method, it just returns nil
 	return nil
 }

@@ -100,9 +100,9 @@ func isDBEmpty(bdb *badger.DB) error {
 }
 
 func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
-	pulsesDB := pulse.NewDB(bdb)
+	pulsesDB := pulse.NewBadgerDB(bdb)
 
-	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
+	jetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(bdb), bdb, pulsesDB)
 	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
 
 	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)

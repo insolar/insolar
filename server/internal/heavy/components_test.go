@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -49,6 +49,6 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, application.GenesisHeavyConfig{Skip: true})
+	_, err = newComponents(ctx, cfg, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false)
 	require.NoError(t, err)
 }

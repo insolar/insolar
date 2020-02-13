@@ -26,6 +26,11 @@ type Storage struct {
 	GCRunFrequency uint
 }
 
+type PostgreSQL struct {
+	URL           string // postgresql:// connection string
+	MigrationPath string // path to the directory with migration scripts
+}
+
 // JetSplit holds configuration for jet split.
 type JetSplit struct {
 	// RecordsCountThreshold is a drop threshold in records to perform split for jet.
@@ -40,6 +45,10 @@ type JetSplit struct {
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
+
+	// PostgreSQL defines configuration related to PostgreSQL.
+	PostgreSQL PostgreSQL
+
 	// JetSplit holds jet split configuration.
 	JetSplit JetSplit
 
@@ -63,6 +72,9 @@ type Ledger struct {
 
 	// FilamentCacheLimit holds the limit for cache items for an object
 	FilamentCacheLimit int
+
+	// IsPostgresBase indicates that heavy uses Postgres as a database
+	IsPostgresBase bool
 }
 
 // Backup holds configuration for backuping.
@@ -135,5 +147,6 @@ func NewLedger() Ledger {
 		CleanerDelay:             3,    // 3 pulses
 		MaxNotificationsPerPulse: 100,  // 100 objects
 		FilamentCacheLimit:       3000, // 3000 records for every object
+		IsPostgresBase:           false,
 	}
 }

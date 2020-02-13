@@ -56,12 +56,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
 
 .PHONY: all
-all: clean submodule pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
-
-.PHONY: submodule
-submodule: ## init git submodule
-	git submodule init
-	git submodule update
+all: clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
@@ -315,7 +310,8 @@ generate-protobuf: ## generate protobuf structs
 
 .PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
-	$(BININSGOCC) regen-builtin
+	$(BININSGOCC) regen-builtin -c application/builtin/contract -i github.com/insolar/insolar/application/builtin/contract
+	$(BININSGOCC) regen-builtin -c applicationbase/builtin/contract -i github.com/insolar/insolar/applicationbase/builtin/contract
 
 .PHONY: build-track
 build-track: ## build logs event tracker tool

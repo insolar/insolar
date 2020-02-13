@@ -4,15 +4,11 @@ not_discovery_keys_dir: "{{ .BaseDir }}/reusekeys/nodes/"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
-heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins/"
-contracts:
-  insgocc: "bin/insgocc"
-  outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "5000000000000000000"
 md_balance: "5000000000000000000"
 lockup_pulse_period: 20
-pk_shard_count: 10000
-ma_shard_count: 1000
+pk_shard_count: 100
+ma_shard_count: 100
 vesting_pulse_period: 10
 vesting_pulse_step: 10
 majority_rule: 5

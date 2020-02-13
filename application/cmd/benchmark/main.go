@@ -43,7 +43,7 @@ const (
 	createMemberRetries = 5
 	balanceCheckRetries = 10
 	balanceCheckDelay   = 5 * time.Second
-	fee                 = 1000000000 // value from Fee const in costcenter contract
+	fee                 = 100000000 // value from Fee const in costcenter contract
 )
 
 var (
