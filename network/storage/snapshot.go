@@ -17,7 +17,7 @@ import (
 
 // SnapshotStorage provides methods for accessing Snapshot.
 type SnapshotStorage interface {
-	ForPulseNumber2(insolar.PulseNumber) (*node.Snapshot, error)
+	ForPulseNumber(insolar.PulseNumber) (*node.Snapshot, error)
 	Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error
 }
 
@@ -42,7 +42,7 @@ func (s *snapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snaps
 	return s.DB.Set(pulseKey(pulse), buff)
 }
 
-func (s *snapshotStorage) ForPulseNumber2(pulse insolar.PulseNumber) (*node.Snapshot, error) {
+func (s *snapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
