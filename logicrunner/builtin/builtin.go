@@ -11,9 +11,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/insolar/insolar/applicationbase/builtin"
 	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -42,40 +42,23 @@ type BuiltIn struct {
 	PrototypeRefRegistry map[insolar.Reference]string
 }
 
-type BuiltinContracts struct {
-	CodeRegistry         map[string]insolar.ContractWrapper
-	CodeRefRegistry      map[insolar.Reference]string
-	CodeDescriptors      []artifacts.CodeDescriptor
-	PrototypeDescriptors []artifacts.PrototypeDescriptor
-}
-
 // NewBuiltIn is an constructor
-func NewBuiltIn(
-	am artifacts.Client, stub LogicRunnerRPCStub, builtinContracts BuiltinContracts,
-) *BuiltIn {
-	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), builtinContracts.CodeDescriptors...)
-	for _, codeDescriptor := range fullCodeDescriptors {
+func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
+	codeDescriptors := builtin.InitializeCodeDescriptors()
+	for _, codeDescriptor := range codeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), builtinContracts.PrototypeDescriptors...)
-	for _, prototypeDescriptor := range fullPrototypeDescriptors {
+	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
+	for _, prototypeDescriptor := range prototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
-	fullCodeRefRegistry := builtin.InitializeCodeRefs()
-	for k, v := range builtinContracts.CodeRefRegistry {
-		fullCodeRefRegistry[k] = v
-	}
-	fullCodeRegistry := builtin.InitializeContractMethods()
-	for k, v := range builtinContracts.CodeRegistry {
-		fullCodeRegistry[k] = v
-	}
 	return &BuiltIn{
-		CodeRefRegistry: fullCodeRefRegistry,
-		CodeRegistry:    fullCodeRegistry,
+		CodeRefRegistry: builtin.InitializeCodeRefs(),
+		CodeRegistry:    builtin.InitializeContractMethods(),
 	}
 }
 
