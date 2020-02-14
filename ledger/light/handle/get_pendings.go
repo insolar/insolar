@@ -32,7 +32,7 @@ func NewGetPendings(dep *proc.Dependencies, meta payload.Meta, passed bool) *Get
 func (s *GetPendings) Present(ctx context.Context, f flow.Flow) error {
 	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal GetPendings message and some debug")
+		return errors.Wrap(err, "failed to unmarshal GetPendings message")
 	}
 	msg, ok := pl.(*payload.GetPendings)
 	if !ok {
