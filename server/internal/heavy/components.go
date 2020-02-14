@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package heavy
 
@@ -27,13 +18,12 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/insolar/store"
+	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
-	"github.com/insolar/component-manager"
 	"github.com/insolar/insolar/application/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
@@ -46,6 +36,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
