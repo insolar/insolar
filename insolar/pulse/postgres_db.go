@@ -95,7 +95,7 @@ func (s *PostgresDB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.Puls
 }
 
 func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -138,7 +138,7 @@ func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args .
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
 func (s *PostgresDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -173,7 +173,7 @@ func (s *PostgresDB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr
 
 // TruncateHead remove all records with pulse_number >= `from`
 func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -213,7 +213,7 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}

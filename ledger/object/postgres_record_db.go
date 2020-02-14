@@ -81,7 +81,7 @@ func (r *PostgresRecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec reco
 
 // Set saves new record-value in storage.
 func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -113,7 +113,7 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 
 // BatchSet saves a batch of records to storage with order-processing.
 func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -152,7 +152,7 @@ func (r *PostgresRecordDB) get(id insolar.ID) (record.Material, error) {
 
 // ForID returns record for provided id.
 func (r *PostgresRecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -228,7 +228,7 @@ func (r *PostgresRecordDB) ForID(ctx context.Context, id insolar.ID) (retRec rec
 // TODO optimize this. Actually user needs ID only to select the Record using .ForID method
 func (r *PostgresRecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID insolar.ID, retErr error) {
 	ctx := context.Background()
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -275,7 +275,7 @@ func (r *PostgresRecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (
 // LastKnownPosition returns last known position of record in Pulse.
 func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32, retErr error) {
 	ctx := context.Background()
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -314,7 +314,7 @@ func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPositio
 
 // TruncateHead remove all records >= from
 func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := r.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}

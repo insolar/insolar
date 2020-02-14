@@ -169,7 +169,7 @@ func (jk *PostgresDBJetKeeper) TopSyncPulse() insolar.PulseNumber {
 func (jk *PostgresDBJetKeeper) topSyncPulse() insolar.PulseNumber {
 	errValue := insolar.GenesisPulse.PulseNumber
 	ctx := context.Background()
-	conn, err := jk.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		return errValue
 	}
@@ -343,7 +343,7 @@ func (jk *PostgresDBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 
 func (jk *PostgresDBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr error) {
 	ctx := context.Background()
-	conn, err := jk.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -393,7 +393,7 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 		return errors.Wrap(err, "Unable to serialize jetsInfo")
 	}
 
-	conn, err := jk.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -429,7 +429,7 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	ctx := context.Background()
 	val := pn.Bytes()
-	conn, err := jk.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -470,7 +470,7 @@ func (jk *PostgresDBJetKeeper) TruncateHead(ctx context.Context, from insolar.Pu
 		return errors.New("try to truncate top sync pulse")
 	}
 
-	conn, err := jk.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}

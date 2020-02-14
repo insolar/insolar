@@ -42,7 +42,7 @@ func NewPostgresStorageDB(pool *pgxpool.Pool) *PostgresStorageDB {
 // Set saves active nodes for pulse in memory.
 func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 	ctx := context.Background()
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -84,7 +84,7 @@ func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node)
 
 func (s *PostgresStorageDB) selectByCondition(where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
 	ctx := context.Background()
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -159,7 +159,7 @@ func (s *PostgresStorageDB) DeleteForPN(_ insolar.PulseNumber) {
 
 // TruncateHead remove all records >= from
 func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}

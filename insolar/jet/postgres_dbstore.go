@@ -98,7 +98,7 @@ func (s *PostgresDBStore) Clone(ctx context.Context, from, to insolar.PulseNumbe
 
 // TruncateHead remove all records >= from
 func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -132,7 +132,7 @@ func (s *PostgresDBStore) get(pn insolar.PulseNumber) *Tree {
 	ctx := context.Background()
 	log := inslogger.FromContext(ctx)
 	ErrResult := NewTree(pn == insolar.GenesisPulse.PulseNumber)
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		log.Errorf("PostgresDBStore.get - s.pool.Acquire failed: %v", err)
 		return ErrResult
@@ -177,7 +177,7 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 		return errors.Wrap(err, "failed to serialize jet.Tree")
 	}
 
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
