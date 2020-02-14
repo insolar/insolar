@@ -1,4 +1,4 @@
- name: pull_request
+name: pull_request
 on:
   pull_request:
 env:
