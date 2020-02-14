@@ -56,7 +56,7 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	return NewLogExt(cfg, logadapter.DefaultLoggerSettings(), 0)
 }
 
-// NewLog creates logger instance with particular configuration
+// NewLogExt creates logger instance depends on configs
 func NewLogExt(cfg configuration.Log, parsedConfig logadapter.ParsedLogConfig, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
 	pCfg, err := logadapter.ParseLogConfigWithDefaults(cfg, parsedConfig)
 
