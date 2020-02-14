@@ -16,20 +16,17 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/server/internal"
 	"github.com/insolar/insolar/version"
 )
 
 type Server struct {
-	cfgPath          string
-	builtinContracts builtin.BuiltinContracts
+	cfgPath string
 }
 
-func New(cfgPath string, builtinContracts builtin.BuiltinContracts) *Server {
+func New(cfgPath string) *Server {
 	return &Server{
-		cfgPath:          cfgPath,
-		builtinContracts: builtinContracts,
+		cfgPath: cfgPath,
 	}
 }
 
@@ -79,7 +76,6 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		s.builtinContracts,
 	)
 
 	var gracefulStop = make(chan os.Signal, 1)

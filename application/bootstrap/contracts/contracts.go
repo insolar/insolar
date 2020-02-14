@@ -8,8 +8,8 @@ package contracts
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
-
+	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/contract/account"
 	"github.com/insolar/insolar/application/builtin/contract/costcenter"
 	"github.com/insolar/insolar/application/builtin/contract/deposit"
@@ -17,12 +17,10 @@ import (
 	"github.com/insolar/insolar/application/builtin/contract/migrationadmin"
 	"github.com/insolar/insolar/application/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/application/builtin/contract/migrationshard"
+	"github.com/insolar/insolar/application/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/application/builtin/contract/pkshard"
 	"github.com/insolar/insolar/application/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/application/builtin/contract/wallet"
-
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/appfoundation"
 	maProxy "github.com/insolar/insolar/application/builtin/proxy/migrationshard"
 	pkProxy "github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/application/genesisrefs"

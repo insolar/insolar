@@ -8,7 +8,8 @@ package nodedomain
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/applicationbase/builtin/proxy/noderecord"
+	"github.com/insolar/insolar/application/appfoundation"
+	"github.com/insolar/insolar/application/builtin/proxy/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
@@ -28,6 +29,11 @@ func NewNodeDomain() (*NodeDomain, error) {
 
 // RegisterNode registers node in system.
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
+	root := appfoundation.GetRootMember()
+	if *nd.GetContext().Caller != root {
+		return "", fmt.Errorf("only root member can register node")
+	}
+
 	canonicalKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
 	if err != nil {
 		return "", fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
