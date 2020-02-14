@@ -51,3 +51,24 @@ jobs:
       - name: test_slow
         run: make test_slow
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+  codegen:
+    name: codegen
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: codegen
+        run: |
+           go clean -modcache
+           make install-deps
+           make pre-build
+           git diff --exit-code
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
