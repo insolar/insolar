@@ -71,7 +71,7 @@ message CodeGeneratorRequest {
   repeated string file_to_generate = 1;
 
   // The generator parameter passed on the command-line.
-  optional string parameter = 2;
+  optional string parameter = 3;
 
   // FileDescriptorProtos for all files in files_to_generate and everything
   // they import.  The files will appear in topological order, so each file
