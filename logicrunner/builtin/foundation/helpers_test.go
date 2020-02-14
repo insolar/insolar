@@ -60,7 +60,6 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 	})
 
 	t.Run("ok with compressed/uncompressed pk odd", func(t *testing.T) {
-		t.Skip() // unskip after ins-4141
 		pk1 := "-----BEGIN PUBLIC KEY-----\nMDYwEAYHKoZIzj0CAQYFK4EEAAoDIgAC45SRdXuMWUnPEHu0VcJlP4Ws6qj0rZzx\nDlv/xlyMdmo=\n-----END PUBLIC KEY-----\n"
 		pk2 := "-----BEGIN PUBLIC KEY-----\nMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE45SRdXuMWUnPEHu0VcJlP4Ws6qj0rZzx\nDlv/xlyMdmqGLpPEuqecYA3Gw9EWQ1I7CulTYQL4tMx0+zh14Rc27g==\n-----END PUBLIC KEY-----\n"
 		got1, _ := ExtractCanonicalPublicKey(pk1)
@@ -69,7 +68,6 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 	})
 
 	t.Run("ok with compressed/uncompressed pk even", func(t *testing.T) {
-		t.Skip() // unskip after ins-4141
 		pk1 := "-----BEGIN PUBLIC KEY-----\nMDYwEAYHKoZIzj0CAQYFK4EEAAoDIgADHHub97QxRqqlcWExT+5IWBXpKQ8lE7ih\nHCsfdiEwR80=\n-----END PUBLIC KEY-----\n"
 		pk2 := "-----BEGIN PUBLIC KEY-----\nMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEHHub97QxRqqlcWExT+5IWBXpKQ8lE7ih\nHCsfdiEwR80q/bdILdePYFDTc/uRcQ7dwAcxZdVwE8XvJ1s6k1vHVQ==\n-----END PUBLIC KEY-----\n"
 		got1, _ := ExtractCanonicalPublicKey(pk1)

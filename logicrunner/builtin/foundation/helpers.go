@@ -6,6 +6,8 @@
 package foundation
 
 import (
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
@@ -62,6 +64,10 @@ func ExtractCanonicalPublicKey(pk string) (string, error) {
 
 	pkDecoded, err := x509.ParsePKIXPublicKey(pkASN1.Bytes)
 	if err != nil {
+		// This is compressed key perhaps
+		if err.Error() == "x509: failed to unmarshal elliptic curve point" && pkASN1.Type == "PUBLIC KEY" && len(pkASN1.Bytes) <= 56 {
+			return extractCanonicalPublicKeyFromCompressed(pkASN1)
+		}
 		return "", fmt.Errorf("problems with parsing. Key - %v", pk)
 	}
 	ecdsaPk, ok := pkDecoded.(*ecdsa.PublicKey)
@@ -77,10 +83,69 @@ func ExtractCanonicalPublicKey(pk string) (string, error) {
 	} else {
 		firstByte = 3
 	}
-
 	canonicalPk := []byte{byte(firstByte)}
 	canonicalPk = append(canonicalPk, ecdsaPk.X.Bytes()...)
 	return base64.RawURLEncoding.EncodeToString(canonicalPk), nil
+}
+
+func extractCanonicalPublicKeyFromCompressed(block *pem.Block) (string, error) {
+	// lengths of serialized public keys.
+	const (
+		PubKeyBytesLenCompressed = 33
+	)
+
+	type publicKeyInfo struct {
+		Raw       asn1.RawContent
+		Algorithm pkix.AlgorithmIdentifier
+		PublicKey asn1.BitString
+	}
+	var pki publicKeyInfo
+	var oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+	var oidNamedCurveSecp256k1 = asn1.ObjectIdentifier{1, 3, 132, 0, 10}
+
+	// Unmarshalling asn1
+	if rest, err := asn1.Unmarshal(block.Bytes, &pki); err != nil {
+		return "", err
+	} else if len(rest) != 0 {
+		return "", errors.New("trailing data after ASN.1 of public-key")
+	}
+
+	if !pki.Algorithm.Algorithm.Equal(oidPublicKeyECDSA) {
+		return "", errors.New("not ecdsa algorithm public key")
+	}
+
+	asn1Data := pki.PublicKey.RightAlign()
+	paramsData := pki.Algorithm.Parameters.FullBytes
+	namedCurveOID := new(asn1.ObjectIdentifier)
+
+	// parse algorithm
+	rest, err := asn1.Unmarshal(paramsData, namedCurveOID)
+	if err != nil {
+		return "", errors.New("failed to parse ECDSA parameters as named curve")
+	}
+	if len(rest) != 0 {
+		return "", errors.New("trailing data after ECDSA parameters")
+	}
+	if !namedCurveOID.Equal(oidNamedCurveSecp256k1) {
+		return "", errors.New("curve is not supported")
+	}
+
+	if len(asn1Data) != PubKeyBytesLenCompressed {
+		return "", errors.New("unknown key format")
+	}
+	if asn1Data[0] != 2 && asn1Data[0] != 3 {
+		// not compressed form
+		return "", errors.New("unknown key format")
+	}
+
+	// checking the key is valid
+	p := elliptic.P256K().Params().P
+	x := new(big.Int).SetBytes(asn1Data[1:PubKeyBytesLenCompressed])
+	if x.Cmp(p) >= 0 {
+		return "", errors.New("wrong elliptic curve x point")
+	}
+
+	return base64.RawURLEncoding.EncodeToString(asn1Data), nil
 }
 
 // TrimAddress trims address
