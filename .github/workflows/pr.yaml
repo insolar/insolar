@@ -6,8 +6,8 @@ env:
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
 jobs:
-  test-unit:
-    name: test-unit
+  unit-tests:
+    name: unit-tests
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/work/insolar/insolar/go
@@ -30,8 +30,8 @@ jobs:
       - name: test_unit
         run: make test_unit
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-  test-slow:
-    name: test-slow
+  slow-tests:
+    name: slow-tests
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/work/insolar/insolar/go
@@ -77,9 +77,9 @@ jobs:
            make pre-build
            git diff --exit-code
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-  test-func:
+  func-tests-badger:
     runs-on: self-hosted
-    name: test-func
+    name: func-tests-badger
     env:
       GOPATH: ${{github.workspace}}/go
     steps:
@@ -98,9 +98,9 @@ jobs:
         run: |
           make build
           make functest
-  test-func-pgsql:
+  func-tests-pgsql:
     runs-on: self-hosted
-    name: test-func-pgsql
+    name: func-tests-pgsql
     env:
       GOPATH: ${{github.workspace}}/go
     steps:
