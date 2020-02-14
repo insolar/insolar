@@ -126,8 +126,6 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 				Reference: node.reference().String(),
 			},
 			MajorityRule: g.config.MajorityRule,
-
-			// RootDomainReference: genesisrefs.ContractRootDomain.String(),
 		}
 		c.MinRoles.Virtual = g.config.MinRoles.Virtual
 		c.MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial

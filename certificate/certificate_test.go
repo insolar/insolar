@@ -58,7 +58,6 @@ func TestReadCertificate(t *testing.T) {
 	require.Equal(t, "insolar:1AMuaHS6ENi_58HSwvLmeNg-26BHLcCuz36c0SzEJT1I",
 		cert.Reference)
 	require.Equal(t, 7, cert.MajorityRule)
-	require.Equal(t, "insolar:1AAEAAflht_i9JBIq2_moi5L61cLEVxGNpIBJlzA54zc", cert.RootDomainReference)
 
 	testPubKey1 := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n"
 	key1, err := kp.ImportPublicKeyPEM([]byte(testPubKey1))
@@ -138,10 +137,9 @@ func TestReadCertificateFromReader(t *testing.T) {
 			"heavy_material": 2,
 			"light_material": 3,
 		},
-		"public_key":      string(publicKey[:]),
-		"reference":       "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
-		"role":            "virtual",
-		"root_domain_ref": "insolar:1AAABAAH5Ybf4vSQSKtv5qIuS-tXCxFcRjaSASZcwOeM",
+		"public_key": string(publicKey[:]),
+		"reference":  "insolar:1AAABAAGmM9GcyL3DR16wLGN_4rnKYfoFP6uOtSGiEHo",
+		"role":       "virtual",
 		"bootstrap_nodes": []map[string]interface{}{
 			{
 				"public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n",
@@ -178,7 +176,6 @@ func TestReadCertificateFromReader(t *testing.T) {
 	require.Equal(t, uint(1), cert.MinRoles.Virtual)
 	require.Equal(t, uint(2), cert.MinRoles.HeavyMaterial)
 	require.Equal(t, uint(3), cert.MinRoles.LightMaterial)
-	require.Equal(t, "insolar:1AAABAAH5Ybf4vSQSKtv5qIuS-tXCxFcRjaSASZcwOeM", cert.RootDomainReference)
 	require.Equal(t, nodePublicKey, cert.nodePublicKey)
 
 	testPubKey1 := "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n"
