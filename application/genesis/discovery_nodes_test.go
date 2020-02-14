@@ -16,6 +16,7 @@ import (
 	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
@@ -51,9 +52,9 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	nodes, err := publicKeysFromDir("testdata/keys", "testdata/keys_meta.json")
 	require.NoError(t, err, "can't load keys")
 
-	var networkNodes []DiscoveryNodeRegister
+	var networkNodes []application.DiscoveryNodeRegister
 	for _, n := range nodes {
-		networkNodes = append(networkNodes, DiscoveryNodeRegister{
+		networkNodes = append(networkNodes, application.DiscoveryNodeRegister{
 			Role:      n.role.String(),
 			PublicKey: platformpolicy.MustPublicKeyToString(n.key),
 		})

@@ -18,14 +18,10 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
-	component "github.com/insolar/component-manager"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"google.golang.org/grpc"
-
+	"github.com/insolar/component-manager"
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/applicationbase/genesis"
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -54,6 +50,10 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"google.golang.org/grpc"
 )
 
 type badgerLogger struct {
@@ -107,10 +107,8 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 func initWithPostgres(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg genesis.HeavyConfig,
-	genesisOptions genesis.Options,
-	genesisOnly bool,
-) (*components, error) {
+	genesisCfg application.GenesisHeavyConfig,
+	genesisOnly bool) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -397,8 +395,8 @@ func initWithPostgres(
 				IndexModifier:  IndexesPostgres,
 			},
 
-			DiscoveryNodes: genesisCfg.DiscoveryNodes,
-			GenesisOptions: genesisOptions,
+			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
+			ContractsConfig: genesisCfg.ContractsConfig,
 		}
 	}
 
@@ -470,10 +468,7 @@ func initWithPostgres(
 func initWithBadger(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg genesis.HeavyConfig,
-	genesisOptions genesis.Options,
-	genesisOnly bool,
-) (*components, error) {
+	genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -735,8 +730,8 @@ func initWithBadger(
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes: genesisCfg.DiscoveryNodes,
-			GenesisOptions: genesisOptions,
+			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
+			ContractsConfig: genesisCfg.ContractsConfig,
 		}
 	}
 
@@ -805,12 +800,12 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg application.GenesisHeavyConfig, genesisOnly bool) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOnly)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOnly)
 }
 
 func (c *components) Start(ctx context.Context) error {

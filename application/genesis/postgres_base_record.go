@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -139,8 +140,8 @@ func (br *PostgresBaseRecord) Create(ctx context.Context) error {
 		)
 	}
 
-	genesisID := Record.ID()
-	genesisRecord := record.Genesis{Hash: Record}
+	genesisID := application.GenesisRecord.ID()
+	genesisRecord := record.Genesis{Hash: application.GenesisRecord}
 	virtRec := record.Wrap(&genesisRecord)
 	rec := record.Material{
 		Virtual: virtRec,
@@ -172,5 +173,5 @@ func (br *PostgresBaseRecord) Create(ctx context.Context) error {
 
 // Done saves genesis value. Should be called when all genesis steps finished properly.
 func (br *PostgresBaseRecord) Done(ctx context.Context) error {
-	return br.setRecord(ctx, Record.Ref().Bytes())
+	return br.setRecord(ctx, application.GenesisRecord.Ref().Bytes())
 }

@@ -22,18 +22,10 @@ const (
 	FundsDepositName = "genesis_deposit"
 )
 
-// This constants are here temporary, after PENV-36 they will be moved
-const (
-	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
-	GenesisNameNodeDomain = "nodedomain"
-	// GenesisNameNodeRecord is the name of node contract for genesis record.
-	GenesisNameNodeRecord = "noderecord"
-)
-
 var PredefinedPrototypes = map[string]insolar.Reference{
 	application.GenesisNameRootDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameRootDomain, 0),
-	GenesisNameNodeDomain + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeDomain, 0),
-	GenesisNameNodeRecord + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeRecord, 0),
+	application.GenesisNameNodeDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameNodeDomain, 0),
+	application.GenesisNameNodeRecord + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameNodeRecord, 0),
 	application.GenesisNameRootMember + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
 	application.GenesisNameRootWallet + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
 	application.GenesisNameRootAccount + PrototypeSuffix:           *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0),
@@ -118,9 +110,9 @@ var (
 	// ContractRootDomain is the root domain contract reference.
 	ContractRootDomain = GenesisRef(application.GenesisNameRootDomain)
 	// ContractNodeDomain is the node domain contract reference.
-	ContractNodeDomain = GenesisRef(GenesisNameNodeDomain)
+	ContractNodeDomain = GenesisRef(application.GenesisNameNodeDomain)
 	// ContractNodeRecord is the node contract reference.
-	ContractNodeRecord = GenesisRef(GenesisNameNodeRecord)
+	ContractNodeRecord = GenesisRef(application.GenesisNameNodeRecord)
 	// ContractRootMember is the root member contract reference.
 	ContractRootMember = GenesisRef(application.GenesisNameRootMember)
 	// ContractRootWallet is the root wallet contract reference.
