@@ -13,9 +13,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
+	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
+
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/builtin/contract/nodedomain"
-	"github.com/insolar/insolar/application/builtin/contract/noderecord"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
