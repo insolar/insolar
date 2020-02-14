@@ -12,7 +12,7 @@ message PulseProto {
     uint32 PrevPulseNumber = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     uint32 NextPulseNumber = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 
-    int64 PulseTimestamp = 4;
+    int64 PulseTimestamp = 5;
     int32 EpochPulseNumber = 5;
     bytes OriginID = 6;
 
