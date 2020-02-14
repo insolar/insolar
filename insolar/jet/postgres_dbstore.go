@@ -19,11 +19,13 @@ package jet
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 type PostgresDBStore struct {
@@ -104,8 +106,16 @@ func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNu
 	}
 	defer conn.Release()
 
+	truncateTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+	}()
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+		stats.Record(ctx, TruncateHeadRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -138,6 +148,12 @@ func (s *PostgresDBStore) get(pn insolar.PulseNumber) *Tree {
 		return ErrResult
 	}
 	defer conn.Release()
+
+	getTimeStart := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			GetTime.M(float64(time.Since(getTimeStart).Nanoseconds())/1e6))
+	}()
 
 	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
@@ -183,8 +199,17 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 	}
 	defer conn.Release()
 
+	setTimeStart := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			SetTime.M(float64(time.Since(setTimeStart).Nanoseconds())/1e6))
+	}()
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(ctx, SetRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")

@@ -35,7 +35,7 @@ func init() {
 			Name:        "postgres_conenction_latency_milliseconds",
 			Description: "acquiring connection latency",
 			Measure:     postgresConnectionLatency,
-			Aggregation: view.Distribution(1, 10, 100, 1000, 5000, 10000),
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 	)
 	if err != nil {
