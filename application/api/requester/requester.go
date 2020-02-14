@@ -26,6 +26,7 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httputil"
 	"strconv"
 	"time"
@@ -63,9 +64,11 @@ func SetTimeout(timeout uint) {
 
 // createHTTPClient for connection re-use
 func createHTTPClient() *http.Client {
+	jar, _ := cookiejar.New(nil)
 	client := &http.Client{
 		Transport: &http.Transport{},
 		Timeout:   RequestTimeout,
+		Jar:       jar,
 	}
 
 	return client
