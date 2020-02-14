@@ -44,13 +44,7 @@ var (
 	verbose              bool
 	memberPrivateKey     crypto.PrivateKey
 	request              *requester.ContractRequest
-	rootCmd              *cobra.Command
 )
-
-func init() {
-	rootCmd = getRequesterCommand()
-	parseInputParams(rootCmd)
-}
 
 func parseInputParams(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
@@ -186,5 +180,7 @@ func getRequesterCommand() *cobra.Command {
 }
 
 func Execute() error {
+	rootCmd := getRequesterCommand()
+	parseInputParams(rootCmd)
 	return rootCmd.Execute()
 }
