@@ -11,12 +11,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar/record"
 )
 
 func TestGenesisRecordMarshalUnmarshal(t *testing.T) {
 	genIn := record.Genesis{
-		Hash: Record,
+		Hash: application.GenesisRecord,
 	}
 
 	virtGenIn := record.Wrap(&genIn)

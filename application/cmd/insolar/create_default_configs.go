@@ -12,7 +12,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/application/bootstrap"
-	bootstrapbase "github.com/insolar/insolar/applicationbase/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 )
@@ -31,17 +30,12 @@ func writePulsarConfig(outputDir string) {
 }
 
 func writeBootstrapConfig(outputDir string) {
-	rawBase, err := yaml.Marshal(bootstrapbase.Config{})
+	raw, err := yaml.Marshal(bootstrap.Config{})
 	if err != nil {
 		panic(err)
 	}
 
-	rawApp, err := yaml.Marshal(bootstrap.ContractsConfig{})
-	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(path.Join(outputDir, "bootstrap_default.yaml"), append(rawBase, rawApp...), 0644)
+	err = ioutil.WriteFile(path.Join(outputDir, "bootstrap_default.yaml"), raw, 0644)
 	if err != nil {
 		panic(err)
 	}

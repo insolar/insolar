@@ -15,6 +15,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -25,6 +26,17 @@ import (
 var (
 	contractSources = insolar.RootModule + "/application/contract"
 	proxySources    = insolar.RootModule + "/application/proxy"
+	contractNames   = []string{
+		application.GenesisNameRootDomain,
+		application.GenesisNameNodeDomain,
+		application.GenesisNameNodeRecord,
+		application.GenesisNameMember,
+		application.GenesisNameWallet,
+		application.GenesisNameDeposit,
+		application.GenesisNameCostCenter,
+		application.GenesisNamePKShard,
+		application.GenesisNameMigrationShard,
+	}
 )
 
 type contractsBuilder struct {
@@ -82,13 +94,13 @@ type buildResult struct {
 
 func (cb *contractsBuilder) build(ctx context.Context, names ...string) ([]buildResult, error) {
 	if len(names) == 0 {
-		return nil, errors.New("provide at least one contract name")
+		names = contractNames
 	}
 	if err := cb.prepare(ctx, names...); err != nil {
 		return nil, err
 	}
 
-	var result []buildResult
+	result := make([]buildResult, 0, len(contractNames))
 	for _, name := range names {
 		log.Infof("building plugin for contract %q in %q", name, cb.root)
 		soFile, err := cb.plugin(ctx, name)
