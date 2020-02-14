@@ -7,17 +7,11 @@ package application
 
 import (
 	"strconv"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
 	GenesisNameRootDomain = "rootdomain"
-	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
-	GenesisNameNodeDomain = "nodedomain"
-	// GenesisNameNodeRecord is the name of node contract for genesis record.
-	GenesisNameNodeRecord = "noderecord"
 	// GenesisNameMember is the name of member contract for genesis record.
 	GenesisNameMember = "member"
 	// GenesisNameWallet is the name of wallet contract for genesis record.
@@ -180,35 +174,6 @@ var GenesisNameEnterpriseAccounts = func() (result [GenesisAmountEnterpriseMembe
 	return
 }()
 
-type genesisBinary []byte
-
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// ID returns genesis record id.
-func (r genesisBinary) ID() insolar.ID {
-	return *insolar.NewID(insolar.GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() insolar.Reference {
-	return *insolar.NewReference(r.ID())
-}
-
-// DiscoveryNodeRegister carries data required for registering discovery node via genesis.
-type DiscoveryNodeRegister struct {
-	Role      string
-	PublicKey string
-}
-
-// GenesisContractState carries data required for contract object creation via genesis.
-type GenesisContractState struct {
-	Name       string
-	Prototype  string
-	ParentName string
-	Memory     []byte
-}
-
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
 	// RootBalance is a balance of Root Member.
@@ -245,13 +210,4 @@ type GenesisContractsConfig struct {
 	PKShardCount int
 	// MAShardCount is a migration addresses shards count.
 	MAShardCount int
-}
-
-// GenesisHeavyConfig carries data required for initial genesis on heavy node.
-type GenesisHeavyConfig struct {
-	// DiscoveryNodes is the list with discovery node info.
-	DiscoveryNodes  []DiscoveryNodeRegister
-	ContractsConfig GenesisContractsConfig
-	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
-	Skip bool
 }
