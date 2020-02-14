@@ -14,6 +14,7 @@ message PulseProto {
 
     int64 PulseTimestamp = 5;
     int32 EpochPulseNumber = 5;
+    int32 PulseTestNumber = 5;
     bytes OriginID = 6;
 
     bytes Entropy = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
