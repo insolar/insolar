@@ -13,6 +13,7 @@ import (
 
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock/v3"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -93,7 +94,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.sender = bus.NewSenderMock(suite.mc)
 	suite.pub = &publisherMock{}
-	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
+	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender, builtin.BuiltinContracts{})
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
 	suite.lr.MachinesManager = suite.mm
@@ -223,11 +224,11 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 }
 
 func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
-	lr, err := NewLogicRunner(nil, suite.pub, suite.sender)
+	lr, err := NewLogicRunner(nil, suite.pub, suite.sender, builtin.BuiltinContracts{})
 	suite.Require().Error(err)
 	suite.Require().Nil(lr)
 
-	lr, err = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
+	lr, err = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender, builtin.BuiltinContracts{})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 	_ = lr.Stop(context.Background())
@@ -236,7 +237,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr, err := NewLogicRunner(&configuration.LogicRunner{
 		BuiltIn: &configuration.BuiltIn{},
-	}, suite.pub, suite.sender)
+	}, suite.pub, suite.sender, builtin.BuiltinContracts{})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 
@@ -279,7 +280,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 		{
 			name: "broker that stays and sends messages",
 			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
+				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil, builtin.BuiltinContracts{})
 				require.NoError(t, err)
 
 				lr.initHandlers()
@@ -309,7 +310,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 		{
 			name: "broker that goes way",
 			mocks: func(ctx context.Context, mc minimock.Tester) *LogicRunner {
-				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
+				lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil, builtin.BuiltinContracts{})
 				require.NoError(t, err)
 
 				lr.initHandlers()
@@ -362,7 +363,7 @@ const (
 
 func TestLogicRunner_OnPulse_Order(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil)
+	lr, err := NewLogicRunner(&configuration.LogicRunner{}, nil, nil, builtin.BuiltinContracts{})
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
