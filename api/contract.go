@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -115,13 +114,12 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func setRootReferenceIfNeeded(params *requester.Params) {
+func setRootReferenceIfNeeded(params *requester.Params, runner *Runner) {
 	if params.Reference != "" {
 		return
 	}
-	methods := []string{"member.create", "member.migrationCreate", "member.get"}
-	if contains(methods, params.CallSite) {
-		params.Reference = genesisrefs.ContractRootMember.String()
+	if contains(runner.Options.ProxyToRootMethods, params.CallSite) {
+		params.Reference = runner.Options.RootReference.String()
 	}
 }
 

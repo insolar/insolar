@@ -59,6 +59,8 @@ type Options struct {
 	InfoResponse         map[string]interface{}
 	AdminContractMethods map[string]bool
 	ContractMethods      map[string]bool
+	RootReference        insolar.Reference
+	ProxyToRootMethods   []string
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {

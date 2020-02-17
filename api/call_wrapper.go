@@ -83,7 +83,7 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 		}
 	}
 
-	setRootReferenceIfNeeded(args)
+	setRootReferenceIfNeeded(args, runner)
 
 	callResult, requestRef, err := runner.makeCall(ctx, *args, requestBody.Raw, signature, seedPulse)
 

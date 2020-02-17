@@ -71,10 +71,13 @@ func createAPIOptions() (api.Options, error) {
 		"member.migrationCreate": true,
 		"deposit.transfer":       true,
 	}
+	proxyToRootMethods := []string{"member.create", "member.migrationCreate", "member.get"}
 
 	return api.Options{
 		AdminContractMethods: adminContractMethods,
 		ContractMethods:      contractMethods,
 		InfoResponse:         apiInfoResponse,
+		RootReference:        genesisrefs.ContractRootMember,
+		ProxyToRootMethods:   proxyToRootMethods,
 	}, nil
 }
