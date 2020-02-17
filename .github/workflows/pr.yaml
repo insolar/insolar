@@ -121,13 +121,13 @@ jobs:
         run: |
            make ci-test-with-coverage
            content=`cat coverage.txt | ./scripts/dev/cover-filter.sh` 
-           echo "$content" > coverage.txt
-           echo "$content" | wc 
+           echo "$content" | tee $GITHUB_WORKSPACE/coverage.txt
+           cat $GITHUB_WORKSPACE/coverage.txt | wc 
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.codecov_token }}
-          file: ./coverage.txt
+          file: $GITHUB_WORKSPACE/coverage.txt
           name: CI
           fail_ci_if_error: true
   func-tests-badger:
