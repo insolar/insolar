@@ -52,6 +52,10 @@ type Runner struct {
 	SeedManager   *seedmanager.SeedManager
 	SeedGenerator seedmanager.SeedGenerator
 
+	Options Options
+}
+
+type Options struct {
 	InfoResponse map[string]interface{}
 }
 
@@ -126,7 +130,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	jetCoordinator jet.Coordinator,
 	networkStatus insolar.NetworkStatus,
 	availabilityChecker insolar.AvailabilityChecker,
-	infoResponse map[string]interface{},
+	apiOptions Options,
 ) (*Runner, error) {
 
 	err := checkConfig(cfg)
@@ -150,7 +154,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		cfg:                 cfg,
 		keyCache:            make(map[string]crypto.PublicKey),
 		cacheLock:           &sync.RWMutex{},
-		InfoResponse:        infoResponse,
+		Options:             apiOptions,
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")

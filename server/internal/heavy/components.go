@@ -110,7 +110,7 @@ func initWithPostgres(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
-	apiInfoResponse map[string]interface{},
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -267,7 +267,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
-			apiInfoResponse,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -284,7 +284,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
-			apiInfoResponse,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -476,7 +476,7 @@ func initWithBadger(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
-	apiInfoResponse map[string]interface{},
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -630,7 +630,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
-			apiInfoResponse,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -647,7 +647,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
-			apiInfoResponse,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -817,13 +817,13 @@ func newComponents(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
-	apiInfoResponse map[string]interface{},
+	apiOptions api.Options,
 ) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiInfoResponse)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiInfoResponse)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 }
 
 func (c *components) Start(ctx context.Context) error {

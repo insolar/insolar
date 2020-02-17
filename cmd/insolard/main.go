@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/application"
 	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
@@ -80,11 +81,18 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 				ParentDomain: application.GenesisNameRootDomain,
 			},
 			genesisOnly,
-			apiInfoResponse,
+			api.Options{
+				InfoResponse: apiInfoResponse,
+			},
 		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(configPath, apiInfoResponse)
+		s := server.NewLightServer(
+			configPath,
+			api.Options{
+				InfoResponse: apiInfoResponse,
+			},
+		)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
 		builtinContracts := builtin.BuiltinContracts{
@@ -93,7 +101,13 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
 			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
 		}
-		s := server.NewVirtualServer(configPath, builtinContracts, apiInfoResponse)
+		s := server.NewVirtualServer(
+			configPath,
+			builtinContracts,
+			api.Options{
+				InfoResponse: apiInfoResponse,
+			},
+		)
 		s.Serve()
 	}
 }
