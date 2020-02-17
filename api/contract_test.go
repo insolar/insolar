@@ -88,7 +88,7 @@ func TestTimeoutSuite(t *testing.T) {
 		checker,
 		Options{
 			ContractMethods: map[string]bool{
-				"member.create": true,
+				"contract.registerNode": true,
 			},
 		},
 	)
@@ -106,7 +106,7 @@ func TestTimeoutSuite(t *testing.T) {
 		ctx,
 		CallUrl,
 		user,
-		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
+		&requester.Params{CallSite: "contract.registerNode", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
 		seedString,
 	)
 	require.NoError(t, err, "make request with seed error")

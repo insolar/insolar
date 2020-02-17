@@ -11,6 +11,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -30,6 +31,6 @@ func TestComponents(t *testing.T) {
 	cfg.APIRunner.SwaggerPath = "../../../api/spec/api-exported.yaml"
 	cfg.AdminAPIRunner.SwaggerPath = "../../../api/spec/api-exported.yaml"
 
-	_, err := newComponents(ctx, cfg, nil)
+	_, err := newComponents(ctx, cfg, api.Options{})
 	require.NoError(t, err)
 }

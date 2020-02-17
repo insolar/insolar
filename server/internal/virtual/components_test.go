@@ -11,6 +11,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
@@ -48,7 +49,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyProcessor,
 		cert,
 		builtin.BuiltinContracts{},
-		nil,
+		api.Options{},
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)
