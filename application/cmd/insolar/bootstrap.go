@@ -28,16 +28,22 @@ func bootstrapCommand() *cobra.Command {
 			contractsConfig, err := bootstrap.CreateGenesisContractsConfig(ctx, configPath)
 			check("failed to create genesis contracts config", err)
 
-			gen, err := basebootstrap.NewGenerator(configPath, certificatesOutDir, contractsConfig)
-			check("base bootstrap failed to start", err)
+			config, err := basebootstrap.ParseConfig(configPath)
+			check("bootstrap config error", err)
+			if certificatesOutDir != "" {
+				config.CertificatesOutDir = certificatesOutDir
+			}
 
-			err = gen.Run(ctx)
-			check("base bootstrap failed", err)
+			err = basebootstrap.NewGeneratorWithConfig(config, contractsConfig).Run(ctx)
+			check("base bootstrap failed to start", err)
 		},
 	}
 	c.Flags().StringVarP(
 		&configPath, "config", "c", "bootstrap.yaml", "path to bootstrap config")
+
 	c.Flags().StringVarP(
 		&certificatesOutDir, "certificates-out-dir", "o", "", "dir with certificate files")
+	c.Flags().MarkDeprecated("certificates-out-dir", "please switch to 'certificates_out_dir:' in config")
+
 	return c
 }

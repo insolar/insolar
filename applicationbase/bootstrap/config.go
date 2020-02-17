@@ -29,6 +29,8 @@ type Config struct {
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir" yaml:"discovery_keys_dir"`
 	// NotDiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	NotDiscoveryKeysDir string `mapstructure:"not_discovery_keys_dir" yaml:"not_discovery_keys_dir"`
+	// CertificatesOutDir is a directory where to save generated cert files.
+	CertificatesOutDir string `mapstructure:"certificates_out_dir" yaml:"certificates_out_dir"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
 	KeysNameFormat string `mapstructure:"keys_name_format" yaml:"keys_name_format"`
 	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)
