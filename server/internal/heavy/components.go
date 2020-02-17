@@ -110,6 +110,7 @@ func initWithPostgres(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiInfoResponse map[string]interface{},
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -266,6 +267,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -282,6 +284,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -808,12 +811,19 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
+func newComponents(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+	apiInfoResponse map[string]interface{},
+) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiInfoResponse)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiInfoResponse)
 }
 
 func (c *components) Start(ctx context.Context) error {
