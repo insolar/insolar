@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package executor
 
@@ -334,5 +325,13 @@ func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.Puls
 		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
 	}
 
+	return nil
+}
+
+type PostgresBackupMaker struct {
+}
+
+func (p PostgresBackupMaker) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	// because the method is a stub-method, it just returns nil
 	return nil
 }

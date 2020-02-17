@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -20,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/insolar/insolar/application/bootstrap"
+	basebootstrap "github.com/insolar/insolar/applicationbase/bootstrap"
 )
 
 func bootstrapCommand() *cobra.Command {
@@ -31,11 +23,16 @@ func bootstrapCommand() *cobra.Command {
 		Use:   "bootstrap",
 		Short: "creates files required for new network (keys, genesis config)",
 		Run: func(cmd *cobra.Command, args []string) {
-			gen, err := bootstrap.NewGenerator(configPath, certificatesOutDir)
-			check("bootstrap failed to start", err)
+			ctx := context.Background()
 
-			err = gen.Run(context.Background())
-			check("bootstrap failed", err)
+			contractsConfig, err := bootstrap.CreateGenesisContractsConfig(ctx, configPath)
+			check("failed to create genesis contracts config", err)
+
+			gen, err := basebootstrap.NewGenerator(configPath, certificatesOutDir, contractsConfig)
+			check("base bootstrap failed to start", err)
+
+			err = gen.Run(ctx)
+			check("base bootstrap failed", err)
 		},
 	}
 	c.Flags().StringVarP(

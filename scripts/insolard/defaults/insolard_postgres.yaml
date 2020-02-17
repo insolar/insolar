@@ -1,0 +1,8 @@
+metrics:
+  zpagesenabled: false
+ledger:
+  lightchainlimit: 15
+  ispostgresbase: true
+  postgresql:
+    url: postgres://postgres:s3cr3t@localhost/insolar?sslmode=disable&pool_max_conns=10
+    migrationpath: ./migration

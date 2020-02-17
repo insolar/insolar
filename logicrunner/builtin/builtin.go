@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // Package builtin is implementation of builtin contracts engine
 package builtin
@@ -20,9 +11,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/insolar/insolar/applicationbase/builtin"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -51,23 +42,40 @@ type BuiltIn struct {
 	PrototypeRefRegistry map[insolar.Reference]string
 }
 
+type BuiltinContracts struct {
+	CodeRegistry         map[string]insolar.ContractWrapper
+	CodeRefRegistry      map[insolar.Reference]string
+	CodeDescriptors      []artifacts.CodeDescriptor
+	PrototypeDescriptors []artifacts.PrototypeDescriptor
+}
+
 // NewBuiltIn is an constructor
-func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
-	codeDescriptors := builtin.InitializeCodeDescriptors()
-	for _, codeDescriptor := range codeDescriptors {
+func NewBuiltIn(
+	am artifacts.Client, stub LogicRunnerRPCStub, builtinContracts BuiltinContracts,
+) *BuiltIn {
+	fullCodeDescriptors := append(builtin.InitializeCodeDescriptors(), builtinContracts.CodeDescriptors...)
+	for _, codeDescriptor := range fullCodeDescriptors {
 		am.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
 	}
 
-	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
-	for _, prototypeDescriptor := range prototypeDescriptors {
+	fullPrototypeDescriptors := append(builtin.InitializePrototypeDescriptors(), builtinContracts.PrototypeDescriptors...)
+	for _, prototypeDescriptor := range fullPrototypeDescriptors {
 		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)
 
+	fullCodeRefRegistry := builtin.InitializeCodeRefs()
+	for k, v := range builtinContracts.CodeRefRegistry {
+		fullCodeRefRegistry[k] = v
+	}
+	fullCodeRegistry := builtin.InitializeContractMethods()
+	for k, v := range builtinContracts.CodeRegistry {
+		fullCodeRegistry[k] = v
+	}
 	return &BuiltIn{
-		CodeRefRegistry: builtin.InitializeCodeRefs(),
-		CodeRegistry:    builtin.InitializeContractMethods(),
+		CodeRefRegistry: fullCodeRefRegistry,
+		CodeRegistry:    fullCodeRegistry,
 	}
 }
 

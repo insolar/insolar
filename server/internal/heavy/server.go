@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package heavy
 
@@ -23,7 +14,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -36,12 +27,16 @@ import (
 type Server struct {
 	cfgHolder      *configuration.Holder
 	genesisCfgPath string
+	genesisOptions genesis.Options
+	genesisOnly    bool
 }
 
-func New(cfgHolder *configuration.Holder, genesisCfgPath string) *Server {
+func New(cfgHolder *configuration.Holder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) *Server {
 	return &Server{
 		cfgHolder:      cfgHolder,
 		genesisCfgPath: genesisCfgPath,
+		genesisOptions: genesisOptions,
+		genesisOnly:    genesisOnly,
 	}
 }
 
@@ -50,10 +45,10 @@ func (s *Server) Serve() {
 	if err != nil {
 		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
 	}
-	var genesisCfg application.GenesisHeavyConfig
+	var genesisCfg genesis.HeavyConfig
 	err = json.Unmarshal(b, &genesisCfg)
 	if err != nil {
-		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
+		log.Fatalf("failed to parse genesis configuration from file: %v", s.genesisCfgPath)
 	}
 
 	cfg := s.cfgHolder.Configuration
@@ -83,7 +78,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, cfg, genesisCfg)
+	cmp, err := newComponents(ctx, cfg, genesisCfg, s.genesisOptions, s.genesisOnly)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

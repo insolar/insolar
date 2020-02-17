@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // +build slowtest
 
@@ -31,8 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	component "github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/genesis"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -125,10 +115,10 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 	return nil
 }
 
-func NewServer(
+func NewBadgerServer(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	genesisCfg application.GenesisHeavyConfig,
+	genesisCfg genesis.HeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.
@@ -166,9 +156,9 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *insolarPulse.DB
-		Jets        *jet.DBStore
-		Nodes       *node.StorageDB
+		Pulses      *insolarPulse.BadgerDB
+		Jets        *jet.BadgerDBStore
+		Nodes       *node.BadgerStorageDB
 		DB          *store.BadgerDB
 		DBRollback  *executor.DBRollback
 	)
@@ -180,9 +170,9 @@ func NewServer(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorageDB(DB)
-		Pulses = insolarPulse.NewDB(DB)
-		Jets = jet.NewDBStore(DB)
+		Nodes = node.NewBadgerStorageDB(DB)
+		Pulses = insolarPulse.NewBadgerDB(DB)
+		Jets = jet.NewBadgerDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
@@ -221,14 +211,14 @@ func NewServer(
 		PulseManager insolar.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
-		Records      *object.RecordDB
-		JetKeeper    *executor.DBJetKeeper
+		Records      *object.BadgerRecordDB
+		JetKeeper    *executor.BadgerDBJetKeeper
 	)
 	{
-		Records = object.NewRecordDB(DB)
-		indexes := object.NewIndexDB(DB, Records)
-		drops := drop.NewDB(DB)
-		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		Records = object.NewBadgerRecordDB(DB)
+		indexes := object.NewBadgerIndexDB(DB, Records)
+		drops := drop.NewBadgerDB(DB)
+		JetKeeper = executor.NewBadgerJetKeeper(Jets, DB, Pulses)
 		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 
 		sp := insolarPulse.NewStartPulse()
@@ -265,7 +255,6 @@ func NewServer(
 		h.JetModifier = Jets
 		h.JetAccessor = Jets
 		h.JetTree = Jets
-		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = ClientBus
@@ -284,7 +273,8 @@ func NewServer(
 		}
 		Genesis = &genesis.Genesis{
 			ArtifactManager: artifactManager,
-			BaseRecord: &genesis.BaseRecord{
+			IndexModifier:   indexes,
+			BaseRecord: &genesis.BadgerBaseRecord{
 				DB:             DB,
 				DropModifier:   drops,
 				PulseAppender:  Pulses,
@@ -293,8 +283,7 @@ func NewServer(
 				IndexModifier:  indexes,
 			},
 
-			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
-			ContractsConfig: genesisCfg.ContractsConfig,
+			DiscoveryNodes: genesisCfg.DiscoveryNodes,
 		}
 	}
 

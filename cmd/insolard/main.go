@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -19,6 +10,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/insolar/insolar/application"
+	appbuiltin "github.com/insolar/insolar/application/builtin"
+	"github.com/insolar/insolar/applicationbase/genesis"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -35,16 +30,18 @@ func main() {
 	var (
 		configPath        string
 		genesisConfigPath string
+		genesisOnly       bool
 	)
 
 	var rootCmd = &cobra.Command{
 		Use: "insolard",
 		Run: func(_ *cobra.Command, _ []string) {
-			runInsolardServer(configPath, genesisConfigPath)
+			runInsolardServer(configPath, genesisConfigPath, genesisOnly)
 		},
 	}
 	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
+	rootCmd.Flags().BoolVarP(&genesisOnly, "genesis-only", "", false, "run only genesis and then terminate")
 	rootCmd.AddCommand(version.GetCommand("insolard"))
 	err := rootCmd.Execute()
 	if err != nil {
@@ -55,7 +52,7 @@ func main() {
 // psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
 var psAgentLauncher = func() error { return nil }
 
-func runInsolardServer(configPath string, genesisConfigPath string) {
+func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly bool) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	holder, err := readConfig(configPath)
@@ -73,13 +70,28 @@ func runInsolardServer(configPath string, genesisConfigPath string) {
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		s := server.NewHeavyServer(holder, genesisConfigPath)
+		states, _ := initStates(holder, genesisConfigPath)
+		s := server.NewHeavyServer(
+			configPath,
+			genesisConfigPath,
+			genesis.Options{
+				States:           states,
+				NodeDomainParent: application.GenesisNameRootDomain,
+			},
+			genesisOnly,
+		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(holder)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		s := server.NewVirtualServer(holder)
+		builtinContracts := builtin.BuiltinContracts{
+			CodeRegistry:         appbuiltin.InitializeContractMethods(),
+			CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
+			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
+			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
+		}
+		s := server.NewVirtualServer(holder, builtinContracts)
 		s.Serve()
 	}
 }

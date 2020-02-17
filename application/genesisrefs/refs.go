@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package genesisrefs
 
@@ -31,10 +22,18 @@ const (
 	FundsDepositName = "genesis_deposit"
 )
 
+// This constants are here temporary, after PENV-36 they will be moved
+const (
+	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
+	GenesisNameNodeDomain = "nodedomain"
+	// GenesisNameNodeRecord is the name of node contract for genesis record.
+	GenesisNameNodeRecord = "noderecord"
+)
+
 var PredefinedPrototypes = map[string]insolar.Reference{
 	application.GenesisNameRootDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameRootDomain, 0),
-	application.GenesisNameNodeDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameNodeDomain, 0),
-	application.GenesisNameNodeRecord + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameNodeRecord, 0),
+	GenesisNameNodeDomain + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeDomain, 0),
+	GenesisNameNodeRecord + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeRecord, 0),
 	application.GenesisNameRootMember + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
 	application.GenesisNameRootWallet + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
 	application.GenesisNameRootAccount + PrototypeSuffix:           *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0),
@@ -119,9 +118,9 @@ var (
 	// ContractRootDomain is the root domain contract reference.
 	ContractRootDomain = GenesisRef(application.GenesisNameRootDomain)
 	// ContractNodeDomain is the node domain contract reference.
-	ContractNodeDomain = GenesisRef(application.GenesisNameNodeDomain)
+	ContractNodeDomain = GenesisRef(GenesisNameNodeDomain)
 	// ContractNodeRecord is the node contract reference.
-	ContractNodeRecord = GenesisRef(application.GenesisNameNodeRecord)
+	ContractNodeRecord = GenesisRef(GenesisNameNodeRecord)
 	// ContractRootMember is the root member contract reference.
 	ContractRootMember = GenesisRef(application.GenesisNameRootMember)
 	// ContractRootWallet is the root wallet contract reference.
