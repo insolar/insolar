@@ -1,6 +1,6 @@
 # The requester 
 
-The utility helps send swagger-like requests to Insolar platform. 
+The requester is a simple CLI for sending requests to Insolar Platform. 
 
 ## Usage
 
@@ -11,12 +11,17 @@ The utility helps send swagger-like requests to Insolar platform.
 ### Options
     ./requester --help
     
-    Usage of ./requester:
-      -p, --autocompletekey     should replace publicKey to correct value
-      -s, --autocompleteseed    should replace seed to correct value
-      -k, --memberkeys string   path to member key paramsFile
-      -r, --request string      the request body or path to request paramsFile
+    Usage:
+      requester [flags]
+    
+    Flags:
+      -p, --autocompletekey     Should replace publicKey to correct value (default true)
+      -s, --autocompleteseed    Should replace seed to correct value (default true)
+      -h, --help                help for requester
+      -k, --memberkeys string   Path to member key
+      -r, --request string      The request body or path to request params file
       -u, --url string          API URL. for example http://localhost:19101/api/rpc
+
 
 
 ### how to generate keypair 
