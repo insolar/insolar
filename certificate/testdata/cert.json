@@ -8,7 +8,6 @@
     "heavy_material": 1,
     "light_material": 1
   },
-  "pulsar_public_keys": null,
   "bootstrap_nodes": [
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n",

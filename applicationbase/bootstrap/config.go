@@ -49,10 +49,6 @@ type Config struct {
 
 	// Nodes is used only by generate_insolar_config.go
 	Nodes []Node `mapstructure:"nodes" yaml:"nodes"`
-
-	// PulsarPublicKeys is the pulsar's public keys for pulses validation
-	// (not in use, just for future features).
-	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys" yaml:"pulsar_public_keys"`
 }
 
 // hasMinimumRolesSet does basic check (it's not about majority rule).

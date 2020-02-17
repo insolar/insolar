@@ -47,8 +47,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				Reference: certNodeRef.String(),
 				Role:      "virtual",
 			},
-			MajorityRule:     0,
-			PulsarPublicKeys: []string{},
+			MajorityRule: 0,
 			BootstrapNodes: []certificate.BootstrapNode{
 				{
 					NodeRef:     discoveryNodeRef.String(),
@@ -137,7 +136,6 @@ func TestComplete_GetCert(t *testing.T) {
 	assert.Equal(t, uint(0), cert.MinRoles.Virtual)
 	assert.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
 	assert.Equal(t, uint(0), cert.MinRoles.LightMaterial)
-	assert.Equal(t, []string{}, cert.PulsarPublicKeys)
 	assert.Equal(t, 1, len(cert.BootstrapNodes))
 	assert.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
 	assert.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
