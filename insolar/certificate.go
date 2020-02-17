@@ -20,7 +20,6 @@ type NodeMeta interface {
 type Certificate interface {
 	AuthorizationCertificate
 
-	GetRootDomainReference() *Reference
 	GetDiscoveryNodes() []DiscoveryNode
 
 	GetMajorityRule() int

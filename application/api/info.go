@@ -16,6 +16,7 @@ import (
 
 	"github.com/insolar/insolar/application/api/instrumenter"
 	"github.com/insolar/insolar/application/genesisrefs"
+	genesisrefsbase "github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -100,7 +101,7 @@ func (s *InfoService) getInfo(_ context.Context, _ *http.Request, _ *InfoArgs, _
 	if feeMember.IsEmpty() {
 		return errors.New("feeMember ref is nil")
 	}
-	nodeDomain := genesisrefs.ContractNodeDomain
+	nodeDomain := genesisrefsbase.ContractNodeDomain
 	if nodeDomain.IsEmpty() {
 		return errors.New("nodeDomain ref is nil")
 	}

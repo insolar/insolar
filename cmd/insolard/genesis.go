@@ -75,8 +75,8 @@ func initStates(configPath, genesisConfigPath string) ([]genesis.ContractState, 
 	migrationDeposits := make(foundation.StableMap)
 	migrationDeposits[genesisrefs.FundsDepositName] = genesisrefs.ContractMigrationDeposit.String()
 
-	contracts.ContractMigrationAddressShardRefs(contractsConfig.MAShardCount)
-	contracts.ContractPublicKeyShardRefs(contractsConfig.PKShardCount)
+	genesisrefs.ContractMigrationAddressShardRefs(contractsConfig.MAShardCount)
+	genesisrefs.ContractPublicKeyShardRefs(contractsConfig.PKShardCount)
 
 	// Hint: order matters, because of dependency contracts on each other.
 	states := []genesis.ContractState{

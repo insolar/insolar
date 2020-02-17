@@ -10,9 +10,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -37,7 +37,7 @@ func NewDiscoveryNodeManager(
 
 // StoreDiscoveryNodes saves discovery nodes objects and saves discovery nodes index in node domain index.
 // If node domain index not empty this method does nothing.
-func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []DiscoveryNodeRegister) error {
+func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []DiscoveryNodeRegister, parentDomain string) error {
 	if len(discoveryNodes) == 0 {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discove
 			key:  platformpolicy.MustNormalizePublicKey([]byte(n.PublicKey)),
 		})
 	}
-	return nm.updateDiscoveryData(ctx, nodesInfo)
+	return nm.updateDiscoveryData(ctx, nodesInfo, parentDomain)
 }
 
 // nodeInfo carries data for node objects required by DiscoveryNodeManager methods.
@@ -75,13 +75,14 @@ type nodeInfo struct {
 func (nm *DiscoveryNodeManager) updateDiscoveryData(
 	ctx context.Context,
 	nodes []nodeInfo,
+	parentDomain string,
 ) error {
 	indexMap, err := nm.addDiscoveryNodes(ctx, nodes)
 	if err != nil {
 		return errors.Wrap(err, "failed to add discovery nodes")
 	}
 
-	err = nm.updateNodeDomainIndex(ctx, indexMap)
+	err = nm.updateNodeDomainIndex(ctx, indexMap, parentDomain)
 	return errors.Wrap(err, "failed to update node domain index")
 }
 
@@ -147,7 +148,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to activate object of node record")
 	}
 
-	_, err = nm.artifactManager.RegisterResult(ctx, genesisrefs.ContractRootDomain, *contract, nil)
+	_, err = nm.artifactManager.RegisterResult(ctx, genesisrefs.ContractNodeDomain, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register result for new node object")
 	}
@@ -157,6 +158,7 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 	ctx context.Context,
 	indexMap map[string]string,
+	parentDomain string,
 ) error {
 	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, genesisrefs.ContractNodeDomain)
 	if err != nil {
@@ -176,7 +178,7 @@ func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 
 	err = nm.artifactManager.UpdateObject(
 		ctx,
-		genesisrefs.ContractRootDomain,
+		genesisrefs.GenesisRef(parentDomain),
 		genesisrefs.ContractNodeDomain,
 		nodeDomainDesc,
 		updateData,
