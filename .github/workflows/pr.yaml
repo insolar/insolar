@@ -128,7 +128,7 @@ jobs:
         with:
           token: ${{ secrets.codecov_token }}
           file: ./coverage.txt
-          name: CI
+          yml:  ./codecov.yml
           fail_ci_if_error: true
   func-tests-badger:
     runs-on: self-hosted
