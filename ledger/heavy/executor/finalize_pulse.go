@@ -132,19 +132,21 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 	// record all jets count
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, pulseToFinalize)))))
 
-	startedAt := time.Now()
-	logger.Infof("finalizePulseStep: calling backuperr.MakeBackup()...")
-	bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
-	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
-		logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
-	}
-	logger.Infof("finalizePulseStep: MakeBackup() done!")
+	if backuper != nil {
+		// Badger backend is used and backups are enabled
+		startedAt := time.Now()
+		logger.Infof("finalizePulseStep: calling backuper.MakeBackup()...")
+		bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
+		if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
+			logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
+		}
+		logger.Infof("finalizePulseStep: MakeBackup() done!")
+		stats.Record(ctx, statBackupTime.M(time.Since(startedAt).Nanoseconds()))
 
-	stats.Record(ctx, statBackupTime.M(time.Since(startedAt).Nanoseconds()))
-
-	if bkpError == ErrAlreadyDone {
-		logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
-		return nil
+		if bkpError == ErrAlreadyDone {
+			logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
+			return nil
+		}
 	}
 
 	logger.Info("finalizePulseStep: before getting lock")
