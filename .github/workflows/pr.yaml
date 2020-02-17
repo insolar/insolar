@@ -117,14 +117,15 @@ jobs:
           go-version: ${{env.GO_VERSION}}
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
-      - name: test_prepare
-        run: |
-          make ci-test-with-coverage | tee unit.json
-          content=`cat coverage.txt | ./scripts/dev/cover-filter.sh`
-          echo "$content" > coverage.txt
-          echo "$content" | wc
-          curl -s https://codecov.io/bash | bash -s -- -c -F CI -f coverage.txt -t ${{secrets.codecov_token}}
+      - name: generate codecov
+        run:  make ci-test-with-coverage
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.codecov_token }}
+          file: ./coverage.txt
+          name: CI
+          fail_ci_if_error: true
   func-tests-badger:
     runs-on: self-hosted
     name: func-tests-badger
