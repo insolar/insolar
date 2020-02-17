@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"

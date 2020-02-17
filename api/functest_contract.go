@@ -17,7 +17,7 @@ import (
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"

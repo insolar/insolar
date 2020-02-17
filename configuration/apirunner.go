@@ -24,14 +24,14 @@ func NewAPIRunner(admin bool) APIRunner {
 		return APIRunner{
 			Address:     "localhost:19001",
 			RPC:         "/admin-api/rpc",
-			SwaggerPath: "api/spec/api-exported.yaml",
+			SwaggerPath: "application/spec/api-exported.yaml",
 			IsAdmin:     true,
 		}
 	}
 	return APIRunner{
 		Address:     "localhost:19101",
 		RPC:         "/api/rpc",
-		SwaggerPath: "api/spec/api-exported.yaml",
+		SwaggerPath: "application/spec/api-exported.yaml",
 		IsAdmin:     false,
 	}
 }

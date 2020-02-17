@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/log"
 )
 

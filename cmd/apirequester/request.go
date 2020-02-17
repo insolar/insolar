@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 )
 
 func oneSimpleRequest(insSDK *sdk.SDK) {
