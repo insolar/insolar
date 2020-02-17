@@ -23,18 +23,7 @@ type AdminContractService struct {
 
 // NewAdminContractService creates new AdminContract service instance.
 func NewAdminContractService(runner *Runner) *AdminContractService {
-	methods := map[string]bool{
-		"migration.deactivateDaemon": true,
-		"migration.activateDaemon":   true,
-		"migration.checkDaemon":      true,
-		"migration.addAddresses":     true,
-		"migration.getAddressCount":  true,
-		"deposit.migration":          true,
-		"member.getBalance":          true,
-		"contract.registerNode":      true,
-		"contract.getNodeRef":        true,
-	}
-	return &AdminContractService{runner: runner, allowedMethods: methods}
+	return &AdminContractService{runner: runner, allowedMethods: runner.Options.AdminContractMethods}
 }
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {

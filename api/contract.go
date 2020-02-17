@@ -35,14 +35,7 @@ type ContractService struct {
 
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
-	methods := map[string]bool{
-		"member.create":          true,
-		"member.get":             true,
-		"member.transfer":        true,
-		"member.migrationCreate": true,
-		"deposit.transfer":       true,
-	}
-	return &ContractService{runner: runner, allowedMethods: methods}
+	return &ContractService{runner: runner, allowedMethods: runner.Options.ContractMethods}
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {

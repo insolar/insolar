@@ -56,7 +56,9 @@ type Runner struct {
 }
 
 type Options struct {
-	InfoResponse map[string]interface{}
+	InfoResponse         map[string]interface{}
+	AdminContractMethods map[string]bool
+	ContractMethods      map[string]bool
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {

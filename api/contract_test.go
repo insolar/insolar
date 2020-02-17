@@ -86,7 +86,11 @@ func TestTimeoutSuite(t *testing.T) {
 		nil,
 		nil,
 		checker,
-		nil,
+		Options{
+			ContractMethods: map[string]bool{
+				"member.create": true,
+			},
+		},
 	)
 	require.NoError(t, err)
 	defer api.Stop(ctx)

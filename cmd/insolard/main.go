@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/application"
 	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
@@ -65,7 +64,7 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	apiInfoResponse, err := getAPIInfoResponse()
+	apiOptions, err := createAPIOptions()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "failed to get API info response"))
 	}
@@ -81,17 +80,13 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 				ParentDomain: application.GenesisNameRootDomain,
 			},
 			genesisOnly,
-			api.Options{
-				InfoResponse: apiInfoResponse,
-			},
+			apiOptions,
 		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(
 			configPath,
-			api.Options{
-				InfoResponse: apiInfoResponse,
-			},
+			apiOptions,
 		)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
@@ -104,9 +99,7 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		s := server.NewVirtualServer(
 			configPath,
 			builtinContracts,
-			api.Options{
-				InfoResponse: apiInfoResponse,
-			},
+			apiOptions,
 		)
 		s.Serve()
 	}

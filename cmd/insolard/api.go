@@ -6,6 +6,7 @@
 package main
 
 import (
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/pkg/errors"
 )
@@ -44,5 +45,36 @@ func getAPIInfoResponse() (map[string]interface{}, error) {
 		"migrationAdminMember":   migrationAdminMember.String(),
 		"feeMember":              feeMember.String(),
 		"migrationDaemonMembers": migrationDaemonMembersStrs,
+	}, nil
+}
+
+func createAPIOptions() (api.Options, error) {
+	apiInfoResponse, err := getAPIInfoResponse()
+	if err != nil {
+		return api.Options{}, err
+	}
+	adminContractMethods := map[string]bool{
+		"migration.deactivateDaemon": true,
+		"migration.activateDaemon":   true,
+		"migration.checkDaemon":      true,
+		"migration.addAddresses":     true,
+		"migration.getAddressCount":  true,
+		"deposit.migration":          true,
+		"member.getBalance":          true,
+		"contract.registerNode":      true,
+		"contract.getNodeRef":        true,
+	}
+	contractMethods := map[string]bool{
+		"member.create":          true,
+		"member.get":             true,
+		"member.transfer":        true,
+		"member.migrationCreate": true,
+		"deposit.transfer":       true,
+	}
+
+	return api.Options{
+		AdminContractMethods: adminContractMethods,
+		ContractMethods:      contractMethods,
+		InfoResponse:         apiInfoResponse,
 	}, nil
 }
