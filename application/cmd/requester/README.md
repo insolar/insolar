@@ -9,7 +9,7 @@ The requester is a simple CLI for sending requests to Insolar Platform.
     make requester
 
 ### Options
-    ./requester --help
+    The requester is a simple CLI for sending requests to Insolar Platform
     
     Usage:
       requester [flags]
@@ -21,6 +21,7 @@ The requester is a simple CLI for sending requests to Insolar Platform.
       -k, --memberkeys string   Path to member key
       -r, --request string      The request body or path to request params file
       -u, --url string          API URL. for example http://localhost:19101/api/rpc
+      -v, --verbose             Print request information
 
 
 
