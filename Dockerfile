@@ -24,5 +24,12 @@ WORKDIR /go/src/github.com/insolar/insolar
 RUN  set -eux; \
      groupadd -r insolar --gid=999; \
      useradd -r -g insolar --uid=999 --shell=/bin/bash insolar
-COPY --from=build /go/src/github.com/insolar/insolar/bin/insolar /go/src/github.com/insolar/insolar/bin/insolard /go/src/github.com/insolar/insolar/bin/keeperd /go/src/github.com/insolar/insolar/bin/pulsard /usr/local/bin/
-
+COPY --from=build /go/src/github.com/insolar/insolar/application/api/spec/api-exported.yaml /app/api-exported.yaml
+ADD deployments/bootstrap/* /app/bootstrap/
+COPY --from=build \
+    /go/src/github.com/insolar/insolar/bin/insolar \
+    /go/src/github.com/insolar/insolar/bin/insolard \
+    /go/src/github.com/insolar/insolar/bin/keeperd \
+    /go/src/github.com/insolar/insolar/bin/pulsard \
+    /go/src/github.com/insolar/insolar/bin/pulsewatcher \
+    /usr/local/bin/
