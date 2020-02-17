@@ -42,6 +42,9 @@ func NewGenerator(configFile string, contractsConfig map[string]interface{}) (*G
 
 // NewGeneratorWithConfig creates new Generator with provided config.
 func NewGeneratorWithConfig(config *Config, contractsConfig map[string]interface{}) *Generator {
+	if config.CertificateNameOffsetFromZero {
+		certNamesStartFrom = 0
+	}
 	return &Generator{
 		config:          config,
 		contractsConfig: contractsConfig,
