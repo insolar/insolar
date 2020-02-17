@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package foundation
 
@@ -69,7 +60,6 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 	})
 
 	t.Run("ok with compressed/uncompressed pk odd", func(t *testing.T) {
-		t.Skip() // unskip after ins-4141
 		pk1 := "-----BEGIN PUBLIC KEY-----\nMDYwEAYHKoZIzj0CAQYFK4EEAAoDIgAC45SRdXuMWUnPEHu0VcJlP4Ws6qj0rZzx\nDlv/xlyMdmo=\n-----END PUBLIC KEY-----\n"
 		pk2 := "-----BEGIN PUBLIC KEY-----\nMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE45SRdXuMWUnPEHu0VcJlP4Ws6qj0rZzx\nDlv/xlyMdmqGLpPEuqecYA3Gw9EWQ1I7CulTYQL4tMx0+zh14Rc27g==\n-----END PUBLIC KEY-----\n"
 		got1, _ := ExtractCanonicalPublicKey(pk1)
@@ -78,7 +68,6 @@ func TestExtractCanonicalPublicKey(t *testing.T) {
 	})
 
 	t.Run("ok with compressed/uncompressed pk even", func(t *testing.T) {
-		t.Skip() // unskip after ins-4141
 		pk1 := "-----BEGIN PUBLIC KEY-----\nMDYwEAYHKoZIzj0CAQYFK4EEAAoDIgADHHub97QxRqqlcWExT+5IWBXpKQ8lE7ih\nHCsfdiEwR80=\n-----END PUBLIC KEY-----\n"
 		pk2 := "-----BEGIN PUBLIC KEY-----\nMFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEHHub97QxRqqlcWExT+5IWBXpKQ8lE7ih\nHCsfdiEwR80q/bdILdePYFDTc/uRcQ7dwAcxZdVwE8XvJ1s6k1vHVQ==\n-----END PUBLIC KEY-----\n"
 		got1, _ := ExtractCanonicalPublicKey(pk1)

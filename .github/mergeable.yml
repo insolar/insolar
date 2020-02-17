@@ -34,3 +34,5 @@ mergeable:
                   reviewers: ["ita-sammann"]
               - required:
                   reviewers: ["shayenblue"]
+              - required:
+                  reviewers: ["LinnikD"]

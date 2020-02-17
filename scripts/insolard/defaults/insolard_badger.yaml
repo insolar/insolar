@@ -1,0 +1,5 @@
+metrics:
+  zpagesenabled: false
+ledger:
+  lightchainlimit: 15
+  ispostgresbase: false
