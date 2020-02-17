@@ -7,8 +7,8 @@ heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
 root_balance: "5000000000000000000"
 md_balance: "5000000000000000000"
 lockup_pulse_period: 20
-pk_shard_count: 10000
-ma_shard_count: 1000
+pk_shard_count: 100
+ma_shard_count: 100
 vesting_pulse_period: 10
 vesting_pulse_step: 10
 majority_rule: 5
@@ -16,9 +16,6 @@ min_roles:
   heavy_material: 1
   virtual:  2
   light_material: 2
-# TODO: check pulsar_public_keys usage
-pulsar_public_keys:
-  - "pulsar_public_key"
 discovery_nodes:
   -
     host: "127.0.0.1:13831"
