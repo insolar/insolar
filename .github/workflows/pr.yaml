@@ -118,7 +118,11 @@ jobs:
       - name: add bin to path
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: generate codecov
-        run:  make ci-test-with-coverage
+        run: |
+           make ci-test-with-coverage
+           content=`cat coverage.txt | ./scripts/dev/cover-filter.sh` 
+           echo "$content" > coverage.txt
+           echo "$content" | wc 
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - uses: codecov/codecov-action@v1
         with:
