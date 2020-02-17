@@ -6,11 +6,12 @@
 package requester
 
 import (
-	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/pkg/errors"
