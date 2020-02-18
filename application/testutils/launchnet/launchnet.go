@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"

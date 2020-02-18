@@ -12,7 +12,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
