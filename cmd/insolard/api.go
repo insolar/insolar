@@ -10,7 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func getAPIInfoResponse() (map[string]interface{}, error) {
+// initAPIInfoResponse creates application-specific data,
+// that will be included in response from /admin-api/rpc#network.getInfo
+func initAPIInfoResponse() (map[string]interface{}, error) {
 	rootDomain := genesisrefs.ContractRootDomain
 	if rootDomain.IsEmpty() {
 		return nil, errors.New("rootDomain ref is nil")

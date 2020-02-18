@@ -92,8 +92,8 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 		instr.SetError(err, InternalErrorShort)
 	}
 
-	for i, val := range s.runner.InfoResponse {
-		(*reply)[i] = val
+	for name, val := range s.runner.InfoResponse {
+		(*reply)[name] = val
 	}
 
 	return err
