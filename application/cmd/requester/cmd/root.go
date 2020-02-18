@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
@@ -29,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/log/logadapter"
+	crypto "github.com/insolar/x-crypto"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -47,22 +47,15 @@ var (
 )
 
 func parseInputParams(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
-	cmd.Flags().StringVarP(&apiURL, "url", "u", "", "API URL. for example http://localhost:19101/api/rpc")
-	cmd.Flags().StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
-	cmd.Flags().BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
-	cmd.Flags().BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
-	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Print request information")
+	flags := cmd.Flags()
+	flags.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
+	flags.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
+	flags.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
+	flags.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
+	flags.BoolVarP(&verbose, "verbose", "v", false, "Print request information")
 }
 
 func verifyParams() {
-	if len(apiURL) > 0 {
-		ok, err := isUrl(apiURL)
-		if !ok {
-			log.Fatal("URL parameter is incorrect. ", err)
-		}
-	}
-
 	// verify that the member keys paramsFile is exist
 	if !isFileExists(memberKeysPath) {
 		log.Fatal("Member keys does not exists")
@@ -121,6 +114,7 @@ func getContextWithLogger() context.Context {
 	defaultCfg.Instruments.MetricsMode = insolar.NoLogMetrics
 	logger, _ := log.NewLogExt(cfg, defaultCfg, 0)
 	ctx = inslogger.SetLogger(ctx, logger)
+	log.SetGlobalLogger(logger)
 
 	return ctx
 }
@@ -141,12 +135,32 @@ func createUserConfig(privateKey crypto.PrivateKey) (*requester.UserConfigJSON, 
 	return requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
 }
 
+// requireUrlArg returns an error if there is not url args.
+func requireUrlArg() cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return errors.New("The program required url as an argument")
+		}
+		return nil
+	}
+}
+
 func getRequesterCommand() *cobra.Command {
 	retCmd := &cobra.Command{
-		Use:   "requester",
-		Short: ApplicationShortDescription,
+		Use:     "requester <insolar url>",
+		Short:   ApplicationShortDescription,
+		Args:    requireUrlArg(),
+		Example: "./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r params.json  -v",
+		Run: func(_ *cobra.Command, args []string) {
 
-		Run: func(_ *cobra.Command, _ []string) {
+			// no need to check args size because of requireUrlArg
+			apiURL = args[0]
+			if len(apiURL) > 0 {
+				ok, err := isUrl(apiURL)
+				if !ok {
+					log.Fatal("URL parameter is incorrect. ", err)
+				}
+			}
 
 			verifyParams()
 			ctx := getContextWithLogger()
@@ -172,7 +186,7 @@ func getRequesterCommand() *cobra.Command {
 				log.Fatal(err)
 			}
 
-			print(string(response))
+			_, _ = os.Stdout.Write(response)
 		},
 	}
 
