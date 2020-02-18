@@ -51,6 +51,9 @@ type Runner struct {
 	cacheLock     *sync.RWMutex
 	SeedManager   *seedmanager.SeedManager
 	SeedGenerator seedmanager.SeedGenerator
+
+	// InfoResponse contains info, that will be included in response from /admin-api/rpc#network.getInfo
+	InfoResponse map[string]interface{}
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {
@@ -124,6 +127,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	jetCoordinator jet.Coordinator,
 	networkStatus insolar.NetworkStatus,
 	availabilityChecker insolar.AvailabilityChecker,
+	infoResponse map[string]interface{},
 ) (*Runner, error) {
 
 	err := checkConfig(cfg)
@@ -147,6 +151,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		cfg:                 cfg,
 		keyCache:            make(map[string]crypto.PublicKey),
 		cacheLock:           &sync.RWMutex{},
+		InfoResponse:        infoResponse,
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")

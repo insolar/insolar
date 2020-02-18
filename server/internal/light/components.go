@@ -78,7 +78,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, apiInfoResponse map[string]interface{}) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -208,6 +208,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -224,6 +225,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiInfoResponse,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")

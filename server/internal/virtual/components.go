@@ -97,6 +97,7 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 	builtinContracts builtin.BuiltinContracts,
+	apiInfoResponse map[string]interface{},
 
 ) (*component.Manager, func()) {
 	cm := component.NewManager(nil)
@@ -152,6 +153,7 @@ func initComponents(
 		jc,
 		nw,
 		availabilityChecker,
+		apiInfoResponse,
 	)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -166,6 +168,7 @@ func initComponents(
 		jc,
 		nw,
 		availabilityChecker,
+		apiInfoResponse,
 	)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
 

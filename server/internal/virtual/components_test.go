@@ -48,6 +48,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyProcessor,
 		cert,
 		builtin.BuiltinContracts{},
+		nil,
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)

@@ -22,12 +22,14 @@ import (
 )
 
 type Server struct {
-	cfgPath string
+	cfgPath         string
+	apiInfoResponse map[string]interface{}
 }
 
-func New(cfgPath string) *Server {
+func New(cfgPath string, apiInfoResponse map[string]interface{}) *Server {
 	return &Server{
-		cfgPath: cfgPath,
+		cfgPath:         cfgPath,
+		apiInfoResponse: apiInfoResponse,
 	}
 }
 
@@ -69,7 +71,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg)
+	cmp, err := newComponents(ctx, *cfg, s.apiInfoResponse)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
