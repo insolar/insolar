@@ -83,8 +83,3 @@ type StatusResponse struct {
 	Timestamp          time.Time `json:"timestamp"`
 	StartTime          time.Time `json:"startTime"`
 }
-
-type rpcInfoResponse struct {
-	Response
-	Result map[string]interface{} `json:"result"`
-}

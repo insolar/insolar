@@ -411,7 +411,7 @@ bootstrap()
     generate_migration_addresses
 
     echo "start bootstrap ..."
-    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
+    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG}"
 
     GENESIS_EXIT_CODE=0
     set +e

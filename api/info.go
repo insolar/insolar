@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/rpc/v2"
+
 	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/rpc/v2"
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -30,6 +31,20 @@ type InfoService struct {
 // NewInfoService creates new Info service instance.
 func NewInfoService(runner *Runner) *InfoService {
 	return &InfoService{runner: runner}
+}
+
+func (s *InfoService) getInfo(_ context.Context, _ *http.Request, _ *InfoArgs, _ *rpc.RequestBody, reply *map[string]interface{}) error {
+	nodeDomain := genesisrefs.ContractNodeDomain
+	if nodeDomain.IsEmpty() {
+		return errors.New("nodeDomain ref is nil")
+	}
+
+	*reply = map[string]interface{}{
+		"nodeDomain": nodeDomain.String(),
+		"traceID":    utils.RandTraceID(),
+	}
+
+	return nil
 }
 
 // GetInfo returns info about genesis objects.
@@ -60,20 +75,6 @@ func NewInfoService(runner *Runner) *InfoService {
 //		"id": str|int|null // same as in request
 //	}
 //
-func (s *InfoService) getInfo(_ context.Context, _ *http.Request, _ *InfoArgs, _ *rpc.RequestBody, reply *map[string]interface{}) error {
-	nodeDomain := genesisrefs.ContractNodeDomain
-	if nodeDomain.IsEmpty() {
-		return errors.New("nodeDomain ref is nil")
-	}
-
-	*reply = map[string]interface{}{
-		"nodeDomain": nodeDomain.String(),
-		"traceID":    utils.RandTraceID(),
-	}
-
-	return nil
-}
-
 func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.RequestBody, reply *map[string]interface{}) error {
 	ctx, instr := instrumenter.NewMethodInstrument("InfoService.getInfo")
 	defer instr.End()
@@ -91,8 +92,8 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 		instr.SetError(err, InternalErrorShort)
 	}
 
-	for i, val := range s.runner.Options.InfoResponse {
-		(*reply)[i] = val
+	for name, val := range s.runner.Options.InfoResponse {
+		(*reply)[name] = val
 	}
 
 	return err

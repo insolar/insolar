@@ -295,26 +295,6 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Para
 	return response, nil
 }
 
-// Info makes rpc request to network.getInfo method and extracts it
-func Info(url string) (map[string]interface{}, error) {
-	body, err := GetResponseBodyPlatform(url, "network.getInfo", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ]")
-	}
-
-	infoResp := rpcInfoResponse{}
-
-	err = json.Unmarshal(body, &infoResp)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
-	}
-	if infoResp.Error != nil {
-		return nil, infoResp.Error
-	}
-
-	return infoResp.Result, nil
-}
-
 // Status makes rpc request to node.getStatus method and extracts it
 func Status(url string) (*StatusResponse, error) {
 	body, err := GetResponseBodyPlatform(url, "node.getStatus", nil)

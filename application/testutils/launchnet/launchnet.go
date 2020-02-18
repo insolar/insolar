@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/application/api/sdk"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
@@ -99,7 +100,7 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info map[string]interface{}
+var info *sdk.InfoResponse
 var Root User
 var MigrationAdmin User
 var FeeMember User
@@ -308,7 +309,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestRPCUrl)
+	info, err = sdk.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
@@ -529,8 +530,8 @@ func setup() error {
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	Root.Ref = info["rootMember"].(string)
-	MigrationAdmin.Ref = info["migrationAdminMember"].(string)
+	Root.Ref = info.RootMember
+	MigrationAdmin.Ref = info.MigrationAdminMember
 
 	return nil
 }
