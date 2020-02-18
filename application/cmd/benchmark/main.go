@@ -60,7 +60,7 @@ var (
 	discoveryNodesLogs        string
 	maxRetries                int
 	retryPeriod               time.Duration
-	pauseBeforeGettingBalance time.Duration
+	delayBeforeGettingBalance time.Duration
 )
 
 func parseInputParams() {
@@ -83,7 +83,7 @@ func parseInputParams() {
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
 	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
-	pflag.DurationVarP(&pauseBeforeGettingBalance, "pause-before-getting-balance", "", 0, "pause before getting balance")
+	pflag.DurationVarP(&delayBeforeGettingBalance, "delay-before-getting-balance", "d", 0, "delay before getting balance")
 	pflag.Parse()
 }
 
@@ -493,7 +493,7 @@ func main() {
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
-	time.Sleep(pauseBeforeGettingBalance)
+	time.Sleep(delayBeforeGettingBalance)
 
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
