@@ -68,8 +68,8 @@ func runCmd(args ...string) (string, error) {
 
 func getArgs(key, url, requestParams string, shouldPrivateKey, shouldSeed bool) []string {
 	cmd := make([]string, 5)
-	cmd[0] = fmt.Sprintf("-k=%v", key)
-	cmd[1] = fmt.Sprintf("-u=%v", url)
+	cmd[0] = fmt.Sprintf("%v", url)
+	cmd[1] = fmt.Sprintf("-k=%v", key)
 	cmd[2] = fmt.Sprintf("-r=%v", requestParams)
 	cmd[3] = fmt.Sprintf("-p=%v", shouldPrivateKey)
 	cmd[4] = fmt.Sprintf("-s=%v", shouldSeed)

@@ -61,9 +61,9 @@ func (s *requesterSuiteTest) TestRequester_AllArgsPassedSuccessfully() {
 }
 
 func (s *requesterSuiteTest) TestRequester_UserShouldPassUrl() {
-	sout, err := runCmd(getArgs("/somePath", "", "someParams.json", true, true)...)
+	sout, err := runCmd(getArgs(s.userKeyFile.Name(), "", s.paramsFile.Name(), true, true)[1:]...)
 	assert.Error(s.T(), err)
-	assert.Contains(s.T(), sout, "URL parameter is incorrect")
+	assert.Contains(s.T(), sout, "The program required url as an argument")
 }
 
 func (s *requesterSuiteTest) TestRequester_UserShouldNotPassInvalidUrl() {
