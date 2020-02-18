@@ -491,6 +491,8 @@ func main() {
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
+	// AALEKSEEV TODO
+
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
 		// update balances in file
