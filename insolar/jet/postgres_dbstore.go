@@ -139,7 +139,8 @@ func (s *PostgresDBStore) get(pn insolar.PulseNumber) *Tree {
 	err = row.Scan(&serializedTree)
 
 	if err != nil {
-		log.Errorf("PostgresDBStore.get - row.Scan failed: %v", err)
+		// this happens on regular basis
+		// log.Errorf("PostgresDBStore.get - row.Scan failed: %v", err)
 		_ = tx.Rollback(ctx)
 		return ErrResult
 	}
