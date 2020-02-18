@@ -12,11 +12,11 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
