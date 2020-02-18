@@ -1,0 +1,14 @@
+# unfortunately we need config with proper cert, data dir and swagger file for heavy node
+# even in 'genesis only' mode
+ledger:
+  storage:
+    datadirectory: /var/data/
+log:
+  level: Debug
+  outputtype: stderr
+apirunner:
+  swaggerpath: /app/api-exported.yaml
+adminapirunner:
+  swaggerpath: /app/api-exported.yaml
+keyspath: /var/data/bootstrap/discovery-keys/node-0.json
+certificatepath: /var/data/bootstrap/certs/discovery-cert-0.json

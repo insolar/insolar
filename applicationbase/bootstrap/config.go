@@ -10,6 +10,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+// certNamesStartFrom is an offset certificate name index starts from.
+var certNamesStartFrom = 1
+
 // Node contains info about discovery nodes.
 type Node struct {
 	Host string `mapstructure:"host" yaml:"host"`
@@ -29,6 +32,12 @@ type Config struct {
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir" yaml:"discovery_keys_dir"`
 	// NotDiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	NotDiscoveryKeysDir string `mapstructure:"not_discovery_keys_dir" yaml:"not_discovery_keys_dir"`
+	// CertificatesOutDir is a directory where to save generated cert files.
+	CertificatesOutDir string `mapstructure:"certificates_out_dir" yaml:"certificates_out_dir"`
+	// CertificateNameOffsetFromZero specifies if starting index number starts from zero.
+	// Mostly exists because of launchnet, where node names uses numeric suffix started from 1.
+	// TODO: get rid of launchnet and this parameter - @nordicdyno 17.02.2020
+	CertificateNameOffsetFromZero bool `mapstructure:"certificate_name_offset_from_zero" yaml:"certificate_name_offset_from_zero"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
 	KeysNameFormat string `mapstructure:"keys_name_format" yaml:"keys_name_format"`
 	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)

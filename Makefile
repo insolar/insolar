@@ -43,6 +43,7 @@ ifneq ("$(wildcard ./.git)", "")
 	BUILD_VERSION ?= $(shell git describe --tags)
 endif
 DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
+DOCKER_IMAGE_TAG ?= $(DOCKER_BASE_IMAGE_TAG)
 
 GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
@@ -345,6 +346,17 @@ docker_base_build: ## build base image with source dependencies and compiled bin
 		-f docker/Dockerfile .
 	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
 	docker images "insolar-base"
+
+.PHONY: docker_build
+docker_build: ## build image with binaries and files required for kubernetes deployment.
+	docker build -t insolar/insolar:$(DOCKER_IMAGE_TAG) \
+		--build-arg BUILD_DATE="$(BUILD_DATE)" \
+		--build-arg BUILD_TIME="$(BUILD_TIME)" \
+		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
+		--build-arg BUILD_HASH="$(BUILD_HASH)" \
+		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
+		-f Dockerfile .
+	docker images "insolar/insolar"
 
 .PHONY: docker_clean
 docker_clean: ## removes intermediate docker image layers w/o tags (beware: it clean up space, but resets caches)
