@@ -64,7 +64,7 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	apiOptions, err := createAPIOptions()
+	apiOptions, err := initAPIOptions()
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "failed to get API info response"))
 	}

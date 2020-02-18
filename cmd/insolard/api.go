@@ -50,7 +50,8 @@ func initAPIInfoResponse() (map[string]interface{}, error) {
 	}, nil
 }
 
-func createAPIOptions() (api.Options, error) {
+// initAPIOptions creates options object, that contains application-specific settings for api component.
+func initAPIOptions() (api.Options, error) {
 	apiInfoResponse, err := initAPIInfoResponse()
 	if err != nil {
 		return api.Options{}, err
