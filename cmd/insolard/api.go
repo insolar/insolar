@@ -61,8 +61,6 @@ func createAPIOptions() (api.Options, error) {
 		"migration.getAddressCount":  true,
 		"deposit.migration":          true,
 		"member.getBalance":          true,
-		"contract.registerNode":      true,
-		"contract.getNodeRef":        true,
 	}
 	contractMethods := map[string]bool{
 		"member.create":          true,

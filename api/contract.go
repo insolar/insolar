@@ -114,12 +114,12 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func setRootReferenceIfNeeded(params *requester.Params, runner *Runner) {
+func setRootReferenceIfNeeded(params *requester.Params, options Options) {
 	if params.Reference != "" {
 		return
 	}
-	if contains(runner.Options.ProxyToRootMethods, params.CallSite) {
-		params.Reference = runner.Options.RootReference.String()
+	if contains(options.ProxyToRootMethods, params.CallSite) {
+		params.Reference = options.RootReference.String()
 	}
 }
 

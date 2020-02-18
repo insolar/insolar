@@ -55,12 +55,18 @@ type Runner struct {
 	Options Options
 }
 
+// Options contains application-specific settings for api component.
 type Options struct {
-	InfoResponse         map[string]interface{}
+	// InfoResponse contains info, that will be included in response from /admin-api/rpc#network.getInfo
+	InfoResponse map[string]interface{}
+	// AdminContractMethods are set of api methods, that need to be called from /admin-api/rpc url.
 	AdminContractMethods map[string]bool
-	ContractMethods      map[string]bool
-	RootReference        insolar.Reference
-	ProxyToRootMethods   []string
+	// ContractMethods are set of api methods, that need to be called from /api/rpc url.
+	ContractMethods map[string]bool
+	// RootReference is reference of object, that will be set as Caller for methods in ProxyToRootMethods.
+	RootReference insolar.Reference
+	// ProxyToRootMethods is set of api methods, that need to be called with RootReference as Caller.
+	ProxyToRootMethods []string
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {

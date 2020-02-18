@@ -23,7 +23,10 @@ type AdminContractService struct {
 
 // NewAdminContractService creates new AdminContract service instance.
 func NewAdminContractService(runner *Runner) *AdminContractService {
-	return &AdminContractService{runner: runner, allowedMethods: runner.Options.AdminContractMethods}
+	allowedMethods := runner.Options.AdminContractMethods
+	allowedMethods["contract.registerNode"] = true
+	allowedMethods["contract.getNodeRef"] = true
+	return &AdminContractService{runner: runner, allowedMethods: allowedMethods}
 }
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
