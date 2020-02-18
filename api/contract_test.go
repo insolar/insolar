@@ -74,7 +74,7 @@ func TestTimeoutSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
 	cfg.Address = "localhost:19192"
-	cfg.SwaggerPath = "spec/api-exported.yaml"
+	cfg.SwaggerPath = "testdata/api-exported.yaml"
 	api, err := NewRunner(
 		&cfg,
 		nil,

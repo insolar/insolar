@@ -40,7 +40,7 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, Options{})
 	suite.Contains(err.Error(), "Missing openAPI spec file path")
 
-	cfg.SwaggerPath = "spec/api-exported.yaml"
+	cfg.SwaggerPath = "testdata/api-exported.yaml"
 	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, Options{})
 	suite.NoError(err)
 	suite.NoError(runner.Stop(context.Background()))
@@ -50,7 +50,7 @@ func TestMainTestSuite(t *testing.T) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
-	cfg.SwaggerPath = "spec/api-exported.yaml"
+	cfg.SwaggerPath = "testdata/api-exported.yaml"
 	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, Options{})
 	require.NoError(t, err, "new runner constructor")
 
