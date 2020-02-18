@@ -12,7 +12,10 @@ The requester is a simple CLI for sending requests to Insolar Platform.
     The requester is a simple CLI for sending requests to Insolar Platform
     
     Usage:
-      requester [flags]
+      requester <insolar url> [flags]
+    
+    Examples:
+    ./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r params.json  -v
     
     Flags:
       -p, --autocompletekey     Should replace publicKey to correct value (default true)
@@ -20,7 +23,6 @@ The requester is a simple CLI for sending requests to Insolar Platform.
       -h, --help                help for requester
       -k, --memberkeys string   Path to member key
       -r, --request string      The request body or path to request params file
-      -u, --url string          API URL. for example http://localhost:19101/api/rpc
       -v, --verbose             Print request information
 
 
@@ -44,7 +46,7 @@ The requester is a simple CLI for sending requests to Insolar Platform.
     }
 ```      
 
-`./bin/requester -k=/tmp/userkey -u http://localhost:19101/api/rpc -r params.json -p true -s true` <br>
+`./bin/requester -k=/tmp/userkey -r params.json  http://localhost:19101/api/rpc` <br>
 or <br>
-```./bin/requester -k=/tmp/userkey -u http://localhost:19101/api/rpc -r="`cat params.json`" -p true -s true```
+```./bin/requester http://localhost:19101/api/rpc -k=/tmp/userkey -r="`cat params.json`" ```
    
