@@ -35,11 +35,6 @@ const TESTREFERENCE = "insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI"
 const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
-var testInfoResponse = map[string]interface{}{
-	"rootMember": "root_member_ref",
-	"rootDomain": "root_domain_ref",
-	"nodeDomain": "node_domain_ref",
-}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
 func writeReponse(response http.ResponseWriter, answer interface{}) {
@@ -72,8 +67,6 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	switch request.Method {
 	case "node.getStatus":
 		rpcResponse.Result = testStatusResponse
-	case "network.getInfo":
-		rpcResponse.Result = testInfoResponse
 	case "node.getSeed":
 		rpcResponse.Result = testSeedResponse
 	case "contract.call":
