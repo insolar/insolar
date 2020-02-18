@@ -92,23 +92,23 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
-	response, err := requester.Info(adminBuffer.next())
+	response, err := Info(adminBuffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get info")
 	}
 
-	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response["rootMember"].(string))
+	rootMember, err := getMember(filepath.Join(memberKeysDirPath, "root_member_keys.json"), response.RootMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get root member")
 	}
 
 	migrationAdminMember, err := getMember(
-		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response["migrationAdminMember"].(string))
+		filepath.Join(memberKeysDirPath, "migration_admin_member_keys.json"), response.MigrationAdminMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
-	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response["feeMember"].(string))
+	feeMember, err := getMember(filepath.Join(memberKeysDirPath, "fee_member_keys.json"), response.FeeMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get fee member")
 	}
@@ -124,13 +124,13 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		options:                options,
 	}
 
-	if len(response["migrationDaemonMembers"].([]interface{})) < application.GenesisAmountMigrationDaemonMembers {
+	if len(response.MigrationDaemonMembers) < application.GenesisAmountMigrationDaemonMembers {
 		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", application.GenesisAmountActiveMigrationDaemonMembers))
 	}
 
 	for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
 		m, err := getMember(
-			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response["migrationDaemonMembers"].([]interface{})[i].(string))
+			filepath.Join(memberKeysDirPath, bootstrap.GetMigrationDaemonPath(i)), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))
 		}
@@ -138,6 +138,26 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 	}
 
 	return result, nil
+}
+
+// Info makes rpc request to network.getInfo method and extracts it
+func Info(url string) (*InfoResponse, error) {
+	body, err := requester.GetResponseBodyPlatform(url, "network.getInfo", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ]")
+	}
+
+	infoResp := rpcInfoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
+	}
+	if infoResp.Error != nil {
+		return nil, infoResp.Error
+	}
+
+	return &infoResp.Result, nil
 }
 
 func (sdk *SDK) GetFeeMember() Member {

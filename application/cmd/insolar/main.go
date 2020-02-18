@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/insolar/insolar/application/api/sdk"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -264,10 +265,10 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		PublicKey:  string(pubKeyStr),
 	}
 
-	info, err := requester.Info(sendURL)
+	info, err := sdk.Info(sendURL)
 	check("Problems with obtaining info", err)
 
-	ucfg, err := requester.CreateUserConfig(info["rootMember"].(string), cfg.PrivateKey, cfg.PublicKey)
+	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey, cfg.PublicKey)
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
@@ -377,13 +378,13 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	}
 
 	if userCfg.Caller == "" {
-		info, err := requester.Info(adminURL)
+		info, err := sdk.Info(adminURL)
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
-			userCfg.Caller = info["rootMember"].(string)
+			userCfg.Caller = info.RootMember
 		}
 		if maAsCaller {
-			userCfg.Caller = info["migrationAdminMember"].(string)
+			userCfg.Caller = info.MigrationAdminMember
 			reqCfg.PublicKey = userCfg.PublicKey
 		}
 	}
@@ -399,12 +400,12 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 }
 
 func getInfo(url string) {
-	info, err := requester.Info(url)
+	info, err := sdk.Info(url)
 	check("[ sendRequest ]", err)
-	fmt.Printf("TraceID    : %s\n", info["traceID"].(string))
-	fmt.Printf("RootMember : %s\n", info["rootMember"].(string))
-	fmt.Printf("NodeDomain : %s\n", info["nodeDomain"].(string))
-	fmt.Printf("RootDomain : %s\n", info["rootDomain"].(string))
+	fmt.Printf("TraceID    : %s\n", info.TraceID)
+	fmt.Printf("RootMember : %s\n", info.RootMember)
+	fmt.Printf("NodeDomain : %s\n", info.NodeDomain)
+	fmt.Printf("RootDomain : %s\n", info.RootDomain)
 }
 
 func check(msg string, err error) {

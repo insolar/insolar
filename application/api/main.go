@@ -52,6 +52,7 @@ type Runner struct {
 	SeedManager   *seedmanager.SeedManager
 	SeedGenerator seedmanager.SeedGenerator
 
+	// InfoResponse contains info, that will be included in response from /admin-api/rpc#network.getInfo
 	InfoResponse map[string]interface{}
 }
 

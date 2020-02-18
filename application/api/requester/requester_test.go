@@ -238,12 +238,6 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 	require.EqualError(t, err, "[ SendWithSeed ] Problem with creating target request: configs must be initialized")
 }
 
-func TestInfo(t *testing.T) {
-	resp, err := Info(URL)
-	require.NoError(t, err)
-	require.Equal(t, resp, testInfoResponse)
-}
-
 func TestStatus(t *testing.T) {
 	resp, err := Status(URL)
 	require.NoError(t, err)
