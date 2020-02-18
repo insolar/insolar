@@ -41,25 +41,26 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile          string
-	output              string
-	concurrent          int
-	repetitions         int
-	memberKeys          string
-	adminAPIURLs        []string
-	publicAPIURLs       []string
-	logLevel            string
-	logLevelServer      string
-	saveMembersToFile   bool
-	useMembersFromFile  bool
-	noCheckBalance      bool
-	checkMembersBalance bool
-	checkAllBalance     bool
-	checkTotalBalance   bool
-	scenarioName        string
-	discoveryNodesLogs  string
-	maxRetries          int
-	retryPeriod         time.Duration
+	memberFile                string
+	output                    string
+	concurrent                int
+	repetitions               int
+	memberKeys                string
+	adminAPIURLs              []string
+	publicAPIURLs             []string
+	logLevel                  string
+	logLevelServer            string
+	saveMembersToFile         bool
+	useMembersFromFile        bool
+	noCheckBalance            bool
+	checkMembersBalance       bool
+	checkAllBalance           bool
+	checkTotalBalance         bool
+	scenarioName              string
+	discoveryNodesLogs        string
+	maxRetries                int
+	retryPeriod               time.Duration
+	pauseBeforeGettingBalance time.Duration
 )
 
 func parseInputParams() {
@@ -82,6 +83,7 @@ func parseInputParams() {
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
 	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
+	pflag.DurationVarP(&pauseBeforeGettingBalance, "pause-before-getting-balance", "", 0, "pause before getting balance")
 	pflag.Parse()
 }
 
@@ -491,7 +493,7 @@ func main() {
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
-	// AALEKSEEV TODO
+	time.Sleep(pauseBeforeGettingBalance)
 
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
