@@ -16,7 +16,7 @@ import (
 	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/secrets"
@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const ParentDomain = "parentDomain"
+
 func TestData_EmptyDomainData(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
@@ -39,7 +41,7 @@ func TestData_EmptyDomainData(t *testing.T) {
 	defer am.MinimockFinish()
 
 	dnm := NewDiscoveryNodeManager(am)
-	err := dnm.StoreDiscoveryNodes(ctx, nil)
+	err := dnm.StoreDiscoveryNodes(ctx, nil, ParentDomain)
 	require.NoError(t, err, "StoreDiscoveryNodes failed")
 }
 
@@ -58,7 +60,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 			PublicKey: platformpolicy.MustPublicKeyToString(n.key),
 		})
 	}
-	err = dCerts.StoreDiscoveryNodes(ctx, networkNodes)
+	err = dCerts.StoreDiscoveryNodes(ctx, networkNodes, ParentDomain)
 	require.NoError(t, err, "StoreDiscoveryNodes failed")
 
 	objDesc, err := am.GetObject(ctx, genesisrefs.ContractNodeDomain)
@@ -128,7 +130,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		obj artifact.ObjectDescriptor,
 		memory []byte,
 	) error {
-		if domain != genesisrefs.ContractRootDomain {
+		if domain != genesisrefs.GenesisRef(ParentDomain) {
 			return errors.Errorf("domain should be the contract root domain ref")
 		}
 		if request != genesisrefs.ContractNodeDomain {

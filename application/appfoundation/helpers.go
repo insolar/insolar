@@ -37,11 +37,6 @@ func GetRootDomain() insolar.Reference {
 	return genesisrefs.ContractRootDomain
 }
 
-// Get reference on NodeDomain contract.
-func GetNodeDomain() insolar.Reference {
-	return genesisrefs.ContractNodeDomain
-}
-
 // Get reference on  migrationdaemon contract by  migration member.
 func GetMigrationDaemon(migrationMember insolar.Reference) (insolar.Reference, error) {
 	return genesisrefs.ContractMigrationMap[migrationMember], nil

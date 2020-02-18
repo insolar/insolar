@@ -5,11 +5,12 @@ env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
-  GOPATH: /home/runner/work/insolar/insolar/go
 jobs:
-  test-unit:
-    name: test-unit
+  unit-tests:
+    name: unit-tests
     runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/insolar/insolar/go
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -29,9 +30,11 @@ jobs:
       - name: test_unit
         run: make test_unit
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
-  test-slow:
-    name: test-slow
+  slow-tests:
+    name: slow-tests
     runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/insolar/insolar/go
     steps:
       - name: checkout code
         uses: actions/checkout@master
@@ -51,3 +54,123 @@ jobs:
       - name: test_slow
         run: make test_slow
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+  net-integration-tests:
+    name: net-integration-tests
+    runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/insolar/insolar/go
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: test_prepare
+        run: |
+           go mod download
+           make pre-build build
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - name: test_net-integration
+        run: make ci-test-integrtest
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+  codegen:
+    name: codegen
+    runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/insolar/insolar/go
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: codegen
+        run: |
+           go clean -modcache
+           make install-deps
+           make pre-build
+           git diff --exit-code
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/insolar/insolar/go
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: generate codecov
+        run: |
+           make ci-test-with-coverage
+           content=`cat coverage.txt | ./scripts/dev/cover-filter.sh` 
+           echo "$content" | tee $GITHUB_WORKSPACE/coverage.txt
+           cat ./coverage.txt | wc 
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.codecov_token }}
+          file: ./coverage.txt
+          yml:  ./codecov.yml
+          fail_ci_if_error: true
+  func-tests-badger:
+    runs-on: self-hosted
+    name: func-tests-badger
+    env:
+      GOPATH: ${{github.workspace}}/go
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: test_func
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        run: |
+          make build
+          make functest
+  func-tests-pgsql:
+    runs-on: self-hosted
+    name: func-tests-pgsql
+    env:
+      GOPATH: ${{github.workspace}}/go
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+        with:
+          path: go/src/github.com/insolar/insolar
+      - name: set up go ${{env.GO_VERSION}}
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{env.GO_VERSION}}
+      - name: add bin to path
+        run: echo "::add-path::${{env.GOPATH}}/bin"
+      - name: test_func
+        working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+        env:
+          POSTGRES_ENABLE: 1
+        run: |
+          make build
+          make functest

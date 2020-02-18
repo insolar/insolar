@@ -21,7 +21,6 @@ local make_min_roles() = {
     root_balance: 1000000000,
     majority_rule: 0,
     min_roles: make_min_roles(),
-    pulsar_public_keys: ['pulsar_public_key'],
 
     // generating discovery_nodes
     local discovery_nodes_tmpl() = {

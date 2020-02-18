@@ -54,9 +54,7 @@ func NewUnsignedCertificate(baseCert insolar.Certificate, pKey string, role stri
 			Reference: ref,
 			Role:      role,
 		},
-		PulsarPublicKeys:    cert.PulsarPublicKeys,
-		RootDomainReference: cert.RootDomainReference,
-		BootstrapNodes:      make([]BootstrapNode, len(cert.BootstrapNodes)),
+		BootstrapNodes: make([]BootstrapNode, len(cert.BootstrapNodes)),
 	}
 	for i, node := range cert.BootstrapNodes {
 		newCert.BootstrapNodes[i].Host = node.Host

@@ -84,12 +84,7 @@ type Certificate struct {
 		HeavyMaterial uint `json:"heavy_material"`
 		LightMaterial uint `json:"light_material"`
 	} `json:"min_roles"`
-	PulsarPublicKeys    []string        `json:"pulsar_public_keys"`
-	RootDomainReference string          `json:"root_domain_ref"`
-	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
-
-	// preprocessed fields
-	pulsarPublicKey []crypto.PublicKey
+	BootstrapNodes []BootstrapNode `json:"bootstrap_nodes"`
 }
 
 func newCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, data []byte) (*Certificate, error) {
@@ -123,11 +118,8 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcesso
 
 func (cert *Certificate) SerializeNetworkPart() []byte {
 	out := strconv.Itoa(cert.MajorityRule) + strconv.Itoa(int(cert.MinRoles.Virtual)) +
-		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial)) +
-		cert.RootDomainReference
+		strconv.Itoa(int(cert.MinRoles.HeavyMaterial)) + strconv.Itoa(int(cert.MinRoles.LightMaterial))
 
-	sort.Strings(cert.PulsarPublicKeys)
-	out += strings.Join(cert.PulsarPublicKeys, "")
 	nodes := make([]string, len(cert.BootstrapNodes))
 	for i, node := range cert.BootstrapNodes {
 		nodes[i] = node.PublicKey + node.NodeRef + node.Host + node.NodeRole
@@ -155,14 +147,6 @@ func (cert *Certificate) fillExtraFields(keyProcessor insolar.KeyProcessor) erro
 	}
 	cert.nodePublicKey = importedNodePubKey
 
-	for _, pulsarKey := range cert.PulsarPublicKeys {
-		importedPulsarPubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(pulsarKey))
-		if err != nil {
-			return errors.Wrapf(err, "[ fillExtraFields ] Bad pulsarKey: %s", pulsarKey)
-		}
-		cert.pulsarPublicKey = append(cert.pulsarPublicKey, importedPulsarPubKey)
-	}
-
 	for i := 0; i < len(cert.BootstrapNodes); i++ {
 		currentNode := &cert.BootstrapNodes[i]
 		importedBNodePubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(currentNode.PublicKey))
@@ -173,16 +157,6 @@ func (cert *Certificate) fillExtraFields(keyProcessor insolar.KeyProcessor) erro
 	}
 
 	return nil
-}
-
-// GetRootDomainReference returns RootDomain reference
-func (cert *Certificate) GetRootDomainReference() *insolar.Reference {
-	ref, err := insolar.NewReferenceFromString(cert.RootDomainReference)
-	if err != nil {
-		log.Errorf("Invalid domain reference in cert: %s\n", cert.Reference)
-		return nil
-	}
-	return ref
 }
 
 // GetDiscoveryNodes return bootstrap nodes array

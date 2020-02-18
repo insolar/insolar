@@ -324,7 +324,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 		return "", fmt.Errorf("only root member can register node")
 	}
 
-	nodeDomainRef := appfoundation.GetNodeDomain()
+	nodeDomainRef := foundation.GetNodeDomain()
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	cert, err := nd.RegisterNode(public, role)
@@ -336,7 +336,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 }
 
 func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
-	nd := nodedomain.GetObject(appfoundation.GetNodeDomain())
+	nd := nodedomain.GetObject(foundation.GetNodeDomain())
 	nodeRef, err := nd.GetNodeRefByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("network node was not found by public key: %s", err.Error())

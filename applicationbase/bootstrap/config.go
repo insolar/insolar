@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package bootstrap
 
@@ -58,10 +49,6 @@ type Config struct {
 
 	// Nodes is used only by generate_insolar_config.go
 	Nodes []Node `mapstructure:"nodes" yaml:"nodes"`
-
-	// PulsarPublicKeys is the pulsar's public keys for pulses validation
-	// (not in use, just for future features).
-	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys" yaml:"pulsar_public_keys"`
 }
 
 // hasMinimumRolesSet does basic check (it's not about majority rule).
