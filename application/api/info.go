@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/insolar/insolar/applicationbase/genesisrefs"
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/rpc/v2"
+
 	"github.com/insolar/insolar/application/api/instrumenter"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
