@@ -3,6 +3,7 @@ set -em
 # requires: lsof, awk, sed, grep, pgrep, docker
 
 export GO111MODULE=on
+export GOFLAGS="-mod=vendor"
 
 # Changeable environment variables (parameters)
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
@@ -195,7 +196,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run -mod=vendor scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
+    go run scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 

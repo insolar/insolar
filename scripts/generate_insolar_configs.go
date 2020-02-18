@@ -91,6 +91,7 @@ func writeGorundPorts(gorundPorts [][]string) {
 
 func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configuration) {
 	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
+
 	for index, conf := range insolardConfigs {
 		data := configuration.ToString(conf)
 

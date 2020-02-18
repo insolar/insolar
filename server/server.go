@@ -7,8 +7,8 @@ package server
 
 import (
 	"github.com/insolar/insolar/applicationbase/genesis"
-	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/server/internal/heavy"
 	"github.com/insolar/insolar/server/internal/light"
 	"github.com/insolar/insolar/server/internal/virtual"
@@ -25,10 +25,10 @@ func NewLightServer(cfgHolder *configuration.Holder) Server {
 
 // NewHeavyServer creates instance of Server for node with Heavy role
 func NewHeavyServer(cfgHolder *configuration.Holder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) Server {
-	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly)
+	return heavy.New(cfgHolder, genesisCfgPath, genesisOptions, genesisOnly)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
 func NewVirtualServer(cfgHolder *configuration.Holder, builtinContracts builtin.BuiltinContracts) Server {
-	return virtual.New(cfgPath, builtinContracts)
+	return virtual.New(cfgHolder, builtinContracts)
 }

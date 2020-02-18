@@ -10,13 +10,14 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/application"
 	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/logicrunner/builtin"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -70,9 +71,9 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		states, _ := initStates(holder, genesisConfigPath)
+		states, _ := initStates(genesisConfigPath)
 		s := server.NewHeavyServer(
-			configPath,
+			holder,
 			genesisConfigPath,
 			genesis.Options{
 				States:           states,
