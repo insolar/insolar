@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -50,25 +41,26 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile          string
-	output              string
-	concurrent          int
-	repetitions         int
-	memberKeys          string
-	adminAPIURLs        []string
-	publicAPIURLs       []string
-	logLevel            string
-	logLevelServer      string
-	saveMembersToFile   bool
-	useMembersFromFile  bool
-	noCheckBalance      bool
-	checkMembersBalance bool
-	checkAllBalance     bool
-	checkTotalBalance   bool
-	scenarioName        string
-	discoveryNodesLogs  string
-	maxRetries          int
-	retryPeriod         time.Duration
+	memberFile                string
+	output                    string
+	concurrent                int
+	repetitions               int
+	memberKeys                string
+	adminAPIURLs              []string
+	publicAPIURLs             []string
+	logLevel                  string
+	logLevelServer            string
+	saveMembersToFile         bool
+	useMembersFromFile        bool
+	noCheckBalance            bool
+	checkMembersBalance       bool
+	checkAllBalance           bool
+	checkTotalBalance         bool
+	scenarioName              string
+	discoveryNodesLogs        string
+	maxRetries                int
+	retryPeriod               time.Duration
+	delayBeforeGettingBalance time.Duration
 )
 
 func parseInputParams() {
@@ -91,6 +83,7 @@ func parseInputParams() {
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
 	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
+	pflag.DurationVarP(&delayBeforeGettingBalance, "delay-before-getting-balance", "d", 0, "delay before getting balance")
 	pflag.Parse()
 }
 
@@ -499,6 +492,8 @@ func main() {
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
+
+	time.Sleep(delayBeforeGettingBalance)
 
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())

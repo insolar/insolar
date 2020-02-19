@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package api
 
@@ -32,25 +23,25 @@ type MainAPISuite struct {
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
-	_, err := NewRunner(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err := NewRunner(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "config is nil")
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	cfg := configuration.APIRunner{}
-	_, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
-	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "Missing openAPI spec file path")
 
 	cfg.SwaggerPath = "spec/api-exported.yaml"
-	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	runner, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.NoError(err)
 	suite.NoError(runner.Stop(context.Background()))
 }
@@ -60,7 +51,7 @@ func TestMainTestSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
 	cfg.SwaggerPath = "spec/api-exported.yaml"
-	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	require.NoError(t, err, "new runner constructor")
 
 	cm := certificate.NewCertificateManager(&certificate.Certificate{})

@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package executor
 
@@ -27,13 +18,29 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-type BadgerGCRunner interface {
+type GCRunner interface {
 	// RunValueGC run badger values garbage collection
 	RunValueGC(ctx context.Context)
 }
 
+type PostgresGCRunInfo struct {
+}
+
+func (p *PostgresGCRunInfo) RunValueGC(ctx context.Context) {
+}
+
+func (p *PostgresGCRunInfo) RunGCIfNeeded(ctx context.Context) <-chan struct{} {
+	c := make(chan struct{}, 1)
+	c <- struct{}{}
+	return c
+}
+
+type GCRunInfo interface {
+	RunGCIfNeeded(ctx context.Context) <-chan struct{}
+}
+
 type BadgerGCRunInfo struct {
-	runner BadgerGCRunner
+	runner GCRunner
 	// runFrequency is period of running gc (in number of pulses)
 	runFrequency uint
 
@@ -41,7 +48,7 @@ type BadgerGCRunInfo struct {
 	tryLock     chan struct{}
 }
 
-func NewBadgerGCRunInfo(runner BadgerGCRunner, runFrequency uint) *BadgerGCRunInfo {
+func NewBadgerGCRunInfo(runner GCRunner, runFrequency uint) *BadgerGCRunInfo {
 	tryLock := make(chan struct{}, 1)
 	tryLock <- struct{}{}
 	return &BadgerGCRunInfo{
@@ -98,7 +105,7 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 }
 
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner *BadgerGCRunInfo) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner GCRunInfo) {
 	finPulse := &newPulse
 	for {
 		finPulse = finalizePulseStep(ctx, pulses, backuper, jetKeeper, indexes, *finPulse, gcRunner)
@@ -110,7 +117,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 
 var finalizationLock sync.Mutex
 
-func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber, gcRunner *BadgerGCRunInfo) *insolar.PulseNumber {
+func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, pulseToFinalize insolar.PulseNumber, gcRunner GCRunInfo) *insolar.PulseNumber {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"pulse_to_finalize": pulseToFinalize,
 	})
@@ -125,19 +132,21 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 	// record all jets count
 	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, pulseToFinalize)))))
 
-	startedAt := time.Now()
-	logger.Infof("finalizePulseStep: calling backuperr.MakeBackup()...")
-	bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
-	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
-		logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
-	}
-	logger.Infof("finalizePulseStep: MakeBackup() done!")
+	if backuper != nil {
+		// Badger backend is used and backups are enabled
+		startedAt := time.Now()
+		logger.Infof("finalizePulseStep: calling backuper.MakeBackup()...")
+		bkpError := backuper.MakeBackup(ctx, pulseToFinalize)
+		if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
+			logger.Fatal("finalizePulseStep: MakeBackup() failed: " + bkpError.Error())
+		}
+		logger.Infof("finalizePulseStep: MakeBackup() done!")
+		stats.Record(ctx, statBackupTime.M(time.Since(startedAt).Nanoseconds()))
 
-	stats.Record(ctx, statBackupTime.M(time.Since(startedAt).Nanoseconds()))
-
-	if bkpError == ErrAlreadyDone {
-		logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
-		return nil
+		if bkpError == ErrAlreadyDone {
+			logger.Info("finalizePulseStep: pulse already backuped: ", pulseToFinalize, bkpError)
+			return nil
+		}
 	}
 
 	logger.Info("finalizePulseStep: before getting lock")

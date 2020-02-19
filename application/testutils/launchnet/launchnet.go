@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package launchnet
 
@@ -33,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/application/api/sdk"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
@@ -108,7 +100,7 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info *requester.InfoResponse
+var info *sdk.InfoResponse
 var Root User
 var MigrationAdmin User
 var FeeMember User
@@ -317,7 +309,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestRPCUrl)
+	info, err = sdk.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}

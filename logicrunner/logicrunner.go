@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // Package logicrunner - infrastructure for executing smartcontracts
 package logicrunner
@@ -72,17 +63,22 @@ type LogicRunner struct {
 	Cfg *configuration.LogicRunner
 
 	rpc *lrCommon.RPC
+
+	builtinContracts builtin.BuiltinContracts
 }
 
 // NewLogicRunner is constructor for LogicRunner
-func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender) (*LogicRunner, error) {
+func NewLogicRunner(
+	cfg *configuration.LogicRunner, publisher watermillMsg.Publisher, sender bus.Sender, builtinContracts builtin.BuiltinContracts,
+) (*LogicRunner, error) {
 	if cfg == nil {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:       cfg,
-		Publisher: publisher,
-		Sender:    sender,
+		Cfg:              cfg,
+		Publisher:        publisher,
+		Sender:           sender,
+		builtinContracts: builtinContracts,
 	}
 
 	return &res, nil
@@ -165,6 +161,7 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	bi := builtin.NewBuiltIn(
 		lr.ArtifactManager,
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
+		lr.builtinContracts,
 	)
 	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
 		return err

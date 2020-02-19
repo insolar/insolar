@@ -57,12 +57,6 @@ type CertificateMock struct {
 	beforeGetRoleCounter uint64
 	GetRoleMock          mCertificateMockGetRole
 
-	funcGetRootDomainReference          func() (rp1 *mm_insolar.Reference)
-	inspectFuncGetRootDomainReference   func()
-	afterGetRootDomainReferenceCounter  uint64
-	beforeGetRootDomainReferenceCounter uint64
-	GetRootDomainReferenceMock          mCertificateMockGetRootDomainReference
-
 	funcSerializeNodePart          func() (ba1 []byte)
 	inspectFuncSerializeNodePart   func()
 	afterSerializeNodePartCounter  uint64
@@ -90,8 +84,6 @@ func NewCertificateMock(t minimock.Tester) *CertificateMock {
 	m.GetPublicKeyMock = mCertificateMockGetPublicKey{mock: m}
 
 	m.GetRoleMock = mCertificateMockGetRole{mock: m}
-
-	m.GetRootDomainReferenceMock = mCertificateMockGetRootDomainReference{mock: m}
 
 	m.SerializeNodePartMock = mCertificateMockSerializeNodePart{mock: m}
 
@@ -1101,149 +1093,6 @@ func (m *CertificateMock) MinimockGetRoleInspect() {
 	}
 }
 
-type mCertificateMockGetRootDomainReference struct {
-	mock               *CertificateMock
-	defaultExpectation *CertificateMockGetRootDomainReferenceExpectation
-	expectations       []*CertificateMockGetRootDomainReferenceExpectation
-}
-
-// CertificateMockGetRootDomainReferenceExpectation specifies expectation struct of the Certificate.GetRootDomainReference
-type CertificateMockGetRootDomainReferenceExpectation struct {
-	mock *CertificateMock
-
-	results *CertificateMockGetRootDomainReferenceResults
-	Counter uint64
-}
-
-// CertificateMockGetRootDomainReferenceResults contains results of the Certificate.GetRootDomainReference
-type CertificateMockGetRootDomainReferenceResults struct {
-	rp1 *mm_insolar.Reference
-}
-
-// Expect sets up expected params for Certificate.GetRootDomainReference
-func (mmGetRootDomainReference *mCertificateMockGetRootDomainReference) Expect() *mCertificateMockGetRootDomainReference {
-	if mmGetRootDomainReference.mock.funcGetRootDomainReference != nil {
-		mmGetRootDomainReference.mock.t.Fatalf("CertificateMock.GetRootDomainReference mock is already set by Set")
-	}
-
-	if mmGetRootDomainReference.defaultExpectation == nil {
-		mmGetRootDomainReference.defaultExpectation = &CertificateMockGetRootDomainReferenceExpectation{}
-	}
-
-	return mmGetRootDomainReference
-}
-
-// Inspect accepts an inspector function that has same arguments as the Certificate.GetRootDomainReference
-func (mmGetRootDomainReference *mCertificateMockGetRootDomainReference) Inspect(f func()) *mCertificateMockGetRootDomainReference {
-	if mmGetRootDomainReference.mock.inspectFuncGetRootDomainReference != nil {
-		mmGetRootDomainReference.mock.t.Fatalf("Inspect function is already set for CertificateMock.GetRootDomainReference")
-	}
-
-	mmGetRootDomainReference.mock.inspectFuncGetRootDomainReference = f
-
-	return mmGetRootDomainReference
-}
-
-// Return sets up results that will be returned by Certificate.GetRootDomainReference
-func (mmGetRootDomainReference *mCertificateMockGetRootDomainReference) Return(rp1 *mm_insolar.Reference) *CertificateMock {
-	if mmGetRootDomainReference.mock.funcGetRootDomainReference != nil {
-		mmGetRootDomainReference.mock.t.Fatalf("CertificateMock.GetRootDomainReference mock is already set by Set")
-	}
-
-	if mmGetRootDomainReference.defaultExpectation == nil {
-		mmGetRootDomainReference.defaultExpectation = &CertificateMockGetRootDomainReferenceExpectation{mock: mmGetRootDomainReference.mock}
-	}
-	mmGetRootDomainReference.defaultExpectation.results = &CertificateMockGetRootDomainReferenceResults{rp1}
-	return mmGetRootDomainReference.mock
-}
-
-//Set uses given function f to mock the Certificate.GetRootDomainReference method
-func (mmGetRootDomainReference *mCertificateMockGetRootDomainReference) Set(f func() (rp1 *mm_insolar.Reference)) *CertificateMock {
-	if mmGetRootDomainReference.defaultExpectation != nil {
-		mmGetRootDomainReference.mock.t.Fatalf("Default expectation is already set for the Certificate.GetRootDomainReference method")
-	}
-
-	if len(mmGetRootDomainReference.expectations) > 0 {
-		mmGetRootDomainReference.mock.t.Fatalf("Some expectations are already set for the Certificate.GetRootDomainReference method")
-	}
-
-	mmGetRootDomainReference.mock.funcGetRootDomainReference = f
-	return mmGetRootDomainReference.mock
-}
-
-// GetRootDomainReference implements insolar.Certificate
-func (mmGetRootDomainReference *CertificateMock) GetRootDomainReference() (rp1 *mm_insolar.Reference) {
-	mm_atomic.AddUint64(&mmGetRootDomainReference.beforeGetRootDomainReferenceCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetRootDomainReference.afterGetRootDomainReferenceCounter, 1)
-
-	if mmGetRootDomainReference.inspectFuncGetRootDomainReference != nil {
-		mmGetRootDomainReference.inspectFuncGetRootDomainReference()
-	}
-
-	if mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation.Counter, 1)
-
-		mm_results := mmGetRootDomainReference.GetRootDomainReferenceMock.defaultExpectation.results
-		if mm_results == nil {
-			mmGetRootDomainReference.t.Fatal("No results are set for the CertificateMock.GetRootDomainReference")
-		}
-		return (*mm_results).rp1
-	}
-	if mmGetRootDomainReference.funcGetRootDomainReference != nil {
-		return mmGetRootDomainReference.funcGetRootDomainReference()
-	}
-	mmGetRootDomainReference.t.Fatalf("Unexpected call to CertificateMock.GetRootDomainReference.")
-	return
-}
-
-// GetRootDomainReferenceAfterCounter returns a count of finished CertificateMock.GetRootDomainReference invocations
-func (mmGetRootDomainReference *CertificateMock) GetRootDomainReferenceAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetRootDomainReference.afterGetRootDomainReferenceCounter)
-}
-
-// GetRootDomainReferenceBeforeCounter returns a count of CertificateMock.GetRootDomainReference invocations
-func (mmGetRootDomainReference *CertificateMock) GetRootDomainReferenceBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetRootDomainReference.beforeGetRootDomainReferenceCounter)
-}
-
-// MinimockGetRootDomainReferenceDone returns true if the count of the GetRootDomainReference invocations corresponds
-// the number of defined expectations
-func (m *CertificateMock) MinimockGetRootDomainReferenceDone() bool {
-	for _, e := range m.GetRootDomainReferenceMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetRootDomainReferenceMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRootDomainReferenceCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetRootDomainReference != nil && mm_atomic.LoadUint64(&m.afterGetRootDomainReferenceCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetRootDomainReferenceInspect logs each unmet expectation
-func (m *CertificateMock) MinimockGetRootDomainReferenceInspect() {
-	for _, e := range m.GetRootDomainReferenceMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetRootDomainReferenceMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRootDomainReferenceCounter) < 1 {
-		m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetRootDomainReference != nil && mm_atomic.LoadUint64(&m.afterGetRootDomainReferenceCounter) < 1 {
-		m.t.Error("Expected call to CertificateMock.GetRootDomainReference")
-	}
-}
-
 type mCertificateMockSerializeNodePart struct {
 	mock               *CertificateMock
 	defaultExpectation *CertificateMockSerializeNodePartExpectation
@@ -1404,8 +1253,6 @@ func (m *CertificateMock) MinimockFinish() {
 
 		m.MinimockGetRoleInspect()
 
-		m.MinimockGetRootDomainReferenceInspect()
-
 		m.MinimockSerializeNodePartInspect()
 		m.t.FailNow()
 	}
@@ -1437,6 +1284,5 @@ func (m *CertificateMock) minimockDone() bool {
 		m.MinimockGetNodeRefDone() &&
 		m.MinimockGetPublicKeyDone() &&
 		m.MinimockGetRoleDone() &&
-		m.MinimockGetRootDomainReferenceDone() &&
 		m.MinimockSerializeNodePartDone()
 }

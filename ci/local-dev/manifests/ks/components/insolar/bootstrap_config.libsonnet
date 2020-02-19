@@ -18,15 +18,9 @@ local make_min_roles() = {
     node_keys_dir: '/opt/insolar/config/nodes',
     discovery_keys_dir: '/opt/insolar/config/discovery',
     heavy_genesis_config_file: "/opt/insolar/config/heavy_genesis.json",
-    heavy_genesis_plugins_dir: "/opt/insolar/plugins",
-    contracts: {
-      insgocc: "/go/bin/insgocc",
-      outdir: "/opt/insolar/config/plugins",
-    },
     root_balance: 1000000000,
     majority_rule: 0,
     min_roles: make_min_roles(),
-    pulsar_public_keys: ['pulsar_public_key'],
 
     // generating discovery_nodes
     local discovery_nodes_tmpl() = {

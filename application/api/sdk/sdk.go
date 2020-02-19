@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package sdk
 
@@ -101,7 +92,7 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
-	response, err := requester.Info(adminBuffer.next())
+	response, err := Info(adminBuffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get info")
 	}
@@ -147,6 +138,26 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 	}
 
 	return result, nil
+}
+
+// Info makes rpc request to network.getInfo method and extracts it
+func Info(url string) (*InfoResponse, error) {
+	body, err := requester.GetResponseBodyPlatform(url, "network.getInfo", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ]")
+	}
+
+	infoResp := rpcInfoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
+	}
+	if infoResp.Error != nil {
+		return nil, infoResp.Error
+	}
+
+	return &infoResp.Result, nil
 }
 
 func (sdk *SDK) GetFeeMember() Member {

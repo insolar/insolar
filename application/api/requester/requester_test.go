@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package requester
 
@@ -44,7 +35,6 @@ const TESTREFERENCE = "insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI"
 const TESTSEED = "VGVzdA=="
 
 var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
-var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
 func writeReponse(response http.ResponseWriter, answer interface{}) {
@@ -77,8 +67,6 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	switch request.Method {
 	case "node.getStatus":
 		rpcResponse.Result = testStatusResponse
-	case "network.getInfo":
-		rpcResponse.Result = testInfoResponse
 	case "node.getSeed":
 		rpcResponse.Result = testSeedResponse
 	case "contract.call":
@@ -241,12 +229,6 @@ func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
 	require.EqualError(t, err, "[ SendWithSeed ] Problem with creating target request: configs must be initialized")
-}
-
-func TestInfo(t *testing.T) {
-	resp, err := Info(URL)
-	require.NoError(t, err)
-	require.Equal(t, resp, &testInfoResponse)
 }
 
 func TestStatus(t *testing.T) {
