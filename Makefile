@@ -120,8 +120,8 @@ $(INSOLAR):
 	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): application/cmd/insgocc/insgocc.go logicrunner/preprocessor
-	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" application/cmd/insgocc/*.go
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
+	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
 

@@ -36,7 +36,7 @@ func buildInsiderCLI() (string, error) {
 }
 
 func BuildPreprocessor() (string, error) {
-	return buildCLI("application/cmd/insgocc")
+	return buildCLI("cmd/insgocc")
 }
 
 func testdataPath() string {
