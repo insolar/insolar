@@ -280,9 +280,9 @@ ci-test-integrtest-nightly: ## run networktest with race and a little count
 
 
 .PHONY: regen-proxies
-CONTRACTS = $(wildcard application/contract/*)
+CONTRACTS = $(wildcard applicationbase/contract/*)
 regen-proxies: $(BININSGOCC) ## regen contracts proxies
-	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
+	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy applicationbase/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
 .PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
