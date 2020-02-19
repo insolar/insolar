@@ -46,26 +46,26 @@ func parseInputParams(cmd *cobra.Command) {
 	flags.BoolVarP(&verbose, "verbose", "v", false, "Print request information")
 }
 
-func verifyParams() {
+func verifyParams() error {
 	// verify that the member keys paramsFile is exist
 	if !isFileExists(memberKeysPath) {
-		log.Fatal("Member keys does not exists")
+		return errors.New("Member keys does not exists")
 	}
 
 	// try to read keys
 	keys, err := secrets.ReadXCryptoKeysFile(memberKeysPath, false)
 	if err != nil {
-		log.Fatal("Cannot parse member keys. ", err)
+		return errors.Wrap(err, "Cannot parse member keys. ")
 	}
 	memberPrivateKey = keys.Private
 
 	if len(inputRequestParams) == 0 {
-		log.Fatal("Request parameters cannot be empty")
+		return errors.New("Request parameters cannot be empty")
 	}
 	if isFileExists(inputRequestParams) {
 		fileContent, err := ioutil.ReadFile(inputRequestParams)
 		if err != nil {
-			log.Fatal("Cannot read request. ", err)
+			return errors.Wrap(err, "Cannot read request. ")
 		}
 		// save to inputRequestParams if we could read params file for unmarshalling
 		inputRequestParams = string(fileContent)
@@ -73,8 +73,10 @@ func verifyParams() {
 
 	err = json.Unmarshal([]byte(inputRequestParams), &request)
 	if err != nil {
-		log.Fatal("Cannot unmarshal request. ["+inputRequestParams+"]", err)
+		return errors.Wrap(err, "Cannot unmarshal request. ["+inputRequestParams+"]")
 	}
+
+	return nil
 }
 
 func isUrl(str string) (bool, error) {
@@ -136,30 +138,33 @@ func requireUrlArg() cobra.PositionalArgs {
 	}
 }
 
-func getRequesterCommand() *cobra.Command {
+func GetRequesterCommand() *cobra.Command {
 	retCmd := &cobra.Command{
 		Use:     "requester <insolar url>",
 		Short:   ApplicationShortDescription,
 		Args:    requireUrlArg(),
 		Example: "./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r params.json  -v",
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 
 			// no need to check args size because of requireUrlArg
 			apiURL = args[0]
 			if len(apiURL) > 0 {
 				ok, err := isUrl(apiURL)
 				if !ok {
-					log.Fatal("URL parameter is incorrect. ", err)
+					return errors.Wrap(err, "URL parameter is incorrect. ")
 				}
 			}
 
-			verifyParams()
+			e := verifyParams()
+			if e != nil {
+				return e
+			}
 			ctx := getContextWithLogger()
 			requester.SetVerbose(verbose)
 
 			userConfig, e := createUserConfig(memberPrivateKey)
 			if e != nil {
-				log.Fatal(e)
+				return e
 			}
 			if shouldPastePublicKey {
 				request.Params.PublicKey = userConfig.PublicKey
@@ -174,18 +179,17 @@ func getRequesterCommand() *cobra.Command {
 			}
 
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			_, _ = os.Stdout.Write(response)
+			return nil
 		},
 	}
-
+	parseInputParams(retCmd)
 	return retCmd
 }
 
 func Execute() error {
-	rootCmd := getRequesterCommand()
-	parseInputParams(rootCmd)
-	return rootCmd.Execute()
+	return GetRequesterCommand().Execute()
 }

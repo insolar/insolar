@@ -12,14 +12,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/insolar/insolar/application/cmd/requester/cmd"
 	"github.com/insolar/insolar/insolar/secrets"
 )
 
 const (
-	binLocation                string = "./../../../bin/requester"
 	getSeedResponse            string = `{"jsonrpc":"2.0","result":{"seed":"s2pMpKZwIeqOaHbVkWQQFnzMPqotBKwEnBElZCTmz3w=","traceID":"c648d2ee1e414ce7f12f266cef47eeac"},"id":0}`
 	memberCreateResponse       string = `{"jsonrpc":"2.0","result":{"callResult":{"reference":"insolar:1AhiuscmUtUs4gqtSQFcKj-PV5Z1hp3GVGG4SPtdxkvs"},"requestReference":"insolar:1AhiusW4AvZu_0tdLO0Vq_cH9Hoc62vU4W0vJApydA1I.record","traceID":"f441b82fb75cc744595524353140e0b2"},"id":8674665223082153551}`
 	createMemberRequestExample string = `{
@@ -61,9 +60,19 @@ func handlers() http.Handler {
 }
 
 func runCmd(args ...string) (string, error) {
-	cmd := exec.Command(binLocation, args...)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
+	// cmd := exec.Command(binLocation, args...)
+	// out, err := cmd.CombinedOutput()
+	// return string(out), err
+	var executionError error
+	out, captureError := CaptureOutput(func() {
+		rootCmd := cmd.GetRequesterCommand()
+		rootCmd.SetArgs(args)
+		executionError = rootCmd.Execute()
+	})
+	if captureError != nil {
+		return out, captureError
+	}
+	return out, executionError
 }
 
 func getArgs(key, url, requestParams string, shouldPrivateKey, shouldSeed bool) []string {
