@@ -1,15 +1,11 @@
 name: pull_request
 on:
-  pull_request:
-
   push:
     branches:
       - master
-
+  pull_requests
   schedule:
-    - cron: 
-        - '0 2 * * *'
-        - '0 4 * * *'
+    - cron: '0 2 * * *'
 env:
   GO_VERSION: 1.12.15
   CI_GOMAXPROCS: 0
