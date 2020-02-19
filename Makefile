@@ -13,7 +13,6 @@ INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 BACKUPMANAGER = backupmanager
-APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
 BADGER = badger
@@ -106,7 +105,7 @@ vendor: ## update vendor dependencies
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
+build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -148,10 +147,6 @@ $(PULSEWATCHER):
 .PHONY: $(BACKUPMANAGER)
 $(BACKUPMANAGER):
 	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMANAGER) -ldflags "${LDFLAGS}" cmd/backupmanager/*.go
-
-.PHONY: $(APIREQUESTER)
-$(APIREQUESTER):
-	$(GOBUILD) -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
 
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
