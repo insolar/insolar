@@ -51,10 +51,7 @@ To test Insolar locally, install it and deploy as described below.
    It generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.
    The default number of nodes is 5, you can uncomment more in `scripts/insolard/bootstrap_template.yaml`.
 
-2. When the pulse watcher says `INSOLAR STATE: READY`, you can run the following:
-
-   * Benchmark:
-
+2. When the pulse watcher says `INSOLAR STATE: READY`, you can run a benchmark:
      ```
      bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
      ```
