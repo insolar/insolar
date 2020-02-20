@@ -64,6 +64,8 @@ var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
 var Enterprise [application.GenesisAmountEnterpriseMembers]*User
 var Foundation [application.GenesisAmountFoundationMembers]*User
 
+var appPath = []string{"insolar", "insolar"}
+
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
 func Run(cb func() int) int {
@@ -127,7 +129,7 @@ func launchnetPath(a ...string) (string, error) {
 	cwdList := strings.Split(cwd, "/")
 	var count int
 	for i := len(cwdList); i >= 0; i-- {
-		if cwdList[i-1] == "insolar" && cwdList[i-2] == "insolar" {
+		if cwdList[i-1] == appPath[0] && cwdList[i-2] == appPath[1] {
 			break
 		}
 		count++
@@ -402,7 +404,8 @@ func startNet() error {
 		_ = os.Chdir(cwd)
 	}()
 
-	for cwd[len(cwd)-15:] != "insolar/insolar" {
+	cwdList := strings.Split(cwd, "/")
+	for cwdList[len(cwdList)-1] != appPath[1] || cwdList[len(cwdList)-2] != appPath[0] {
 		err = os.Chdir("../")
 		if err != nil {
 			return errors.Wrap(err, "[ startNet  ] Can't change dir")
@@ -411,8 +414,11 @@ func startNet() error {
 		if err != nil {
 			return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 		}
+		if cwd == "/" {
+			return errors.Errorf("[ startNet ] Can't find directory with name `insolar/%s`", appPath)
+		}
+		cwdList = strings.Split(cwd, "/")
 	}
-
 	// If you want to add -n flag here please make sure that insgorund will
 	// be eventually started with --log-level=debug. Otherwise someone will spent
 	// a lot of time trying to figure out why insgorund debug logs are missing
@@ -537,10 +543,8 @@ func setup() error {
 }
 
 func pulseWatcherPath() (string, string) {
-	insDir := insolar.RootModuleDir()
-	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
-
-	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
+	pulseWatcher := filepath.Join("pulsewatcher")
+	baseDir := defaults.LaunchnetDir()
 	config := filepath.Join(baseDir, "pulsewatcher.yaml")
 	return pulseWatcher, config
 }
