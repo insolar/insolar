@@ -40,7 +40,7 @@ func (p *PublisherMock) Close() error {
 	return nil
 }
 
-func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwork {
+func prepareNetwork(t *testing.T, cfg configuration.GenericConfiguration) *ServiceNetwork {
 	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
 	require.NoError(t, err)
 

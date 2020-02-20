@@ -1,7 +1,7 @@
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:0
+    address: 127.0.0.1:13831
     fixedpublicaddress: ""
   mintimeout: 10
   maxtimeout: 2000
@@ -10,31 +10,8 @@ host:
   handshakesessionttl: 5000
 service:
   cachedirectory: network_cache
-ledger:
-  storage:
-    datadirectory: ./data
-    badgervalueloggcdiscardratio: 0.4
-    gcrunfrequency: 1
-  jetsplit:
-    thresholdrecordscount: 100
-    thresholdoverflowcount: 3
-    depthlimit: 5
-  backup:
-    enabled: false
-    tmpdirectory: ""
-    targetdirectory: ""
-    metainfofile: meta.json
-    confirmfile: BACKUPED
-    backupfile: incr.bkp
-    dirnametemplate: pulse-%d
-    backupwaitperiod: 60
-    postprocessbackupcmd: []
-  cleanerdelay: 3
-  maxnotificationsperpulse: 100
-  filamentcachelimit: 3000
-  ispostgresbase: false
 log:
-  level: Info
+  level: Debug
   adapter: zerolog
   formatter: json
   outputtype: stderr
@@ -43,35 +20,35 @@ log:
   buffersize: 0
   llbuffersize: 0
 metrics:
-  listenaddress: 0.0.0.0:9091
+  listenaddress: 127.0.0.1:8001
   namespace: insolar
-  zpagesenabled: true
+  zpagesenabled: false
   reportingperiod: 0s
 logicrunner:
-  rpclisten: 127.0.0.1:7778
+  rpclisten: 127.0.0.1:33306
   rpcprotocol: tcp
   builtin: true
   goplugin:
-    runnerlisten: 127.0.0.1:7777
+    runnerlisten: 127.0.0.1:33305
     runnerprotocol: tcp
   pulselrusize: 100
 apirunner:
-  address: localhost:19101
+  address: 127.0.0.1:19101
   rpc: /api/rpc
   isadmin: false
   swaggerpath: application/api/spec/api-exported.yaml
 adminapirunner:
-  address: localhost:19001
+  address: 127.0.0.1:19001
   rpc: /admin-api/rpc
   isadmin: true
   swaggerpath: application/api/spec/api-exported.yaml
 availabilitychecker:
   enabled: true
-  keeperurl: ""
+  keeperurl: http://127.0.0.1:12012/check
   requesttimeout: 15
   checkperiod: 5
-keyspath: ./
-certificatepath: ""
+keyspath: .artifacts/launchnet/reusekeys/discovery//node_01.json
+certificatepath: .artifacts/launchnet/discoverynodes/certs/discovery_cert_1.json
 tracer:
   jaeger:
     collectorendpoint: ""
@@ -79,9 +56,7 @@ tracer:
     probabilityrate: 1
   samplingrules: {}
 introspection:
-  addr: ""
-exporter:
-  addr: :5678
+  addr: 127.0.0.1:55501
 bus:
   replytimeout: 15s
 lightchainlimit: 5

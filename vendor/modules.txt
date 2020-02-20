@@ -147,18 +147,18 @@ github.com/insolar/go-actors/actor
 github.com/insolar/go-actors/actor/errors
 github.com/insolar/go-actors/actor/system
 github.com/insolar/go-actors/actor/mailbox
-# github.com/insolar/insconfig v0.0.0-20200213152445-21a23222770b
+# github.com/insolar/insconfig v0.0.0-20200219113659-151f8a89d79e
 github.com/insolar/insconfig
 # github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
 github.com/insolar/rpc/v2
 github.com/insolar/rpc/v2/json2
 # github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
+github.com/insolar/x-crypto
 github.com/insolar/x-crypto/sha256
 github.com/insolar/x-crypto/ecdsa
 github.com/insolar/x-crypto/rand
 github.com/insolar/x-crypto/elliptic
 github.com/insolar/x-crypto/x509
-github.com/insolar/x-crypto
 github.com/insolar/x-crypto/internal/randutil
 github.com/insolar/x-crypto/sha512
 github.com/insolar/x-crypto/rand/internal/unix

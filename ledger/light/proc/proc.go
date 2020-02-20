@@ -35,7 +35,7 @@ type Dependencies struct {
 	SetCode        func(*SetCode)
 	SendFilament   func(*SendFilament)
 	HasPendings    func(*HasPendings)
-	Config         func() configuration.Ledger
+	Config         func() configuration.LedgerLight
 }
 
 func NewDependencies(
@@ -61,7 +61,7 @@ func NewDependencies(
 	requestChecker executor.RequestChecker,
 	detachedNotifier executor.DetachedNotifier,
 
-	config configuration.Ledger,
+	config configuration.LedgerLight,
 	registry executor.MetricsRegistry,
 ) *Dependencies {
 	dep := &Dependencies{
@@ -205,7 +205,7 @@ func NewDependencies(
 				sender,
 			)
 		},
-		Config: func() configuration.Ledger {
+		Config: func() configuration.LedgerLight {
 			return config
 		},
 	}
@@ -235,6 +235,6 @@ func NewDependenciesMock() *Dependencies {
 		SendFilament:   func(*SendFilament) {},
 		HasPendings:    func(*HasPendings) {},
 		GetRequestInfo: func(*SendRequestInfo) {},
-		Config:         configuration.NewLedger,
+		Config:         configuration.NewLedgerLight,
 	}
 }

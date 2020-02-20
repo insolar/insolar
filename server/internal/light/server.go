@@ -22,10 +22,10 @@ import (
 )
 
 type Server struct {
-	cfgHolder *configuration.Holder
+	cfgHolder *configuration.HolderLight
 }
 
-func New(cfgHolder *configuration.Holder) *Server {
+func New(cfgHolder *configuration.HolderLight) *Server {
 	return &Server{
 		cfgHolder: cfgHolder,
 	}

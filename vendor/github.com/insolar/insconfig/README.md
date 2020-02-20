@@ -1,9 +1,10 @@
 # insconfig
-Config management library
+Config management library.
+This is the wrapper on https://github.com/spf13/viper library
 
 Key features:
-- .yaml Format
-- No default config path, path is explicitly set by --config/-c flag. Optionally you can override this by implementing ConfigPathGetter
+- .yaml format
+- No default config path, path is explicitly set by --config/-c flag. Optionally you can override this by implementing ConfigPathGetter (look at tests)
 - Environment overrides file values
 - Can use only ENV, without file at all
 - Optionally prints config to log on start
@@ -20,3 +21,7 @@ Key features:
 ```
 go run ./example/example.go --config="./example/example_config.yaml"
 ```
+
+#Usage
+
+see example and tests

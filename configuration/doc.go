@@ -17,8 +17,8 @@ Usage:
 	)
 
 	func main() {
-		holder := configuration.NewHolder()
-		fmt.Printf("Default configuration:\n %+v\n", holder.Configuration)
+		holder := configuration.HolderLight()
+		fmt.Printf("Default configuration:\n %+v\n", holder.ConfigVirtual)
 		holder.SaveAs("insolar.yml")
 	}
 

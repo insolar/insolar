@@ -17,88 +17,163 @@ import (
 	"github.com/insolar/insolar/application"
 	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
-	"github.com/insolar/insolar/logicrunner/builtin"
-
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/server"
-	"github.com/insolar/insolar/version"
 )
 
 func main() {
 	var (
 		configPath        string
 		genesisConfigPath string
+		heavyDB           string
 		genesisOnly       bool
 	)
 
-	var rootCmd = &cobra.Command{
-		Use: "insolard",
-		Run: func(_ *cobra.Command, _ []string) {
-			runInsolardServer(configPath, genesisConfigPath, genesisOnly)
+	var cmdHeavy = &cobra.Command{
+		Use:   "heavy --config=path --heavy-genesis=path",
+		Short: "starts heavy node",
+		Run: func(cmd *cobra.Command, args []string) {
+			runHeavyNode(configPath, genesisConfigPath, heavyDB, genesisOnly)
 		},
 	}
-	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
-	rootCmd.Flags().BoolVarP(&genesisOnly, "genesis-only", "", false, "run only genesis and then terminate")
-	rootCmd.AddCommand(version.GetCommand("insolard"))
+	cmdHeavy.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
+	_ = cmdHeavy.MarkFlagRequired("heavy-genesis")
+	cmdHeavy.Flags().StringVarP(&heavyDB, "database", "", "", "sets database type for heavy node")
+	_ = cmdHeavy.MarkFlagRequired("database")
+	cmdHeavy.Flags().BoolVarP(&genesisOnly, "genesis-only", "", false, "run only genesis and then terminate")
+
+	var cmdLight = &cobra.Command{
+		Use:   "light --config=path",
+		Short: "starts light node",
+		Run: func(cmd *cobra.Command, args []string) {
+			runLightNode(configPath)
+		},
+	}
+
+	var cmdVirtual = &cobra.Command{
+		Use:   "virtual --config=path",
+		Short: "starts virtual node",
+		Run: func(cmd *cobra.Command, args []string) {
+			runVirtualNode(configPath)
+		},
+	}
+
+	var rootCmd = &cobra.Command{
+		Use: "insolard",
+	}
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	_ = rootCmd.MarkPersistentFlagRequired("config")
+	rootCmd.AddCommand(cmdHeavy, cmdLight, cmdVirtual)
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("insolard execution failed:", err)
 	}
 }
 
-// psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
-var psAgentLauncher = func() error { return nil }
+func runHeavyNode(configPath string, genesisConfigPath string, db string, genesisOnly bool) {
+	var holder configuration.ConfigHolder
+	var err error
 
-func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly bool) {
-	jww.SetStdoutThreshold(jww.LevelDebug)
-
-	holder, err := readConfig(configPath)
+	switch db {
+	case "badger":
+		holder, err = readHeavyBadgerConfig(configPath)
+	case "postgres":
+		holder, err = readHeavyPgConfig(configPath)
+	default:
+		log.Fatal("db type is not supported")
+	}
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "failed to load configuration"))
 	}
+
 	role, err := readRole(holder)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
+	}
+	if role != insolar.StaticRoleHeavyMaterial {
+		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
 	}
 
 	if err := psAgentLauncher(); err != nil {
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	switch role {
-	case insolar.StaticRoleHeavyMaterial:
-		states, _ := initStates(genesisConfigPath)
-		s := server.NewHeavyServer(
-			holder,
-			genesisConfigPath,
-			genesis.Options{
-				States:       states,
-				ParentDomain: application.GenesisNameRootDomain,
-			},
-			genesisOnly,
-		)
-		s.Serve()
-	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(holder)
-		s.Serve()
-	case insolar.StaticRoleVirtual:
-		builtinContracts := builtin.BuiltinContracts{
-			CodeRegistry:         appbuiltin.InitializeContractMethods(),
-			CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
-			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
-			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
-		}
-		s := server.NewVirtualServer(holder, builtinContracts)
-		s.Serve()
-	}
+	states, _ := initStates(genesisConfigPath)
+	s := server.NewHeavyServer(
+		holder,
+		genesisConfigPath,
+		genesis.Options{
+			States:       states,
+			ParentDomain: application.GenesisNameRootDomain,
+		},
+		genesisOnly,
+	)
+	s.Serve()
 }
 
-func readConfig(path string) (*configuration.Holder, error) {
-	cfg := configuration.NewHolder(path)
+func runVirtualNode(configPath string) {
+	jww.SetStdoutThreshold(jww.LevelDebug)
+
+	holder, err := readVirtualConfig(configPath)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to load configuration"))
+	}
+
+	role, err := readRole(holder)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "readRole failed"))
+	}
+	if role != insolar.StaticRoleHeavyMaterial {
+		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
+	}
+
+	if err := psAgentLauncher(); err != nil {
+		log.Warnf("Failed to launch gops agent: %s", err)
+	}
+
+	builtinContracts := builtin.BuiltinContracts{
+		CodeRegistry:         appbuiltin.InitializeContractMethods(),
+		CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
+		CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
+		PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
+	}
+	s := server.NewVirtualServer(holder, builtinContracts)
+	s.Serve()
+}
+
+func runLightNode(configPath string) {
+	jww.SetStdoutThreshold(jww.LevelDebug)
+
+	holder, err := readLightConfig(configPath)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to load configuration"))
+	}
+
+	role, err := readRole(holder)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "readRole failed"))
+	}
+	if role != insolar.StaticRoleHeavyMaterial {
+		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
+	}
+
+	if err := psAgentLauncher(); err != nil {
+		log.Warnf("Failed to launch gops agent: %s", err)
+	}
+
+	s := server.NewLightServer(holder)
+	s.Serve()
+}
+
+// psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
+var psAgentLauncher = func() error { return nil }
+
+func readHeavyBadgerConfig(path string) (*configuration.HolderHeavyBadger, error) {
+	cfg := configuration.NewHolderHeavyBadger(path)
 	err := cfg.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load configuration")
@@ -106,13 +181,40 @@ func readConfig(path string) (*configuration.Holder, error) {
 	return cfg, nil
 }
 
-func readRole(holder *configuration.Holder) (insolar.StaticRole, error) {
-	data, err := ioutil.ReadFile(filepath.Clean(holder.Configuration.CertificatePath))
+func readHeavyPgConfig(path string) (*configuration.HolderHeavyPg, error) {
+	cfg := configuration.NewHolderHeavyPg(path)
+	err := cfg.Load()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load configuration")
+	}
+	return cfg, nil
+}
+
+func readLightConfig(path string) (*configuration.HolderLight, error) {
+	cfg := configuration.NewHolderLight(path)
+	err := cfg.Load()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load configuration")
+	}
+	return cfg, nil
+}
+
+func readVirtualConfig(path string) (*configuration.HolderVirtual, error) {
+	cfg := configuration.NewHolderVirtual(path)
+	err := cfg.Load()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load configuration")
+	}
+	return cfg, nil
+}
+
+func readRole(holder configuration.ConfigHolder) (insolar.StaticRole, error) {
+	data, err := ioutil.ReadFile(filepath.Clean(holder.GetGenericConfig().CertificatePath))
 	if err != nil {
 		return insolar.StaticRoleUnknown, errors.Wrapf(
 			err,
 			"failed to read certificate from: %s",
-			holder.Configuration.CertificatePath,
+			holder.GetGenericConfig().CertificatePath,
 		)
 	}
 	cert := certificate.AuthorizationCertificate{}

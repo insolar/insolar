@@ -8,22 +8,17 @@ package configuration
 import (
 	"fmt"
 
-	"github.com/insolar/insconfig"
 	"gopkg.in/yaml.v2"
 )
 
 const InsolarEnvPrefix string = "insolar"
 
-var GlobalHolder *Holder = nil
-
-// Configuration contains configuration params for all Insolar components
-type Configuration struct {
+// GenericConfiguration contains configuration params for all Insolar components
+type GenericConfiguration struct {
 	Host                HostNetwork
 	Service             ServiceNetwork
-	Ledger              Ledger
 	Log                 Log
 	Metrics             Metrics
-	LogicRunner         LogicRunner
 	APIRunner           APIRunner
 	AdminAPIRunner      APIRunner
 	AvailabilityChecker AvailabilityChecker
@@ -31,12 +26,23 @@ type Configuration struct {
 	CertificatePath     string
 	Tracer              Tracer
 	Introspection       Introspection
-	Exporter            Exporter
 	Bus                 Bus
+
+	// LightChainLimit is maximum pulse difference (NOT number of pulses)
+	// between current and the latest replicated on heavy.
+	//
+	// IMPORTANT: It should be the same on ALL nodes.
+	LightChainLimit int
 }
 
-func (c Configuration) GetConfig() interface{} {
+func (c GenericConfiguration) GetConfig() interface{} {
 	return &c
+}
+
+// Holds GenericConfiguration + node specific config
+type ConfigHolder interface {
+	GetGenericConfig() GenericConfiguration
+	GetAllConfig() interface{}
 }
 
 // PulsarConfiguration contains configuration params for the pulsar node
@@ -48,21 +54,13 @@ type PulsarConfiguration struct {
 	Metrics  Metrics
 }
 
-// Holder provides methods to manage configuration
-type Holder struct {
-	Configuration Configuration
-	Params        insconfig.Params
-}
-
 // NewConfiguration creates new default configuration
-func NewConfiguration() Configuration {
-	cfg := Configuration{
+func NewConfiguration() GenericConfiguration {
+	cfg := GenericConfiguration{
 		Host:                NewHostNetwork(),
 		Service:             NewServiceNetwork(),
-		Ledger:              NewLedger(),
 		Log:                 NewLog(),
 		Metrics:             NewMetrics(),
-		LogicRunner:         NewLogicRunner(),
 		APIRunner:           NewAPIRunner(false),
 		AdminAPIRunner:      NewAPIRunner(true),
 		AvailabilityChecker: NewAvailabilityChecker(),
@@ -70,8 +68,8 @@ func NewConfiguration() Configuration {
 		CertificatePath:     "",
 		Tracer:              NewTracer(),
 		Introspection:       NewIntrospection(),
-		Exporter:            NewExporter(),
 		Bus:                 NewBus(),
+		LightChainLimit:     5, // 5 pulses
 	}
 
 	return cfg
@@ -94,50 +92,6 @@ type stringPathGetter struct {
 
 func (g *stringPathGetter) GetConfigPath() string {
 	return g.Path
-}
-
-// MustLoad wrapper around Load function which panics on error.
-func (h *Holder) MustLoad() *Holder {
-	err := h.Load()
-	if err != nil {
-		panic(err)
-	}
-	return h
-}
-
-// NewHolder creates new Holder with config path
-func NewHolder(path string) *Holder {
-	params := insconfig.Params{
-		ConfigStruct:     Configuration{},
-		EnvPrefix:        InsolarEnvPrefix,
-		ConfigPathGetter: &stringPathGetter{Path: path},
-		FileRequired:     false,
-	}
-	holder := &Holder{Configuration: Configuration{}, Params: params}
-
-	GlobalHolder = holder
-	return holder
-}
-
-// Returns global holder if exists
-func NewHolderGlobal(path string) *Holder {
-	// todo refactor this
-	if GlobalHolder != nil {
-		return GlobalHolder
-	}
-	return NewHolder(path)
-}
-
-// Load method reads configuration from params file path
-func (h *Holder) Load() error {
-	insConfigurator := insconfig.NewInsConfigurator(h.Params)
-	parsedConf, err := insConfigurator.Load()
-	if err != nil {
-		return err
-	}
-	cfg := parsedConf.(*Configuration)
-	h.Configuration = *cfg
-	return nil
 }
 
 // Deprecated

@@ -19,16 +19,16 @@ type Server interface {
 }
 
 // NewLightServer creates instance of Server for node with Light role
-func NewLightServer(cfgHolder *configuration.Holder) Server {
+func NewLightServer(cfgHolder *configuration.HolderLight) Server {
 	return light.New(cfgHolder)
 }
 
 // NewHeavyServer creates instance of Server for node with Heavy role
-func NewHeavyServer(cfgHolder *configuration.Holder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) Server {
+func NewHeavyServer(cfgHolder configuration.ConfigHolder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) Server {
 	return heavy.New(cfgHolder, genesisCfgPath, genesisOptions, genesisOnly)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
-func NewVirtualServer(cfgHolder *configuration.Holder, builtinContracts builtin.BuiltinContracts) Server {
+func NewVirtualServer(cfgHolder *configuration.HolderVirtual, builtinContracts builtin.BuiltinContracts) Server {
 	return virtual.New(cfgHolder, builtinContracts)
 }

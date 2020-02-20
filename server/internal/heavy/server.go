@@ -25,13 +25,13 @@ import (
 )
 
 type Server struct {
-	cfgHolder      *configuration.Holder
+	cfgHolder      configuration.ConfigHolder
 	genesisCfgPath string
 	genesisOptions genesis.Options
 	genesisOnly    bool
 }
 
-func New(cfgHolder *configuration.Holder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) *Server {
+func New(cfgHolder configuration.ConfigHolder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) *Server {
 	return &Server{
 		cfgHolder:      cfgHolder,
 		genesisCfgPath: genesisCfgPath,
@@ -51,10 +51,10 @@ func (s *Server) Serve() {
 		log.Fatalf("failed to parse genesis configuration from file: %v", s.genesisCfgPath)
 	}
 
-	cfg := s.cfgHolder.Configuration
+	cfg := s.cfgHolder.GetGenericConfig()
 
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.GetAllConfig()))
 
 	var (
 		ctx         = context.Background()
@@ -78,7 +78,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, cfg, genesisCfg, s.genesisOptions, s.genesisOnly)
+	cmp, err := newComponents(ctx, s.cfgHolder, genesisCfg, s.genesisOptions, s.genesisOnly)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

@@ -76,7 +76,7 @@ type components struct {
 	replicator executor.HeavyReplicator
 }
 
-func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.GenericConfiguration) (*certificate.CertificateManager, error) {
 	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -106,7 +106,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 
 func initWithPostgres(
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.ConfigHeavyPg,
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
@@ -176,7 +176,7 @@ func initWithPostgres(
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, c.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg.GenericConfiguration.Host, c.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -191,7 +191,7 @@ func initWithPostgres(
 		JetsPostgres   *jet.PostgresDBStore
 	)
 	{
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PlatformCryptographyScheme = CryptoScheme
 		Coordinator = c
 
@@ -339,7 +339,7 @@ func initWithPostgres(
 		PulseManager.PulseAppender = PulsesPostgres
 		PulseManager.PulseAccessor = PulsesPostgres
 		PulseManager.JetModifier = JetsPostgres
-		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(PostgresJetKeeper, PulsesPostgres, cfg.Ledger.LightChainLimit)
+		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(PostgresJetKeeper, PulsesPostgres, cfg.LightChainLimit)
 
 		replicator := executor.NewHeavyReplicatorDefault(
 			RecordsPostgres,
@@ -356,7 +356,7 @@ func initWithPostgres(
 
 		PulseManager.StartPulse = sp
 
-		h := handler.New(cfg.Ledger, &executor.PostgresGCRunInfo{})
+		h := handler.New(cfg.LightChainLimit, &executor.PostgresGCRunInfo{})
 		h.RecordAccessor = RecordsPostgres
 		h.RecordModifier = RecordsPostgres
 		h.JetCoordinator = Coordinator
@@ -469,7 +469,7 @@ func initWithPostgres(
 
 func initWithBadger(
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.ConfigHeavyBadger,
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
@@ -539,7 +539,7 @@ func initWithBadger(
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, c.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg.GenericConfiguration.Host, c.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -578,7 +578,7 @@ func initWithBadger(
 		stats.Record(ctx, statBadgerStartTime.M(float64(timeBadgerStarted.Nanoseconds())/1e6))
 		logger.Info("badger starts in ", timeBadgerStarted)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -687,13 +687,13 @@ func initWithBadger(
 		PulseManager.PulseAccessor = Pulses
 		PulseManager.JetModifier = Jets
 		PulseManager.StartPulse = sp
-		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
+		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.LightChainLimit)
 
 		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
 		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 		c.replicator = replicator
 
-		h := handler.New(cfg.Ledger, gcRunInfo)
+		h := handler.New(cfg.LightChainLimit, gcRunInfo)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
@@ -805,12 +805,20 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
-	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+func newComponents(ctx context.Context, cfg configuration.ConfigHolder, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
+	// todo refactor
+	heavyCfg := cfg.GetAllConfig()
+	switch realCfg := heavyCfg.(type) {
+	case configuration.ConfigHeavyPg:
+		if realCfg.Ledger.IsPostgresBase {
+			return initWithPostgres(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly)
+		}
+	case configuration.ConfigHeavyBadger:
+		if !realCfg.Ledger.IsPostgresBase {
+			return initWithBadger(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly)
+		}
 	}
-
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+	return nil, errors.New("can't start heavy, db configuration error")
 }
 
 func (c *components) Start(ctx context.Context) error {

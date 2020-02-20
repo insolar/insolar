@@ -31,12 +31,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// this should be implemented by local config struct
+// This should be implemented by local config struct
 type ConfigStruct interface {
 	GetConfig() interface{}
 }
 
 type Params struct {
+	// Your config
 	ConfigStruct ConfigStruct
 	// Prefix for environment variables
 	EnvPrefix string
@@ -52,7 +53,7 @@ type ConfigPathGetter interface {
 	GetConfigPath() string
 }
 
-// Adds "--config" flag and read path from it
+// Default behaviour adds "--config" flag and read path from it, custom flags should be created before
 type DefaultConfigPathGetter struct {
 	// For go flags compatibility
 	GoFlags *goflag.FlagSet
@@ -187,14 +188,32 @@ func deepFieldNames(iface interface{}, prefix string) []string {
 
 	for i := 0; i < ifv.NumField(); i++ {
 		v := ifv.Field(i)
+		tagValue := ifv.Type().Field(i).Tag.Get("mapstructure")
+		tagParts := strings.Split(tagValue, ",")
+
+		// If "squash" is specified in the tag, we squash the field down.
+		squash := false
+		for _, tag := range tagParts[1:] {
+			if tag == "squash" {
+				squash = true
+				break
+			}
+		}
 
 		switch v.Kind() {
 		case reflect.Struct:
-			subPrefix := ""
-			if prefix != "" {
-				subPrefix = prefix + "."
+			newPrefix := ""
+			currPrefix := ""
+			if !squash {
+				currPrefix = ifv.Type().Field(i).Name
 			}
-			names = append(names, deepFieldNames(v.Interface(), subPrefix+ifv.Type().Field(i).Name)...)
+			if prefix != "" {
+				newPrefix = strings.Join([]string{prefix, currPrefix}, ".")
+			} else {
+				newPrefix = currPrefix
+			}
+
+			names = append(names, deepFieldNames(v.Interface(), newPrefix)...)
 		default:
 			prefWithPoint := ""
 			if prefix != "" {

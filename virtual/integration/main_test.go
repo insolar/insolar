@@ -69,8 +69,8 @@ type Server struct {
 	ExternalPubSub, IncomingPubSub *gochannel.GoChannel
 }
 
-func DefaultVMConfig() configuration.Configuration {
-	cfg := configuration.Configuration{}
+func DefaultVMConfig() configuration.GenericConfiguration {
+	cfg := configuration.GenericConfiguration{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.Ledger.LightChainLimit = math.MaxInt32
 	cfg.LogicRunner = configuration.NewLogicRunner()
@@ -114,7 +114,7 @@ func init() {
 func NewServer(
 	t *testing.T,
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.GenericConfiguration,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 	mManager machinesmanager.MachinesManager) (*Server, error) {
 

@@ -89,7 +89,7 @@ func writeGorundPorts(gorundPorts [][]string) {
 	check("failed to create gorund ports file: "+gorundPortsPath, err)
 }
 
-func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configuration) {
+func writeInsolardConfigs(dir string, insolardConfigs []configuration.GenericConfiguration) {
 	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
 
 	for index, conf := range insolardConfigs {
@@ -115,7 +115,7 @@ func main() {
 	check("Can't read bootstrap config", err)
 
 	pwConfig := pulsewatcher.Config{}
-	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(bootstrapConf.DiscoveryNodes))
+	discoveryNodesConfigs := make([]configuration.GenericConfiguration, 0, len(bootstrapConf.DiscoveryNodes))
 
 	var gorundPorts [][]string
 
@@ -182,7 +182,7 @@ func main() {
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
 	nodeCertificatePathTemplate = filepath.Join(outputDir, nodeCertificatePathTemplate)
 
-	nodesConfigs := make([]configuration.Configuration, 0, len(bootstrapConf.DiscoveryNodes))
+	nodesConfigs := make([]configuration.GenericConfiguration, 0, len(bootstrapConf.DiscoveryNodes))
 	for index, node := range bootstrapConf.Nodes {
 		nodeIndex := index + 1
 
@@ -260,9 +260,9 @@ func writeGenesisConfig() {
 	check("Can't makeFileWithDir: "+bootstrapFileName, err)
 }
 
-var defaultInsloardConf *configuration.Configuration
+var defaultInsloardConf *configuration.GenericConfiguration
 
-func newDefaultInsolardConfig() configuration.Configuration {
+func newDefaultInsolardConfig() configuration.GenericConfiguration {
 	if defaultInsloardConf == nil {
 		holder := configuration.NewHolder(insolardDefaultsConfig).MustLoad()
 		defaultInsloardConf = &holder.Configuration
@@ -315,7 +315,7 @@ type promConfigVars struct {
 	Jobs map[string][]string
 }
 
-func (pcv *promConfigVars) addTarget(name string, conf configuration.Configuration) {
+func (pcv *promConfigVars) addTarget(name string, conf configuration.GenericConfiguration) {
 	jobs := pcv.Jobs
 	addrPair := strings.SplitN(conf.Metrics.ListenAddress, ":", 2)
 	addr := "host.docker.internal:" + addrPair[1]
