@@ -17,11 +17,10 @@ import (
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/api/instrumenter"
-	"github.com/insolar/insolar/application/api/requester"
-	"github.com/insolar/insolar/application/api/seedmanager"
-	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/api/instrumenter"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,14 +34,7 @@ type ContractService struct {
 
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
-	methods := map[string]bool{
-		"member.create":          true,
-		"member.get":             true,
-		"member.transfer":        true,
-		"member.migrationCreate": true,
-		"deposit.transfer":       true,
-	}
-	return &ContractService{runner: runner, allowedMethods: methods}
+	return &ContractService{runner: runner, allowedMethods: runner.Options.ContractMethods}
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -122,13 +114,12 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func setRootReferenceIfNeeded(params *requester.Params) {
+func setRootReferenceIfNeeded(params *requester.Params, options Options) {
 	if params.Reference != "" {
 		return
 	}
-	methods := []string{"member.create", "member.migrationCreate", "member.get"}
-	if contains(methods, params.CallSite) {
-		params.Reference = genesisrefs.ContractRootMember.String()
+	if contains(options.ProxyToRootMethods, params.CallSite) {
+		params.Reference = options.RootReference.String()
 	}
 }
 

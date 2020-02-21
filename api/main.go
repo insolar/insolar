@@ -18,7 +18,7 @@ import (
 	jsonrpc "github.com/insolar/rpc/v2/json2"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/api/seedmanager"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network"
 
@@ -52,8 +52,21 @@ type Runner struct {
 	SeedManager   *seedmanager.SeedManager
 	SeedGenerator seedmanager.SeedGenerator
 
+	Options Options
+}
+
+// Options contains application-specific settings for api component.
+type Options struct {
 	// InfoResponse contains info, that will be included in response from /admin-api/rpc#network.getInfo
 	InfoResponse map[string]interface{}
+	// AdminContractMethods are set of api methods, that need to be called from /admin-api/rpc url.
+	AdminContractMethods map[string]bool
+	// ContractMethods are set of api methods, that need to be called from /api/rpc url.
+	ContractMethods map[string]bool
+	// RootReference is reference of object, that will be set as Caller for methods in ProxyToRootMethods.
+	RootReference insolar.Reference
+	// ProxyToRootMethods is set of api methods, that need to be called with RootReference as Caller.
+	ProxyToRootMethods []string
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {
@@ -127,7 +140,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	jetCoordinator jet.Coordinator,
 	networkStatus insolar.NetworkStatus,
 	availabilityChecker insolar.AvailabilityChecker,
-	infoResponse map[string]interface{},
+	apiOptions Options,
 ) (*Runner, error) {
 
 	err := checkConfig(cfg)
@@ -151,7 +164,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		cfg:                 cfg,
 		keyCache:            make(map[string]crypto.PublicKey),
 		cacheLock:           &sync.RWMutex{},
-		InfoResponse:        infoResponse,
+		Options:             apiOptions,
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")

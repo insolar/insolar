@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -25,11 +26,11 @@ import (
 )
 
 type Server struct {
-	cfgPath         string
-	genesisCfgPath  string
-	genesisOptions  genesis.Options
-	genesisOnly     bool
-	apiInfoResponse map[string]interface{}
+	cfgPath        string
+	genesisCfgPath string
+	genesisOptions genesis.Options
+	genesisOnly    bool
+	apiOptions     api.Options
 }
 
 func New(
@@ -37,14 +38,14 @@ func New(
 	genesisCfgPath string,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
-	apiInfoResponse map[string]interface{},
+	apiOptions api.Options,
 ) *Server {
 	return &Server{
-		cfgPath:         cfgPath,
-		genesisCfgPath:  genesisCfgPath,
-		genesisOptions:  genesisOptions,
-		genesisOnly:     genesisOnly,
-		apiInfoResponse: apiInfoResponse,
+		cfgPath:        cfgPath,
+		genesisCfgPath: genesisCfgPath,
+		genesisOptions: genesisOptions,
+		genesisOnly:    genesisOnly,
+		apiOptions:     apiOptions,
 	}
 }
 
@@ -97,7 +98,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.genesisOptions, s.genesisOnly, s.apiInfoResponse)
+	cmp, err := newComponents(ctx, *cfg, genesisCfg, s.genesisOptions, s.genesisOnly, s.apiOptions)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

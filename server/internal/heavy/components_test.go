@@ -13,6 +13,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/applicationbase/genesis"
@@ -35,11 +36,11 @@ func TestComponents(t *testing.T) {
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
-	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
-	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+	cfg.APIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
+	cfg.AdminAPIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, nil)
+	_, err = newComponents(ctx, cfg, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, api.Options{})
 	require.NoError(t, err)
 }

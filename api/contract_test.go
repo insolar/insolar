@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
@@ -74,7 +74,7 @@ func TestTimeoutSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner(false)
 	cfg.Address = "localhost:19192"
-	cfg.SwaggerPath = "spec/api-exported.yaml"
+	cfg.SwaggerPath = "testdata/api-exported.yaml"
 	api, err := NewRunner(
 		&cfg,
 		nil,
@@ -86,7 +86,11 @@ func TestTimeoutSuite(t *testing.T) {
 		nil,
 		nil,
 		checker,
-		nil,
+		Options{
+			ContractMethods: map[string]bool{
+				"contract.registerNode": true,
+			},
+		},
 	)
 	require.NoError(t, err)
 	defer api.Stop(ctx)
@@ -102,7 +106,7 @@ func TestTimeoutSuite(t *testing.T) {
 		ctx,
 		CallUrl,
 		user,
-		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
+		&requester.Params{CallSite: "contract.registerNode", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
 		seedString,
 	)
 	require.NoError(t, err, "make request with seed error")
