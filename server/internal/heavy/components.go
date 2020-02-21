@@ -310,6 +310,10 @@ func initWithPostgres(
 		PostgresJetKeeper *executor.PostgresDBJetKeeper
 	)
 	{
+		TxManager, err := object.NewPostgreSQLTxManager(Pool)
+		if err != nil {
+			panic(fmt.Errorf("object.NewPostgreSQLTxManager failed: %s", err))
+		}
 		RecordsPostgres = object.NewPostgresRecordDB(Pool)
 		IndexesPostgres = object.NewPostgresIndexDB(Pool, RecordsPostgres)
 		DropPostgres = drop.NewPostgresDB(Pool)
@@ -345,6 +349,7 @@ func initWithPostgres(
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(PostgresJetKeeper, PulsesPostgres, cfg.Ledger.LightChainLimit)
 
 		replicator := executor.NewHeavyReplicatorDefault(
+			TxManager,
 			RecordsPostgres,
 			IndexesPostgres,
 			CryptoScheme,
@@ -670,6 +675,11 @@ func initWithBadger(
 		JetKeeper    *executor.BadgerDBJetKeeper
 	)
 	{
+		TxManager, err := object.NewBadgerTxManager(DB.Backend())
+		if err != nil {
+			panic(fmt.Errorf("object.NewBadgerTxManager failed: %s", err))
+		}
+
 		Records = object.NewBadgerRecordDB(DB)
 		indexes := object.NewBadgerIndexDB(DB, Records)
 		drops := drop.NewBadgerDB(DB)
@@ -696,7 +706,7 @@ func initWithBadger(
 		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
+		replicator := executor.NewHeavyReplicatorDefault(TxManager, Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 		c.replicator = replicator
 
 		h := handler.New(cfg.Ledger, gcRunInfo)

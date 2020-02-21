@@ -10,6 +10,7 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"sync"
@@ -228,8 +229,12 @@ func NewBadgerServer(
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
+		txManager, err := object.NewBadgerTxManager(DB.Backend())
+		if err != nil {
+			panic(fmt.Errorf("object.NewBadgerTxManager failed: %s", err))
+		}
 		gcRunInfo := executor.NewBadgerGCRunInfo(DB, cfg.Ledger.Storage.GCRunFrequency)
-		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
+		replicator = executor.NewHeavyReplicatorDefault(txManager, Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets, gcRunInfo)
 
 		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork

@@ -37,6 +37,7 @@ type HeavyReplicator interface {
 
 // HeavyReplicatorDefault is a base impl for HeavyReplicator
 type HeavyReplicatorDefault struct {
+	txManager       object.TxManager
 	records         object.RecordModifier
 	indexes         object.IndexModifier
 	pcs             insolar.PlatformCryptographyScheme
@@ -50,6 +51,7 @@ type HeavyReplicatorDefault struct {
 
 // NewHeavyReplicatorDefault creates new instance of HeavyReplicatorDefault.
 func NewHeavyReplicatorDefault(
+	txManager object.TxManager,
 	records object.RecordModifier,
 	indexes object.IndexModifier,
 	pcs insolar.PlatformCryptographyScheme,
@@ -61,6 +63,7 @@ func NewHeavyReplicatorDefault(
 	gcRunner GCRunInfo,
 ) *HeavyReplicatorDefault {
 	return &HeavyReplicatorDefault{
+		txManager:       txManager,
 		records:         records,
 		indexes:         indexes,
 		pcs:             pcs,
