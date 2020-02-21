@@ -7,6 +7,7 @@ package object
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -84,7 +85,12 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 		}
 
 		err = r.insertRecord(ctx, tx, rec)
-		if err != nil {
+		if err != nil && strings.Contains(err.Error(), "SQLSTATE 40001") {
+			// "could not serialize access due to concurrent update (SQLSTATE 40001)"
+			log.Infof("PostgresRecordDB.Set - insertRecord failed, retrying: %v", err)
+			_ = tx.Rollback(ctx)
+			continue
+		} else if err != nil {
 			_ = tx.Rollback(ctx)
 			return err
 		}
@@ -117,7 +123,12 @@ func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material)
 
 		for _, rec := range recs {
 			err = r.insertRecord(ctx, tx, rec)
-			if err != nil {
+			if err != nil && strings.Contains(err.Error(), "SQLSTATE 40001") {
+				// "could not serialize access due to concurrent update (SQLSTATE 40001)"
+				log.Infof("PostgresRecordDB.BatchSet - insertRecord failed, retrying: %v", err)
+				_ = tx.Rollback(ctx)
+				continue
+			} else if err != nil {
 				_ = tx.Rollback(ctx)
 				return err
 			}
