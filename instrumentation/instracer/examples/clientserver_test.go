@@ -40,7 +40,7 @@ func TestClientServerExample(t *testing.T) {
 }
 
 func Example_ClientServer() {
-	cfgHolder := configuration.NewHolder("testdata/default.yaml").MustLoad()
+	cfgHolder := configuration.NewHolderLight("testdata/insolard-light.yaml").MustLoad()
 	jconf := cfgHolder.Configuration.Tracer.Jaeger
 	ctx := context.Background()
 	inslogger.FromContext(ctx).Infof("jconf => %+v", jconf)

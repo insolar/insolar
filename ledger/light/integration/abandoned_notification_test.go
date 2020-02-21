@@ -37,7 +37,7 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
-	cfg.Ledger.LightChainLimit = 5
+	cfg.LightChainLimit = 5
 
 	// Responses from server.
 	received := make(chan payload.AbandonedRequestsNotification)
@@ -165,7 +165,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
-	cfg.Ledger.LightChainLimit = 5
+	cfg.LightChainLimit = 5
 
 	// Responses from server.
 	received := make(chan payload.AbandonedRequestsNotification)
@@ -244,7 +244,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 func Test_AbandonsMetricValue(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
-	cfg.Ledger.LightChainLimit = 5
+	cfg.LightChainLimit = 5
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
 	defer s.Stop()

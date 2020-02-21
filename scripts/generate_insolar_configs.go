@@ -89,7 +89,7 @@ func writeGorundPorts(gorundPorts [][]string) {
 	check("failed to create gorund ports file: "+gorundPortsPath, err)
 }
 
-func writeInsolardConfigs(dir string, insolardConfigs []configuration.GenericConfiguration) {
+func writeInsolardConfigs(dir string, insolardConfigs []interface{}) {
 	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
 
 	for index, conf := range insolardConfigs {
@@ -115,7 +115,7 @@ func main() {
 	check("Can't read bootstrap config", err)
 
 	pwConfig := pulsewatcher.Config{}
-	discoveryNodesConfigs := make([]configuration.GenericConfiguration, 0, len(bootstrapConf.DiscoveryNodes))
+	discoveryNodesConfigs := make([]interface{}, 0, len(bootstrapConf.DiscoveryNodes))
 
 	var gorundPorts [][]string
 
@@ -129,51 +129,52 @@ func main() {
 	for index, node := range bootstrapConf.DiscoveryNodes {
 		nodeIndex := index + 1
 
-		conf := newDefaultInsolardConfig()
+		genericConfiguration := createGenericConfigDiscovery(node, nodeIndex, bootstrapConf)
 
-		conf.Host.Transport.Address = node.Host
-		conf.Host.Transport.Protocol = "TCP"
+		switch node.Role {
+		case "light_material":
+			configLight := createLightConfig()
+			configLight.GenericConfiguration = genericConfiguration
 
-		rpcListenPort := 33300 + (index+nodeIndex)*nodeIndex
-		conf.LogicRunner = configuration.NewLogicRunner()
-		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
-		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
-		if node.Role == "virtual" {
+			discoveryNodesConfigs = append(discoveryNodesConfigs, configLight)
+			promVars.addTarget("insolard", configLight.Metrics.ListenAddress)
+			pwConfig.Nodes = append(pwConfig.Nodes, configLight.AdminAPIRunner.Address)
+
+		case "virtual":
+			configVirtual := createVirtualConfig(index, nodeIndex)
+			configVirtual.GenericConfiguration = genericConfiguration
+
+			rpcListenPort := 33300 + (index+nodeIndex)*nodeIndex
 			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
+
+			discoveryNodesConfigs = append(discoveryNodesConfigs, configVirtual)
+			promVars.addTarget("insolard", configVirtual.Metrics.ListenAddress)
+			pwConfig.Nodes = append(pwConfig.Nodes, configVirtual.AdminAPIRunner.Address)
+
+		case "heavy_material":
+			fmt.Println("[createHeavyConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
+
+			if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+				fmt.Println("[createHeavyConfig] Using PostgreSQL config")
+				holder := *configuration.NewHolderHeavyPg(insolardDefaultsConfigWithPostgres).MustLoad()
+				conf := holder.Configuration
+				conf.GenericConfiguration = genericConfiguration
+
+				discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
+				promVars.addTarget("insolard", conf.Metrics.ListenAddress)
+				pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
+			} else {
+				fmt.Println("[newDefaultInsolardConfig] Using Badger config")
+				holder := *configuration.NewHolderHeavyBadger(insolardDefaultsConfigWithBadger).MustLoad()
+				conf := holder.Configuration
+				conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
+				conf.GenericConfiguration = genericConfiguration
+
+				discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
+				promVars.addTarget("insolard", conf.Metrics.ListenAddress)
+				pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
+			}
 		}
-
-		if node.Role == "light_material" {
-			conf.Ledger.JetSplit.ThresholdRecordsCount = 1
-			conf.Ledger.JetSplit.ThresholdOverflowCount = 0
-			conf.Ledger.JetSplit.DepthLimit = 4
-		}
-
-		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
-		conf.APIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
-
-		conf.AvailabilityChecker.Enabled = true
-		conf.AvailabilityChecker.KeeperURL = "http://127.0.0.1:12012/check"
-
-		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
-		conf.AdminAPIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
-
-		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
-		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
-
-		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
-		conf.Log.Level = debugLevel
-		conf.Log.Adapter = "zerolog"
-		conf.Log.Formatter = "json"
-
-		conf.KeysPath = bootstrapConf.DiscoveryKeysDir + fmt.Sprintf(bootstrapConf.KeysNameFormat, nodeIndex)
-		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
-		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
-
-		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
-
-		promVars.addTarget("insolard", conf)
-
-		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
 
 	fmt.Println("[main] leaving the loop which calls newDefaultInsolardConfig() first time")
@@ -182,42 +183,46 @@ func main() {
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
 	nodeCertificatePathTemplate = filepath.Join(outputDir, nodeCertificatePathTemplate)
 
-	nodesConfigs := make([]configuration.GenericConfiguration, 0, len(bootstrapConf.DiscoveryNodes))
+	nodesConfigs := make([]interface{}, 0, len(bootstrapConf.Nodes))
 	for index, node := range bootstrapConf.Nodes {
 		nodeIndex := index + 1
 
-		conf := newDefaultInsolardConfig()
+		genericConfiguration := createGenericConfigJoiner(node, nodeIndex, bootstrapConf)
 
-		conf.Host.Transport.Address = node.Host
-		conf.Host.Transport.Protocol = "TCP"
+		if node.Role == "heavy_material" {
+			if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+				heavyConfig := configuration.NewConfigurationHeavyBadger()
+				heavyConfig.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
+				heavyConfig.GenericConfiguration = genericConfiguration
 
-		rpcListenPort := 34300 + (index+nodeIndex+len(bootstrapConf.DiscoveryNodes)+1)*nodeIndex
-		conf.LogicRunner = configuration.NewLogicRunner()
-		conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
-		conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
-		if node.Role == "virtual" {
-			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
+				nodesConfigs = append(nodesConfigs, genericConfiguration)
+				promVars.addTarget("insolard", genericConfiguration.Metrics.ListenAddress)
+				pwConfig.Nodes = append(pwConfig.Nodes, genericConfiguration.AdminAPIRunner.Address)
+			} else {
+				heavyConfig := configuration.NewConfigurationHeavyBadger()
+				heavyConfig.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
+				heavyConfig.GenericConfiguration = genericConfiguration
+
+				nodesConfigs = append(nodesConfigs, genericConfiguration)
+				promVars.addTarget("insolard", genericConfiguration.Metrics.ListenAddress)
+				pwConfig.Nodes = append(pwConfig.Nodes, genericConfiguration.AdminAPIRunner.Address)
+			}
+
 		}
 
-		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
-		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
-		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
-		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+		if node.Role == "virtual" {
+			virtualConfig := configuration.NewConfigurationVirtual()
+			rpcListenPort := 34300 + (index+nodeIndex+len(bootstrapConf.DiscoveryNodes)+1)*nodeIndex
+			virtualConfig.LogicRunner = configuration.NewLogicRunner()
+			virtualConfig.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
+			virtualConfig.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
+			virtualConfig.GenericConfiguration = genericConfiguration
 
-		conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
-		conf.Log.Level = debugLevel
-		conf.Log.Adapter = "zerolog"
-		conf.Log.Formatter = "json"
-
-		conf.KeysPath = node.KeysFile
-		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
-		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
-
-		nodesConfigs = append(nodesConfigs, conf)
-
-		promVars.addTarget("insolard", conf)
-
-		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
+			gorundPorts = append(gorundPorts, []string{strconv.Itoa(rpcListenPort - 1), strconv.Itoa(rpcListenPort)})
+			nodesConfigs = append(nodesConfigs, genericConfiguration)
+			promVars.addTarget("insolard", genericConfiguration.Metrics.ListenAddress)
+			pwConfig.Nodes = append(pwConfig.Nodes, genericConfiguration.AdminAPIRunner.Address)
+		}
 	}
 
 	writePromConfig(promVars)
@@ -244,6 +249,73 @@ func main() {
 	fmt.Println("generate_insolar_configs.go: write to file", pulsewatcherFileName)
 }
 
+func createGenericConfigDiscovery(node bootstrap.Node, nodeIndex int, bootstrapConf *bootstrap.Config) configuration.GenericConfiguration {
+	conf := configuration.NewGenericConfiguration()
+	conf.Host.Transport.Address = node.Host
+	conf.Host.Transport.Protocol = "TCP"
+
+	conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
+	conf.APIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+
+	conf.AvailabilityChecker.Enabled = true
+	conf.AvailabilityChecker.KeeperURL = "http://127.0.0.1:12012/check"
+
+	conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
+	conf.AdminAPIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+
+	conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
+	conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
+
+	conf.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
+	conf.Log.Level = debugLevel
+	conf.Log.Adapter = "zerolog"
+	conf.Log.Formatter = "json"
+
+	conf.KeysPath = bootstrapConf.DiscoveryKeysDir + fmt.Sprintf(bootstrapConf.KeysNameFormat, nodeIndex)
+	conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
+	conf.LightChainLimit = 15
+	return conf
+}
+
+func createGenericConfigJoiner(node bootstrap.Node, nodeIndex int, bootstrapConf *bootstrap.Config) configuration.GenericConfiguration {
+	genericConfiguration := configuration.NewGenericConfiguration()
+	genericConfiguration.Host.Transport.Address = node.Host
+	genericConfiguration.Host.Transport.Protocol = "TCP"
+	genericConfiguration.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+	genericConfiguration.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+	genericConfiguration.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+	genericConfiguration.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+
+	genericConfiguration.Tracer.Jaeger.AgentEndpoint = defaultJaegerEndPoint
+	genericConfiguration.Log.Level = debugLevel
+	genericConfiguration.Log.Adapter = "zerolog"
+	genericConfiguration.Log.Formatter = "json"
+
+	genericConfiguration.KeysPath = node.KeysFile
+	genericConfiguration.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)
+	genericConfiguration.LightChainLimit = 15
+	return genericConfiguration
+}
+
+func createLightConfig() configuration.ConfigLight {
+	conf := configuration.NewConfigurationLight()
+
+	conf.Ledger.JetSplit.ThresholdRecordsCount = 1
+	conf.Ledger.JetSplit.ThresholdOverflowCount = 0
+	conf.Ledger.JetSplit.DepthLimit = 4
+	return conf
+}
+
+func createVirtualConfig(index, nodeIndex int) configuration.ConfigVirtual {
+	conf := configuration.NewConfigurationVirtual()
+
+	rpcListenPort := 33300 + (index+nodeIndex)*nodeIndex
+	conf.LogicRunner = configuration.NewLogicRunner()
+	conf.LogicRunner.GoPlugin.RunnerListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort-1)
+	conf.LogicRunner.RPCListen = fmt.Sprintf(defaultHost+":%d", rpcListenPort)
+	return conf
+}
+
 type commonConfigVars struct {
 	BaseDir string
 }
@@ -264,20 +336,8 @@ var defaultInsloardConf *configuration.GenericConfiguration
 
 func newDefaultInsolardConfig() configuration.GenericConfiguration {
 	if defaultInsloardConf == nil {
-		holder := configuration.NewHolder(insolardDefaultsConfig).MustLoad()
-		defaultInsloardConf = &holder.Configuration
-		// todo resolve this
-		fmt.Println("[newDefaultInsolardConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
-		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
-			fmt.Println("[newDefaultInsolardConfig] Using PostgreSQL config")
-			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)
-			defaultInsloardConf = &holder.Configuration
-		} else {
-			fmt.Println("[newDefaultInsolardConfig] Using Badger config")
-			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithBadger).MustInit(true)
-			defaultInsloardConf = &holder.Configuration
-		}
-
+		c := configuration.NewGenericConfiguration()
+		defaultInsloardConf = &c
 	}
 	return *defaultInsloardConf
 }
@@ -315,9 +375,9 @@ type promConfigVars struct {
 	Jobs map[string][]string
 }
 
-func (pcv *promConfigVars) addTarget(name string, conf configuration.GenericConfiguration) {
+func (pcv *promConfigVars) addTarget(name string, address string) {
 	jobs := pcv.Jobs
-	addrPair := strings.SplitN(conf.Metrics.ListenAddress, ":", 2)
+	addrPair := strings.SplitN(address, ":", 2)
 	addr := "host.docker.internal:" + addrPair[1]
 	jobs[name] = append(jobs[name], addr)
 }

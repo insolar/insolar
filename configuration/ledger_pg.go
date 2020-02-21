@@ -32,7 +32,7 @@ type LedgerPg struct {
 func NewLedgerPg() LedgerPg {
 	return LedgerPg{
 		PostgreSQL: PostgreSQL{
-			URL:           "postgresql://postgres@postgres",
+			URL:           "postgres://postgres@localhost/postgres?sslmode=disable",
 			MigrationPath: "migrations",
 		},
 		IsPostgresBase: false,

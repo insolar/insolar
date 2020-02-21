@@ -127,7 +127,7 @@ func runVirtualNode(configPath string) {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
-	if role != insolar.StaticRoleHeavyMaterial {
+	if role != insolar.StaticRoleVirtual {
 		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
 	}
 
@@ -157,7 +157,7 @@ func runLightNode(configPath string) {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
-	if role != insolar.StaticRoleHeavyMaterial {
+	if role != insolar.StaticRoleLightMaterial {
 		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
 	}
 

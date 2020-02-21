@@ -806,7 +806,7 @@ func initWithBadger(
 }
 
 func newComponents(ctx context.Context, cfg configuration.ConfigHolder, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
-	// todo refactor
+	// todo refactor this, extract IsPostgresBase from Ledger
 	heavyCfg := cfg.GetAllConfig()
 	switch realCfg := heavyCfg.(type) {
 	case configuration.ConfigHeavyPg:

@@ -29,7 +29,7 @@ func TestComponents(t *testing.T) {
 	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
 		return logger.Copy().WithBuffer(100, false).Build()
 	})
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewConfigurationHeavyBadger()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
@@ -40,6 +40,10 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false)
+	holder := configuration.HolderHeavyBadger{
+		Configuration: cfg,
+	}
+
+	_, err = newComponents(ctx, holder, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false)
 	require.NoError(t, err)
 }

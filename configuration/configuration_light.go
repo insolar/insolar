@@ -20,7 +20,7 @@ import (
 
 // ConfigLight contains configuration params for Light
 type ConfigLight struct {
-	GenericConfiguration `mapstructure:",squash"`
+	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	Ledger               LedgerLight
 }
 
@@ -32,7 +32,7 @@ func (c ConfigLight) GetConfig() interface{} {
 func NewConfigurationLight() ConfigLight {
 	return ConfigLight{
 		Ledger:               NewLedgerLight(),
-		GenericConfiguration: NewConfiguration(),
+		GenericConfiguration: NewGenericConfiguration(),
 	}
 }
 
@@ -70,4 +70,13 @@ func (h *HolderLight) Load() error {
 	cfg := parsedConf.(*ConfigLight)
 	h.Configuration = *cfg
 	return nil
+}
+
+// MustLoad wrapper around Load function which panics on error.
+func (h *HolderLight) MustLoad() *HolderLight {
+	err := h.Load()
+	if err != nil {
+		panic(err)
+	}
+	return h
 }

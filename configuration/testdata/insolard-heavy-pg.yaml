@@ -12,7 +12,7 @@ service:
   cachedirectory: network_cache
 ledger:
   postgresql:
-    url: postgres://radist@localhost/postgres?sslmode=disable
+    url: postgres://postgres@localhost/postgres?sslmode=disable
     migrationpath: migration
   ispostgresbase: true
 log:

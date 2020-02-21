@@ -87,10 +87,10 @@ type Server struct {
 	metrics *metrics.Metrics
 }
 
-func DefaultLightConfig() configuration.GenericConfiguration {
-	cfg := configuration.GenericConfiguration{}
+func DefaultLightConfig() configuration.ConfigLight {
+	cfg := configuration.ConfigLight{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.Ledger.LightChainLimit = math.MaxInt32
+	cfg.LightChainLimit = math.MaxInt32
 	cfg.Ledger.JetSplit.DepthLimit = math.MaxUint8
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = math.MaxInt32
 	cfg.Ledger.JetSplit.ThresholdRecordsCount = math.MaxInt32
@@ -134,7 +134,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 
 func NewServer(
 	ctx context.Context,
-	cfg configuration.GenericConfiguration,
+	cfg configuration.ConfigLight,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.
@@ -181,7 +181,7 @@ func NewServer(
 		Pulses = insolarPulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -203,7 +203,7 @@ func NewServer(
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -257,7 +257,7 @@ func NewServer(
 			Pulses,
 			indexes,
 			filamentCalculator,
-			conf.LightChainLimit,
+			cfg.LightChainLimit,
 			conf.CleanerDelay,
 			conf.FilamentCacheLimit,
 		)
@@ -282,12 +282,12 @@ func NewServer(
 			indexes,
 			Pulses,
 			Jets,
-			conf.LightChainLimit,
+			cfg.LightChainLimit,
 			ServerBus,
 		)
 
 		stateIniter := executor.NewStateIniter(
-			conf, Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+			cfg.LightChainLimit, Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		metricsRegistry := executor.NewMetricsRegistry()
@@ -309,7 +309,7 @@ func NewServer(
 			filamentCalculator,
 			requestChecker,
 			detachedNotifier,
-			configuration.NewLedger(),
+			configuration.NewLedgerLight(),
 			metricsRegistry,
 		)
 

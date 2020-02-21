@@ -1,7 +1,6 @@
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:0
     fixedpublicaddress: ""
   mintimeout: 10
   maxtimeout: 2000
@@ -10,29 +9,6 @@ host:
   handshakesessionttl: 5000
 service:
   cachedirectory: network_cache
-ledger:
-  storage:
-    datadirectory: ./data
-    badgervalueloggcdiscardratio: 0.4
-    gcrunfrequency: 1
-  jetsplit:
-    thresholdrecordscount: 100
-    thresholdoverflowcount: 3
-    depthlimit: 5
-  lightchainlimit: 5
-  backup:
-    enabled: false
-    tmpdirectory: ""
-    targetdirectory: ""
-    metainfofile: meta.json
-    confirmfile: BACKUPED
-    backupfile: incr.bkp
-    dirnametemplate: pulse-%d
-    backupwaitperiod: 60
-    postprocessbackupcmd: []
-  cleanerdelay: 3
-  maxnotificationsperpulse: 100
-  filamentcachelimit: 3000
 log:
   level: Info
   adapter: zerolog
@@ -47,14 +23,6 @@ metrics:
   namespace: insolar
   zpagesenabled: true
   reportingperiod: 0s
-logicrunner:
-  rpclisten: 127.0.0.1:7778
-  rpcprotocol: tcp
-  builtin: true
-  goplugin:
-    runnerlisten: 127.0.0.1:7777
-    runnerprotocol: tcp
-  pulselrusize: 100
 apirunner:
   address: localhost:19101
   rpc: /api/rpc
@@ -80,7 +48,14 @@ tracer:
   samplingrules: {}
 introspection:
   addr: ""
-exporter:
-  addr: :5678
 bus:
   replytimeout: 15s
+lightchainlimit: 5
+ledger:
+  jetsplit:
+    thresholdrecordscount: 100
+    thresholdoverflowcount: 3
+    depthlimit: 5
+  cleanerdelay: 3
+  maxnotificationsperpulse: 100
+  filamentcachelimit: 3000

@@ -34,7 +34,7 @@ func TestRequester_Authorize(t *testing.T) {
 	t.Skip("Until merge")
 	cert := GetTestCertificate()
 
-	options := network.ConfigureOptions(configuration.NewConfiguration())
+	options := network.ConfigureOptions(configuration.NewGenericConfiguration().Host)
 
 	cs := testutils.NewCryptographyServiceMock(t)
 	sig := insolar.SignatureFromBytes([]byte("lalal"))
@@ -48,7 +48,7 @@ func TestRequester_Authorize(t *testing.T) {
 }
 
 func TestRequester_Bootstrap(t *testing.T) {
-	options := network.ConfigureOptions(configuration.NewConfiguration())
+	options := network.ConfigureOptions(configuration.NewGenericConfiguration().Host)
 
 	hn := mock.NewHostNetworkMock(t)
 	hn.SendRequestToHostMock.Set(func(p context.Context, p1 types.PacketType, p2 interface{}, p3 *host.Host) (r network.Future, r1 error) {

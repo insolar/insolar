@@ -54,8 +54,8 @@ type PulsarConfiguration struct {
 	Metrics  Metrics
 }
 
-// NewConfiguration creates new default configuration
-func NewConfiguration() GenericConfiguration {
+// NewGenericConfiguration creates new default configuration
+func NewGenericConfiguration() GenericConfiguration {
 	cfg := GenericConfiguration{
 		Host:                NewHostNetwork(),
 		Service:             NewServiceNetwork(),

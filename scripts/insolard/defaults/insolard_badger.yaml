@@ -15,12 +15,6 @@ ledger:
     datadirectory: ./data
     badgervalueloggcdiscardratio: 0.4
     gcrunfrequency: 1
-  jetsplit:
-    thresholdrecordscount: 100
-    thresholdoverflowcount: 3
-    depthlimit: 5
-  lightchainlimit: 15
-  ispostgresbase: false
   backup:
     enabled: false
     tmpdirectory: ""
@@ -31,9 +25,7 @@ ledger:
     dirnametemplate: pulse-%d
     backupwaitperiod: 60
     postprocessbackupcmd: []
-  cleanerdelay: 3
-  maxnotificationsperpulse: 100
-  filamentcachelimit: 3000
+  ispostgresbase: false
 log:
   level: Info
   adapter: zerolog
@@ -48,14 +40,6 @@ metrics:
   namespace: insolar
   zpagesenabled: false
   reportingperiod: 0s
-logicrunner:
-  rpclisten: 127.0.0.1:7778
-  rpcprotocol: tcp
-  builtin: true
-  goplugin:
-    runnerlisten: 127.0.0.1:7777
-    runnerprotocol: tcp
-  pulselrusize: 100
 apirunner:
   address: localhost:19101
   rpc: /api/rpc
@@ -85,3 +69,4 @@ exporter:
   addr: :5678
 bus:
   replytimeout: 15s
+lightchainlimit: 5

@@ -69,10 +69,10 @@ type Server struct {
 	ExternalPubSub, IncomingPubSub *gochannel.GoChannel
 }
 
-func DefaultVMConfig() configuration.GenericConfiguration {
-	cfg := configuration.GenericConfiguration{}
+func DefaultVMConfig() configuration.ConfigVirtual {
+	cfg := configuration.ConfigVirtual{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.Ledger.LightChainLimit = math.MaxInt32
+	cfg.LightChainLimit = math.MaxInt32
 	cfg.LogicRunner = configuration.NewLogicRunner()
 	cfg.Bus.ReplyTimeout = 5 * time.Second
 	cfg.Log = configuration.NewLog()
@@ -114,7 +114,7 @@ func init() {
 func NewServer(
 	t *testing.T,
 	ctx context.Context,
-	cfg configuration.GenericConfiguration,
+	cfg configuration.ConfigVirtual,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 	mManager machinesmanager.MachinesManager) (*Server, error) {
 
@@ -168,7 +168,7 @@ func NewServer(
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		Coordinator = jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		Coordinator = jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, virtual.ref)
 		Coordinator.PulseCalculator = Pulses
 		Coordinator.PulseAccessor = Pulses
 		Coordinator.JetAccessor = Jets
@@ -200,7 +200,7 @@ func NewServer(
 		ExternalPubSub = pubsub
 		IncomingPubSub = pubsub
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets

@@ -41,7 +41,7 @@ func (p *PublisherMock) Close() error {
 }
 
 func prepareNetwork(t *testing.T, cfg configuration.GenericConfiguration) *ServiceNetwork {
-	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
+	serviceNetwork, err := NewServiceNetwork(cfg.Host, component.NewManager(nil))
 	require.NoError(t, err)
 
 	nodeKeeper := networkUtils.NewNodeKeeperMock(t)
@@ -54,7 +54,7 @@ func prepareNetwork(t *testing.T, cfg configuration.GenericConfiguration) *Servi
 }
 
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewGenericConfiguration()
 
 	serviceNetwork := prepareNetwork(t, cfg)
 
@@ -72,8 +72,8 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 }
 
 func TestSendMessageHandler_SameNode(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
+	cfg := configuration.NewGenericConfiguration()
+	serviceNetwork, err := NewServiceNetwork(cfg.Host, component.NewManager(nil))
 	nodeRef := gen.Reference()
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
@@ -105,9 +105,9 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 }
 
 func TestSendMessageHandler_SendError(t *testing.T) {
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewGenericConfiguration()
 	pubMock := &PublisherMock{}
-	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
+	serviceNetwork, err := NewServiceNetwork(cfg.Host, component.NewManager(nil))
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
@@ -142,9 +142,9 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 }
 
 func TestSendMessageHandler_WrongReply(t *testing.T) {
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewGenericConfiguration()
 	pubMock := &PublisherMock{}
-	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
+	serviceNetwork, err := NewServiceNetwork(cfg.Host, component.NewManager(nil))
 	serviceNetwork.Pub = pubMock
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
@@ -179,8 +179,8 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 }
 
 func TestSendMessageHandler(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	serviceNetwork, err := NewServiceNetwork(cfg, component.NewManager(nil))
+	cfg := configuration.NewGenericConfiguration()
+	serviceNetwork, err := NewServiceNetwork(cfg.Host, component.NewManager(nil))
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
@@ -227,7 +227,7 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	cert := &certificate.Certificate{}
 	cert.Reference = origin.String()
 	certManager := certificate.NewCertificateManager(cert)
-	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), cm)
+	serviceNetwork, err := NewServiceNetwork(configuration.NewGenericConfiguration().Host, cm)
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
@@ -250,7 +250,7 @@ func (pm *publisherMock) Publish(topic string, messages ...*message.Message) err
 func (pm *publisherMock) Close() error                                             { return nil }
 
 func TestServiceNetwork_processIncoming(t *testing.T) {
-	serviceNetwork, err := NewServiceNetwork(configuration.NewConfiguration(), component.NewManager(nil))
+	serviceNetwork, err := NewServiceNetwork(configuration.NewGenericConfiguration().Host, component.NewManager(nil))
 	require.NoError(t, err)
 	pub := &publisherMock{}
 	serviceNetwork.Pub = pub

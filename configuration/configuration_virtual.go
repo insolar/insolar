@@ -20,7 +20,7 @@ import (
 
 // ConfigVirtual contains configuration params for Virtual node
 type ConfigVirtual struct {
-	GenericConfiguration `mapstructure:",squash"`
+	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	LogicRunner          LogicRunner
 }
 
@@ -32,7 +32,7 @@ func (c ConfigVirtual) GetConfig() interface{} {
 func NewConfigurationVirtual() ConfigVirtual {
 	return ConfigVirtual{
 		LogicRunner:          NewLogicRunner(),
-		GenericConfiguration: NewConfiguration(),
+		GenericConfiguration: NewGenericConfiguration(),
 	}
 }
 

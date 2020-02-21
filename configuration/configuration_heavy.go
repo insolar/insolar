@@ -20,14 +20,14 @@ import (
 
 // ConfigHeavyBadger contains configuration params for HeavyBadger
 type ConfigHeavyBadger struct {
-	GenericConfiguration `mapstructure:",squash"`
+	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	Ledger               Ledger
 	Exporter             Exporter
 }
 
 // ConfigHeavyPg contains configuration params for HeavyPg
 type ConfigHeavyPg struct {
-	GenericConfiguration `mapstructure:",squash"`
+	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	Ledger               LedgerPg
 	Exporter             Exporter
 }
@@ -45,7 +45,7 @@ func NewConfigurationHeavyBadger() ConfigHeavyBadger {
 	return ConfigHeavyBadger{
 		Ledger:               NewLedger(),
 		Exporter:             NewExporter(),
-		GenericConfiguration: NewConfiguration(),
+		GenericConfiguration: NewGenericConfiguration(),
 	}
 }
 
@@ -54,7 +54,7 @@ func NewConfigurationHeavyPg() ConfigHeavyPg {
 	cfg := ConfigHeavyPg{
 		Ledger:               NewLedgerPg(),
 		Exporter:             NewExporter(),
-		GenericConfiguration: NewConfiguration(),
+		GenericConfiguration: NewGenericConfiguration(),
 	}
 	return cfg
 }

@@ -15,58 +15,34 @@ import (
 )
 
 func TestConfiguration_Load_Default(t *testing.T) {
-	holder := NewHolder("testdata/default.yml")
+	holder := NewHolderLight("testdata/insolard-light.yaml")
 	err := holder.Load()
 	require.NoError(t, err)
 
-	cfg := NewConfiguration()
+	cfg := NewConfigurationLight()
 	fmt.Println(ToString(cfg))
 	require.Equal(t, cfg, holder.Configuration)
 }
 
 func TestConfiguration_DoubleLoad(t *testing.T) {
-	holder := NewHolder("testdata/default.yml")
+	holder := NewHolderLight("testdata/insolard-light.yaml")
 	err := holder.Load()
 	require.NoError(t, err)
 
-	holder2 := NewHolder("testdata/default.yml")
+	holder2 := NewHolderLight("testdata/insolard-light.yaml")
 	err = holder2.Load()
 	require.NoError(t, err)
 	require.Equal(t, holder2.Configuration, holder.Configuration)
 }
 
-func TestConfiguration_GlobalLoad(t *testing.T) {
-	holder := NewHolder("testdata/default.yml")
-	err := holder.Load()
-	require.NoError(t, err)
-
-	require.NoError(t, os.Setenv("INSOLAR_LOG_LEVEL", "error"))
-	holder2 := NewHolderGlobal("").MustLoad()
-	require.NoError(t, os.Unsetenv("INSOLAR_LOG_LEVEL"))
-	require.Equal(t, "error", holder2.Configuration.Log.Level)
-
-}
-
-func TestConfiguration_Load_Changed(t *testing.T) {
-	holder := NewHolder("testdata/changed.yml")
-	err := holder.Load()
-	require.NoError(t, err)
-
-	cfg := NewConfiguration()
-	require.NotEqual(t, cfg, holder.Configuration)
-
-	cfg.Log.Level = "Debug"
-	require.Equal(t, cfg, holder.Configuration)
-}
-
 func TestConfiguration_Load_Invalid(t *testing.T) {
-	holder := NewHolder("testdata/invalid.yml")
+	holder := NewHolderLight("testdata/invalid.yaml")
 	err := holder.Load()
 	require.Error(t, err)
 }
 
 func TestConfiguration_LoadEnv(t *testing.T) {
-	holder := NewHolder("testdata/default.yml")
+	holder := NewHolderLight("testdata/insolard-light.yaml")
 
 	require.NoError(t, os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555"))
 	err := holder.Load()
@@ -76,32 +52,26 @@ func TestConfiguration_LoadEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
 
-	defaultCfg := NewConfiguration()
+	defaultCfg := NewConfigurationLight()
 	require.Equal(t, "127.0.0.1:0", defaultCfg.Host.Transport.Address)
 }
 
 func TestConfiguration_Load_EmptyPath(t *testing.T) {
-	var (
-		holder *Holder
-		err    error
-	)
-	holder = NewHolder("")
-	err = holder.Load()
+	holder := NewHolderLight("")
+	err := holder.Load()
 	require.Error(t, err)
 
-	require.Panics(t, func() { NewHolder("").MustLoad() })
+	require.Panics(t, func() { NewHolderLight("").MustLoad() })
 }
 
 func TestConfiguration_Load_ENVOverridesEmpty(t *testing.T) {
-	var (
-		holder *Holder
-		err    error
-	)
-	holder = NewHolder("")
-	err = holder.Load()
-	require.Error(t, err)
+	_ = os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555")
+	defer os.Unsetenv("INSOLAR_HOST_TRANSPORT_ADDRESS")
+	holder := NewHolderLight("testdata/insolard-light-empty.yaml")
+	err := holder.Load()
+	require.NoError(t, err)
 
-	require.Panics(t, func() { NewHolder("").MustLoad() })
+	require.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
 }
 
 func TestMain(m *testing.M) {

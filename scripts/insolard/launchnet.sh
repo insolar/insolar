@@ -472,6 +472,7 @@ if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
   build_logger
 fi
 
+HEAVY_DB="badger"
 if [[ "$POSTGRES_ENABLE" == "1" ]]; then
   # Terminate running PostgreSQL container if there is one
   docker stop insolar-postgresql || true
@@ -490,6 +491,7 @@ if [[ "$POSTGRES_ENABLE" == "1" ]]; then
     echo "PostgreSQL is not up yet, retrying..."
     sleep 1
   done
+  HEAVY_DB="postgres"
 fi
 
 handle_sigchld()
@@ -501,16 +503,18 @@ handle_sigchld()
 trap 'handle_sigchld' SIGCHLD
 
 echo "Running genesis before actually starting any nodes (consensus may fail if genesis takes long)"
-$INSOLARD \
+$INSOLARD heavy \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --database=$HEAVY_DB \
     --genesis-only
 
 echo "start heavy node"
 set -x
-$INSOLARD \
+$INSOLARD heavy \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --database=$HEAVY_DB \
     2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}1/output.log > /dev/null &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
@@ -519,8 +523,17 @@ echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
 echo "start discovery nodes ..."
 for i in `seq 2 $NUM_DISCOVERY_NODES`
 do
+    ROLE=""
+    # even - lme, odd - vm
+    if [ $((i%2)) -eq 0 ]
+    then
+      ROLE="virtual"
+    else
+      ROLE="light"
+    fi
+
     set -x
-    $INSOLARD \
+    $INSOLARD $ROLE \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
         2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}${i}/output.log > /dev/null &
     { set +x; } 2>/dev/null

@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -61,7 +60,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		defer mc.Finish()
 
 		s := executor.NewStateIniter(
-			configuration.Ledger{},
+			0,
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -83,7 +82,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		var heavy []insolar.Node
 		s := executor.NewStateIniter(
-			configuration.Ledger{},
+			0,
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -107,7 +106,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		jets := []insolar.JetID{gen.JetID(), gen.JetID(), gen.JetID()}
 		s := executor.NewStateIniter(
-			configuration.Ledger{},
+			0,
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -139,7 +138,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 		heavy := []insolar.Node{{ID: *insolar.NewReference(gen.ID()), Role: insolar.StaticRoleHeavyMaterial}}
 		s := executor.NewStateIniter(
-			configuration.Ledger{},
+			0,
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -171,9 +170,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		})
 
 		s := executor.NewStateIniter(
-			configuration.Ledger{
-				LightChainLimit: 5,
-			},
+			5,
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -217,7 +214,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		})
 
 		s := executor.NewStateIniter(
-			configuration.Ledger{},
+			0,
 			jetModifier.UpdateMock.Return(nil),
 			jetReleaser.UnlockMock.Return(nil),
 			drops.SetMock.Return(nil),
