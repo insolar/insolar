@@ -9,6 +9,8 @@ import (
 	"context"
 	"math"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -91,7 +93,11 @@ func isDBEmpty(bdb *badger.DB) error {
 }
 
 func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
-	pulsesDB := pulse.NewBadgerDB(bdb)
+	txManager, err := object.NewBadgerTxManager(bdb.Backend())
+	if err != nil {
+		return 0, err
+	}
+	pulsesDB := pulse.NewBadgerDB(bdb, txManager)
 
 	jetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(bdb), bdb, pulsesDB)
 	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
@@ -113,7 +119,7 @@ func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseN
 	}
 
 	log.Info("All jets confirmed for pulse: ", pulseNumber.String())
-	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
+	err = jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to add backup confirmation for pulse "+pulseNumber.String())
 	}

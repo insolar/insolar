@@ -12,6 +12,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +47,10 @@ func TestPulse_Components(t *testing.T) {
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
-	dbStorage := pulse.NewBadgerDB(db)
+
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	dbStorage := pulse.NewBadgerDB(db, txManager)
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {

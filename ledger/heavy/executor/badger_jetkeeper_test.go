@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
@@ -43,7 +45,9 @@ func initBadgerDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeep
 	require.NoError(t, err)
 
 	jets := jet.NewBadgerDBStore(db)
-	pulses := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulses := pulse.NewBadgerDB(db, txManager)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
@@ -376,7 +380,9 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewBadgerDBStore(db)
-	pulses := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulses := pulse.NewBadgerDB(db, txManager)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
@@ -445,7 +451,9 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewBadgerDBStore(db)
-	pulses := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulses := pulse.NewBadgerDB(db, txManager)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 

@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -39,7 +41,9 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *st
 	require.NoError(t, err)
 
 	jets := jet.NewBadgerDBStore(db)
-	pulses := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulses := pulse.NewBadgerDB(db, txManager)
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 

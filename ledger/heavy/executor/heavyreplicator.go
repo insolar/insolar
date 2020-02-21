@@ -91,7 +91,7 @@ func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *pa
 	logger.Info("heavy replicator got a new message")
 
 	logger.Debug("heavy replicator storing records")
-	if err := storeRecords(ctx, h.records, h.pcs, msg.Pulse, msg.Records); err != nil {
+	if err := h.storeRecords(ctx, h.records, h.pcs, msg.Pulse, msg.Records); err != nil {
 		logger.Panic(errors.Wrap(err, "heavy replicator failed to store records"))
 	}
 
@@ -105,12 +105,12 @@ func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *pa
 	}
 
 	logger.Debug("heavy replicator storing indexes")
-	if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse, abandonedNotifyPulse.PulseNumber); err != nil {
+	if err := h.storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse, abandonedNotifyPulse.PulseNumber); err != nil {
 		logger.Panic(errors.Wrap(err, "heavy replicator failed to store indexes"))
 	}
 
 	logger.Debug("heavy replicator storing drop")
-	err = storeDrop(ctx, h.drops, msg.Drop)
+	err = h.storeDrop(ctx, h.drops, msg.Drop)
 	if err != nil {
 		logger.Panic(errors.Wrap(err, "heavy replicator failed to store drop"))
 	}
@@ -133,7 +133,7 @@ func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *pa
 	logger.Info("heavy replicator stops replication")
 }
 
-func storeIndexes(
+func (h *HeavyReplicatorDefault) storeIndexes(
 	ctx context.Context,
 	mod object.IndexModifier,
 	indexes []record.Index,
@@ -152,7 +152,7 @@ func storeIndexes(
 	return nil
 }
 
-func storeDrop(
+func (h *HeavyReplicatorDefault) storeDrop(
 	ctx context.Context,
 	drops drop.Modifier,
 	drop drop.Drop,
@@ -165,7 +165,7 @@ func storeDrop(
 	return nil
 }
 
-func storeRecords(
+func (h *HeavyReplicatorDefault) storeRecords(
 	ctx context.Context,
 	recordStorage object.RecordModifier,
 	pcs insolar.PlatformCryptographyScheme,

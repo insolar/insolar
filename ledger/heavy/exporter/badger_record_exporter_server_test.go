@@ -385,7 +385,9 @@ func TestRecordServer_Export_Composite_Badger(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	pulseStorage := insolarPulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewBadgerDB(db, txManager)
 	recordStorage := object.NewBadgerRecordDB(db)
 	recordPosition := object.NewBadgerRecordDB(db)
 
@@ -566,7 +568,9 @@ func TestRecordServer_Export_Composite_BatchVersion_Badger(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	pulseStorage := insolarPulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewBadgerDB(db, txManager)
 	recordStorage := object.NewBadgerRecordDB(db)
 	recordPosition := object.NewBadgerRecordDB(db)
 
@@ -714,7 +718,9 @@ func TestRecordServer_Export_ReturnTopPulseWhenNoRecords_Badger(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	pulseStorage := insolarPulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewBadgerDB(db, txManager)
 	recordStorage := object.NewBadgerRecordDB(db)
 	recordPosition := object.NewBadgerRecordDB(db)
 

@@ -14,6 +14,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/insolar/insolar/insolar/gen"
 
 	"github.com/insolar/insolar/ledger/heavy/migration"
@@ -113,8 +115,10 @@ func initPostgresDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, *je
 
 	ctx := inslogger.TestContext(t)
 	jets := jet.NewPostgresDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulses := pulse.NewPostgresDB(getPool(), txManager)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
 	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
@@ -384,8 +388,10 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	jets := jet.NewPostgresDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulses := pulse.NewPostgresDB(getPool(), txManager)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
 	jetKeeper := NewPostgresJetKeeper(jets, getPool(), pulses)
@@ -449,8 +455,10 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	jets := jet.NewPostgresDBStore(getPool())
-	pulses := pulse.NewPostgresDB(getPool())
-	err := pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulses := pulse.NewPostgresDB(getPool(), txManager)
+	err = pulses.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 
 	jetKeeper := NewPostgresJetKeeper(jets, getPool(), pulses)

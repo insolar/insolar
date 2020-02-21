@@ -100,7 +100,9 @@ func TestDBRollback_HappyPath_Badger(t *testing.T) {
 	indexes := object.NewBadgerIndexDB(db, nil)
 
 	jets := jet.NewBadgerDBStore(db)
-	pulses := pulse.NewBadgerDB(badger)
+	txManager, err := object.NewBadgerTxManager(badger.Backend())
+	require.NoError(t, err)
+	pulses := pulse.NewBadgerDB(badger, txManager)
 
 	nodes := NewHeadTruncaterMock(t)
 	nodes.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {

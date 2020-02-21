@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
@@ -139,10 +141,12 @@ func TestPostgresWriteReadAndLatest(t *testing.T) {
 
 	ctx := context.Background()
 	pn := gen.PulseNumber()
-	db := NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	db := NewPostgresDB(getPool(), txManager)
 
 	// Make sure there is no such pulse in PostgresDB yet
-	_, err := db.ForPulseNumber(ctx, pn)
+	_, err = db.ForPulseNumber(ctx, pn)
 	require.Error(t, err)
 
 	writePulse := generatePulse(pn, gen.PulseNumber(), gen.PulseNumber())
@@ -165,7 +169,9 @@ func TestPostgresForwardsBackwards(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := context.Background()
-	db := NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	db := NewPostgresDB(getPool(), txManager)
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)
@@ -208,7 +214,9 @@ func TestPostgresTruncateHead(t *testing.T) {
 	defer cleanupDatabase()
 
 	ctx := context.Background()
-	db := NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	db := NewPostgresDB(getPool(), txManager)
 	pulsesNum := 10
 	pulseNumbers := make([]insolar.PulseNumber, pulsesNum+2)
 	pulses := make([]*insolar.Pulse, pulsesNum+2)
@@ -231,7 +239,7 @@ func TestPostgresTruncateHead(t *testing.T) {
 	}
 
 	// Call TruncateHead
-	err := db.TruncateHead(ctx, pulseNumbers[startPulseIdx+pulsesNum/2])
+	err = db.TruncateHead(ctx, pulseNumbers[startPulseIdx+pulsesNum/2])
 	require.NoError(t, err)
 
 	// Make sure half of the pulses are still in the database...
@@ -252,7 +260,9 @@ func TestPostgresPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMem()
-	dbStorage := NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	dbStorage := NewPostgresDB(getPool(), txManager)
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {

@@ -172,7 +172,11 @@ func NewBadgerServer(
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 		Nodes = node.NewBadgerStorageDB(DB)
-		Pulses = insolarPulse.NewBadgerDB(DB)
+		TxManager, err := object.NewBadgerTxManager(DB.Backend())
+		if err != nil {
+			panic(errors.Wrap(err, "object.NewBadgerTxManager failed"))
+		}
+		Pulses = insolarPulse.NewBadgerDB(DB, TxManager)
 		Jets = jet.NewBadgerDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)

@@ -8,6 +8,8 @@ package pulse
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/insolar"
@@ -18,7 +20,8 @@ import (
 
 // BadgerDB is a BadgerDB storage implementation. It saves pulses to disk and does not allow removal.
 type BadgerDB struct {
-	db *badger.DB
+	db        *badger.DB
+	txManager object.TxManager
 }
 
 type pulseKey insolar.PulseNumber
@@ -42,8 +45,8 @@ type dbNode struct {
 }
 
 // NewBadgerDB creates new BadgerDB storage instance.
-func NewBadgerDB(db *store.BadgerDB) *BadgerDB {
-	return &BadgerDB{db: db.Backend()}
+func NewBadgerDB(db *store.BadgerDB, txManager object.TxManager) *BadgerDB {
+	return &BadgerDB{db: db.Backend(), txManager: txManager}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.

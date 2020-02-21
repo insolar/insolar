@@ -8,6 +8,8 @@ package pulse
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
@@ -18,12 +20,13 @@ import (
 
 // PostgresDB is a pulse.PostgresDB storage implementation. It saves pulses to PostgreSQL and does not allow removal.
 type PostgresDB struct {
-	pool *pgxpool.Pool
+	pool      *pgxpool.Pool
+	txManager object.TxManager
 }
 
 // NewPostgresDB creates new PostgresDB storage instance.
-func NewPostgresDB(pool *pgxpool.Pool) *PostgresDB {
-	return &PostgresDB{pool: pool}
+func NewPostgresDB(pool *pgxpool.Pool, txManager object.TxManager) *PostgresDB {
+	return &PostgresDB{pool: pool, txManager: txManager}
 }
 
 func (s *PostgresDB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {

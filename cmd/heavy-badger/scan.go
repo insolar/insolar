@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 
@@ -166,7 +168,12 @@ func (dbs *dbScanner) getAllPulses() (pulses []insolar.Pulse) {
 	}
 	ctx := context.Background()
 
-	var pulseStore = pulsedb.NewBadgerDB(dbs.db)
+	txManager, err := object.NewBadgerTxManager(dbs.db.Backend())
+	if err != nil {
+		fatalf("object.NewBadgerTxManager failed: %v", err)
+	}
+
+	var pulseStore = pulsedb.NewBadgerDB(dbs.db, txManager)
 	p, err := pulseStore.Latest(ctx)
 	pulses = append(pulses, p)
 	if err == pulsedb.ErrNotFound {

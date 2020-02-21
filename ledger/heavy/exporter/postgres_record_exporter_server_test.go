@@ -512,12 +512,14 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	thirdRec := getMaterialRecord()
 	thirdRec.ID = thirdID
 
-	pulseStorage := insolarPulse.NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewPostgresDB(getPool(), txManager)
 	recordStorage := object.NewPostgresRecordDB(getPool())
 	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Save records to DB
-	err := recordStorage.Set(ctx, firstRec)
+	err = recordStorage.Set(ctx, firstRec)
 	require.NoError(t, err)
 
 	err = recordStorage.Set(ctx, secondRec)
@@ -683,12 +685,14 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	thirdRec := getMaterialRecord()
 	thirdRec.ID = thirdID
 
-	pulseStorage := insolarPulse.NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewPostgresDB(getPool(), txManager)
 	recordStorage := object.NewPostgresRecordDB(getPool())
 	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Save records to DB
-	err := recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec, thirdRec})
+	err = recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec, thirdRec})
 	require.NoError(t, err)
 
 	// Pulses
@@ -821,14 +825,16 @@ func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
 	jetKeeper := executor.NewJetKeeperMock(t)
 	jetKeeper.TopSyncPulseMock.Return(secondPN)
 
-	pulseStorage := insolarPulse.NewPostgresDB(getPool())
+	txManager, err := object.NewPostgreSQLTxManager(getPool())
+	require.NoError(t, err)
+	pulseStorage := insolarPulse.NewPostgresDB(getPool(), txManager)
 	recordStorage := object.NewPostgresRecordDB(getPool())
 	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Pulses
 
 	// Trash pulses without data
-	err := pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
 	require.NoError(t, err)
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
 	require.NoError(t, err)

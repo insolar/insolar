@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
@@ -52,7 +54,9 @@ func TestBadgerDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	pulseStore := NewBadgerDB(dbMock)
+	txManager, err := object.NewBadgerTxManager(dbMock.Backend())
+	require.NoError(t, err)
+	pulseStore := NewBadgerDB(dbMock, txManager)
 
 	err = pulseStore.TruncateHead(ctx, 77)
 	require.NoError(t, err)
@@ -71,7 +75,9 @@ func TestBadgerDBStore_TruncateHead(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	dbStore := NewBadgerDB(dbMock)
+	txManager, err := object.NewBadgerTxManager(dbMock.Backend())
+	require.NoError(t, err)
+	dbStore := NewBadgerDB(dbMock, txManager)
 
 	numElements := 10
 

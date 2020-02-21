@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -327,7 +329,9 @@ func TestBackup_FullCycle(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulsesDB := pulse.NewBadgerDB(db, txManager)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
@@ -354,7 +358,10 @@ func TestBackup_FullCycle(t *testing.T) {
 	require.NoError(t, err)
 	defer recoveredDB.Stop(context.Background())
 
-	recoveredJetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(recoveredDB), recoveredDB, pulse.NewBadgerDB(recoveredDB))
+	txManager2, err2 := object.NewBadgerTxManager(recoveredDB.Backend())
+	require.NoError(t, err2)
+	pulsesDB2 := pulse.NewBadgerDB(recoveredDB, txManager2)
+	recoveredJetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(recoveredDB), recoveredDB, pulsesDB2)
 
 	// pulse must be finalized when prepare_backup complete without error
 	require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
@@ -393,7 +400,9 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewBadgerDB(db)
+	txManager, err := object.NewBadgerTxManager(db.Backend())
+	require.NoError(t, err)
+	pulsesDB := pulse.NewBadgerDB(db, txManager)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
@@ -430,7 +439,9 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		defer db.Stop(ctx)
 
 		// -------------------- finalize pulse
-		pulsesDB = pulse.NewBadgerDB(db)
+		txManager, err := object.NewBadgerTxManager(db.Backend())
+		require.NoError(t, err)
+		pulsesDB := pulse.NewBadgerDB(db, txManager)
 		jetsDB = jet.NewBadgerDBStore(db)
 		jetKeeper = executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 		jetKeeper.AddBackupConfirmation(ctx, testPulse)
@@ -460,11 +471,15 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		require.NoError(t, err)
 		defer recoveredDB.Stop(context.Background())
 
+		txManager2, err2 := object.NewBadgerTxManager(recoveredDB.Backend())
+		require.NoError(t, err2)
+		pulsesDB2 := pulse.NewBadgerDB(recoveredDB, txManager2)
+
 		// check that db is ok
 		recoveredJetKeeper := executor.NewBadgerJetKeeper(
 			jet.NewBadgerDBStore(recoveredDB),
 			recoveredDB,
-			pulse.NewBadgerDB(recoveredDB))
+			pulsesDB2)
 
 		// pulse must be finalized when prepare_backup complete without error
 		require.Equal(t, nextPulse, recoveredJetKeeper.TopSyncPulse())

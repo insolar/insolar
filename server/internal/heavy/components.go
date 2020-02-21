@@ -185,6 +185,7 @@ func initWithPostgres(
 
 	// Storage.
 	var (
+		TxManager      object.TxManager
 		Coordinator    jet.Coordinator
 		PulsesPostgres *insolarPulse.PostgresDB
 		NodesPostgres  *node.PostgresStorageDB
@@ -202,6 +203,11 @@ func initWithPostgres(
 			panic(errors.Wrap(err, "Unable to connect to PostgreSQL"))
 		}
 
+		TxManager, err = object.NewPostgreSQLTxManager(Pool)
+		if err != nil {
+			panic(fmt.Errorf("object.NewPostgreSQLTxManager failed: %s", err))
+		}
+
 		cwd, err := os.Getwd()
 		if err != nil {
 			panic(errors.Wrap(err, "os.Getwd failed"))
@@ -214,7 +220,7 @@ func initWithPostgres(
 		}
 		logger.Infof("PostgreSQL database migration done, current schema version: %d", ver)
 
-		PulsesPostgres = insolarPulse.NewPostgresDB(Pool)
+		PulsesPostgres = insolarPulse.NewPostgresDB(Pool, TxManager)
 		NodesPostgres = node.NewPostgresStorageDB(Pool)
 		JetsPostgres = jet.NewPostgresDBStore(Pool)
 
@@ -310,10 +316,6 @@ func initWithPostgres(
 		PostgresJetKeeper *executor.PostgresDBJetKeeper
 	)
 	{
-		TxManager, err := object.NewPostgreSQLTxManager(Pool)
-		if err != nil {
-			panic(fmt.Errorf("object.NewPostgreSQLTxManager failed: %s", err))
-		}
 		RecordsPostgres = object.NewPostgresRecordDB(Pool)
 		IndexesPostgres = object.NewPostgresIndexDB(Pool, RecordsPostgres)
 		DropPostgres = drop.NewPostgresDB(Pool)
@@ -556,6 +558,7 @@ func initWithBadger(
 
 	// Storage.
 	var (
+		TxManager   object.TxManager
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.BadgerDB
 		Nodes       *node.BadgerStorageDB
@@ -579,8 +582,13 @@ func initWithBadger(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
+		TxManager, err = object.NewBadgerTxManager(DB.Backend())
+		if err != nil {
+			panic(fmt.Errorf("object.NewBadgerTxManager failed: %s", err))
+		}
+
 		Nodes = node.NewBadgerStorageDB(DB)
-		Pulses = insolarPulse.NewBadgerDB(DB)
+		Pulses = insolarPulse.NewBadgerDB(DB, TxManager)
 		Jets = jet.NewBadgerDBStore(DB)
 
 		timeBadgerStarted := time.Since(startTime)
@@ -675,11 +683,6 @@ func initWithBadger(
 		JetKeeper    *executor.BadgerDBJetKeeper
 	)
 	{
-		TxManager, err := object.NewBadgerTxManager(DB.Backend())
-		if err != nil {
-			panic(fmt.Errorf("object.NewBadgerTxManager failed: %s", err))
-		}
-
 		Records = object.NewBadgerRecordDB(DB)
 		indexes := object.NewBadgerIndexDB(DB, Records)
 		drops := drop.NewBadgerDB(DB)

@@ -39,4 +39,7 @@ type Appender interface {
 type Calculator interface {
 	Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+	// AALEKSEEV
+	//ForwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+	//BackwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 }
