@@ -216,35 +216,16 @@ func (s *BadgerDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *BadgerDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	if steps < 0 {
-		return *insolar.GenesisPulse, errors.New("BadgerDB.traverseTx - `steps` argument should be not negative")
-	}
-
-	for {
-		tx, err := s.txManager.BeginReadTx()
-		if err != nil {
-			return *insolar.GenesisPulse, err
-		}
-
-		pn, err := s.traverseTx(tx, pn, steps, false)
-		if err != nil {
-			_ = tx.Rollback()
-			return pn, err
-		}
-
-		err = tx.Commit()
-		if err != nil {
-			inslogger.FromContext(ctx).Debugf("tx.Commit() returned an error, retrying: %s", err.Error())
-			continue
-		}
-
-		return pn, nil
-	}
+	return s.traverse(ctx, pn, steps, false)
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *BadgerDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
+	return s.traverse(ctx, pn, steps, true)
+}
+
+func (s *BadgerDB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
 	if steps < 0 {
 		return *insolar.GenesisPulse, errors.New("BadgerDB.traverseTx - `steps` argument should be not negative")
 	}
@@ -255,7 +236,7 @@ func (s *BadgerDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps 
 			return *insolar.GenesisPulse, err
 		}
 
-		pn, err := s.traverseTx(tx, pn, steps, true)
+		pn, err := s.traverseTx(tx, pn, steps, reverse)
 		if err != nil {
 			_ = tx.Rollback()
 			return pn, err
