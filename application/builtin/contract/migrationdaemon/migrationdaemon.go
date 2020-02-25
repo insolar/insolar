@@ -1,18 +1,7 @@
-/*
- *
- *  Copyright  2019. Insolar Technologies GmbH
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package migrationdaemon
 
@@ -113,28 +102,15 @@ func (md *MigrationDaemon) depositMigration(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet: %s", err.Error())
 	}
+
 	w := wallet.GetObject(*tokenHolderWallet)
-	isFound, txDepositRef, err := w.FindDeposit(txHash)
+	vestingParams, _ := migrationAdminContract.GetDepositParameters()
+	depositRef, err := w.FindOrCreateDeposit(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
+		return nil, fmt.Errorf("failed to get or create deposit: %s", err.Error())
 	}
 
-	// If deposit doesn't exist - create new deposit
-	if !isFound {
-		var err error
-		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(txHash, vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
-		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-		}
-		err = w.AddDeposit(txHash, txDeposit.GetReference())
-		if err != nil {
-			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
-		}
-		txDepositRef = &txDeposit.Reference
-	}
-	return addConfirmToDeposit(*tokenHolderRef, *txDepositRef, txHash, amount.String(), caller, request)
+	return addConfirmToDeposit(*tokenHolderRef, *depositRef, txHash, amount.String(), caller, request)
 }
 
 func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {

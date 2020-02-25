@@ -1,3 +1,8 @@
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 package meta
 
 const (
@@ -18,6 +23,9 @@ const (
 
 	// Sender is key for Sender
 	Sender = "sender"
+
+	// Receiver is key for Receiver
+	Receiver = "receiver"
 
 	// TraceID is key for traceID
 	TraceID = "TraceID"

@@ -1,13 +1,19 @@
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 package critlog
 
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/log/logoutput"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/log/logoutput"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/args"

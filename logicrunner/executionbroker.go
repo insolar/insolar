@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package logicrunner
 
@@ -63,6 +52,14 @@ type ExecutionBrokerI interface {
 	OnPulse(ctx context.Context) []payload.Payload
 }
 
+type LedgerHasMore int
+
+const (
+	LedgerIsEmpty LedgerHasMore = iota + 1
+	LedgerHasMoreKnown
+	LedgerHasMoreUnknown
+)
+
 type ExecutionBroker struct {
 	Ref  insolar.Reference
 	name string
@@ -71,7 +68,7 @@ type ExecutionBroker struct {
 
 	processorActive            bool
 	closed                     chan struct{}
-	ledgerHasMoreRequests      bool
+	ledgerHasMoreRequests      LedgerHasMore
 	probablyMoreSinceLastFetch chan struct{}
 
 	finished []*common.Transcript
@@ -112,6 +109,7 @@ func NewExecutionBroker(
 		Ref:  ref,
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
+		ledgerHasMoreRequests:      LedgerIsEmpty,
 		closed:                     make(chan struct{}),
 		probablyMoreSinceLastFetch: make(chan struct{}, 1),
 
@@ -147,13 +145,23 @@ func (q *ExecutionBroker) AbandonedRequestsOnLedger(ctx context.Context) {
 	go q.startProcessor(ctx)
 }
 
+func (q *ExecutionBroker) noMoreRequestsOnLedgerInitial(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if len(q.probablyMoreSinceLastFetch) == 0 {
+		inslogger.FromContext(ctx).Debug("marking that there is no more requests on ledger")
+		q.ledgerHasMoreRequests = LedgerIsEmpty
+	}
+}
+
 func (q *ExecutionBroker) noMoreRequestsOnLedger(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	if len(q.probablyMoreSinceLastFetch) == 0 {
 		inslogger.FromContext(ctx).Debug("marking that there is no more requests on ledger")
-		q.ledgerHasMoreRequests = false
+		q.ledgerHasMoreRequests = LedgerHasMoreKnown
 	}
 }
 
@@ -194,8 +202,14 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	feedMutable := make(chan *common.Transcript, 10)
 	feedImmutable := make(chan *common.Transcript, 10)
 	transcriptFeed := fetcher.FetchPendings(ctx)
+	fetchedRequests, fetchIteration := 0, 0
 
 	go func() {
+		ctx, logger := inslogger.WithFields(context.Background(), map[string]interface{}{
+			"broker": q.name,
+			"object": q.Ref.String(),
+		})
+
 		defer q.stopProcessor(ctx, fetcher, feedMutable, feedImmutable)
 		for {
 			select {
@@ -214,12 +228,19 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 					}
 				}
 				if tr == nil {
-					q.noMoreRequestsOnLedger(ctx)
+					if fetchIteration == 0 && fetchedRequests == 0 {
+						q.noMoreRequestsOnLedgerInitial(ctx)
+					} else {
+						q.noMoreRequestsOnLedger(ctx)
+					}
+					fetchIteration++
+
 					continue
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
 					continue
 				}
+				fetchedRequests++
 				if tr.Request.Immutable {
 					feedImmutable <- tr
 				} else {
@@ -232,6 +253,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	}()
 
 	reader := func(feed chan *common.Transcript) {
+		ctx, _ := inslogger.WithFields(context.Background(), map[string]interface{}{"broker": q.name})
+
 		for tr := range feed {
 			q.processTranscript(ctx, tr)
 		}
@@ -275,10 +298,8 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	ctx, span := instracer.StartSpan(ctx, "IncomingRequest processing")
 	defer span.Finish()
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"request": transcript.RequestRef.String(),
-		"broker":  q.name,
-	})
+	// ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{})
+	logger := inslogger.FromContext(ctx)
 
 	if !q.canProcessTranscript(ctx, transcript) {
 		// either closed broker or we're executing this already
@@ -441,11 +462,11 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		logger.Warn("looks like pending executor died, continuing execution on next executor")
 		q.pending = insolar.NotPending
 		sendExecResults = true
-		q.ledgerHasMoreRequests = true
+		q.ledgerHasMoreRequests = LedgerHasMoreKnown
 	case len(q.finished) > 0:
 		logger.Debug("had activity on object, sending result to next executor")
 		sendExecResults = true
-	case q.ledgerHasMoreRequests:
+	case q.ledgerHasMoreRequests > LedgerIsEmpty:
 		logger.Debug("object is marked as having requests on ledger, sending result to next executor")
 		sendExecResults = true
 	default:
@@ -455,10 +476,15 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	messages := make([]payload.Payload, 0)
 
 	if sendExecResults {
+		ledgerHasMoreRequests := false
+		if q.ledgerHasMoreRequests > LedgerIsEmpty {
+			ledgerHasMoreRequests = true
+		}
+
 		messages = append(messages, &payload.ExecutorResults{
 			RecordRef:             q.Ref,
 			Pending:               q.pending,
-			LedgerHasMoreRequests: q.ledgerHasMoreRequests,
+			LedgerHasMoreRequests: ledgerHasMoreRequests,
 		})
 	}
 
@@ -569,7 +595,7 @@ func (q *ExecutionBroker) clarifyPendingStateFromLedger(ctx context.Context) {
 		if has {
 			logger.Debug("ledger has requests older than one pulse")
 			q.pending = insolar.InPending
-			q.ledgerHasMoreRequests = true
+			q.ledgerHasMoreRequests = LedgerHasMoreUnknown
 		} else {
 			logger.Debug("no requests on ledger older than one pulse")
 			q.pending = insolar.NotPending
@@ -594,7 +620,7 @@ func (q *ExecutionBroker) close() {
 
 // must be called under lock
 func (q *ExecutionBroker) setHasMoreRequests() {
-	q.ledgerHasMoreRequests = true
+	q.ledgerHasMoreRequests = LedgerHasMoreKnown
 	select {
 	case q.probablyMoreSinceLastFetch <- struct{}{}:
 	default:

@@ -1,18 +1,7 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package proc
 
@@ -22,6 +11,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock/v3"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -39,7 +29,7 @@ func TestNewSendInitialState(t *testing.T) {
 	expected := &SendInitialState{
 		meta: meta,
 	}
-	is := NewSendInitialState(meta)
+	is := NewSendInitialState(meta, configuration.Ledger{})
 	require.Equal(t, expected, is)
 }
 
@@ -50,7 +40,7 @@ func TestSendInitialState_Dep(t *testing.T) {
 	pulseAccessor := pulse.NewAccessorMock(t)
 	sender := bus.NewSenderMock(t)
 
-	is := NewSendInitialState(payload.Meta{})
+	is := NewSendInitialState(payload.Meta{}, configuration.Ledger{})
 	is.Dep(startPulse, jetKeeper, stateAccessor, pulseAccessor, sender)
 	require.Equal(t, startPulse, is.dep.startPulse)
 	require.Equal(t, jetKeeper, is.dep.jetKeeper)
@@ -69,7 +59,7 @@ func TestSendInitialState_ProceedNoPulse(t *testing.T) {
 		require.Equal(t, payload.CodeNoStartPulse, resErr.Code)
 		require.Equal(t, "Couldn't get start pulse", resErr.Text)
 	})
-	is := NewSendInitialState(payload.Meta{})
+	is := NewSendInitialState(payload.Meta{}, configuration.Ledger{})
 	is.dep.startPulse = pulse.NewStartPulse()
 	is.dep.sender = sender
 	err := is.Proceed(ctx)
@@ -80,7 +70,7 @@ func TestSendInitialState_ProceedUnknownRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	p, err := payload.Marshal(&payload.Request{})
 	require.NoError(t, err)
-	is := NewSendInitialState(payload.Meta{Payload: p})
+	is := NewSendInitialState(payload.Meta{Payload: p}, configuration.Ledger{})
 	is.dep.startPulse = pulse.NewStartPulse()
 	is.dep.startPulse.SetStartPulse(ctx, insolar.Pulse{PulseNumber: 1000})
 
@@ -136,7 +126,7 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 		Payload: p,
 		Sender:  light,
 		Pulse:   1000,
-	})
+	}, configuration.Ledger{})
 	is.dep.startPulse = startPulse
 	is.dep.jetKeeper = jetKeeper
 	is.dep.pulseAccessor = pulseAccessor
@@ -180,7 +170,7 @@ func TestSendInitialState_ProceedForJoiner(t *testing.T) {
 		Payload: p,
 		Sender:  light,
 		Pulse:   1001,
-	})
+	}, configuration.Ledger{})
 
 	is.dep.startPulse = startPulse
 	is.dep.jetKeeper = jetKeeper

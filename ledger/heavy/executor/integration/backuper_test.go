@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 // +build !coverage
 
@@ -22,7 +12,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -60,14 +49,15 @@ func (t *testKey) Scope() store.Scope {
 	return store.ScopeJetDrop
 }
 
-func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDBDir string) configuration.Ledger {
+func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDBDir string) (configuration.Ledger, string) {
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		require.NoError(t, err)
 	}
 
-	tmpDir := "/tmp/BKP/"
+	tmpDir, err := ioutil.TempDir("", "bdb-backup-test-integr-")
+	require.NoError(t, err)
 
 	cfg := configuration.Backup{
 		ConfirmFile:          "BACKUPED",
@@ -91,13 +81,11 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string, recoverDB
 		Storage: configuration.Storage{
 			DataDirectory: badgerDir,
 		},
-	}
+	}, tmpDir
 }
 
-func clearData(t *testing.T, cfg configuration.Ledger) {
-	err := os.RemoveAll(cfg.Backup.TargetDirectory)
-	require.NoError(t, err)
-	err = os.RemoveAll(cfg.Backup.TmpDirectory)
+func clearData(t *testing.T, tmpDir string) {
+	err := os.RemoveAll(tmpDir)
 	require.NoError(t, err)
 }
 
@@ -111,8 +99,8 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -184,16 +172,6 @@ func TestBackuper(t *testing.T) {
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
-}
-
-func loadLastBackupedVersion(t *testing.T, fileName string) uint64 {
-	raw, err := ioutil.ReadFile(fileName)
-	require.NoError(t, err)
-	var backupInfo executor.LastBackupInfo
-	err = json.Unmarshal(raw, &backupInfo)
-	require.NoError(t, err)
-
-	return backupInfo.LastBackupedVersion
 }
 
 var binaryPath string
@@ -276,8 +254,8 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -336,8 +314,8 @@ func TestBackup_FullCycle(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, recovTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -349,17 +327,17 @@ func TestBackup_FullCycle(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewDB(db)
+	pulsesDB := pulse.NewBadgerDB(db)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetsDB := jet.NewDBStore(db)
+	jetsDB := jet.NewBadgerDBStore(db)
 	err = jetsDB.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+	jetKeeper := executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 
 	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
@@ -376,7 +354,7 @@ func TestBackup_FullCycle(t *testing.T) {
 	require.NoError(t, err)
 	defer recoveredDB.Stop(context.Background())
 
-	recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+	recoveredJetKeeper := executor.NewBadgerJetKeeper(jet.NewBadgerDBStore(recoveredDB), recoveredDB, pulse.NewBadgerDB(recoveredDB))
 
 	// pulse must be finalized when prepare_backup complete without error
 	require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
@@ -406,8 +384,8 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(backupTmpDir)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir, backupTmpDir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir, backupTmpDir)
+	defer clearData(t, tmpDir)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -415,17 +393,17 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	testJet := insolar.ZeroJetID
 
-	pulsesDB := pulse.NewDB(db)
+	pulsesDB := pulse.NewBadgerDB(db)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
 	require.NoError(t, err)
 	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
 	require.NoError(t, err)
 
-	jetsDB := jet.NewDBStore(db)
+	jetsDB := jet.NewBadgerDBStore(db)
 	err = jetsDB.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+	jetKeeper := executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 
 	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
@@ -452,9 +430,9 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		defer db.Stop(ctx)
 
 		// -------------------- finalize pulse
-		pulsesDB = pulse.NewDB(db)
-		jetsDB = jet.NewDBStore(db)
-		jetKeeper = executor.NewJetKeeper(jetsDB, db, pulsesDB)
+		pulsesDB = pulse.NewBadgerDB(db)
+		jetsDB = jet.NewBadgerDBStore(db)
+		jetKeeper = executor.NewBadgerJetKeeper(jetsDB, db, pulsesDB)
 		jetKeeper.AddBackupConfirmation(ctx, testPulse)
 		require.Equal(t, testPulse, jetKeeper.TopSyncPulse())
 
@@ -483,7 +461,10 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		defer recoveredDB.Stop(context.Background())
 
 		// check that db is ok
-		recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+		recoveredJetKeeper := executor.NewBadgerJetKeeper(
+			jet.NewBadgerDBStore(recoveredDB),
+			recoveredDB,
+			pulse.NewBadgerDB(recoveredDB))
 
 		// pulse must be finalized when prepare_backup complete without error
 		require.Equal(t, nextPulse, recoveredJetKeeper.TopSyncPulse())

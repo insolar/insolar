@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package integration
@@ -31,7 +21,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/insolar/component-manager"
+	component "github.com/insolar/component-manager"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -45,12 +35,12 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -128,8 +118,7 @@ func NewServer(
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 	mManager machinesmanager.MachinesManager) (*Server, error) {
 
-	traceID := utils.RandTraceID() + "_main"
-	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, "", "")
 
 	if mManager == nil {
 		mManager = machinesmanager.NewMachinesManager()
@@ -220,7 +209,7 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
 	}
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, IncomingPubSub, ClientBus, builtin.BuiltinContracts{})
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(
@@ -234,6 +223,7 @@ func NewServer(
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
+	artifactsClient := artifacts.NewClient(ClientBus)
 	cm.Inject(CryptoScheme,
 		KeyStore,
 		CryptoService,
@@ -244,13 +234,13 @@ func NewServer(
 		ClientBus,
 		IncomingPubSub,
 		contractRequester,
-		artifacts.NewClient(ClientBus),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		Pulses,
 		Jets,
 		Nodes,
 
-		logicexecutor.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(artifacts.NewPulseAccessorLRU(Pulses, artifactsClient, 100)),
 		logicrunner.NewRequestsExecutor(),
 		mManager,
 		NodeNetwork,

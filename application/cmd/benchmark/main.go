@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -34,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
@@ -45,31 +34,33 @@ const (
 	createMemberRetries = 5
 	balanceCheckRetries = 10
 	balanceCheckDelay   = 5 * time.Second
+	fee                 = 100000000 // value from Fee const in costcenter contract
 )
 
 var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile          string
-	output              string
-	concurrent          int
-	repetitions         int
-	memberKeys          string
-	adminAPIURLs        []string
-	publicAPIURLs       []string
-	logLevel            string
-	logLevelServer      string
-	saveMembersToFile   bool
-	useMembersFromFile  bool
-	noCheckBalance      bool
-	checkMembersBalance bool
-	checkAllBalance     bool
-	checkTotalBalance   bool
-	scenarioName        string
-	discoveryNodesLogs  string
-	maxRetries          int
-	retryPeriod         time.Duration
+	memberFile                string
+	output                    string
+	concurrent                int
+	repetitions               int
+	memberKeys                string
+	adminAPIURLs              []string
+	publicAPIURLs             []string
+	logLevel                  string
+	logLevelServer            string
+	saveMembersToFile         bool
+	useMembersFromFile        bool
+	noCheckBalance            bool
+	checkMembersBalance       bool
+	checkAllBalance           bool
+	checkTotalBalance         bool
+	scenarioName              string
+	discoveryNodesLogs        string
+	maxRetries                int
+	retryPeriod               time.Duration
+	delayBeforeGettingBalance time.Duration
 )
 
 func parseInputParams() {
@@ -92,6 +83,7 @@ func parseInputParams() {
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
 	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
+	pflag.DurationVarP(&delayBeforeGettingBalance, "delay-before-getting-balance", "d", 0, "delay before getting balance")
 	pflag.Parse()
 }
 
@@ -212,29 +204,72 @@ func printResults(b benchmark) {
 }
 
 func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
-	var members []sdk.Member
-	var member sdk.Member
-	var traceID string
-	var err error
+	var (
+		members []sdk.Member
+		member  sdk.Member
+		traceID string
+		err     error
+	)
+
+	feeMember := insSDK.GetFeeMember()
+	balanceBefore, _, err := insSDK.GetBalance(feeMember)
+	check("Couldn't get balance of fee member before create any new members:", err)
 
 	for i := 0; i < count; i++ {
 		retries := createMemberRetries
 		for retries > 0 {
-			if migration {
-				member, traceID, err = insSDK.MigrationCreateMember()
-			} else {
-				member, traceID, err = insSDK.CreateMember()
+			member, traceID, err = createMember(insSDK, migration)
+			if err != nil {
+				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
+				retries--
+				continue
 			}
-			if err == nil {
-				members = append(members, member)
-				break
-			}
-			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
-			retries--
+			members = append(members, member)
+			break
 		}
 		check(fmt.Sprintf("Couldn't create member after retries: %d", createMemberRetries), err)
 	}
+
+	difference := fee * count
+	amount := new(big.Int).SetInt64(int64(difference))
+	expectedBalance := new(big.Int).Add(balanceBefore, amount)
+	for nretries := 0; nretries < balanceCheckRetries; nretries++ {
+		balanceAfter, _, err := insSDK.GetBalance(feeMember)
+		check("Couldn't get balance of fee member after creation of new members:", err)
+		if balanceAfter.Cmp(expectedBalance) == 0 {
+			break
+		}
+		fmt.Printf("Wait for fee from creation complite: %v vs %v (difference must be %d) - retrying in %s ...\n",
+			balanceBefore, balanceAfter, difference, balanceCheckDelay)
+		time.Sleep(balanceCheckDelay)
+		if nretries+1 == balanceCheckRetries {
+			fmt.Printf("Couldn't wait for expected fee member balance after retries: %d\n", createMemberRetries)
+			os.Exit(1)
+		}
+	}
 	return members
+}
+
+func createMember(insSDK *sdk.SDK, migration bool) (sdk.Member, string, error) {
+	var (
+		member  sdk.Member
+		traceID string
+		err     error
+	)
+
+	if migration {
+		member, traceID, err = insSDK.MigrationCreateMember()
+	} else {
+		member, traceID, err = insSDK.CreateMember()
+	}
+
+	if err != nil {
+		return nil, traceID, errors.Wrap(err, "Failed to create member")
+	}
+
+	traceID, err = insSDK.Transfer("100000000000000", insSDK.GetRootMember(), member)
+
+	return member, traceID, errors.Wrap(err, "Failed to transfer initial amount")
 }
 
 func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[string]*big.Int) {
@@ -457,6 +492,8 @@ func main() {
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
+
+	time.Sleep(delayBeforeGettingBalance)
 
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())

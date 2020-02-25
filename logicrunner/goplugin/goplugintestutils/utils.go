@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package goplugintestutils
 
@@ -27,9 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
@@ -98,14 +87,18 @@ func NewContractBuilder(icc string, am artifacts.Client, pa pulse.Accessor, jc j
 
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
-	err := os.RemoveAll(cb.root) // nolint: errcheck
+	err := os.RemoveAll(cb.root)
 	if err != nil {
 		panic(err)
 	}
 }
 
+type BuildOptions struct {
+	PanicIsLogicalError bool
+}
+
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string, options BuildOptions) error {
 	logger := inslogger.FromContext(ctx)
 
 	for name := range contracts {
@@ -138,11 +131,11 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't WriteFile")
 		}
-		err = cb.proxy(name)
+		err = cb.proxy(name, options)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call proxy")
 		}
-		err = cb.wrapper(name)
+		err = cb.wrapper(name, options)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call wrapper")
 		}
@@ -177,7 +170,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*cb.Prototypes[name],
-			application.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
+			genesis.Record.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)
@@ -226,7 +219,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 	return nil, errors.Wrap(err, "flow cancelled, retries exceeded")
 }
 
-func (cb *ContractsBuilder) proxy(name string) error {
+func (cb *ContractsBuilder) proxy(name string, _ BuildOptions) error {
 	root := insolar.RootModuleDir()
 	dstDir := filepath.Join(root, "application/proxy", name)
 
@@ -249,11 +242,15 @@ func (cb *ContractsBuilder) proxy(name string) error {
 	return nil
 }
 
-func (cb *ContractsBuilder) wrapper(name string) error {
+func (cb *ContractsBuilder) wrapper(name string, options BuildOptions) error {
 	contractPath := filepath.Join(cb.root, "src/contract", name, "main.go")
 	wrapperPath := filepath.Join(cb.root, "src/contract", name, "main_wrapper.go")
 
-	out, err := exec.Command(cb.IccPath, "wrapper", "-o", wrapperPath, contractPath).CombinedOutput()
+	args := []string{"wrapper", "-o", wrapperPath, contractPath}
+	if options.PanicIsLogicalError {
+		args = append(args, "--panic-logical")
+	}
+	out, err := exec.Command(cb.IccPath, args...).CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, "can't generate wrapper for contract '"+name+"': "+string(out))
 	}

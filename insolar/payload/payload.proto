@@ -351,6 +351,7 @@ message LightInitialState {
     repeated drop.Drop Drops = 22 [(gogoproto.nullable) = false];
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
     pulse.PulseProto Pulse = 24 [(gogoproto.nullable) = false];
+    uint32 LightChainLimit = 25;
 }
 
 message GetIndex {
@@ -371,4 +372,16 @@ message UpdateJet {
 
     bytes Pulse = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+}
+
+message GetPulse {
+    uint32 Polymorph = 16;
+
+    bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message Pulse {
+    uint32 Polymorph = 16;
+
+    pulse.PulseProto Pulse = 20 [(gogoproto.nullable) = false];
 }

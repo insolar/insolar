@@ -25,11 +25,6 @@ out
 ### VSCode configuration
 .vscode
 
-# Go dep
-vendor
-.vendor-new
-*.lock
-
 # wasm tests
 vm/wasm/test/data/!simple!.wasm
 vm/wasm/test/data/*.wat

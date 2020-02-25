@@ -1,33 +1,21 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package light
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application/api"
+	component "github.com/insolar/component-manager"
+
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -47,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -61,7 +50,35 @@ type components struct {
 	cleaner           executor.Cleaner
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+	earlyComponents := component.NewManager(nil)
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load KeyStore")
+	}
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	earlyComponents.Register(platformCryptographyScheme, keyStore)
+	earlyComponents.Inject(cryptographyService, keyProcessor)
+
+	publicKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve node public key")
+	}
+
+	certManager, err := certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create new CertificateManager")
+	}
+
+	return certManager, nil
+}
+
+func newComponents(ctx context.Context, cfg configuration.Configuration, apiOptions api.Options) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -191,6 +208,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -207,6 +225,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -301,7 +320,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		stateIniter := executor.NewStateIniter(
-			Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+			conf, Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		dep := proc.NewDependencies(

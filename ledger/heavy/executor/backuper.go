@@ -1,26 +1,13 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package executor
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,8 +38,6 @@ var (
 
 // BackupInfo contains meta information about current incremental backup
 type BackupInfo struct {
-	// SHA256 is hash of backup file
-	SHA256 string
 	// Pulse is number of backuped pulse
 	Pulse insolar.PulseNumber
 	// LastBackupedVersion is last backaped badger's version\timestamp
@@ -109,26 +94,6 @@ func checkConfig(config configuration.Ledger) error {
 	}
 
 	return nil
-}
-
-// LastBackupInfo contains info about last successful backup
-type LastBackupInfo struct {
-	LastBackupedVersion uint64
-}
-
-// loadLastBackupedVersion reads LastBackupedVersion from given file
-func loadLastBackupedVersion(fileName string) (uint64, error) {
-	raw, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to read "+fileName)
-	}
-	var backupInfo LastBackupInfo
-	err = json.Unmarshal(raw, &backupInfo)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to unmarshal "+fileName)
-	}
-
-	return backupInfo.LastBackupedVersion, nil
 }
 
 type DBInitializedKey byte
@@ -228,6 +193,7 @@ func (lw *logWrapper) Write(p []byte) (n int, err error) {
 
 func invokeBackupPostProcessCommand(ctx context.Context, command []string, currentBkpDirPath string) error {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("invokeBackupPostProcessCommand starts")
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "INSOLAR_CURRENT_BACKUP_DIR="+currentBkpDirPath)
@@ -303,30 +269,39 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 }
 
 func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"last_finalized_pulse": lastFinalizedPulse,
+	})
+
+	logger.Info("MakeBackup: before acquiring the lock")
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	logger.Info("MakeBackup: lock acquired!")
 
 	if lastFinalizedPulse <= b.lastBackupedPulse {
+		logger.Info("MakeBackup: backup already done")
 		return ErrAlreadyDone
 	}
 
 	if !b.config.Enabled {
-		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
+		logger.Info("MakeBackup: backup disabled")
 		b.lastBackupedPulse = lastFinalizedPulse
 		return ErrBackupDisabled
 	}
 
 	err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
+		logger.Infof("MakeBackup: doBackup() returned an error %v", err)
 		return errors.Wrap(err, "failed to doBackup")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
 
-	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
+	logger.Infof("Done!")
 	return nil
 }
 
+// TruncateHead remove all records starting with 'from'
 func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -350,5 +325,13 @@ func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.Puls
 		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
 	}
 
+	return nil
+}
+
+type PostgresBackupMaker struct {
+}
+
+func (p PostgresBackupMaker) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+	// because the method is a stub-method, it just returns nil
 	return nil
 }

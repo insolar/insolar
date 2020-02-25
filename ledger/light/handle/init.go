@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package handle
 
@@ -77,8 +66,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
-
+	logger := inslogger.FromContext(ctx)
 	logger.Debug("Start to handle new message")
 
 	switch payloadType {
@@ -136,6 +124,8 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, NewError(s.message).Present)
 	case payload.TypeHotObjects:
 		err = f.Handle(ctx, NewHotObjects(s.dep, meta).Present)
+	case payload.TypeGetPulse:
+		err = f.Handle(ctx, NewGetPulse(s.dep, meta).Present)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
@@ -296,7 +286,8 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeGetRequest,
 		payload.TypePassState,
 		payload.TypeGetRequestInfo,
-		payload.TypeGetFilament:
+		payload.TypeGetFilament,
+		payload.TypeGetPulse:
 		return s.Present(ctx, f)
 	}
 

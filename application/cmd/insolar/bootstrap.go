@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -22,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/insolar/insolar/application/bootstrap"
+	basebootstrap "github.com/insolar/insolar/applicationbase/bootstrap"
 )
 
 func bootstrapCommand() *cobra.Command {
@@ -33,16 +23,27 @@ func bootstrapCommand() *cobra.Command {
 		Use:   "bootstrap",
 		Short: "creates files required for new network (keys, genesis config)",
 		Run: func(cmd *cobra.Command, args []string) {
-			gen, err := bootstrap.NewGenerator(configPath, certificatesOutDir)
-			check("bootstrap failed to start", err)
+			ctx := context.Background()
 
-			err = gen.Run(context.Background())
-			check("bootstrap failed", err)
+			contractsConfig, err := bootstrap.CreateGenesisContractsConfig(ctx, configPath)
+			check("failed to create genesis contracts config", err)
+
+			config, err := basebootstrap.ParseConfig(configPath)
+			check("bootstrap config error", err)
+			if certificatesOutDir != "" {
+				config.CertificatesOutDir = certificatesOutDir
+			}
+
+			err = basebootstrap.NewGeneratorWithConfig(config, contractsConfig).Run(ctx)
+			check("base bootstrap failed to start", err)
 		},
 	}
 	c.Flags().StringVarP(
 		&configPath, "config", "c", "bootstrap.yaml", "path to bootstrap config")
+
 	c.Flags().StringVarP(
 		&certificatesOutDir, "certificates-out-dir", "o", "", "dir with certificate files")
+	c.Flags().MarkDeprecated("certificates-out-dir", "please switch to 'certificates_out_dir:' in config")
+
 	return c
 }

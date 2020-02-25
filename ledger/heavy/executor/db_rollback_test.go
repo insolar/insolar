@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package executor
 
@@ -55,7 +44,7 @@ func TestDBRollback_TruncateReturnError(t *testing.T) {
 	require.Contains(t, err.Error(), testError.Error(), err)
 }
 
-func TestDBRollback_HappyPath(t *testing.T) {
+func TestDBRollback_HappyPath_Badger(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1
 	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
@@ -100,7 +89,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return iterMock
 	})
 
-	drops := drop.NewDB(db)
+	drops := drop.NewBadgerDB(db)
 
 	records := NewHeadTruncaterMock(t)
 	records.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
@@ -108,10 +97,10 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return nil
 	})
 
-	indexes := object.NewIndexDB(db, nil)
+	indexes := object.NewBadgerIndexDB(db, nil)
 
-	jets := jet.NewDBStore(db)
-	pulses := pulse.NewDB(badger)
+	jets := jet.NewBadgerDBStore(db)
+	pulses := pulse.NewBadgerDB(badger)
 
 	nodes := NewHeadTruncaterMock(t)
 	nodes.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {

@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package payload
 
@@ -49,6 +38,8 @@ const (
 	TypeGetFilament
 	TypeGetRequest
 	TypeRequest
+	TypeGetPulse
+	TypePulse
 	TypeFilamentSegment
 	TypeSetResult
 	TypeActivate
@@ -253,6 +244,12 @@ func Marshal(payload Payload) ([]byte, error) {
 		return pl.Marshal()
 	case *Request:
 		pl.Polymorph = uint32(TypeRequest)
+		return pl.Marshal()
+	case *GetPulse:
+		pl.Polymorph = uint32(TypeGetPulse)
+		return pl.Marshal()
+	case *Pulse:
+		pl.Polymorph = uint32(TypePulse)
 		return pl.Marshal()
 	case *Deactivate:
 		pl.Polymorph = uint32(TypeDeactivate)
@@ -529,6 +526,14 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeErrorResultExitsts:
 		pl := ErrorResultExists{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetPulse:
+		pl := GetPulse{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePulse:
+		pl := Pulse{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

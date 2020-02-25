@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package heavy
@@ -23,9 +13,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -44,9 +35,12 @@ func TestComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
+	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
+	cfg.APIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
+	cfg.AdminAPIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, application.GenesisHeavyConfig{Skip: true})
+	_, err = newComponents(ctx, cfg, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, api.Options{})
 	require.NoError(t, err)
 }

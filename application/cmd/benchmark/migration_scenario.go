@@ -1,18 +1,7 @@
-// /
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// /
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -21,13 +10,13 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 )
 
 const (
 	migrationAmount = 101
 
-	txHashPrefix = "tx_hash_"
+	txHashPattern = "0x89f2d6994e5d152bece9ec291f6098d236ab81f76f0d4d52fb69d0cd6b6fd70d"
 )
 
 type migrationScenario struct {
@@ -75,12 +64,19 @@ func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (str
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
 		return traceID, err
 	}
-	return s.insSDK.Migration(s.migrationDaemons[1], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.Migration(s.migrationDaemons[1], replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
 func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
 	return s.balanceCheckMembers
+}
+
+func replaceLast(str, replace string) string {
+	if len(replace) >= len(str) {
+		return replace
+	}
+	return str[:len(str)-len(replace)] + replace
 }

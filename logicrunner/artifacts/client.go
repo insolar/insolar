@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package artifacts
 
@@ -206,6 +195,41 @@ func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.Ou
 	return res, err
 }
 
+// GetPulse returns pulse data for pulse number from request.
+func (m *client) GetPulse(ctx context.Context, pn insolar.PulseNumber) (insolar.Pulse, error) {
+	var err error
+	ctx, instrumenter := instrument(ctx, "GetPulse", &err)
+	defer instrumenter.end()
+
+	getPulse := &payload.GetPulse{
+		PulseNumber: pn,
+	}
+
+	pl, err := m.sendToLight(
+		ctx, bus.NewRetrySender(
+			m.sender,
+			m.PulseAccessor, 1,
+			1),
+		getPulse,
+		*insolar.NewReference(*insolar.NewID(pn, nil)),
+	)
+
+	if err != nil {
+		return insolar.Pulse{}, errors.Wrap(err, "failed to send GetPulse")
+	}
+
+	switch p := pl.(type) {
+	case *payload.Pulse:
+		return *insPulse.FromProto(&p.Pulse), nil
+	case *payload.Error:
+		err = errors.New(p.Text)
+		return insolar.Pulse{}, err
+	default:
+		err = fmt.Errorf("GetPulse: unexpected reply: %#v", p)
+		return insolar.Pulse{}, err
+	}
+}
+
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
@@ -337,7 +361,7 @@ func (m *client) sendGetObject(
 		err error
 		res = &getObjectRes{}
 	)
-	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
+	logger := inslogger.FromContext(ctx).WithField("get_object", head.GetLocal().String())
 
 	pl := payload.GetObject{
 		ObjectID: *head.GetLocal(),

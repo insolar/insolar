@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package secrets
 
@@ -47,32 +36,23 @@ func GenerateKeyPair() (*KeyPair, error) {
 	}, nil
 }
 
-// GetPublicKeyFromFile reads private/public keys pair from json file and return public key
-func GetPublicKeyFromFile(file string) (string, error) {
-	pair, err := ReadKeysFile(file)
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't get keys")
-	}
-	return platformpolicy.MustPublicKeyToString(pair.Public), nil
-}
-
 // ReadKeysFile reads private/public keys pair from json file.
-func ReadKeysFile(file string) (*KeyPair, error) {
+func ReadKeysFile(file string, publicOnly bool) (*KeyPair, error) {
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrapf(err, " couldn't read keys file %v", file)
 	}
-	return ReadKeys(bytes.NewReader(b))
+	return ReadKeys(bytes.NewReader(b), publicOnly)
 }
 
 // ReadKeysFile reads and parses json from reader, returns parsed private/public keys pair.
-func ReadKeys(r io.Reader) (*KeyPair, error) {
+func ReadKeys(r io.Reader, publicOnly bool) (*KeyPair, error) {
 	var keys map[string]string
 	err := json.NewDecoder(r).Decode(&keys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "fail unmarshal keys data")
 	}
-	if keys["private_key"] == "" {
+	if !publicOnly && keys["private_key"] == "" {
 		return nil, errors.New("empty private key")
 	}
 	if keys["public_key"] == "" {
@@ -81,9 +61,12 @@ func ReadKeys(r io.Reader) (*KeyPair, error) {
 
 	kp := platformpolicy.NewKeyProcessor()
 
-	privateKey, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
-	if err != nil {
-		return nil, errors.Wrapf(err, "fail import private key")
+	var privateKey crypto.PrivateKey
+	if !publicOnly {
+		privateKey, err = kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
+		if err != nil {
+			return nil, errors.Wrapf(err, "fail import private key")
+		}
 	}
 	publicKey, err := kp.ImportPublicKeyPEM([]byte(keys["public_key"]))
 	if err != nil {
@@ -107,7 +90,7 @@ func ReadKeysFromDir(dir string) ([]*KeyPair, error) {
 
 	nodes := make([]*KeyPair, 0, len(files))
 	for _, f := range files {
-		pair, err := ReadKeysFile(filepath.Join(dir, f.Name()))
+		pair, err := ReadKeysFile(filepath.Join(dir, f.Name()), false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "can't get keys from file %v", f.Name())
 		}

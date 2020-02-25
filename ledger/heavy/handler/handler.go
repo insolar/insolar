@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package handler
 
@@ -44,7 +33,7 @@ import (
 // Handler is a base struct for heavy's methods
 type Handler struct {
 	cfg      configuration.Ledger
-	gcRunner *executor.BadgerGCRunInfo
+	gcRunner executor.GCRunInfo
 
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -66,7 +55,6 @@ type Handler struct {
 	StartPulse      pulse.StartPulse
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
-	DropDB          *drop.DB
 
 	Replicator executor.HeavyReplicator
 
@@ -74,7 +62,7 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New(cfg configuration.Ledger, gcRunner *executor.BadgerGCRunInfo) *Handler {
+func New(cfg configuration.Ledger, gcRunner executor.GCRunInfo) *Handler {
 	h := &Handler{
 		cfg:      cfg,
 		gcRunner: gcRunner,
@@ -125,6 +113,12 @@ func New(cfg configuration.Ledger, gcRunner *executor.BadgerGCRunInfo) *Handler 
 				h.StartPulse,
 				h.JetKeeper,
 				h.InitialStateReader,
+				h.PulseAccessor,
+				h.Sender,
+			)
+		},
+		SendPulse: func(p *proc.SendPulse) {
+			p.Dep(
 				h.PulseAccessor,
 				h.Sender,
 			)
@@ -220,8 +214,12 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
 	case payload.TypeGetLightInitialState:
-		p := proc.NewSendInitialState(meta)
+		p := proc.NewSendInitialState(meta, h.cfg)
 		h.dep.SendInitialState(p)
+		err = p.Proceed(ctx)
+	case payload.TypeGetPulse:
+		p := proc.NewSendPulse(meta)
+		h.dep.SendPulse(p)
 		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())

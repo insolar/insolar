@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package rootdomain
 
@@ -35,7 +24,10 @@ type RootDomain struct {
 // GetMemberByPublicKey gets member reference by public key.
 // ins:immutable
 func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	trimmedPublicKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
 	i := foundation.GetShardIndex(trimmedPublicKey, len(rd.PublicKeyShards))
 	if i >= len(rd.PublicKeyShards) {
 		return nil, fmt.Errorf("incorrect shard index")
@@ -56,13 +48,16 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
 // ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	trimmedPublicKey, err := foundation.ExtractCanonicalPublicKey(publicKey)
+	if err != nil {
+		return fmt.Errorf("extracting canonical pk failed, current value %v", publicKey)
+	}
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(rd.PublicKeyShards))
 	if shardIndex >= len(rd.PublicKeyShards) {
 		return fmt.Errorf("incorrect public key shard index")
 	}
 	pks := pkshard.GetObject(rd.PublicKeyShards[shardIndex])
-	err := pks.SetRef(trimmedPublicKey, memberRef.String())
+	err = pks.SetRef(trimmedPublicKey, memberRef.String())
 	if err != nil {
 		return errors.Wrap(err, "failed to set reference in public key shard")
 	}

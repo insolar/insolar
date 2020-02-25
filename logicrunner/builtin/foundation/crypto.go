@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package foundation
 
@@ -50,10 +39,21 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 		return fmt.Errorf("cant decode signature %s", err.Error())
 	}
 
-	if TrimPublicKey(key) != TrimPublicKey(rawpublicpem) && !selfSigned {
+	canonicalRawPk, err := ExtractCanonicalPublicKey(rawpublicpem)
+	if err != nil {
+		return fmt.Errorf("problems with parsing. Key - %v", rawpublicpem)
+	}
+
+	canonicalKey, err := ExtractCanonicalPublicKey(key)
+	if err != nil {
+		return fmt.Errorf("problems with parsing. Key - %v", key)
+	}
+
+	if canonicalKey != canonicalRawPk && !selfSigned {
 		return fmt.Errorf("access denied. Key - %v", rawpublicpem)
 	}
 
+	// todo: simplify next
 	blockPub, _ := pem.Decode([]byte(rawpublicpem))
 	if blockPub == nil {
 		return fmt.Errorf("problems with decoding. Key - %v", rawpublicpem)
@@ -86,6 +86,6 @@ func GetShardIndex(s string, mod int) int {
 // Calc hash
 func hash(s string) uint32 {
 	h := fnv.New32a()
-	h.Write([]byte(s))
+	_, _ = h.Write([]byte(s))
 	return h.Sum32()
 }

@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // +build functest
 
@@ -31,7 +20,7 @@ import (
 )
 
 const times = 5
-const feeSize = "1000000000"
+const feeSize = "100000000"
 
 func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expected *big.Int) {
 	for i := 0; i < times; i++ {
@@ -48,6 +37,15 @@ func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expe
 func TestTransferMoney(t *testing.T) {
 	firstMember := createMember(t)
 	secondMember := createMember(t)
+
+	// init money on members
+	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "2000000000", "toMemberReference": firstMember.Ref})
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "2000000000", "toMemberReference": secondMember.Ref})
+	require.NoError(t, err)
+
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 
@@ -99,7 +97,7 @@ func TestTransferMoneyToNotObjectRef(t *testing.T) {
 	require.Error(t, err)
 
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not object")
+	require.Contains(t, strings.Join(data.Trace, ": "), "OpenAPI schema validation")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
@@ -137,7 +135,7 @@ func TestTransferMoneyToNotSelfScopedRef(t *testing.T) {
 	require.Error(t, err)
 
 	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, strings.Join(data.Trace, ": "), "provided reference is not self-scoped")
+	require.Contains(t, strings.Join(data.Trace, ": "), "OpenAPI schema validation")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
@@ -262,9 +260,17 @@ func TestTransferTwoTimes(t *testing.T) {
 	// oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	// oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 
+	// init money on members
+	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "5000000000", "toMemberReference": firstMember.Ref})
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.Root, "member.transfer",
+		map[string]interface{}{"amount": "5000000000", "toMemberReference": secondMember.Ref})
+	require.NoError(t, err)
+
 	amount := "10"
 
-	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",

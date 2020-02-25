@@ -1,24 +1,16 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package deposit
 
 import (
 	"fmt"
 	"math/big"
+	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/deposit"
@@ -45,10 +37,15 @@ type Deposit struct {
 	Lockup                  int64                     `json:"lockupInPulses"`
 	Vesting                 int64                     `json:"vestingInPulses"`
 	VestingStep             int64                     `json:"vestingStepInPulses"`
+	IsConfirmed             bool                      `json:"isConfirmed"`
 }
 
 // New creates new deposit.
 func New(txHash string, lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
+
+	if vestingStep > 0 && vesting%vestingStep != 0 {
+		return nil, errors.New("vesting is not multiple of vestingStep")
+	}
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 
@@ -113,9 +110,13 @@ func (d *Deposit) Itself() (interface{}, error) {
 	if err == nil {
 		pulseDepositUnHold = t.Unix()
 	}
+	holdStartDate := pulseDepositUnHold - d.Lockup
+	if holdStartDate < 0 {
+		holdStartDate = 0
+	}
 	return &DepositOut{
 		Balance:                 d.Balance,
-		HoldStartDate:           pulseDepositUnHold - d.Lockup,
+		HoldStartDate:           holdStartDate,
 		PulseDepositUnHold:      pulseDepositUnHold,
 		MigrationDaemonConfirms: daemonConfirms,
 		Amount:                  d.Amount,
@@ -133,43 +134,64 @@ func (d *Deposit) Confirm(
 ) error {
 
 	migrationDaemonRef := fromMember.String()
-	if d.PulseDepositUnHold != 0 {
-		return fmt.Errorf("migration is done for this deposit %s", txHash)
-	}
 	if txHash != d.TxHash {
-		return fmt.Errorf("transaction hash is incorrect")
+		return errors.New("transaction hash is incorrect")
 	}
-	if _, ok := d.MigrationDaemonConfirms[migrationDaemonRef]; ok {
-		return fmt.Errorf("confirm from this migration daemon already exists: '%s' ", migrationDaemonRef)
+	if confirmedAmount, ok := d.MigrationDaemonConfirms[migrationDaemonRef]; ok {
+		if amountStr != confirmedAmount {
+			return fmt.Errorf(
+				"confirm from this migration daemon %s already exists with different amount: was %s, now %s",
+				migrationDaemonRef,
+				confirmedAmount,
+				amountStr,
+			)
+		}
+		return nil
+	}
+
+	if d.IsConfirmed {
+		d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
+		if amountStr != d.Amount {
+			return fmt.Errorf(
+				"migration is done for this deposit %s, but with different amount: confirmed is %s, from this daemon %s",
+				txHash,
+				d.Amount,
+				amountStr,
+			)
+		}
+		return nil
 	}
 
 	if len(d.MigrationDaemonConfirms) > 0 {
-		err := d.checkConfirm(migrationDaemonRef, amountStr)
-		if err != nil {
-			return err
-		}
-		currentPulse, err := foundation.GetPulseNumber()
-		if err != nil {
-			return fmt.Errorf("failed to get current pulse: %s", err.Error())
-		}
-		d.Amount = amountStr
-		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.Lockup)
+		canConfirm, errFromConfirm := d.checkConfirm(migrationDaemonRef, amountStr)
+		if canConfirm {
+			currentPulse, err := foundation.GetPulseNumber()
+			if err != nil {
+				return errors.Wrap(err, "failed to get current pulse")
+			}
+			d.Amount = amountStr
+			d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.Lockup)
 
-		ma := member.GetObject(appfoundation.GetMigrationAdminMember())
-		walletRef, err := ma.GetWallet()
-		if err != nil {
-			return fmt.Errorf("failed to get wallet: %s", err.Error())
-		}
-		ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit(genesisrefs.FundsDepositName)
-		if !ok {
-			return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
-		}
+			ma := member.GetObject(appfoundation.GetMigrationAdminMember())
+			walletRef, err := ma.GetWallet()
+			if err != nil {
+				return errors.Wrap(err, "failed to get wallet")
+			}
+			ok, maDeposit, _ := wallet.GetObject(*walletRef).FindDeposit(genesisrefs.FundsDepositName)
+			if !ok {
+				return fmt.Errorf("failed to find source deposit - %s", walletRef.String())
+			}
 
-		err = deposit.GetObject(*maDeposit).TransferToDeposit(
-			amountStr, d.GetReference(), appfoundation.GetMigrationAdminMember(), request, toMember,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to transfer from migration deposit to deposit: %s", err.Error())
+			err = deposit.GetObject(*maDeposit).TransferToDeposit(
+				amountStr, d.GetReference(), appfoundation.GetMigrationAdminMember(), request, toMember,
+			)
+			if err != nil {
+				return errors.Wrap(err, "failed to transfer from migration deposit to deposit")
+			}
+			d.IsConfirmed = true
+		}
+		if errFromConfirm != nil {
+			return errFromConfirm
 		}
 		return nil
 	}
@@ -187,18 +209,18 @@ func (d *Deposit) TransferToDeposit(
 ) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return fmt.Errorf("can't parse input amount")
+		return errors.New("can't parse input amount")
 	}
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse deposit balance")
+		return errors.New("can't parse deposit balance")
 	}
 	if balance.Sign() <= 0 {
-		return fmt.Errorf("not enough balance for transfer")
+		return errors.New("not enough balance for transfer")
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
-		return fmt.Errorf("not enough balance for transfer: %s", err.Error())
+		return errors.Wrap(err, "not enough balance for transfer")
 	}
 	d.Balance = newBalance.String()
 	destination := deposit.GetObject(toDeposit)
@@ -211,107 +233,127 @@ func (d *Deposit) TransferToDeposit(
 		return nil
 	}
 	d.Balance = balance.String()
-	return fmt.Errorf("failed to transfer amount: %s", acceptDepositErr.Error())
+	return errors.Wrap(err, "failed to transfer amount")
 
 }
 
 // Check amount field in confirmation from migration daemons.
-func (d *Deposit) checkAmount(activeDaemons []string) error {
+func (d *Deposit) checkAmount(activeDaemons map[string]string, migrationDaemonRef string, amountStr string) (bool, error) {
+	confirmed := false
 	if activeDaemons == nil || len(activeDaemons) == 0 {
-		return fmt.Errorf("list with migration daemons member is empty")
+		return false, errors.New("list with migration daemons member is empty")
 	}
-	result := ""
-	for _, migrationRef := range activeDaemons {
-		if amount, ok := d.MigrationDaemonConfirms[migrationRef]; ok {
-			if result == "" {
-				result = amount
-				continue
-			}
-			if result != amount {
-				return fmt.Errorf(" several migration daemons send different amount  ")
-			}
+	amountConfirms := make(map[string]int) // amount: num of confirms
+	var errDaemon []string
+	for migrationRef, amount := range activeDaemons {
+		if amount != amountStr {
+			errDaemon = append(errDaemon, fmt.Sprintf("%s send amount %s", migrationRef, amount))
 		}
+		amountConfirms[amount] = amountConfirms[amount] + 1
 	}
-	return nil
+	amountConfirms[amountStr] = amountConfirms[amountStr] + 1
+	if amountConfirms[amountStr] >= numConfirmation {
+		confirmed = true
+	}
+	var err error
+	if len(errDaemon) > 0 {
+		if !confirmed {
+			errDaemon = append(errDaemon, fmt.Sprintf("%s send amount %s", migrationDaemonRef, amountStr))
+		}
+		err = fmt.Errorf("several migration daemons send different amount: %s", strings.Join(errDaemon, ": "))
+	}
+	return confirmed, err
 }
 
-func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) error {
-	var activateDaemons []string
+func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) (bool, error) {
+	activateDaemons := make(map[string]string)
 
-	for ref := range d.MigrationDaemonConfirms {
+	for ref, a := range d.MigrationDaemonConfirms {
 		migrationDaemonMemberRef, err := insolar.NewObjectReferenceFromString(ref)
 		if err != nil {
-			return fmt.Errorf(" failed to parse params.Reference")
+			return false, errors.New("failed to parse params.Reference")
 		}
 
 		migrationDaemonContractRef, err := appfoundation.GetMigrationDaemon(*migrationDaemonMemberRef)
 		if err != nil || migrationDaemonContractRef.IsEmpty() {
-			return fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err)
+			return false, errors.Wrap(err, "get migration daemon contract from foundation failed")
 		}
 
 		migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
 		result, err := migrationDaemonContract.GetActivationStatus()
 
 		if err != nil {
-			return err
+			return false, err
 		}
 		if result {
-			activateDaemons = append(activateDaemons, ref)
+			activateDaemons[ref] = a
 		}
 	}
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
-	activateDaemons = append(activateDaemons, migrationDaemonRef)
-	if len(activateDaemons) >= numConfirmation {
-		err := d.checkAmount(activateDaemons)
+	if len(activateDaemons) > 0 {
+		canConfirm, err := d.checkAmount(activateDaemons, migrationDaemonRef, amountStr)
 		if err != nil {
-			return fmt.Errorf("failed to check amount in confirmation from migration daemon: '%s'", err.Error())
+			return canConfirm, errors.Wrap(err, "failed to check amount in confirmation from migration daemon")
 		}
-		return nil
+		return canConfirm, nil
 	}
-	return fmt.Errorf("failed to check amount in confirmation from migration daemon")
+	return false, nil
 }
 
-func (d *Deposit) canTransfer(transferAmount *big.Int) error {
-	c := 0
-	for _, r := range d.MigrationDaemonConfirms {
-		if r != "" {
-			c++
-		}
-	}
-	if d.VestingType == appfoundation.DefaultVesting && c < numConfirmation {
-		return fmt.Errorf("number of confirms is less then 2")
+func (d *Deposit) availableAmount() (*big.Int, error) {
+	if d.VestingType == appfoundation.DefaultVesting && !d.IsConfirmed {
+		return nil, errors.New("number of confirms is less then 2")
 	}
 
 	currentPulse, err := foundation.GetPulseNumber()
 	if err != nil {
-		return fmt.Errorf("failed to get pulse number: %s", err.Error())
+		return nil, errors.Wrap(err, "failed to get pulse number")
 	}
-	if d.PulseDepositUnHold > currentPulse {
-		return fmt.Errorf("hold period didn't end")
+	if currentPulse < d.PulseDepositUnHold {
+		return nil, errors.New("hold period didn't end")
 	}
 
-	spentPeriodInPulses := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
-		return fmt.Errorf("can't parse derposit amount")
+		return nil, errors.New("can't parse derposit amount")
 	}
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse derposit balance")
+		return nil, errors.New("can't parse derposit balance")
 	}
 
-	// How much can we transfer for this time
-	availableForNow := new(big.Int).Div(
-		new(big.Int).Mul(amount, spentPeriodInPulses),
-		big.NewInt(d.Vesting/d.VestingStep),
-	)
-
-	if new(big.Int).Sub(amount, availableForNow).Cmp(
-		new(big.Int).Sub(balance, transferAmount),
-	) == 1 {
-		return fmt.Errorf("not enough unholded balance for transfer")
+	// Allow to transfer whole balance if vesting period has already finished
+	if currentPulse > d.PulseDepositUnHold+insolar.PulseNumber(d.Vesting) {
+		return balance, nil
 	}
 
+	// Total number of vesting steps in vesting period
+	totalSteps := uint64(d.Vesting / d.VestingStep)
+	// Vesting steps already passed by now
+	passedSteps := uint64(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
+	// Amount that has been vested by now
+	vestedByNow := VestedByNow(amount, passedSteps, totalSteps)
+	// Amount that is still locked on deposit
+	onHold := new(big.Int).Sub(amount, vestedByNow)
+	// Amount that is now available for withdrawal
+	availableNow := new(big.Int).Sub(balance, onHold)
+
+	// availableNow can become negative when balance is 0 and vesting has already started
+	if availableNow.Cmp(big.NewInt(0)) == -1 {
+		return big.NewInt(0), nil
+	}
+
+	return availableNow, nil
+}
+
+func (d *Deposit) canTransfer(transferAmount *big.Int) error {
+	availableAmount, err := d.availableAmount()
+	if err != nil {
+		return err
+	}
+	if transferAmount.Cmp(availableAmount) == 1 {
+		return errors.New("not enough unholded balance for transfer")
+	}
 	return nil
 }
 
@@ -322,23 +364,23 @@ func (d *Deposit) Transfer(
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
+		return nil, errors.New("can't parse input amount")
 	}
 
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse deposit balance")
+		return nil, errors.New("can't parse deposit balance")
 	}
 	if balance.Sign() <= 0 {
-		return nil, fmt.Errorf("not enough balance for transfer")
+		return nil, errors.New("not enough balance for transfer")
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
-		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
+		return nil, errors.Wrap(err, "not enough balance for transfer")
 	}
 	err = d.canTransfer(amount)
 	if err != nil {
-		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+		return nil, errors.Wrap(err, "can't start transfer")
 	}
 	d.Balance = newBalance.String()
 
@@ -352,7 +394,7 @@ func (d *Deposit) Transfer(
 		return nil, nil
 	}
 	d.Balance = balance.String()
-	return nil, fmt.Errorf("failed to transfer amount: %s", acceptMemberErr.Error())
+	return nil, errors.Wrap(acceptMemberErr, "failed to transfer amount")
 }
 
 // Accept accepts transfer to balance.
@@ -362,18 +404,18 @@ func (d *Deposit) Accept(arg appfoundation.SagaAcceptInfo) error {
 	amount := new(big.Int)
 	amount, ok := amount.SetString(arg.Amount, 10)
 	if !ok {
-		return fmt.Errorf("can't parse input amount")
+		return errors.New("can't parse input amount")
 	}
 
 	balance := new(big.Int)
 	balance, ok = balance.SetString(d.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse deposit balance")
+		return errors.New("can't parse deposit balance")
 	}
 
 	b, err := safemath.Add(balance, amount)
 	if err != nil {
-		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
+		return errors.Wrap(err, "failed to add amount to balance")
 	}
 	d.Balance = b.String()
 

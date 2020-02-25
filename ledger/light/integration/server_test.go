@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package integration_test
@@ -31,7 +21,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
-	"github.com/insolar/component-manager"
+	component "github.com/insolar/component-manager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -91,6 +81,9 @@ type Server struct {
 	replicator   executor.LightReplicator
 	cleaner      executor.Cleaner
 
+	serverPubSub *gochannel.GoChannel
+	clientPubSub *gochannel.GoChannel
+
 	metrics *metrics.Metrics
 }
 
@@ -115,6 +108,7 @@ func DefaultLightInitialState() *payload.LightInitialState {
 		Drops: []drop.Drop{
 			{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 		},
+		LightChainLimit: math.MaxInt32,
 	}
 }
 
@@ -293,7 +287,7 @@ func NewServer(
 		)
 
 		stateIniter := executor.NewStateIniter(
-			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
+			conf, Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		metricsRegistry := executor.NewMetricsRegistry()
@@ -457,6 +451,8 @@ func NewServer(
 		replicator:   Replicator,
 		cleaner:      Cleaner,
 		metrics:      m,
+		serverPubSub: ServerPubSub,
+		clientPubSub: ClientPubSub,
 	}
 	return s, nil
 }
@@ -501,6 +497,14 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 func (s *Server) Stop() {
 	s.replicator.Stop()
 	s.cleaner.Stop()
+	err := s.clientPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
+	err = s.serverPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
 }
 
 type nodeMock struct {

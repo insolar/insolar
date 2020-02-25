@@ -1,17 +1,7 @@
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // +build functest
 
@@ -20,8 +10,6 @@ package functest
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,9 +22,10 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/insolar/secrets"
 
-	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -49,9 +38,12 @@ import (
 )
 
 const (
-	countTwoActiveDaemon = iota + 2
+	countOneActiveDaemon = iota + 1
+	countTwoActiveDaemon
 	countThreeActiveDaemon
 )
+
+const TestDepositAmount string = "1000000000000000000"
 
 type contractInfo struct {
 	reference *insolar.Reference
@@ -145,14 +137,6 @@ func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 	member.MigrationAddress = ma
 	return member
 
-}
-
-func generateMigrationAddress() (string, error) {
-	bytes := make([]byte, 20)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
 }
 
 func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
@@ -284,7 +268,8 @@ func getInfo(t testing.TB) infoResponse {
 	pp := postParams{
 		"jsonrpc": "2.0",
 		"method":  "network.getInfo",
-		"id":      "",
+		"id":      1,
+		"params":  map[string]string{},
 	}
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
@@ -297,7 +282,7 @@ func getStatus(t testing.TB) statusResponse {
 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getStatus",
-		"id":      "",
+		"id":      "1",
 	})
 	rpcStatusResponse := &rpcStatusResponse{}
 	unmarshalRPCResponse(t, body, rpcStatusResponse)
@@ -341,17 +326,16 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 func signedRequest(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
-	var errMsg string
 	if err != nil {
 		var suffix string
 		requesterError, ok := err.(*requester.Error)
 		if ok {
 			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
 		}
-		t.Error(err.Error() + suffix)
+		t.Error("[" + method + "]" + err.Error() + suffix)
 	}
-	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
-	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
+	require.NotEmpty(t, refStr, "request ref is empty")
+	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero")
 
 	_, err = insolar.NewReferenceFromString(refStr)
 	require.Nil(t, err)
@@ -426,19 +410,17 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 }
 
 func newUserWithKeys() (*launchnet.User, error) {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privateKey, err := ks.GeneratePrivateKey()
+	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, err
 	}
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privateKey)
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	publicKey := ks.ExtractPublicKey(privateKey)
-	pubKeyStr, err := ks.ExportPublicKeyPEM(publicKey)
+	publicKey := secrets.ExtractPublicKey(privateKey)
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -451,8 +433,12 @@ func newUserWithKeys() (*launchnet.User, error) {
 // uploadContractOnce is needed for running tests with count
 // use unique names when uploading contracts otherwise your contract won't be uploaded
 func uploadContractOnce(t testing.TB, name string, code string) *insolar.Reference {
+	return uploadContractOnceExt(t, name, code, false)
+}
+
+func uploadContractOnceExt(t testing.TB, name string, code string, panicIsLogicalError bool) *insolar.Reference {
 	if _, ok := contracts[name]; !ok {
-		ref := uploadContract(t, name, code)
+		ref := uploadContract(t, name, code, panicIsLogicalError)
 		contracts[name] = &contractInfo{
 			reference: ref,
 			testName:  t.Name(),
@@ -465,14 +451,15 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 	return contracts[name].reference
 }
 
-func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
+func uploadContract(t testing.TB, contractName string, contractCode string, panicIsLogicalError bool) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.upload",
 		"id":      "",
-		"params": map[string]string{
-			"name": contractName,
-			"code": contractCode,
+		"params": map[string]interface{}{
+			"name":                contractName,
+			"code":                contractCode,
+			"panicIsLogicalError": panicIsLogicalError,
 		},
 	})
 	require.NotEmpty(t, uploadBody)
@@ -485,8 +472,8 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	}{}
 
 	err := json.Unmarshal(uploadBody, &uploadRes)
-	require.NoError(t, err)
-	require.Empty(t, uploadRes.Error)
+	require.NoError(t, err, "unmarshal error")
+	require.Empty(t, uploadRes.Error, "upload result error %#v", uploadRes)
 
 	prototypeRef, err := insolar.NewReferenceFromString(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
@@ -495,7 +482,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	return prototypeRef
 }
 
-func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+func callConstructorNoChecks(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) callResult {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -511,15 +498,15 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	})
 	require.NotEmpty(t, objectBody)
 
-	callConstructorRes := struct {
-		Version string              `json:"jsonrpc"`
-		ID      string              `json:"id"`
-		Result  api.CallMethodReply `json:"result"`
-		Error   json2.Error         `json:"error"`
-	}{}
-
+	callConstructorRes := callResult{}
 	err = json.Unmarshal(objectBody, &callConstructorRes)
 	require.NoError(t, err)
+
+	return callConstructorRes
+}
+
+func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) *insolar.Reference {
+	callConstructorRes := callConstructorNoChecks(t, prototypeRef, method, args...)
 	require.Empty(t, callConstructorRes.Error)
 
 	require.NotEmpty(t, callConstructorRes.Result.Object)
@@ -533,36 +520,14 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 }
 
 func callConstructorExpectSystemError(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) string {
-	argsSerialized, err := insolar.Serialize(args)
-	require.NoError(t, err)
+	callConstructorRes := callConstructorNoChecks(t, prototypeRef, method, args...)
 
-	objectBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
-		"jsonrpc": "2.0",
-		"method":  "funcTestContract.callConstructor",
-		"id":      "",
-		"params": map[string]interface{}{
-			"PrototypeRefString": prototypeRef.String(),
-			"Method":             method,
-			"MethodArgs":         argsSerialized,
-		},
-	})
-	require.NotEmpty(t, objectBody)
-
-	callConstructorRes := struct {
-		Version string              `json:"jsonrpc"`
-		ID      string              `json:"id"`
-		Result  api.CallMethodReply `json:"result"`
-		Error   json2.Error         `json:"error"`
-	}{}
-
-	err = json.Unmarshal(objectBody, &callConstructorRes)
-	require.NoError(t, err)
 	require.NotEmpty(t, callConstructorRes.Error)
 
 	return callConstructorRes.Error.Message
 }
 
-type callRes struct {
+type callResult struct {
 	Version string              `json:"jsonrpc"`
 	ID      string              `json:"id"`
 	Result  api.CallMethodReply `json:"result"`
@@ -583,7 +548,7 @@ func callMethodExpectError(t testing.TB, objectRef *insolar.Reference, method st
 	return callRes.Result
 }
 
-func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) callRes {
+func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method string, args ...interface{}) callResult {
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
@@ -679,7 +644,7 @@ func getAddressCount(t *testing.T, startWithIndex int) map[int]int {
 	return migrationShardsMap
 }
 
-func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
+func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User, expectedBalance string) error {
 	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err
@@ -694,16 +659,16 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.User) error {
 		return errors.New("balance should be zero, current value: " + balance.String())
 	}
 	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
+	if deposit["amount"] != expectedBalance {
+		return errors.New(fmt.Sprintf("deposit amount should be %s, current value: %s", expectedBalance, deposit["amount"]))
 	}
-	if deposit["balance"] != "10000000000000000000" {
-		return errors.New("deposit balance should be `10000000000000000000`, current value: " + deposit["balance"].(string))
+	if deposit["balance"] != expectedBalance {
+		return errors.New(fmt.Sprintf("deposit balance should be %s, current value: %s", expectedBalance, deposit["balance"]))
 	}
 	return nil
 }
 
-func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
+func verifyFundsMembersExist(t *testing.T, m *launchnet.User, expectedBalance string) error {
 	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err
@@ -713,10 +678,36 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User) error {
 	if !ok {
 		return errors.New(fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 	}
-	_, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
-	deposit, ok := deposits["genesis_deposit"].(map[string]interface{})
-	if deposit["amount"] != "10000000000000000000" {
-		return errors.New("deposit amount should be `10000000000000000000`, current value: " + deposit["amount"].(string))
-	}
+	balance, deposits := getBalanceAndDepositsNoErr(t, m, decodedRes2["reference"].(string))
+	require.Equal(t, expectedBalance, balance.String())
+	require.Empty(t, deposits)
 	return nil
+}
+
+func expectedError(t *testing.T, trace []string, expected string) {
+	found := hasSubstring(trace, expected)
+	require.True(t, found, "Expected error (%s) not found in trace: %v", expected, trace)
+}
+
+func hasSubstring(trace []string, expected string) bool {
+	found := false
+	for _, trace := range trace {
+		found = strings.Contains(trace, expected)
+		if found {
+			return found
+		}
+	}
+	return found
+}
+
+func generateNodePublicKey(t *testing.T) string {
+	ks := platformpolicy.NewKeyProcessor()
+
+	privKey, err := ks.GeneratePrivateKey()
+	require.NoError(t, err)
+
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	require.NoError(t, err)
+
+	return string(pubKeyStr)
 }

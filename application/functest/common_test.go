@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // +build functest
 
@@ -27,20 +16,20 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
 func TestGetRequest(t *testing.T) {
 	postResp, err := http.Get(launchnet.TestRPCUrl)
-	defer postResp.Body.Close()
 	require.NoError(t, err)
+	defer postResp.Body.Close()
 	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
 }
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
-	testURL := launchnet.HOST + launchnet.AdminPort + "/not_api"
+	testURL := launchnet.AdminHostPort + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
@@ -59,6 +48,6 @@ func TestWrongJson(t *testing.T) {
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 
-	require.Equal(t, "invalid character 's' looking for beginning of value", response.Error.Message)
+	require.Equal(t, "The JSON received is not a valid request payload.", response.Error.Message)
 	require.Nil(t, response.Result)
 }

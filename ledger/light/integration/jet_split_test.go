@@ -1,23 +1,14 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package integration_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -60,8 +51,6 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 			testPulsesQuantity: 5,
 		},
 	}
-
-	t.Parallel()
 
 	testCase := func(t *testing.T, sc splitCase) {
 
@@ -166,8 +155,6 @@ func Test_JetSplitEveryPulse(t *testing.T) {
 }
 
 func Test_JetSplitsWhenOverflows(t *testing.T) {
-	t.Parallel()
-
 	var hotObjects = make(chan insolar.JetID)
 	var replication = make(chan insolar.JetID)
 	var hotObjectConfirm = make(chan insolar.JetID)
@@ -283,8 +270,6 @@ func Test_JetSplitsWhenOverflows(t *testing.T) {
 }
 
 func Test_LightStartsFromInitialState(t *testing.T) {
-	t.Parallel()
-
 	var hotObjects = make(chan insolar.JetID)
 	var replication = make(chan insolar.JetID)
 	var hotObjectConfirm = make(chan insolar.JetID)
@@ -347,7 +332,8 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 						Pulse: insolarPulse.PulseProto{
 							PulseNumber: pulse.MinTimePulse,
 						},
-						Drops: createDrops(initialJets),
+						Drops:           createDrops(initialJets),
+						LightChainLimit: math.MaxInt32,
 					},
 				}
 			}

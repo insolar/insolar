@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package virtual
 
@@ -20,14 +9,14 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/log/logwatermill"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/insolar/insolar/logicrunner/builtin"
 
-	"github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application/api"
+	component "github.com/insolar/component-manager"
+
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -40,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
@@ -106,6 +96,8 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
+	builtinContracts builtin.BuiltinContracts,
+	apiOptions api.Options,
 
 ) (*component.Manager, func()) {
 	cm := component.NewManager(nil)
@@ -132,9 +124,12 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
+	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
+	artifactsClient := artifacts.NewClient(b)
+	cachedPulses := artifacts.NewPulseAccessorLRU(pulses, artifactsClient, cfg.LogicRunner.PulseLRUSize)
+
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b, builtinContracts)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(
@@ -145,7 +140,6 @@ func initComponents(
 	)
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	artifactsClient := artifacts.NewClient(b)
 	availabilityChecker := api.NewNetworkChecker(cfg.AvailabilityChecker)
 
 	API, err := api.NewRunner(
@@ -159,6 +153,7 @@ func initComponents(
 		jc,
 		nw,
 		availabilityChecker,
+		apiOptions,
 	)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -173,6 +168,7 @@ func initComponents(
 		jc,
 		nw,
 		availabilityChecker,
+		apiOptions,
 	)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
 
@@ -190,7 +186,7 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicexecutor.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(cachedPulses),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		APIWrapper,

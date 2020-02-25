@@ -1,18 +1,7 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -25,10 +14,10 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 
-	"github.com/insolar/component-manager"
+	component "github.com/insolar/component-manager"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
@@ -76,9 +65,8 @@ func main() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
-	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "test_pulsar")
+	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {

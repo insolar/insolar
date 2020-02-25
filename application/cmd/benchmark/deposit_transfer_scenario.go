@@ -1,18 +1,7 @@
-///
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-///
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -24,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 )
 
 type depositTransferScenario struct {
@@ -68,7 +57,7 @@ func (s *depositTransferScenario) prepare(repetition int) {
 			os.Exit(1)
 		}
 		for i := 0; i < repetition; i++ {
-			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, replaceLast(txHashPattern, strconv.Itoa(i)), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
 			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
 				check("Error while migrating tokens: ", err)
 			}
@@ -87,7 +76,7 @@ func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, replaceLast(txHashPattern, strconv.Itoa(repetitionIndex)))
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {

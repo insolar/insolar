@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -em
-# requires: lsof, awk, sed, grep, pgrep
+# requires: lsof, awk, sed, grep, pgrep, docker
 
 export GO111MODULE=on
 
@@ -94,12 +94,12 @@ build_logger()
 kill_port()
 {
     port=$1
-    pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
+    pids=$(lsof -i :$port 2>/dev/null | grep "LISTEN\|UDP" | awk '{print $2}')
     for pid in $pids
     do
         echo -n "killing pid $pid at "
         date
-        kill -ABRT $pid
+        kill $pid || true
     done
 }
 
@@ -156,6 +156,7 @@ clear_dirs()
 {
     echo "clear_dirs() starts ..."
     set -x
+    rm -rfv ${CONFIGS_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     rm -rfv ${CONTRACTS_PLUGINS_DIR}
@@ -228,43 +229,44 @@ rebuild_binaries()
 generate_pulsar_keys()
 {
     echo "generate pulsar keys: ${PULSAR_KEYS}"
-    bin/insolar gen-key-pair > ${PULSAR_KEYS}
+    bin/insolar gen-key-pair --target=node > ${PULSAR_KEYS}
 }
 
 generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}root_member_keys.json
+
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}fee_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=node > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 30; b++ ))
+    for (( b = 0; b < 140; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 30; b++ ))
+    for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 30; b++ ))
+    for (( b = 0; b < 40; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
 
     for (( b = 0; b < 1; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}funds_${b}_member_keys.json
     done
 
-    for (( b = 0; b < 4; b++ ))
+    for (( b = 0; b < 8; b++ ))
     do
-    bin/insolar gen-key-pair > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
+    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
     done
 }
 
@@ -409,7 +411,7 @@ bootstrap()
     generate_migration_addresses
 
     echo "start bootstrap ..."
-    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
+    CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG}"
 
     GENESIS_EXIT_CODE=0
     set +e
@@ -422,16 +424,16 @@ bootstrap()
     else
         set -x
         ${CMD}
-        BOOTSTRAP_EXIT_CODE=$?
+        GENESIS_EXIT_CODE=$?
         { set +x; } 2>/dev/null
     fi
     set -e
-    if [[ ${BOOTSTRAP_EXIT_CODE} -ne 0 ]]; then
+    if [[ ${GENESIS_EXIT_CODE} -ne 0 ]]; then
         echo "Genesis failed"
         if [[ "${NO_BOOTSTRAP_LOG_REDIRECT}" != "1" ]]; then
             echo "check log: ${LAUNCHNET_LOGS_DIR}/bootstrap.log"
         fi
-        exit ${BOOTSTRAP_EXIT_CODE}
+        exit ${GENESIS_EXIT_CODE}
     fi
     echo "bootstrap is done"
 
@@ -464,18 +466,44 @@ else
     echo "insgorund launch skip"
 fi
 
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  echo "prepare logger"
+  build_logger
+fi
+
+if [[ "$POSTGRES_ENABLE" == "1" ]]; then
+  # Terminate running PostgreSQL container if there is one
+  docker stop insolar-postgresql || true
+  docker rm insolar-postgresql || true
+  # Build PostgreSQL Docker image with custom postgresql.conf
+  OLD_PWD=`pwd`
+  echo "pwd: $OLD_PWD"
+  cd scripts/insolard/postgresql-docker
+  docker build --no-cache -t insolar-functests-postgresql .
+  cd $OLD_PWD
+  # Start a new PostgreSQL container
+  docker run -d --name insolar-postgresql -e POSTGRES_DB=insolar -e POSTGRES_PASSWORD=s3cr3t -p 5432:5432 insolar-functests-postgresql:latest
+  # Make sure PostgreSQL is up
+  until bash -c "PGPASSWORD=s3cr3t docker exec -t insolar-postgresql psql -h localhost -U postgres insolar -c 'SELECT 1;'"
+  do
+    echo "PostgreSQL is not up yet, retrying..."
+    sleep 1
+  done
+fi
+
 handle_sigchld()
 {
   jobs -pn
   echo "someone left the network"
 }
 
-if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
-  echo "prepare logger"
-  build_logger
-fi
-
 trap 'handle_sigchld' SIGCHLD
+
+echo "Running genesis before actually starting any nodes (consensus may fail if genesis takes long)"
+$INSOLARD \
+    --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
+    --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --genesis-only
 
 echo "start heavy node"
 set -x

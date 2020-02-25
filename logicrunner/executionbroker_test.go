@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package logicrunner
 
@@ -26,7 +15,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +33,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/testutils"
 )
 
 type publisherMock struct{}
@@ -88,7 +77,7 @@ func finishedCount(args ...interface{}) bool {
 }
 
 func TestExecutionBroker_AddFreshRequest(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	objectRef := gen.Reference()
 
@@ -189,7 +178,7 @@ func sendOK(ch chan<- *message.Message) {
 }
 
 func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	mc := minimock.NewController(t)
 
@@ -290,7 +279,7 @@ func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 }
 
 func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -352,7 +341,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	randTranscript := func(ctx context.Context) *common.Transcript {
 		reqRef := gen.RecordReference()
@@ -371,7 +360,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 		numberOfMessages int
 		pending          insolar.PendingState
 		pendingConfirmed bool
-		ledgerHasMore    bool
+		ledgerHasMore    LedgerHasMore
 		end              bool
 	}{
 		{
@@ -389,6 +378,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			numberOfMessages: 1,
 			pending:          insolar.InPending,
 			pendingConfirmed: true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 		{
 			name: "not confirmed pending",
@@ -403,7 +393,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			numberOfMessages: 1,
 			pending:          insolar.InPending,
 			pendingConfirmed: true,
-			ledgerHasMore:    true,
+			ledgerHasMore:    LedgerHasMoreKnown,
 			end:              true,
 		},
 		{
@@ -411,7 +401,8 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				objectRef := gen.Reference()
 				er := executionregistry.NewExecutionRegistryMock(t).
-					IsEmptyMock.Return(true).DoneMock.Return(true)
+					IsEmptyMock.Return(true).
+					DoneMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, pa)
 				broker.finishTranscript(ctx, randTranscript(ctx))
 				return broker
@@ -420,6 +411,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			pendingConfirmed: true,
 			numberOfMessages: 1,
 			end:              true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 		{
 			name: "did nothing",
@@ -434,6 +426,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 			pendingConfirmed: true,
 			numberOfMessages: 0,
 			end:              true,
+			ledgerHasMore:    LedgerIsEmpty,
 		},
 	}
 
@@ -458,7 +451,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 }
 
 func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	objectRef := gen.Reference()
 
@@ -574,7 +567,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -590,17 +583,17 @@ func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
 		objectRef, nil, nil, nil, nil, nil, nil, pa,
 	)
 
-	b.ledgerHasMoreRequests = true
+	b.ledgerHasMoreRequests = LedgerHasMoreUnknown
 	b.noMoreRequestsOnLedger(ctx)
 
-	require.False(t, b.ledgerHasMoreRequests)
+	assert.Equal(t, b.ledgerHasMoreRequests, LedgerHasMoreKnown)
 }
 
 func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -616,7 +609,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 }
 
 func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	mc := minimock.NewController(t)
 
@@ -684,7 +677,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 }
 
 func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
-	defer leaktest.Check(t)()
+	defer testutils.LeakTester(t)
 
 	objectRef := gen.Reference()
 

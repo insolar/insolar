@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package member
 
@@ -27,9 +16,10 @@ import (
 	"github.com/insolar/insolar/application/builtin/proxy/member"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/application/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/application/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/application/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/application/builtin/proxy/wallet"
+	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
@@ -37,7 +27,7 @@ import (
 const (
 	XNS = "XNS"
 	// 10 ^ 14
-	ACCOUNT_START_VALUE = "100000000000000"
+	ACCOUNT_START_VALUE = "0"
 )
 
 // Member - basic member contract.
@@ -329,7 +319,12 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (interface{
 
 // Platform methods.
 func (m *Member) registerNode(public string, role string) (interface{}, error) {
-	nodeDomainRef := appfoundation.GetNodeDomain()
+	root := genesisrefs.ContractRootMember
+	if m.GetReference() != root {
+		return "", fmt.Errorf("only root member can register node")
+	}
+
+	nodeDomainRef := foundation.GetNodeDomain()
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	cert, err := nd.RegisterNode(public, role)
@@ -341,7 +336,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 }
 
 func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
-	nd := nodedomain.GetObject(appfoundation.GetNodeDomain())
+	nd := nodedomain.GetObject(foundation.GetNodeDomain())
 	nodeRef, err := nd.GetNodeRefByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("network node was not found by public key: %s", err.Error())

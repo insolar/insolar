@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package executor_test
 
@@ -78,9 +67,10 @@ func TestBackuper_BadConfig(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configuration.Ledger {
+func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) (configuration.Ledger, string) {
 
-	tmpDir := "/tmp/BKP/"
+	tmpDir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
 	cfg := configuration.Backup{
 		ConfirmFile:          "BACKUPED",
 		MetaInfoFile:         "META.json",
@@ -93,7 +83,7 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configura
 		PostProcessBackupCmd: []string{"ls"},
 	}
 
-	err := os.MkdirAll(cfg.TargetDirectory, 0777)
+	err = os.MkdirAll(cfg.TargetDirectory, 0777)
 	require.NoError(t, err)
 	err = os.MkdirAll(cfg.TmpDirectory, 0777)
 	require.NoError(t, err)
@@ -103,20 +93,18 @@ func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configura
 		Storage: configuration.Storage{
 			DataDirectory: badgerDir,
 		},
-	}
+	}, tmpDir
 }
 
-func clearData(t *testing.T, cfg configuration.Ledger) {
-	err := os.RemoveAll(cfg.Backup.TargetDirectory)
-	require.NoError(t, err)
-	err = os.RemoveAll(cfg.Backup.TmpDirectory)
+func clearData(t *testing.T, tmpDir string) {
+	err := os.RemoveAll(tmpDir)
 	require.NoError(t, err)
 }
 
 func TestBackuper_Disabled(t *testing.T) {
-	cfg := makeBackuperConfig(t, t.Name(), os.TempDir())
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), os.TempDir())
 	cfg.Backup.Enabled = false
-	defer clearData(t, cfg)
+	defer clearData(t, tmpDir)
 	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, 0, nil)
 	require.NoError(t, err)
 
@@ -131,8 +119,8 @@ func TestBackuper_PostProcessCmdReturnError(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, tmpDir)
 
 	cfg.Backup.BackupWaitPeriod = 1
 
@@ -156,8 +144,8 @@ func TestBackuper_HappyPath(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, tmpDir)
 
 	cfg.Backup.BackupWaitPeriod = 1
 
@@ -181,8 +169,8 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, tmpDir)
 	cfg.Backup.BackupWaitPeriod = 1
 
 	ops := BadgerDefaultOptions(tmpdir)
@@ -197,8 +185,8 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 }
 
 func TestBackuper_Backup_OldPulse(t *testing.T) {
-	cfg := makeBackuperConfig(t, t.Name(), os.TempDir())
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), os.TempDir())
+	defer clearData(t, tmpDir)
 
 	db := store.NewDBMock(t)
 	db.GetMock.Return([]byte{}, nil)
@@ -222,8 +210,8 @@ func TestBackuper_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
-	defer clearData(t, cfg)
+	cfg, tmpDir := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, tmpDir)
 
 	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)

@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -30,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/insolar/insolar/application/bootstrap"
+	"github.com/insolar/insolar/applicationbase/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
@@ -63,7 +52,8 @@ var (
 	keeperdConfigTmpl = "scripts/insolard/keeperd_template.yaml"
 	keeperdFileName   = withBaseDir("keeperd.yaml")
 
-	insolardDefaultsConfig = "scripts/insolard/defaults/insolard.yaml"
+	insolardDefaultsConfigWithBadger   = "scripts/insolard/defaults/insolard_badger.yaml"
+	insolardDefaultsConfigWithPostgres = "scripts/insolard/defaults/insolard_postgres.yaml"
 )
 
 var (
@@ -114,9 +104,12 @@ func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configurat
 }
 
 func main() {
+	fmt.Println("[main] about to call parseInputParams()")
 	parseInputParams()
 
+	fmt.Println("[main] about to call mustMakeDir()")
 	mustMakeDir(outputDir)
+	fmt.Println("[main] about to call writeGenesisConfig()")
 	writeGenesisConfig()
 
 	bootstrapConf, err := bootstrap.ParseConfig(bootstrapFileName)
@@ -130,6 +123,8 @@ func main() {
 	promVars := &promConfigVars{
 		Jobs: map[string][]string{},
 	}
+
+	fmt.Println("[main] about to enter for loop which calls newDefaultInsolardConfig() first time")
 
 	// process discovery nodes
 	for index, node := range bootstrapConf.DiscoveryNodes {
@@ -155,9 +150,14 @@ func main() {
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
+		conf.APIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+
 		conf.AvailabilityChecker.Enabled = true
 		conf.AvailabilityChecker.KeeperURL = "http://127.0.0.1:12012/check"
+
 		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
+		conf.AdminAPIRunner.SwaggerPath = "application/api/spec/api-exported.yaml"
+
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
 		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
 
@@ -176,6 +176,8 @@ func main() {
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
+
+	fmt.Println("[main] leaving the loop which calls newDefaultInsolardConfig() first time")
 
 	// process extra nodes
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
@@ -263,8 +265,17 @@ var defaultInsloardConf *configuration.Configuration
 
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
-		holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfig).MustInit(true)
-		defaultInsloardConf = &holder.Configuration
+		fmt.Println("[newDefaultInsolardConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
+		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+			fmt.Println("[newDefaultInsolardConfig] Using PostgreSQL config")
+			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)
+			defaultInsloardConf = &holder.Configuration
+		} else {
+			fmt.Println("[newDefaultInsolardConfig] Using Badger config")
+			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithBadger).MustInit(true)
+			defaultInsloardConf = &holder.Configuration
+		}
+
 	}
 	return *defaultInsloardConf
 }

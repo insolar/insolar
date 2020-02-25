@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package goplugintestutils
 
@@ -56,7 +45,6 @@ func (r *One) Recursive() (error) {
 `
 
 func TestContractsBuilder_Build(t *testing.T) {
-
 	insgocc, err := BuildPreprocessor()
 	assert.NoError(t, err)
 
@@ -85,11 +73,13 @@ func TestContractsBuilder_Build(t *testing.T) {
 	})
 
 	cb := NewContractBuilder(insgocc, am, pa, j)
+	defer cb.Clean()
 
 	contractMap := make(map[string]string)
 	contractMap["recursive_call_one"] = contractOneCode
 
-	err = cb.Build(context.Background(), contractMap)
+	buildOptions := BuildOptions{PanicIsLogicalError: false}
+	err = cb.Build(context.Background(), contractMap, buildOptions)
 	assert.NoError(t, err)
 
 	reference := cb.Prototypes["recursive_call_one"]

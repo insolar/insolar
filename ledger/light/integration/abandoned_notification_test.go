@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package integration_test
@@ -85,6 +75,7 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 				Drops: []drop.Drop{
 					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
+				LightChainLimit: 5,
 			}}
 		case *payload.SearchIndex:
 			return []payload.Payload{
@@ -171,7 +162,6 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 }
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
-	t.Parallel()
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
@@ -203,6 +193,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},
 				},
+				LightChainLimit: 5,
 			}}
 		}
 		panic(fmt.Sprintf("unexpected message to heavy %T", pl))
@@ -258,14 +249,27 @@ func Test_AbandonsMetricValue(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Stop()
 
-	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", float64(expectAbandoned), time.Second*5)
+	expectAbandonedValue := atomic.LoadInt64(&expectAbandoned)
+
+	v := fetchMetricValue(
+		s.metrics.Handler(),
+		"insolar_requests_abandoned",
+		float64(expectAbandonedValue),
+		time.Second*5,
+	)
+
 	require.NoError(t, err, "fetch insolar_requests_abandoned metric value")
 	// other tests could increment counter, so we expect at least expect value
-	assert.GreaterOrEqualf(t, int64(v), expectAbandoned,
+	assert.GreaterOrEqualf(t, int64(v), expectAbandonedValue,
 		"fetched insolar_requests_abandoned value equals or greater than calculated value")
 }
 
-func fetchMetricValue(h http.Handler, metricName string, expect float64, maxDuration time.Duration) float64 {
+func fetchMetricValue(
+	h http.Handler,
+	metricName string,
+	expect float64,
+	maxDuration time.Duration,
+) float64 {
 	tries := int64(5)
 	var v float64
 	for i := 0; i < int(tries); i++ {

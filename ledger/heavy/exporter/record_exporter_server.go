@@ -1,18 +1,7 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package exporter
 
@@ -55,7 +44,6 @@ func NewRecordServer(
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
-
 	ctx := stream.Context()
 
 	exportStart := time.Now()
@@ -70,13 +58,13 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
-		return errors.New("count can't be 0")
+		return ErrNilCount
 	}
 
 	if getRecords.PulseNumber != 0 {
 		topPulse := r.jetKeeper.TopSyncPulse()
 		if topPulse < getRecords.PulseNumber {
-			return errors.New("trying to get a non-finalized pulse data")
+			return ErrNotFinalPulseData
 		}
 	} else {
 		getRecords.PulseNumber = pulse.MinTimePulse
@@ -103,7 +91,10 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 
 		err = stream.Send(record)
 		if err != nil {
-			logger.Error(err)
+			if stream.Context().Err() != context.Canceled {
+				logger.Error(err)
+			}
+
 			return err
 		}
 		read++
@@ -120,7 +111,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		}
 		numSent++
 	}
-	logger.Info("exported %d record", numSent)
+	logger.Infof("exported %d record", numSent)
 
 	return nil
 }

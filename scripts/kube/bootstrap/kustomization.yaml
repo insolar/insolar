@@ -1,0 +1,19 @@
+# should be placed on one level with configs dir (for current deployment implementation)
+secretGenerator:
+  - name: node-keys
+    files:
+      - discovery-keys/node-0.json
+      - discovery-keys/node-1.json
+      - discovery-keys/node-2.json
+      - discovery-keys/node-3.json
+      - discovery-keys/node-4.json
+      - configs/pulsar-keys.json
+  - name: node-certs
+    files:
+      - certs/discovery-cert-0.json
+      - certs/discovery-cert-1.json
+      - certs/discovery-cert-2.json
+      - certs/discovery-cert-3.json
+      - certs/discovery-cert-4.json
+generatorOptions:
+  disableNameSuffixHash: true

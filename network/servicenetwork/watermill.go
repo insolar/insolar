@@ -1,52 +1,7 @@
-//
-// Modified BSD 3-Clause Clear License
-//
-// Copyright (c) 2019 Insolar Technologies GmbH
-//
+// Copyright 2020 Insolar Network Ltd.
 // All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted (subject to the limitations in the disclaimer below) provided that
-// the following conditions are met:
-//  * Redistributions of source code must retain the above copyright notice, this list
-//    of conditions and the following disclaimer.
-//  * Redistributions in binary form must reproduce the above copyright notice, this list
-//    of conditions and the following disclaimer in the documentation and/or other materials
-//    provided with the distribution.
-//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
-//    may be used to endorse or promote products derived from this software without
-//    specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
-// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Notwithstanding any other provisions of this license, it is prohibited to:
-//    (a) use this software,
-//
-//    (b) prepare modifications and derivative works of this software,
-//
-//    (c) distribute this software (including without limitation in source code, binary or
-//        object code form), and
-//
-//    (d) reproduce copies of this software
-//
-//    for any commercial purposes, and/or
-//
-//    for the purposes of making available this software to third parties as a service,
-//    including, without limitation, any software-as-a-service, platform-as-a-service,
-//    infrastructure-as-a-service or other similar online service, irrespective of
-//    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package servicenetwork
 
@@ -57,10 +12,10 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -88,16 +43,17 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) error {
 }
 
 func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) error {
-	meta := payload.Meta{}
-	err := meta.Unmarshal(msg.Payload)
+	receiver := msg.Metadata.Get(meta.Receiver)
+	if receiver == "" {
+		return errors.New("failed to send message: Receiver in message metadata is not set")
+	}
+	node, err := insolar.NewReferenceFromString(receiver)
 	if err != nil {
-		return errors.Wrap(err, "failed to unwrap message")
+		return errors.Wrap(err, "failed to send message: Receiver in message metadata is invalid")
 	}
-	if meta.Receiver.IsEmpty() {
-		return errors.New("failed to send message: Receiver in meta message not set")
+	if node.IsEmpty() {
+		return errors.New("failed to send message: Receiver in message metadata is empty")
 	}
-
-	node := meta.Receiver
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
@@ -108,11 +64,11 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 		}
 		return nil
 	}
-	msgBytes, err := messageToBytes(msg)
+	msgBytes, err := serializeMessage(msg)
 	if err != nil {
 		return errors.Wrap(err, "error while converting message to bytes")
 	}
-	res, err := n.RPC.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
+	res, err := n.RPC.SendBytes(ctx, *node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return errors.Wrap(err, "error while sending watermillMsg to controller")
 	}
@@ -124,7 +80,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 
 func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]byte, error) {
 	logger := inslogger.FromContext(ctx)
-	msg, err := deserializeMessage(bytes.NewBuffer(args))
+	msg, err := deserializeMessage(args)
 	if err != nil {
 		err = errors.Wrap(err, "error while deserialize msg from buffer")
 		logger.Error(err)

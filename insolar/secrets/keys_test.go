@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package secrets
 
@@ -25,8 +14,22 @@ import (
 )
 
 func TestKeys_GetKeysFromFile(t *testing.T) {
-	pair, err := ReadKeysFile("testdata/keypair.json")
+	pair, err := ReadKeysFile("testdata/keypair.json", false)
 	require.NoError(t, err, "read keys from json")
 	assert.Equal(t, fmt.Sprintf("%T", pair.Private), "*ecdsa.PrivateKey", "private key has proper type")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Public), "*ecdsa.PublicKey", "public key has proper type")
+}
+
+func TestKeys_GetOnlyPublicKey(t *testing.T) {
+	pair, err := ReadKeysFile("testdata/keypair.json", true)
+	require.NoError(t, err, "read keys from json")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Private), "<nil>", "private key has proper type")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Public), "*ecdsa.PublicKey", "public key has proper type")
+}
+
+func TestKeys_GetOnlyPublic_WhenHasOnlyPublic(t *testing.T) {
+	pair, err := ReadKeysFile("testdata/public_only.json", true)
+	require.NoError(t, err, "read keys from json")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Private), "<nil>", "private key has proper type")
 	assert.Equal(t, fmt.Sprintf("%T", pair.Public), "*ecdsa.PublicKey", "public key has proper type")
 }

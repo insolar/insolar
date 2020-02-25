@@ -1,0 +1,81 @@
+name: insolar
+on:
+  push:
+    tags:
+      - '*'
+env:
+  GO_VERSION: 1.12.15
+jobs:
+  build-pack-release:
+    name: build-pack-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@master
+      - name: gather info
+        id: info
+        run: |
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "::set-output name=build_date::$(shell ./scripts/dev/git-date-time.sh -d)"
+          echo "::set-output name=build_time::$(shell ./scripts/dev/git-date-time.sh -t)"
+          echo "::set-output name=build_version::$(git describe --tags)"
+      - name: pack project
+        run: |
+          docker build -t insolar:${{ steps.info.outputs.build_version }} --pull --build-arg "GOLANG_VERSION=${{env.GO_VERSION}}" --build-arg "BUILD_NUMBER=$GITHUB_RUN_NUMBER" --build-arg "BUILD_DATE=${{ steps.info.outputs.build_date }}" --build-arg "BUILD_TIME=${{ steps.info.outputs.build_time }}" --build-arg "BUILD_HASH=${{ steps.info.outputs.sha_short }}" --build-arg "BUILD_VERSION=${{ steps.info.outputs.build_version }}" .
+          docker tag insolar:${{ steps.info.outputs.build_version }} insolar/insolar:${{ steps.info.outputs.build_version }}
+          docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+          docker push insolar/insolar:${{ steps.info.outputs.build_version }}
+      - name: copy artifacts
+        run: |
+          id=$(docker create insolar/insolar:${{ steps.info.outputs.build_version }})
+          mkdir bin
+          docker cp $id:/usr/local/bin/insolar bin/
+          docker cp $id:/usr/local/bin/insolard bin/
+          docker cp $id:/usr/local/bin/keeperd bin/
+          docker cp $id:/usr/local/bin/pulsard bin/
+      - name: create GH release
+        id: create_release
+        uses: actions/create-release@becafb2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: attach insolar binary to GH release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/insolar
+          asset_name: insolar
+          asset_content_type: application/octet-stream
+      - name: attach insolard binary to GH release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/insolard
+          asset_name: insolard
+          asset_content_type: application/octet-stream
+      - name: attach keeperd binary to GH release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/keeperd
+          asset_name: keeperd
+          asset_content_type: application/octet-stream
+      - name: attach pulsard binary to GH release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/pulsard
+          asset_name: pulsard
+          asset_content_type: application/octet-stream

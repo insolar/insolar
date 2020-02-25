@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 // +build functest
 // +build bloattest
@@ -23,12 +12,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 // Make sure that panic() in a contract causes a system error and that this error
 // is returned by API.
-func TestPanic(t *testing.T) {
+func TestPanicIsSystemError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var panicContractCode = `
 package main
 
@@ -47,15 +38,61 @@ func (r *One) Panic() error {
 	panic("AAAAAAAA!")
 	return nil
 }
+
+func NewPanic() (*One, error) {
+	panic("BBBBBBBB!")
+}
 `
-	prototype := uploadContractOnce(t, "panic", panicContractCode)
+	prototype := uploadContractOnceExt(t, "panicAsSystemError", panicContractCode, false)
 	obj := callConstructor(t, prototype, "New")
 
-	resp := callMethodNoChecks(t, obj, "Panic")
-	require.Contains(t, resp.Error.Message, "executor error: problem with API call: AAAAAAAA!")
+	resp1 := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp1.Error.Message, "AAAAAAAA!")
+
+	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
+	require.Contains(t, resp2.Error.Message, "BBBBBBBB!")
+}
+
+// Make sure that panic() in a contract causes a system error and that this error
+// is returned by API.
+func TestPanicIsLogicalError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
+	var panicContractCode = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func New() (*One, error) {
+	return &One{}, nil
+}
+
+var INSATTR_Panic_API = true
+func (r *One) Panic() error {
+	panic("AAAAAAAA!")
+	return nil
+}
+
+func NewPanic() (*One, error) {
+	panic("BBBBBBBB!")
+}
+`
+	prototype := uploadContractOnceExt(t, "panicAsLogicalError", panicContractCode, true)
+	obj := callConstructor(t, prototype, "New")
+
+	resp1 := callMethodNoChecks(t, obj, "Panic")
+	require.Contains(t, resp1.Result.ExtractedError, "AAAAAAAA!")
+
+	resp2 := callConstructorNoChecks(t, prototype, "NewPanic")
+	require.Contains(t, resp2.Result.Error.S, "BBBBBBBB!")
+
 }
 
 func TestRecursiveCallError(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 
@@ -100,6 +137,7 @@ func (r *One) Recursive() (error) {
 }
 
 func TestPrototypeMismatch(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	testContract := `
 package main
 
@@ -173,6 +211,7 @@ func (c *First) GetName() (string, error) {
 }
 
 func TestContractWithEmbeddedConstructor(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
 	var contractOneCode = `
 package main
 

@@ -1,34 +1,17 @@
-///
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-///
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package application
 
 import (
 	"strconv"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
 	GenesisNameRootDomain = "rootdomain"
-	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
-	GenesisNameNodeDomain = "nodedomain"
-	// GenesisNameNodeRecord is the name of node contract for genesis record.
-	GenesisNameNodeRecord = "noderecord"
 	// GenesisNameMember is the name of member contract for genesis record.
 	GenesisNameMember = "member"
 	// GenesisNameWallet is the name of wallet contract for genesis record.
@@ -61,13 +44,15 @@ const (
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 2
 
-	GenesisAmountFundsMembers                 = 1
-	GenesisAmountEnterpriseMembers            = 4
-	GenesisAmountNetworkIncentivesMembers     = 30
-	GenesisAmountApplicationIncentivesMembers = 30
-	GenesisAmountFoundationMembers            = 30
+	GenesisAmountEnterpriseMembers            = 1
+	GenesisAmountNetworkIncentivesMembers     = 20
+	GenesisAmountApplicationIncentivesMembers = 20
+	GenesisAmountFoundationMembers            = 20
 
-	DefaultDistributionAmount = "10000000000000000000"
+	EnterpriseDistributionAmount        = "2000000000000000000"
+	FoundationDistributionAmount        = "50000000000000000"
+	AppIncentivesDistributionAmount     = "50000000000000000"
+	NetworkIncentivesDistributionAmount = "50000000000000000"
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -105,13 +90,6 @@ var GenesisNameFoundationMembers = func() (result [GenesisAmountFoundationMember
 	return
 }()
 
-var GenesisNameFundsMembers = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameMember
-	}
-	return
-}()
-
 var GenesisNameEnterpriseMembers = func() (result [GenesisAmountEnterpriseMembers]string) {
 	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
 		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameMember
@@ -140,20 +118,6 @@ var GenesisNameFoundationDeposits = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-var GenesisNameFundsDeposits = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
-	}
-	return
-}()
-
-var GenesisNameEnterpriseDeposits = func() (result [GenesisAmountEnterpriseMembers]string) {
-	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
-		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
-	}
-	return
-}()
-
 var GenesisNameNetworkIncentivesWallets = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameWallet
@@ -171,13 +135,6 @@ var GenesisNameApplicationIncentivesWallets = func() (result [GenesisAmountAppli
 var GenesisNameFoundationWallets = func() (result [GenesisAmountFoundationMembers]string) {
 	for i := 0; i < GenesisAmountFoundationMembers; i++ {
 		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameWallet
-	}
-	return
-}()
-
-var GenesisNameFundsWallets = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameWallet
 	}
 	return
 }()
@@ -210,12 +167,6 @@ var GenesisNameFoundationAccounts = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-var GenesisNameFundsAccounts = func() (result [GenesisAmountFundsMembers]string) {
-	for i := 0; i < GenesisAmountFundsMembers; i++ {
-		result[i] = "funds_" + strconv.Itoa(i) + "_" + GenesisNameAccount
-	}
-	return
-}()
 var GenesisNameEnterpriseAccounts = func() (result [GenesisAmountEnterpriseMembers]string) {
 	for i := 0; i < GenesisAmountEnterpriseMembers; i++ {
 		result[i] = "enterprise_" + strconv.Itoa(i) + "_" + GenesisNameAccount
@@ -223,62 +174,40 @@ var GenesisNameEnterpriseAccounts = func() (result [GenesisAmountEnterpriseMembe
 	return
 }()
 
-type genesisBinary []byte
-
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// ID returns genesis record id.
-func (r genesisBinary) ID() insolar.ID {
-	return *insolar.NewID(insolar.GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() insolar.Reference {
-	return *insolar.NewReference(r.ID())
-}
-
-// DiscoveryNodeRegister carries data required for registering discovery node via genesis.
-type DiscoveryNodeRegister struct {
-	Role      string
-	PublicKey string
-}
-
-// GenesisContractState carries data required for contract object creation via genesis.
-type GenesisContractState struct {
-	Name       string
-	Prototype  string
-	ParentName string
-	Memory     []byte
-}
-
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance                     string
-	Fee                             string
-	MDBalance                       string
-	RootPublicKey                   string
-	FeePublicKey                    string
-	MigrationAdminPublicKey         string
-	MigrationDaemonPublicKeys       []string
-	VestingPeriodInPulses           int64
-	LockupPeriodInPulses            int64
-	VestingStepInPulses             int64
-	MigrationAddresses              [][]string
-	FundsPublicKeys                 []string
-	EnterprisePublicKeys            []string
-	NetworkIncentivesPublicKeys     []string
+	// RootBalance is a balance of Root Member.
+	RootBalance string
+	// MDBalance is a balance of Migration Daemon.
+	MDBalance string
+	// RootPublicKey is public key of Root Member.
+	RootPublicKey string
+	// FeePublicKey is public key of Fee Member.
+	FeePublicKey string
+	// MigrationAdminPublicKey is public key of Migration Admin.
+	MigrationAdminPublicKey string
+	// MigrationDaemonPublicKeys is a public keys array of Migration Daemon members.
+	MigrationDaemonPublicKeys []string
+	// VestingPeriodInPulses is a vesting period measured with pulses.
+	VestingPeriodInPulses int64
+	// LockupPeriodInPulses is a lockup period before vesting measured with pulses.
+	LockupPeriodInPulses int64
+	// VestingStepInPulses is a one vesting step measured with pulses.
+	VestingStepInPulses int64
+	// MigrationAddresses are migration addresses array per shard where index array is a shard index.
+	MigrationAddresses [][]string
+	// FundsPublicKeys is a public keys array of Funds members.
+	FundsPublicKeys []string
+	// EnterprisePublicKeys is a public keys array of Enterprise members.
+	EnterprisePublicKeys []string
+	// NetworkIncentivesPublicKeys is a public keys array of Network Incentives members.
+	NetworkIncentivesPublicKeys []string
+	// ApplicationIncentivesPublicKeys is a public keys array of Application Incentives members.
 	ApplicationIncentivesPublicKeys []string
-	FoundationPublicKeys            []string
-	PKShardCount                    int
-	MAShardCount                    int
-}
-
-// GenesisHeavyConfig carries data required for initial genesis on heavy node.
-type GenesisHeavyConfig struct {
-	// DiscoveryNodes is the list with discovery node info.
-	DiscoveryNodes  []DiscoveryNodeRegister
-	ContractsConfig GenesisContractsConfig
-	// Skip is flag for skipping genesis on heavy node. Useful for some test cases.
-	Skip bool
+	// FoundationPublicKeys is a public keys array of Foundation members.
+	FoundationPublicKeys []string
+	// PKShardCount is a primary keys shards count.
+	PKShardCount int
+	// MAShardCount is a migration addresses shards count.
+	MAShardCount int
 }

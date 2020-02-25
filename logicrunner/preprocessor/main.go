@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package preprocessor
 
@@ -37,7 +26,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -47,6 +36,7 @@ import (
 var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
+var pkgErrorsPath = "github.com/pkg/errors"
 
 var immutableFlag = "ins:immutable"
 var sagaFlagStart = "ins:saga("
@@ -75,11 +65,12 @@ type SagaInfo struct {
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
-	name        string
-	code        []byte
-	fileSet     *token.FileSet
-	node        *ast.File
-	machineType insolar.MachineType
+	name                string
+	code                []byte
+	fileSet             *token.FileSet
+	node                *ast.File
+	machineType         insolar.MachineType
+	panicIsLogicalError bool
 
 	types        map[string]*ast.TypeSpec
 	methods      map[string][]*ast.FuncDecl
@@ -121,6 +112,9 @@ func ParseFile(fileName string, machineType insolar.MachineType) (*ParsedFile, e
 	}
 
 	return res, nil
+}
+func (pf *ParsedFile) SetPanicIsLogicalError() {
+	pf.panicIsLogicalError = true
 }
 
 func (pf *ParsedFile) parseTypes() error {
@@ -277,8 +271,12 @@ func formatAndWrite(out io.Writer, templateName string, data map[string]interfac
 
 	fmtOut, err := format.Source(buff.Bytes())
 	if err != nil {
-
-		return errors.Wrap(err, "couldn't format code "+buff.String())
+		errPrefix := "couldn't format code: "
+		lines := strings.Split(buff.String(), "\n")
+		for lineNo, line := range lines {
+			errPrefix += fmt.Sprintf("\n%04d | %s", lineNo, line)
+		}
+		return errors.Wrap(err, errPrefix)
 	}
 
 	_, err = out.Write(fmtOut)
@@ -326,14 +324,15 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	data := map[string]interface{}{
-		"Package":            packageName,
-		"ContractType":       pf.contract,
-		"Methods":            methodsInfo,
-		"Functions":          functionsInfo,
-		"ParsedCode":         pf.code,
-		"FoundationPath":     foundationPath,
-		"Imports":            imports,
-		"GenerateInitialize": pf.machineType == insolar.MachineTypeBuiltin,
+		"Package":             packageName,
+		"ContractType":        pf.contract,
+		"Methods":             methodsInfo,
+		"Functions":           functionsInfo,
+		"ParsedCode":          pf.code,
+		"FoundationPath":      foundationPath,
+		"Imports":             imports,
+		"GenerateInitialize":  pf.machineType == insolar.MachineTypeBuiltin,
+		"PanicIsLogicalError": pf.panicIsLogicalError,
 	}
 
 	return formatAndWrite(out, "wrapper", data)
@@ -453,12 +452,19 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
 	res := make([]map[string]interface{}, 0, len(list))
 	for _, fun := range list {
+		errorInterfaceInRes := typeIndexes(pf, fun.Type.Results, errorType)
+		lastErrorInRes := -1
+		if len(errorInterfaceInRes) > 0 {
+			lastErrorInRes = errorInterfaceInRes[len(errorInterfaceInRes)-1]
+		}
 		info := map[string]interface{}{
 			"Name":                fun.Name.Name,
 			"ArgumentsZeroList":   generateZeroListOfTypes(pf, "args", fun.Type.Params),
 			"Arguments":           numberedVars(fun.Type.Params, "args"),
 			"Results":             numberedVars(fun.Type.Results, "ret"),
-			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
+			"ResultDefinitions":   numberedDefinition(pf, fun.Type.Results, "ret"),
+			"ErrorInterfaceInRes": errorInterfaceInRes,
+			"LastErrorInRes":      lastErrorInRes,
 			"Immutable":           isImmutable(fun),  // only for methods, not constructors
 			"SagaInfo":            sagaInfo(pf, fun), // only for methods, not constructors
 		}
@@ -598,18 +604,17 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	if !wrapper {
 		imports[fmt.Sprintf(`"%s"`, corePath)] = true
+	} else {
+		imports[fmt.Sprintf(`"%s"`, pkgErrorsPath)] = true
+
 	}
 	for _, method := range pf.methods[pf.contract] {
 		extendImportsMap(pf, method.Type.Params, imports)
-		if !wrapper {
-			extendImportsMap(pf, method.Type.Results, imports)
-		}
+		extendImportsMap(pf, method.Type.Results, imports)
 	}
 	for _, fun := range pf.constructors[pf.contract] {
 		extendImportsMap(pf, fun.Type.Params, imports)
-		if !wrapper {
-			extendImportsMap(pf, fun.Type.Results, imports)
-		}
+		extendImportsMap(pf, fun.Type.Results, imports)
 	}
 	if !wrapper {
 		for _, t := range pf.types {
@@ -661,6 +666,16 @@ func numberedVarsI(n int, name string) string {
 		res = commaAppend(res, name+strconv.Itoa(i))
 	}
 	return res
+}
+
+func numberedDefinition(parsed *ParsedFile, list *ast.FieldList, name string) string {
+	resultFields := make([]string, list.NumFields())
+	for i := 0; i < list.NumFields(); i++ {
+		field := list.List[i]
+		typeName := parsed.codeOfNode(field.Type)
+		resultFields = append(resultFields, fmt.Sprintf("var %s%d %s", name, i, typeName))
+	}
+	return strings.Join(resultFields, "\n")
 }
 
 func typeIndexes(parsed *ParsedFile, list *ast.FieldList, t string) []int {

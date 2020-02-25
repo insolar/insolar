@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package launchnet
 
@@ -32,14 +21,16 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"testing"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 )
@@ -49,8 +40,14 @@ const AdminPort = "19002"
 const PublicPort = "19102"
 const HostDebug = "http://localhost:8001"
 const TestAdminRPCUrl = "/admin-api/rpc"
-const TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
-const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
+
+var AdminHostPort = HOST + AdminPort
+var TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
+var TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
+var disableLaunchnet = false
+var testRPCUrlVar = "INSOLAR_FUNC_RPC_URL"
+var testRPCUrlPublicVar = "INSOLAR_FUNC_RPC_URL_PUBLIC"
+var keysPathVar = "INSOLAR_FUNC_KEYS_PATH"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
@@ -66,7 +63,6 @@ var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers
 var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
 var Enterprise [application.GenesisAmountEnterpriseMembers]*User
 var Foundation [application.GenesisAmountFoundationMembers]*User
-var Funds [application.GenesisAmountFundsMembers]*User
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
@@ -104,7 +100,7 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info *requester.InfoResponse
+var info *sdk.InfoResponse
 var Root User
 var MigrationAdmin User
 var FeeMember User
@@ -118,6 +114,12 @@ type User struct {
 }
 
 func launchnetPath(a ...string) (string, error) {
+	keysPath := os.Getenv(keysPathVar)
+	if keysPath != "" {
+		p := []string{keysPath}
+		p = append(p, a[len(a)-1])
+		return filepath.Join(p...), nil
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
@@ -167,6 +169,30 @@ func GetNodesCount() (int, error) {
 	}
 
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
+}
+
+func GetNumShards() (int, error) {
+	type bootstrapConf struct {
+		PKShardCount int `yaml:"ma_shard_count"`
+	}
+
+	var conf bootstrapConf
+
+	path, err := launchnetPath("bootstrap.yaml")
+	if err != nil {
+		return 0, err
+	}
+	buff, err := ioutil.ReadFile(path)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't read bootstrap config")
+	}
+
+	err = yaml.Unmarshal(buff, &conf)
+	if err != nil {
+		return 0, errors.Wrap(err, "[ GetNumShards ] Can't parse bootstrap config")
+	}
+
+	return conf.PKShardCount, nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {
@@ -265,19 +291,6 @@ func loadAllMembersKeys() error {
 		Foundation[i] = &md
 	}
 
-	for i := 0; i < application.GenesisAmountFundsMembers; i++ {
-		path, err := launchnetPath("configs", "funds_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		Funds[i] = &md
-	}
-
 	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
 		path, err := launchnetPath("configs", "enterprise_"+strconv.Itoa(i)+"_member_keys.json")
 		if err != nil {
@@ -296,7 +309,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestRPCUrl)
+	info, err = sdk.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
@@ -473,13 +486,30 @@ func waitForLaunch() error {
 	}
 }
 
+func RunOnlyWithLaunchnet(t *testing.T) {
+	if disableLaunchnet {
+		t.Skip()
+	}
+}
+
 func setup() error {
-	err := startNet()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't startNet")
+	testRPCUrl := os.Getenv(testRPCUrlVar)
+	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
+
+	if testRPCUrl == "" || testRPCUrlPublic == "" {
+		err := startNet()
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] could't startNet")
+		}
+	} else {
+		TestRPCUrl = testRPCUrl
+		TestRPCUrlPublic = testRPCUrlPublic
+		url := strings.Split(TestRPCUrlPublic, "/")
+		AdminHostPort = strings.Join(url[0:len(url)-1], "/")
+		disableLaunchnet = true
 	}
 
-	err = loadAllMembersKeys()
+	err := loadAllMembersKeys()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't load keys: ")
 	}
@@ -533,20 +563,22 @@ func RotateLogs(verbose bool) {
 	cmd := exec.Command("sh", "-c", rmCmd)
 	out, err := cmd.Output()
 	if err != nil {
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
 	}
 	if verbose {
-		fmt.Println("RotateLogs removed files:\n", string(out))
+		fmt.Printf("%v output:\n%v\n", rmCmd, string(out))
 	}
 
-	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	rotateCmd := "pkill -SIGUSR2 -x inslogrotator"
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
-		if verbose {
-			println("RotateLogs killall output:", string(out))
-		}
-		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
+		log.Fatal("RotateLogs: failed to execute command:", rotateCmd)
+	}
+	if verbose {
+		fmt.Printf("%v output:\n%v\n", rotateCmd, string(out))
 	}
 }
 

@@ -1,8 +1,8 @@
 .. _integration:
 
-==========================
-Setting Up Insolar Network
-==========================
+======================
+Set Up Insolar Network
+======================
 
 To set up an Insolar network:
 

@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package wallet
 
@@ -84,15 +73,6 @@ func (w *Wallet) GetBalance(assetName string) (string, error) {
 	return acc.GetBalance()
 }
 
-// AddDeposit method stores deposit reference in member it belongs to
-func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
-	if _, ok := w.Deposits[txId]; ok {
-		return fmt.Errorf("deposit for this transaction already exist")
-	}
-	w.Deposits[txId] = deposit.String()
-	return nil
-}
-
 // GetDeposits get all deposits for this wallet
 // ins:immutable
 func (w *Wallet) GetDeposits() ([]interface{}, error) {
@@ -123,4 +103,27 @@ func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		return true, depositReference, nil
 	}
 	return false, nil, nil
+}
+
+// FindOrCreateDeposit finds deposit for this wallet with this transaction hash or creates new one with link in this wallet.
+func (w *Wallet) FindOrCreateDeposit(transactionHash string, lockup int64, vesting int64, vestingStep int64) (*insolar.Reference, error) {
+	found, dRef, err := w.FindDeposit(transactionHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
+	}
+
+	if found {
+		return dRef, nil
+	}
+
+	dHolder := deposit.New(transactionHash, lockup, vesting, vestingStep)
+	txDeposit, err := dHolder.AsChild(w.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf("failed to save deposit as child: %s", err.Error())
+	}
+
+	ref := txDeposit.GetReference()
+	w.Deposits[transactionHash] = ref.String()
+
+	return &ref, err
 }

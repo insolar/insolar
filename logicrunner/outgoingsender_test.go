@@ -1,3 +1,8 @@
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 package logicrunner
 
 import (
@@ -7,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/insolar/go-actors/actor/errors"
 
 	"github.com/gojuno/minimock/v3"
@@ -67,7 +71,7 @@ func checkIncomingAndOutgoingMatch(t *testing.T, incoming *record.IncomingReques
 
 func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -105,7 +109,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 
 func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -145,7 +149,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 
 func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -176,7 +180,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 
 func TestOutgoingSenderStop(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}
@@ -200,7 +204,7 @@ func TestOutgoingSenderStop(t *testing.T) {
 
 func TestAbandonedSenderStop(t *testing.T) {
 	if useLeakTest {
-		defer leaktest.Check(t)()
+		defer testutils.LeakTester(t)
 	} else {
 		t.Parallel()
 	}

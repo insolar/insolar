@@ -1,34 +1,24 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/insolar/insolar/application/sdk"
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/application/cmd/insolar/insolarcmd"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -85,22 +75,29 @@ func main() {
 	addURLFlag(createMemberCmd.Flags())
 	rootCmd.AddCommand(createMemberCmd)
 
+	var targetValue string
 	var genKeysPairCmd = &cobra.Command{
 		Use:   "gen-key-pair",
 		Short: "generates public/private keys pair",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateKeysPair()
+			generateKeysPair(targetValue)
 		},
 	}
+	genKeysPairCmd.Flags().StringVarP(
+		&targetValue, "target", "t", "", "target for whom need to generate keys (possible values: node, user)")
 	rootCmd.AddCommand(genKeysPairCmd)
 
+	var addresses int
 	var genMigrationAddressesCmd = &cobra.Command{
 		Use:   "gen-migration-addresses",
 		Short: "generates fake migration addresses",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateMigrationAddresses()
+			err := insolarcmd.GenerateMigrationAddresses(os.Stdout, addresses)
+			check("failed to generate addresses:", err)
 		},
 	}
+	genMigrationAddressesCmd.Flags().IntVarP(
+		&addresses, "count", "c", 40000, "how many addresses to generate")
 	rootCmd.AddCommand(genMigrationAddressesCmd)
 
 	var rootKeysFile string
@@ -188,12 +185,13 @@ func main() {
 			getfreeMigrationCount([]string{adminURL}, []string{sendURL}, migrationAdminKeys, shardsCount, alertLevel)
 		},
 	}
+	addURLFlag(freeMigrationCountCmd.Flags())
 	freeMigrationCountCmd.Flags().StringVarP(
 		&migrationAdminKeys, "migration-admin-keys", "k", "",
 		"Config that contains public/private keys of root member",
 	)
 	freeMigrationCountCmd.Flags().IntVarP(
-		&alertLevel, "alert-level", "a", 0,
+		&alertLevel, "alert-level", "l", 0,
 		"If one of shard have less free addresses than this value, command will print alert message",
 	)
 	freeMigrationCountCmd.Flags().IntVarP(
@@ -202,26 +200,24 @@ func main() {
 	)
 	rootCmd.AddCommand(freeMigrationCountCmd)
 
-	var (
-		addressesPath string
-	)
+	var addressesDir string
 	var addMigrationAddressesCmd = &cobra.Command{
 		Use: "add-migration-addresses",
 		Run: func(cmd *cobra.Command, args []string) {
-			addMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesPath, shardsCount)
+			fmt.Println("generate random migration addresses")
+			err := insolarcmd.AddMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesDir)
+			check("", err)
+			fmt.Println("All addresses were added successfully")
 		},
 	}
+	addURLFlag(addMigrationAddressesCmd.Flags())
 	addMigrationAddressesCmd.Flags().StringVarP(
 		&migrationAdminKeys, "migration-admin-keys", "k", "",
 		"Dir with config that contains public/private keys of admin member",
 	)
 	addMigrationAddressesCmd.Flags().StringVarP(
-		&addressesPath, "addresses", "a", "",
-		"Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
-	)
-	addMigrationAddressesCmd.Flags().IntVarP(
-		&shardsCount, "shards-count", "s", 10,
-		"Count of shards at platform (must be a multiple of ten)",
+		&addressesDir, "addresses-dir", "d", "",
+		"Path to dir with address files. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
 	)
 	rootCmd.AddCommand(addMigrationAddressesCmd)
 
@@ -252,18 +248,16 @@ type mixedConfig struct {
 }
 
 func createMember(sendURL string, userName string, serverLogLevel string) {
-	ks := platformpolicy.NewKeyProcessor()
-
 	logLevelInsolar, err := insolar.ParseLevel(serverLogLevel)
 	check("Failed to parse logging level", err)
 
-	privKey, err := ks.GeneratePrivateKey()
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	cfg := mixedConfig{
@@ -271,7 +265,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 		PublicKey:  string(pubKeyStr),
 	}
 
-	info, err := requester.Info(sendURL)
+	info, err := sdk.Info(sendURL)
 	check("Problems with obtaining info", err)
 
 	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey, cfg.PublicKey)
@@ -312,30 +306,21 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
-func randomHex(n int) (string, error) {
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+func generateKeysPair(targetValue string) {
+	switch targetValue {
+	case "node":
+		generateKeysPairFast()
+		return
+	case "user":
+		generateKeysPairEthereum()
+		return
+	default:
+		fmt.Fprintln(os.Stderr, "Unknown target. Possible values: node, user.")
+		os.Exit(1)
 	}
-	return hex.EncodeToString(bytes), nil
 }
 
-func generateMigrationAddresses() {
-	maLen := 20000
-	ma := make([]string, maLen)
-
-	for i := 0; i < maLen; i++ {
-		ethAddr, _ := randomHex(20)
-		ma[i] = "0x" + ethAddr
-	}
-
-	result, err := json.MarshalIndent(ma, "", "    ")
-	check("Problems with marshaling migration addresses:", err)
-
-	mustWrite(os.Stdout, string(result))
-}
-
-func generateKeysPair() {
+func generateKeysPairFast() {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privKey, err := ks.GeneratePrivateKey()
@@ -345,6 +330,25 @@ func generateKeysPair() {
 	check("Problems with serialization of private key:", err)
 
 	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	check("Problems with serialization of public key:", err)
+
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": string(privKeyStr),
+		"public_key":  string(pubKeyStr),
+	}, "", "    ")
+	check("Problems with marshaling keys:", err)
+
+	mustWrite(os.Stdout, string(result))
+}
+
+func generateKeysPairEthereum() {
+	privKey, err := secrets.GeneratePrivateKeyEthereum()
+	check("Problems with generating of private key:", err)
+
+	privKeyStr, err := secrets.ExportPrivateKeyPEM(privKey)
+	check("Problems with serialization of private key:", err)
+
+	pubKeyStr, err := secrets.ExportPublicKeyPEM(secrets.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{
@@ -374,7 +378,7 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	}
 
 	if userCfg.Caller == "" {
-		info, err := requester.Info(adminURL)
+		info, err := sdk.Info(adminURL)
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
 			userCfg.Caller = info.RootMember
@@ -396,7 +400,7 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 }
 
 func getInfo(url string) {
-	info, err := requester.Info(url)
+	info, err := sdk.Info(url)
 	check("[ sendRequest ]", err)
 	fmt.Printf("TraceID    : %s\n", info.TraceID)
 	fmt.Printf("RootMember : %s\n", info.RootMember)

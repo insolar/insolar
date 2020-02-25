@@ -1,32 +1,60 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package testutils
 
 import (
 	"crypto"
 	"hash"
+	"math/rand"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/insolar"
 )
+
+const letterBytes = "abcdef0123456789"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+func RandomHashWithLength(n int) string {
+	sb := strings.Builder{}
+	sb.Grow(n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			sb.WriteByte(letterBytes[idx])
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return sb.String()
+}
+
+func RandomEthHash() string {
+	return "0x" + RandomHashWithLength(64)
+}
+
+func RandomEthMigrationAddress() string {
+	return "0x" + RandomHashWithLength(40)
+}
 
 // RandomString generates random uuid and return it as a string.
 func RandomString() string {
@@ -110,6 +138,7 @@ func (m *cryptographySchemeMock) IntegrityHashSize() int {
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
 }
+
 type SyncT struct {
 	*testing.T
 

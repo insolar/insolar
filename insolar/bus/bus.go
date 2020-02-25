@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package bus
 
@@ -23,7 +12,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -457,9 +446,9 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 	}
 }
 
-// wrapMeta wraps origin.Payload data with service fields
+// wrapMeta wraps msg.Payload data with service fields
 // and set it as byte slice back to msg.Payload.
-// Note: this method has side effect - origin-argument mutating
+// Note: this method has side effect - msg-argument mutating
 func (b *Bus) wrapMeta(
 	ctx context.Context,
 	msg *message.Message,
@@ -469,7 +458,7 @@ func (b *Bus) wrapMeta(
 ) (payload.Meta, *message.Message, error) {
 	msg = msg.Copy()
 
-	meta := payload.Meta{
+	payloadMeta := payload.Meta{
 		Polymorph:  uint32(payload.TypeMeta),
 		Payload:    msg.Payload,
 		Receiver:   receiver,
@@ -479,13 +468,14 @@ func (b *Bus) wrapMeta(
 		ID:         []byte(msg.UUID),
 	}
 
-	buf, err := meta.Marshal()
+	buf, err := payloadMeta.Marshal()
 	if err != nil {
 		return payload.Meta{}, nil, errors.Wrap(err, "wrapMeta. failed to wrap message")
 	}
 	msg.Payload = buf
+	msg.Metadata.Set(meta.Receiver, receiver.String())
 
-	return meta, msg, nil
+	return payloadMeta, msg, nil
 }
 
 // messagePayloadTypeName returns message type.

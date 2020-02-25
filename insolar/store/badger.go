@@ -1,18 +1,7 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package store
 
@@ -23,8 +12,9 @@ import (
 	"sync/atomic"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // BadgerDB is a badger DB implementation.
@@ -36,6 +26,9 @@ type BadgerDB struct {
 type BadgerOptions struct {
 	// ValueLogDiscardRatio set parameter for RunValueLogGC badger.DB method.
 	valueLogDiscardRatio float64
+
+	// openCloseOnStart: opens and close badger before usage( useful if badger wasn't closed correctly )
+	openCloseOnStart bool
 }
 
 type BadgerOption func(*BadgerOptions)
@@ -50,12 +43,42 @@ func ValueLogDiscardRatio(value float64) BadgerOption {
 	}
 }
 
+// OpenAndCloseBadgerOnStart switch logic with open and close badger on start
+// May be useful if badger wasn't closed correctly
+func OpenAndCloseBadgerOnStart(doOpenCLose bool) BadgerOption {
+	return func(s *BadgerOptions) {
+		s.openCloseOnStart = doOpenCLose
+	}
+}
+
+// we do it to correctly close badger, since every time heavy falls down it doesn't do close it gracefully
+func openAndCloseBadger(badgerDir string) error {
+	opts := badger.DefaultOptions(badgerDir)
+	opts.Truncate = true
+	db, err := badger.Open(opts)
+
+	if err != nil {
+		return err
+	}
+
+	return db.Close()
+}
+
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
 func NewBadgerDB(opts badger.Options, extras ...BadgerOption) (*BadgerDB, error) {
 	b := &BadgerDB{}
 	for _, opt := range extras {
 		opt(&b.extraOpts)
+	}
+
+	if b.extraOpts.openCloseOnStart {
+		inslogger.FromContext(context.Background()).Info("openAndCloseBadger starts")
+		err := openAndCloseBadger(opts.Dir)
+		if err != nil {
+			return nil, errors.Wrap(err, "openAndCloseBadger failed: ")
+		}
+		inslogger.FromContext(context.Background()).Info("openAndCloseBadger completed")
 	}
 
 	// always allow to truncate vlog if necessary (actually it should have been a default behavior)

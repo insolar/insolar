@@ -1,18 +1,8 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 // +build slowtest
 
 package integration
@@ -25,10 +15,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -58,6 +50,9 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		}
 
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+
+		cfg.LogicRunner = configuration.NewLogicRunner()
+		cfg.LogicRunner.RPCListen = ":0"
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 			lifeTime := &record.Lifeline{
@@ -172,9 +167,17 @@ func TestVirtual_BasicOperations(t *testing.T) {
 						ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
 					},
 				}
+			case *payload.GetPulse:
+				return []payload.Payload{
+					&payload.Pulse{
+						Pulse: pulse.PulseProto{
+							PulseNumber: 42,
+						},
+					},
+				}
+			default:
+				panic(fmt.Sprintf("unexpected message to light %T", pl))
 			}
-
-			panic(fmt.Sprintf("unexpected message to light %T", pl))
 		}, machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(func(_ insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
 			return testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(func(ctx context.Context, callContext *insolar.LogicCallContext, code insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
 				return insolar.MustSerialize(expectedRes), insolar.MustSerialize(expectedRes), nil
