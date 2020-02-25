@@ -11,6 +11,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/api"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
@@ -29,8 +30,8 @@ func TestComponents(t *testing.T) {
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.AdminAPIRunner.Address = "0.0.0.0:0"
-	cfg.APIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
-	cfg.AdminAPIRunner.SwaggerPath = "../../../application/api/spec/api-exported.yaml"
+	cfg.APIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
+	cfg.AdminAPIRunner.SwaggerPath = "../../../api/testdata/api-exported.yaml"
 
 	bootstrapComponents := initBootstrapComponents(ctx, cfg)
 	cert := initCertificateManager(
@@ -48,6 +49,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.KeyProcessor,
 		cert,
 		builtin.BuiltinContracts{},
+		api.Options{},
 	)
 	require.NotNil(t, cm)
 	require.NotNil(t, stopWatermill)

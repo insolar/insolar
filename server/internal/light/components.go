@@ -15,7 +15,7 @@ import (
 
 	component "github.com/insolar/component-manager"
 
-	"github.com/insolar/insolar/application/api"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
@@ -78,7 +78,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.ConfigLight) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.ConfigLight, apiOptions api.Options) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -208,6 +208,7 @@ func newComponents(ctx context.Context, cfg configuration.ConfigLight) (*compone
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -224,6 +225,7 @@ func newComponents(ctx context.Context, cfg configuration.ConfigLight) (*compone
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")

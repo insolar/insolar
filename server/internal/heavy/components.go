@@ -18,13 +18,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
-	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
-	"github.com/insolar/insolar/application/api"
+	component "github.com/insolar/component-manager"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -110,6 +110,7 @@ func initWithPostgres(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -266,6 +267,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -282,6 +284,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -473,6 +476,7 @@ func initWithBadger(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -626,6 +630,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -642,6 +647,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -805,21 +811,27 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.ConfigHolder, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
+func newComponents(
+	ctx context.Context,
+	cfg configuration.ConfigHolder,
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+	apiOptions api.Options,
+) (*components, error) {
 	// todo refactor this, extract IsPostgresBase from Ledger
 	heavyCfg := cfg.GetAllConfig()
 	switch realCfg := heavyCfg.(type) {
 	case configuration.ConfigHeavyPg:
 		if realCfg.Ledger.IsPostgresBase {
-			return initWithPostgres(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly)
+			return initWithPostgres(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 		}
 	case configuration.ConfigHeavyBadger:
 		if !realCfg.Ledger.IsPostgresBase {
-			return initWithBadger(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly)
+			return initWithBadger(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 		}
 	}
 	return nil, errors.New("can't start heavy, db configuration error")
-}
 
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)

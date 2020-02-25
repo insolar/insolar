@@ -59,7 +59,7 @@ func createKeysInDir(
 
 	nodeInfos := make([]nodeInfo, 0, amount)
 	for i, n := range nodes {
-		keyname := fmt.Sprintf(keyFilenameFormat, i+1)
+		keyname := fmt.Sprintf(keyFilenameFormat, i+certNamesStartFrom)
 		if len(n.KeyName) > 0 {
 			keyname = n.KeyName
 		}

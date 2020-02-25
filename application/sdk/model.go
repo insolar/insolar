@@ -8,6 +8,8 @@ package sdk
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/insolar/insolar/api/requester"
 )
 
 type Member interface {
@@ -79,4 +81,20 @@ func NewMigrationMember(ref string, migrationAddress string, privateKey string, 
 
 func (m *MigrationMember) String() string {
 	return fmt.Sprintf("Reference: %s; Private key: %s, Public key: %s, Migration address: %s. \n", m.Reference, m.PrivateKey, m.PublicKey, m.MigrationAddress)
+}
+
+// InfoResponse represents response from rpc on network.getInfo method
+type InfoResponse struct {
+	RootDomain             string   `json:"rootDomain"`
+	RootMember             string   `json:"rootMember"`
+	MigrationAdminMember   string   `json:"migrationAdminMember"`
+	FeeMember              string   `json:"feeMember"`
+	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
+	NodeDomain             string   `json:"nodeDomain"`
+	TraceID                string   `json:"traceID"`
+}
+
+type rpcInfoResponse struct {
+	requester.Response
+	Result InfoResponse `json:"result"`
 }

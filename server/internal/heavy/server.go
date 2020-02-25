@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -29,14 +30,22 @@ type Server struct {
 	genesisCfgPath string
 	genesisOptions genesis.Options
 	genesisOnly    bool
+	apiOptions     api.Options
 }
 
-func New(cfgHolder configuration.ConfigHolder, genesisCfgPath string, genesisOptions genesis.Options, genesisOnly bool) *Server {
+func New(
+	cfgHolder configuration.ConfigHolder,
+	genesisCfgPath string,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+	apiOptions api.Options,
+) *Server {
 	return &Server{
 		cfgHolder:      cfgHolder,
 		genesisCfgPath: genesisCfgPath,
 		genesisOptions: genesisOptions,
 		genesisOnly:    genesisOnly,
+		apiOptions:     apiOptions,
 	}
 }
 
@@ -78,7 +87,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, s.cfgHolder, genesisCfg, s.genesisOptions, s.genesisOnly)
+	cmp, err := newComponents(ctx, s.cfgHolder, genesisCfg, s.genesisOptions, s.genesisOnly, s.apiOptions)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

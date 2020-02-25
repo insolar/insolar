@@ -102,6 +102,11 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
+	apiOptions, err := initAPIOptions()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to get API info response"))
+	}
+
 	states, _ := initStates(genesisConfigPath)
 	s := server.NewHeavyServer(
 		holder,
@@ -111,6 +116,7 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 			ParentDomain: application.GenesisNameRootDomain,
 		},
 		genesisOnly,
+		apiOptions,
 	)
 	s.Serve()
 }
@@ -135,13 +141,18 @@ func runVirtualNode(configPath string) {
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
+	apiOptions, err := initAPIOptions()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to get API info response"))
+	}
+
 	builtinContracts := builtin.BuiltinContracts{
 		CodeRegistry:         appbuiltin.InitializeContractMethods(),
 		CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
 		CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
 		PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
 	}
-	s := server.NewVirtualServer(holder, builtinContracts)
+	s := server.NewVirtualServer(holder, builtinContracts, apiOptions)
 	s.Serve()
 }
 
@@ -161,11 +172,16 @@ func runLightNode(configPath string) {
 		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
 	}
 
+	apiOptions, err := initAPIOptions()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to get API info response"))
+	}
+
 	if err := psAgentLauncher(); err != nil {
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	s := server.NewLightServer(holder)
+	s := server.NewLightServer(holder, apiOptions)
 	s.Serve()
 }
 

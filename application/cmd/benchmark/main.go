@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
@@ -41,25 +41,26 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile          string
-	output              string
-	concurrent          int
-	repetitions         int
-	memberKeys          string
-	adminAPIURLs        []string
-	publicAPIURLs       []string
-	logLevel            string
-	logLevelServer      string
-	saveMembersToFile   bool
-	useMembersFromFile  bool
-	noCheckBalance      bool
-	checkMembersBalance bool
-	checkAllBalance     bool
-	checkTotalBalance   bool
-	scenarioName        string
-	discoveryNodesLogs  string
-	maxRetries          int
-	retryPeriod         time.Duration
+	memberFile                string
+	output                    string
+	concurrent                int
+	repetitions               int
+	memberKeys                string
+	adminAPIURLs              []string
+	publicAPIURLs             []string
+	logLevel                  string
+	logLevelServer            string
+	saveMembersToFile         bool
+	useMembersFromFile        bool
+	noCheckBalance            bool
+	checkMembersBalance       bool
+	checkAllBalance           bool
+	checkTotalBalance         bool
+	scenarioName              string
+	discoveryNodesLogs        string
+	maxRetries                int
+	retryPeriod               time.Duration
+	delayBeforeGettingBalance time.Duration
 )
 
 func parseInputParams() {
@@ -82,6 +83,7 @@ func parseInputParams() {
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.IntVarP(&maxRetries, "retries", "R", 0, "number of request attempts after getting -31429 error. -1 retries infinitely")
 	pflag.DurationVarP(&retryPeriod, "retry-period", "P", 0, "delay between retries")
+	pflag.DurationVarP(&delayBeforeGettingBalance, "delay-before-getting-balance", "d", 0, "delay before getting balance")
 	pflag.Parse()
 }
 
@@ -490,6 +492,8 @@ func main() {
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
+
+	time.Sleep(delayBeforeGettingBalance)
 
 	if !noCheckBalance {
 		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())

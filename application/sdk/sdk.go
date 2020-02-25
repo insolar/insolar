@@ -20,9 +20,9 @@ import (
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/api"
-	"github.com/insolar/insolar/application/api/requester"
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -92,7 +92,7 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
-	response, err := requester.Info(adminBuffer.next())
+	response, err := Info(adminBuffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get info")
 	}
@@ -138,6 +138,26 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string, o
 	}
 
 	return result, nil
+}
+
+// Info makes rpc request to network.getInfo method and extracts it
+func Info(url string) (*InfoResponse, error) {
+	body, err := requester.GetResponseBodyPlatform(url, "network.getInfo", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ]")
+	}
+
+	infoResp := rpcInfoResponse{}
+
+	err = json.Unmarshal(body, &infoResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Info ] Can't unmarshal")
+	}
+	if infoResp.Error != nil {
+		return nil, infoResp.Error
+	}
+
+	return &infoResp.Result, nil
 }
 
 func (sdk *SDK) GetFeeMember() Member {

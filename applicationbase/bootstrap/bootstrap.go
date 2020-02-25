@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strconv"
 
-	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -25,27 +26,28 @@ import (
 
 // Generator is a component for generating bootstrap files required for discovery nodes bootstrap and heavy genesis.
 type Generator struct {
-	config             *Config
-	certificatesOutDir string
-	contractsConfig    map[string]interface{}
+	config          *Config
+	contractsConfig map[string]interface{}
 }
 
 // NewGenerator parses config file and creates new generator on success.
-func NewGenerator(configFile, certificatesOutDir string, contractsConfig map[string]interface{}) (*Generator, error) {
+func NewGenerator(configFile string, contractsConfig map[string]interface{}) (*Generator, error) {
 	config, err := ParseConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewGeneratorWithConfig(config, certificatesOutDir, contractsConfig), nil
+	return NewGeneratorWithConfig(config, contractsConfig), nil
 }
 
 // NewGeneratorWithConfig creates new Generator with provided config.
-func NewGeneratorWithConfig(config *Config, certificatesOutDir string, contractsConfig map[string]interface{}) *Generator {
+func NewGeneratorWithConfig(config *Config, contractsConfig map[string]interface{}) *Generator {
+	if config.CertificateNameOffsetFromZero {
+		certNamesStartFrom = 0
+	}
 	return &Generator{
-		config:             config,
-		certificatesOutDir: certificatesOutDir,
-		contractsConfig:    contractsConfig,
+		config:          config,
+		contractsConfig: contractsConfig,
 	}
 }
 
@@ -145,7 +147,11 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 		certs = append(certs, c)
 	}
 
-	var err error
+	err := os.MkdirAll(g.config.CertificatesOutDir, 0700)
+	if err != nil && !os.IsNotExist(err) {
+		return errors.Wrapf(err, "failed create dir %v: %v", g.config.CertificatesOutDir, err)
+	}
+
 	for i, node := range nodesInfo {
 		for j := range g.config.DiscoveryNodes {
 			dn := discoveryNodes[j]
@@ -173,7 +179,8 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 			return errors.New("cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
-		certFile := path.Join(g.certificatesOutDir, node.certName)
+		certFile := path.Join(g.config.CertificatesOutDir, node.certName)
+
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create certificate: %v", certFile)

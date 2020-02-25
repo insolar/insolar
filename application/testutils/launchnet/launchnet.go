@@ -28,8 +28,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 )
@@ -99,7 +100,7 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info *requester.InfoResponse
+var info *sdk.InfoResponse
 var Root User
 var MigrationAdmin User
 var FeeMember User
@@ -308,7 +309,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestRPCUrl)
+	info, err = sdk.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
