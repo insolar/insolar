@@ -820,7 +820,7 @@ func newComponents(
 	apiOptions api.Options,
 ) (*components, error) {
 	// todo refactor this, extract IsPostgresBase from Ledger
-	heavyCfg := cfg.GetAllConfig()
+	heavyCfg := cfg.GetNodeConfig()
 	switch realCfg := heavyCfg.(type) {
 	case configuration.ConfigHeavyPg:
 		if realCfg.Ledger.IsPostgresBase {
@@ -832,6 +832,7 @@ func newComponents(
 		}
 	}
 	return nil, errors.New("can't start heavy, db configuration error")
+}
 
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)

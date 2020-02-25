@@ -63,7 +63,7 @@ func (s *Server) Serve() {
 	cfg := s.cfgHolder.GetGenericConfig()
 
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.GetAllConfig()))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.GetNodeConfig()))
 
 	var (
 		ctx         = context.Background()

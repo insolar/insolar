@@ -68,7 +68,7 @@ type HolderHeavyBadger struct {
 func (h HolderHeavyBadger) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h HolderHeavyBadger) GetAllConfig() interface{} {
+func (h HolderHeavyBadger) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 
@@ -113,7 +113,7 @@ type HolderHeavyPg struct {
 func (h HolderHeavyPg) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h HolderHeavyPg) GetAllConfig() interface{} {
+func (h HolderHeavyPg) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 

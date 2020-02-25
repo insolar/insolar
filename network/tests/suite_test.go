@@ -536,7 +536,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager = component.NewManager(nil)
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg.Host, node.componentManager)
 	require.NoError(s.t, err)
 
 	certManager, cryptographyService := s.initCrypto(node)

@@ -45,7 +45,7 @@ type HolderLight struct {
 func (h HolderLight) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h HolderLight) GetAllConfig() interface{} {
+func (h HolderLight) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 

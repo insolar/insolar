@@ -41,8 +41,10 @@ func (c GenericConfiguration) GetConfig() interface{} {
 
 // Holds GenericConfiguration + node specific config
 type ConfigHolder interface {
+	// Returns Generic Config struct
 	GetGenericConfig() GenericConfiguration
-	GetAllConfig() interface{}
+	// Returns Node specific config struct
+	GetNodeConfig() interface{}
 }
 
 // PulsarConfiguration contains configuration params for the pulsar node

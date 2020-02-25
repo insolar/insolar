@@ -45,7 +45,7 @@ type HolderVirtual struct {
 func (h HolderVirtual) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h HolderVirtual) GetAllConfig() interface{} {
+func (h HolderVirtual) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 

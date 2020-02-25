@@ -23,13 +23,13 @@ import (
 )
 
 type Server struct {
-	cfgHolder *configuration.HolderLight
+	cfgHolder  *configuration.HolderLight
 	apiOptions api.Options
 }
 
 func New(cfgHolder *configuration.HolderLight, apiOptions api.Options) *Server {
 	return &Server{
-		cfgHolder: cfgHolder,
+		cfgHolder:  cfgHolder,
 		apiOptions: apiOptions,
 	}
 }
