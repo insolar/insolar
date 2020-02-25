@@ -216,73 +216,101 @@ func (s *BadgerDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *BadgerDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	return s.traverse(ctx, pn, steps, false)
+	if steps < 0 {
+		return *insolar.GenesisPulse, errors.New("BadgerDB.traverseTx - `steps` argument should be not negative")
+	}
+
+	for {
+		tx, err := s.txManager.BeginReadTx()
+		if err != nil {
+			return *insolar.GenesisPulse, err
+		}
+
+		pn, err := s.traverseTx(tx, pn, steps, false)
+		if err != nil {
+			_ = tx.Rollback()
+			return pn, err
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			inslogger.FromContext(ctx).Debugf("tx.Commit() returned an error, retrying: %s", err.Error())
+			continue
+		}
+
+		return pn, nil
+	}
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *BadgerDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
-	return s.traverse(ctx, pn, steps, true)
-}
-
-func (s *BadgerDB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {
 	if steps < 0 {
-		return *insolar.GenesisPulse, errors.New("BadgerDB.traverse - `steps` argument should be not negative")
+		return *insolar.GenesisPulse, errors.New("BadgerDB.traverseTx - `steps` argument should be not negative")
 	}
 
-	var (
-		retPulse insolar.Pulse
-		retErr   error
-	)
 	for {
-		err := s.db.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			opts.Reverse = reverse
-			opts.PrefetchSize = steps + 1
-			it := txn.NewIterator(opts)
-			defer it.Close()
+		tx, err := s.txManager.BeginReadTx()
+		if err != nil {
+			return *insolar.GenesisPulse, err
+		}
 
-			pivot := pulseKey(pn)
-			prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
-			scope := pivot.Scope().Bytes()
-			it.Seek(prefix)
-			i := 0
-			for {
-				if !it.ValidForPrefix(scope) {
-					break
-				}
+		pn, err := s.traverseTx(tx, pn, steps, true)
+		if err != nil {
+			_ = tx.Rollback()
+			return pn, err
+		}
 
-				if i == steps {
-					buf, err := it.Item().ValueCopy(nil)
-					if err != nil {
-						retPulse = *insolar.GenesisPulse
-						retErr = err
-						return nil
-					}
-					node := deserialize(buf)
-					retPulse = node.Pulse
-					retErr = nil
-					return nil
-				}
+		err = tx.Commit()
+		if err != nil {
+			inslogger.FromContext(ctx).Debugf("tx.Commit() returned an error, retrying: %s", err.Error())
+			continue
+		}
 
-				it.Next()
-				i++
-			}
+		return pn, nil
+	}
+}
 
-			// not found
-			retPulse = *insolar.GenesisPulse
-			retErr = ErrNotFound
-			return nil
-		})
+func (s *BadgerDB) traverseTx(tx object.Transaction, pn insolar.PulseNumber, steps int, reverse bool) (retPulse insolar.Pulse, retErr error) {
+	txn := tx.ToBadgerTx()
 
-		if err == nil {
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+	opts.PrefetchSize = steps + 1
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	pivot := pulseKey(pn)
+	prefix := append(pivot.Scope().Bytes(), pivot.ID()...)
+	scope := pivot.Scope().Bytes()
+	it.Seek(prefix)
+	i := 0
+	for {
+		if !it.ValidForPrefix(scope) {
 			break
 		}
 
-		inslogger.FromContext(ctx).Debugf("BadgerDB.traverse - s.db.Backend().View returned an error, retrying: %s", err.Error())
+		if i == steps {
+			buf, err := it.Item().ValueCopy(nil)
+			if err != nil {
+				retPulse = *insolar.GenesisPulse
+				retErr = err
+				return
+			}
+			node := deserialize(buf)
+			retPulse = node.Pulse
+			retErr = nil
+			return
+		}
+
+		it.Next()
+		i++
 	}
 
-	return retPulse, retErr
+	// not found
+	retPulse = *insolar.GenesisPulse
+	retErr = ErrNotFound
+	return
 }
 
 func head(txn *badger.Txn) (insolar.PulseNumber, error) {
