@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -22,14 +23,14 @@ import (
 )
 
 type Server struct {
-	cfgPath         string
-	apiInfoResponse map[string]interface{}
+	cfgPath    string
+	apiOptions api.Options
 }
 
-func New(cfgPath string, apiInfoResponse map[string]interface{}) *Server {
+func New(cfgPath string, apiOptions api.Options) *Server {
 	return &Server{
-		cfgPath:         cfgPath,
-		apiInfoResponse: apiInfoResponse,
+		cfgPath:    cfgPath,
+		apiOptions: apiOptions,
 	}
 }
 
@@ -71,7 +72,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, s.apiInfoResponse)
+	cmp, err := newComponents(ctx, *cfg, s.apiOptions)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

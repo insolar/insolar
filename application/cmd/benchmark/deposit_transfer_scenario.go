@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/application/api/sdk"
+	"github.com/insolar/insolar/application/sdk"
 )
 
 type depositTransferScenario struct {
