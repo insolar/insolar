@@ -105,6 +105,7 @@ func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pu
 }
 
 // FinalizePulse starts backup process if needed
+// TODO: split into FinalizePulse and FinalizePulseTx
 func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber, gcRunner GCRunInfo) {
 	finPulse := &newPulse
 	for {
