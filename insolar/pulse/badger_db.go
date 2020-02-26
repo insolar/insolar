@@ -219,10 +219,22 @@ func (s *BadgerDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps i
 	return s.traverse(ctx, pn, steps, false)
 }
 
+// ForwardsTx calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (s *BadgerDB) ForwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
+	return s.traverseTx(tx, pn, steps, false)
+}
+
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *BadgerDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
 	return s.traverse(ctx, pn, steps, true)
+}
+
+// BackwardsTx calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (s *BadgerDB) BackwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error) {
+	return s.traverseTx(tx, pn, steps, true)
 }
 
 func (s *BadgerDB) traverse(ctx context.Context, pn insolar.PulseNumber, steps int, reverse bool) (insolar.Pulse, error) {

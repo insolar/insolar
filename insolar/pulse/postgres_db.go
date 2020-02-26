@@ -295,26 +295,39 @@ func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return nil
 }
 
-// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+var forwardsQuery = `SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number asc OFFSET $2 LIMIT 1;`
+var backwardsQuery = `SELECT pulse_number FROM pulses WHERE pulse_number <= $1 ORDER BY pulse_number desc offset $2 limit 1;`
+
+// ForwardsTx calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *PostgresDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+func (s *PostgresDB) ForwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
 	// There can be "holes" in pulses double-linked list, e.g.
 	// 1) Between fake genesis pulse and first real pulse
 	// 2) If pulsar is separated from the rest of the network for N pulses
 	// 3) The platform was down for N pulses
 	// Thus we can't use recursive queries here. In the future we are
 	// going to refactor the entire pulses logic.
-	retPulse, retErr = s.selectByCondition(ctx, `
-SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number asc OFFSET $2 LIMIT 1;
-	`, pn, steps)
+	retPulse, retErr = s.selectByConditionTx(ctx, tx, forwardsQuery, pn, steps)
+	return
+}
+
+// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (s *PostgresDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+	retPulse, retErr = s.selectByCondition(ctx, forwardsQuery, pn, steps)
+	return
+}
+
+// BackwardsTx calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// be returned.
+func (s *PostgresDB) BackwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+	retPulse, retErr = s.selectByConditionTx(ctx, tx, backwardsQuery, pn, steps)
 	return
 }
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *PostgresDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
-	retPulse, retErr = s.selectByCondition(ctx, `
-SELECT pulse_number FROM pulses WHERE pulse_number <= $1 ORDER BY pulse_number desc offset $2 limit 1;
-	`, pn, steps)
+	retPulse, retErr = s.selectByCondition(ctx, backwardsQuery, pn, steps)
 	return
 }
