@@ -158,7 +158,9 @@ jobs:
           make functest
       - name: cleanup
         run: |
-          docker volume rm $(docker volume ls -q)
+          docker rm -f $(docker ps -aq) || sleep 1
+          docker rmi -f $(docker images -aq) || sleep 1
+          docker volume rm -f $(docker volume ls -q) || sleep 1
           rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.*
   func-tests-pgsql:
     runs-on: self-hosted
@@ -185,5 +187,7 @@ jobs:
           make functest
       - name: cleanup
         run: |
-          docker volume rm $(docker volume ls -q)
+          docker rm -f $(docker ps -aq) || sleep 1
+          docker rmi -f $(docker images -aq) || sleep 1
+          docker volume rm -f $(docker volume ls -q) || sleep 1
           rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.*
