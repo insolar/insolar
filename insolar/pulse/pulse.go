@@ -8,6 +8,8 @@ package pulse
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/object"
+
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -39,7 +41,10 @@ type Appender interface {
 type Calculator interface {
 	Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 	Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
-	// AALEKSEEV
-	//ForwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
-	//BackwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+}
+
+// CalculatorTx performs calculations for pulses in a context of provided transaction.
+type CalculatorTx interface {
+	ForwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
+	BackwardsTx(ctx context.Context, tx object.Transaction, pn insolar.PulseNumber, steps int) (insolar.Pulse, error)
 }

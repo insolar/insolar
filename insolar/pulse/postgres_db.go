@@ -87,44 +87,44 @@ func (s *PostgresDB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.Puls
 }
 
 func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
-	conn, err := s.pool.Acquire(ctx)
+	t, err := s.txManager.BeginReadTx()
 	if err != nil {
-		retErr = errors.Wrap(err, "Unable to acquire a database connection")
-		return
-	}
-	defer conn.Release()
-
-	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
-	if err != nil {
-		retErr = errors.Wrap(err, "Unable to start a read transaction")
+		retErr = errors.Wrap(err, "Unable to start read transaction")
 		return
 	}
 
-	var pn insolar.PulseNumber
-	row := tx.QueryRow(ctx, query, args...)
-	err = row.Scan(&pn)
-	if err == pgx.ErrNoRows {
-		_ = tx.Rollback(ctx)
-		retErr = ErrNotFound
-		return
-	}
-	if err != nil {
-		retErr = errors.Wrapf(err, "selectByCondition - request failed query = `%v`, args = %v", query, args)
-		_ = tx.Rollback(ctx)
-		return
-	}
-
-	retPulse, retErr = s.selectPulse(ctx, tx, pn)
+	retPulse, retErr = s.selectByConditionTx(ctx, t, query, args...)
 	if retErr != nil {
+		_ = t.Rollback()
 		return
 	}
 
-	err = tx.Commit(ctx)
+	err = t.Commit()
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to commit read transaction. If you see this consider adding a retry or lower the isolation level!")
 		return
 	}
 
+	return
+}
+
+func (s *PostgresDB) selectByConditionTx(ctx context.Context, t object.Transaction, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
+	tx := t.ToPostgreSQLTx()
+
+	var pn insolar.PulseNumber
+	row := tx.QueryRow(ctx, query, args...)
+	err := row.Scan(&pn)
+	if err == pgx.ErrNoRows {
+		retErr = ErrNotFound
+		return
+	}
+
+	if err != nil {
+		retErr = errors.Wrapf(err, "selectByCondition - request failed query = `%v`, args = %v", query, args)
+		return
+	}
+
+	retPulse, retErr = s.selectPulse(ctx, tx, pn)
 	return
 }
 
