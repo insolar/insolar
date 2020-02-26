@@ -156,6 +156,10 @@ jobs:
         run: |
           make build
           make functest
+      - name: cleanup
+        run: |
+          docker volume rm $(docker volume ls -q)
+          rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.*
   func-tests-pgsql:
     runs-on: self-hosted
     name: func-tests-pgsql
@@ -179,3 +183,7 @@ jobs:
         run: |
           make build
           make functest
+      - name: cleanup
+        run: |
+          docker volume rm $(docker volume ls -q)
+          rm -rf $GITHUB_WORKSPACE/* $GITHUB_WORKSPACE/.*
