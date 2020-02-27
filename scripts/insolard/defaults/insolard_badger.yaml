@@ -10,6 +10,7 @@ host:
   handshakesessionttl: 5000
 service:
   cachedirectory: network_cache
+databasetype: badger
 ledger:
   storage:
     datadirectory: ./data
@@ -25,7 +26,6 @@ ledger:
     dirnametemplate: pulse-%d
     backupwaitperiod: 60
     postprocessbackupcmd: []
-  ispostgresbase: false
 log:
   level: Info
   adapter: zerolog

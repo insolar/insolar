@@ -22,6 +22,71 @@ Key features:
 go run ./example/example.go --config="./example/example_config.yaml"
 ```
 
-#Usage
+# Usage
 
-see example and tests
+With custom go flags (from example.go)
+```go
+    var testflag1 = flag.String("testflag1", "", "testflag1")
+	mconf := Config{}
+	params := insconfig.Params{
+		EnvPrefix:    "example",
+		ConfigPathGetter: &insconfig.FlagPathGetter{
+			GoFlags: flag.CommandLine,
+		},
+	}
+    insConfigurator := insconfig.New(params)
+    _ = insConfigurator.Load(&mconf)
+    fmt.Println(testflag1)
+```
+
+With custom spf13/pflags
+```go
+    var testflag1 = pflag.String("testflag1", "", "testflag1")
+    mconf := Config{}
+    params := insconfig.Params{
+        EnvPrefix:    "example",
+        ConfigPathGetter: &insconfig.PFlagPathGetter{
+            PFlags: pflag.CommandLine,
+        },
+    }
+    insConfigurator := insconfig.New(params)
+    _ = insConfigurator.Load(&mconf)
+    fmt.Println(testflag1)
+```
+
+With spf13/cobra. Cobra doesn't provide tools to manage flags parsing, so you need to add config flag yourself
+
+```go
+func main () {
+    var configPath string
+    rootCmd := &cobra.Command{
+        Use: "insolard",
+    }
+    rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config file")
+    _ = rootCmd.MarkPersistentFlagRequired("config")
+    err := rootCmd.Execute()
+
+    // ...
+
+    // To set your path from flag to insconfig you need to implement simple ConfigPathGetter interface and return path 
+    type stringPathGetter struct {
+        Path string
+    }
+    
+    func (g *stringPathGetter) GetConfigPath() string {
+        return g.Path
+    }
+}
+
+func read(){
+    cfg := ConfigStruct{}
+    params := insconfig.Params{
+        EnvPrefix:        "InsolarEnvPrefix",
+        ConfigPathGetter: &stringPathGetter{Path: configPath},
+        FileRequired:     false,
+    }
+    insConfigurator := insconfig.NewInsConfigurator(h.Params)
+    err := insConfigurator.Load(&cfg)
+    println(insconfig.ToString(cfg))
+}
+```

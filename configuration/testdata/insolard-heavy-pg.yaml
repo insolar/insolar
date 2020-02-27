@@ -10,11 +10,11 @@ host:
   handshakesessionttl: 5000
 service:
   cachedirectory: network_cache
+databasetype: badger
 ledger:
   postgresql:
     url: postgres://postgres@localhost/postgres?sslmode=disable
     migrationpath: migration
-  ispostgresbase: true
 log:
   level: Debug
   adapter: zerolog

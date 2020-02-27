@@ -35,7 +35,7 @@ func New(cfgHolder *configuration.HolderLight, apiOptions api.Options) *Server {
 }
 
 func (s *Server) Serve() {
-	cfg := s.cfgHolder.Configuration
+	cfg := *s.cfgHolder.Configuration
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))

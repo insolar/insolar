@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
-	github.com/insolar/insconfig v0.0.0-20200219113659-151f8a89d79e
+	github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866
 	github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
 	github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
 	github.com/jackc/pgx/v4 v4.2.1

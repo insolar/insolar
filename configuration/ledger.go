@@ -25,9 +25,6 @@ type Ledger struct {
 	// common/sharable values:
 	// Backup holds configuration of BackupMaker
 	Backup Backup
-
-	// IsPostgresBase indicates that heavy uses Postgres as a database
-	IsPostgresBase bool
 }
 
 // Backup holds configuration for backuping.

@@ -10,8 +10,8 @@ host:
   handshakesessionttl: 5000
 service:
   cachedirectory: network_cache
+databasetype: postgres
 ledger:
-  ispostgresbase: true
   postgresql:
     url: postgres://postgres:s3cr3t@localhost/insolar?sslmode=disable&pool_max_conns=10
     migrationpath: ./migration

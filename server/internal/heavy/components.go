@@ -819,17 +819,12 @@ func newComponents(
 	genesisOnly bool,
 	apiOptions api.Options,
 ) (*components, error) {
-	// todo refactor this, extract IsPostgresBase from Ledger
 	heavyCfg := cfg.GetNodeConfig()
 	switch realCfg := heavyCfg.(type) {
-	case configuration.ConfigHeavyPg:
-		if realCfg.Ledger.IsPostgresBase {
-			return initWithPostgres(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
-		}
-	case configuration.ConfigHeavyBadger:
-		if !realCfg.Ledger.IsPostgresBase {
-			return initWithBadger(ctx, realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
-		}
+	case *configuration.ConfigHeavyPg:
+		return initWithPostgres(ctx, *realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
+	case *configuration.ConfigHeavyBadger:
+		return initWithBadger(ctx, *realCfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 	}
 	return nil, errors.New("can't start heavy, db configuration error")
 }

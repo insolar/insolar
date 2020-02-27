@@ -41,8 +41,8 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	holder := configuration.HolderHeavyBadger{
-		Configuration: cfg,
+	holder := &configuration.HolderHeavyBadger{
+		Configuration: &cfg,
 	}
 
 	_, err = newComponents(ctx, holder, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, api.Options{})

@@ -41,9 +41,13 @@ func main() {
 		},
 	}
 	cmdHeavy.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
-	_ = cmdHeavy.MarkFlagRequired("heavy-genesis")
-	cmdHeavy.Flags().StringVarP(&heavyDB, "database", "", "", "sets database type for heavy node")
-	_ = cmdHeavy.MarkFlagRequired("database")
+	if err := cmdHeavy.MarkFlagRequired("heavy-genesis"); err != nil {
+		log.Fatal("MarkFlagRequired failed:", err)
+	}
+	cmdHeavy.Flags().StringVarP(&heavyDB, "database", "", "", "sets database type for heavy node, available badger/postgres")
+	if err := cmdHeavy.MarkFlagRequired("database"); err != nil {
+		log.Fatal("MarkFlagRequired failed:", err)
+	}
 	cmdHeavy.Flags().BoolVarP(&genesisOnly, "genesis-only", "", false, "run only genesis and then terminate")
 
 	var cmdLight = &cobra.Command{
@@ -66,7 +70,9 @@ func main() {
 		Use: "insolard",
 	}
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "path to config file")
-	_ = rootCmd.MarkPersistentFlagRequired("config")
+	if err := rootCmd.MarkPersistentFlagRequired("config"); err != nil {
+		log.Fatal("MarkFlagRequired failed:", err)
+	}
 	rootCmd.AddCommand(cmdHeavy, cmdLight, cmdVirtual)
 	err := rootCmd.Execute()
 	if err != nil {
@@ -79,9 +85,9 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 	var err error
 
 	switch db {
-	case "badger":
+	case configuration.DbTypeBadger:
 		holder, err = readHeavyBadgerConfig(configPath)
-	case "postgres":
+	case configuration.DbTypePg:
 		holder, err = readHeavyPgConfig(configPath)
 	default:
 		log.Fatal("db type is not supported")
@@ -134,7 +140,7 @@ func runVirtualNode(configPath string) {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 	if role != insolar.StaticRoleVirtual {
-		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
+		log.Fatal(errors.Wrap(err, "role in cert is not virtual executor"))
 	}
 
 	if err := psAgentLauncher(); err != nil {
@@ -169,7 +175,7 @@ func runLightNode(configPath string) {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 	if role != insolar.StaticRoleLightMaterial {
-		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
+		log.Fatal(errors.Wrap(err, "role in cert is not light material"))
 	}
 
 	apiOptions, err := initAPIOptions()

@@ -191,8 +191,7 @@ func main() {
 
 		if node.Role == "heavy_material" {
 			if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
-				heavyConfig := configuration.NewConfigurationHeavyBadger()
-				heavyConfig.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
+				heavyConfig := configuration.NewConfigurationHeavyPg()
 				heavyConfig.GenericConfiguration = genericConfiguration
 
 				nodesConfigs = append(nodesConfigs, genericConfiguration)

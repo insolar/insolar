@@ -38,7 +38,7 @@ func New(cfgHolder *configuration.HolderVirtual, builtinContracts builtin.Builti
 
 func (s *Server) Serve() {
 	var err error
-	cfg := s.cfgHolder.Configuration
+	cfg := *s.cfgHolder.Configuration
 
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))

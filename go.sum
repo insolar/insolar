@@ -132,10 +132,10 @@ github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f h1:06p
 github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f/go.mod h1:pyNB4e1NrTdT7BJJGMedR5OYIa6+zHLpak2Jwk9Aj88=
 github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9 h1:476W50z1EA/U8uqXdVPS6avGmaL2hiBLrT6zKdETgB0=
 github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9/go.mod h1:vh6gyvTJhKxCMROgV7ADLE1jS19NAd6gIaHCjHgVWKQ=
-github.com/insolar/insconfig v0.0.0-20200213152445-21a23222770b h1:IRDuMtCHlW/W36JrZjp9Pv9J2e8RuWQCDXwzC80W2hY=
-github.com/insolar/insconfig v0.0.0-20200213152445-21a23222770b/go.mod h1:zB9bawcGFKS4hwXcu6yH4rYH06EZnGlFfhl0+KMKM9k=
 github.com/insolar/insconfig v0.0.0-20200219113659-151f8a89d79e h1:PZ/cFu/emDPOuKye1NGi2SgUWMRgcY15PW11DhGDDPw=
 github.com/insolar/insconfig v0.0.0-20200219113659-151f8a89d79e/go.mod h1:zB9bawcGFKS4hwXcu6yH4rYH06EZnGlFfhl0+KMKM9k=
+github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866 h1:821agB4jwkceJbV2lniBH3/mGLqSaHPhmurMfeGZAVg=
+github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866/go.mod h1:zB9bawcGFKS4hwXcu6yH4rYH06EZnGlFfhl0+KMKM9k=
 github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f h1:ULc0JNaPBjv2yxucU06zkqoXtDgX5Xokb4Dv3iJAcsE=
 github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f/go.mod h1:BZcTsPtQu8QG8RqqQdAnuNAG8n6TOrdNxIHro0h99Ik=
 github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6 h1:WS4a7qw+P1pcnviyxyMTA/aR+T51wJok1IC9rJkHrTg=
