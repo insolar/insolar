@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package bootstrap
 
@@ -18,6 +9,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
+
+// certNamesStartFrom is an offset certificate name index starts from.
+var certNamesStartFrom = 1
 
 // Node contains info about discovery nodes.
 type Node struct {
@@ -38,6 +32,12 @@ type Config struct {
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir" yaml:"discovery_keys_dir"`
 	// NotDiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	NotDiscoveryKeysDir string `mapstructure:"not_discovery_keys_dir" yaml:"not_discovery_keys_dir"`
+	// CertificatesOutDir is a directory where to save generated cert files.
+	CertificatesOutDir string `mapstructure:"certificates_out_dir" yaml:"certificates_out_dir"`
+	// CertificateNameOffsetFromZero specifies if starting index number starts from zero.
+	// Mostly exists because of launchnet, where node names uses numeric suffix started from 1.
+	// TODO: get rid of launchnet and this parameter - @nordicdyno 17.02.2020
+	CertificateNameOffsetFromZero bool `mapstructure:"certificate_name_offset_from_zero" yaml:"certificate_name_offset_from_zero"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
 	KeysNameFormat string `mapstructure:"keys_name_format" yaml:"keys_name_format"`
 	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)
@@ -58,10 +58,6 @@ type Config struct {
 
 	// Nodes is used only by generate_insolar_config.go
 	Nodes []Node `mapstructure:"nodes" yaml:"nodes"`
-
-	// PulsarPublicKeys is the pulsar's public keys for pulses validation
-	// (not in use, just for future features).
-	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys" yaml:"pulsar_public_keys"`
 }
 
 // hasMinimumRolesSet does basic check (it's not about majority rule).

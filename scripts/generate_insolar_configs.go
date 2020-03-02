@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -113,9 +104,12 @@ func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configurat
 }
 
 func main() {
+	fmt.Println("[main] about to call parseInputParams()")
 	parseInputParams()
 
+	fmt.Println("[main] about to call mustMakeDir()")
 	mustMakeDir(outputDir)
+	fmt.Println("[main] about to call writeGenesisConfig()")
 	writeGenesisConfig()
 
 	bootstrapConf, err := bootstrap.ParseConfig(bootstrapFileName)
@@ -129,6 +123,8 @@ func main() {
 	promVars := &promConfigVars{
 		Jobs: map[string][]string{},
 	}
+
+	fmt.Println("[main] about to enter for loop which calls newDefaultInsolardConfig() first time")
 
 	// process discovery nodes
 	for index, node := range bootstrapConf.DiscoveryNodes {
@@ -180,6 +176,8 @@ func main() {
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
+
+	fmt.Println("[main] leaving the loop which calls newDefaultInsolardConfig() first time")
 
 	// process extra nodes
 	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
@@ -267,11 +265,13 @@ var defaultInsloardConf *configuration.Configuration
 
 func newDefaultInsolardConfig() configuration.Configuration {
 	if defaultInsloardConf == nil {
-
+		fmt.Println("[newDefaultInsolardConfig] os.Getenv == ", os.Getenv("POSTGRES_ENABLE"))
 		if len(os.Getenv("POSTGRES_ENABLE")) > 0 {
+			fmt.Println("[newDefaultInsolardConfig] Using PostgreSQL config")
 			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithPostgres).MustInit(true)
 			defaultInsloardConf = &holder.Configuration
 		} else {
+			fmt.Println("[newDefaultInsolardConfig] Using Badger config")
 			holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfigWithBadger).MustInit(true)
 			defaultInsloardConf = &holder.Configuration
 		}

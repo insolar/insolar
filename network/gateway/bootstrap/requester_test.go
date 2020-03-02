@@ -1,7 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
 // All rights reserved.
 // This material is licensed under the Insolar License version 1.0,
-// available at https://github.com/insolar/insolar/blob/master/network/LICENSE.md.
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package bootstrap
 
@@ -78,8 +78,6 @@ func GetTestCertificate() *certificate.Certificate {
     "heavy_material": 1,
     "light_material": 1
   },
-  "pulsar_public_keys": null,
-  "root_domain_ref": "1tJEDNVffdf4PQjxhKvQVc3D166RqhmFBS2gkBpGva.11111111111111111111111111111111",
   "bootstrap_nodes": [
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+2RsLu5z3nFEimNiesiLDH2Kw1GM\nvgYylDXAmZxpbGjQZ5FqHuXF+DJrwKYzDyfBDEQz6Tu/aeA2CgRZvqbKug==\n-----END PUBLIC KEY-----\n",

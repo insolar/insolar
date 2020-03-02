@@ -1,5 +1,6 @@
 members_keys_dir: "{{ .BaseDir }}/configs/"
 discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery/"
+certificates_out_dir: "{{ .BaseDir }}/discoverynodes/certs/"
 not_discovery_keys_dir: "{{ .BaseDir }}/reusekeys/nodes/"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
@@ -16,9 +17,6 @@ min_roles:
   heavy_material: 1
   virtual:  2
   light_material: 2
-# TODO: check pulsar_public_keys usage
-pulsar_public_keys:
-  - "pulsar_public_key"
 discovery_nodes:
   -
     host: "127.0.0.1:13831"

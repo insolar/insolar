@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package main
 
@@ -73,6 +64,11 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
+	apiOptions, err := initAPIOptions()
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "failed to get API info response"))
+	}
+
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
 		states, _ := initStates(configPath, genesisConfigPath)
@@ -80,14 +76,18 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 			configPath,
 			genesisConfigPath,
 			genesis.Options{
-				States:           states,
-				NodeDomainParent: application.GenesisNameRootDomain,
+				States:       states,
+				ParentDomain: application.GenesisNameRootDomain,
 			},
 			genesisOnly,
+			apiOptions,
 		)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(configPath)
+		s := server.NewLightServer(
+			configPath,
+			apiOptions,
+		)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
 		builtinContracts := builtin.BuiltinContracts{
@@ -96,7 +96,11 @@ func runInsolardServer(configPath string, genesisConfigPath string, genesisOnly 
 			CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
 			PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
 		}
-		s := server.NewVirtualServer(configPath, builtinContracts)
+		s := server.NewVirtualServer(
+			configPath,
+			builtinContracts,
+			apiOptions,
+		)
 		s.Serve()
 	}
 }

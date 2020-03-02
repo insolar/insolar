@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package genesisrefs
 
@@ -21,18 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 )
 
 func TestContractPublicKeyShards(t *testing.T) {
 	for i, ref := range ContractPublicKeyShards(100) {
-		require.Equal(t, GenesisRef(application.GenesisNamePKShard+strconv.Itoa(i)), ref)
+		require.Equal(t, genesisrefs.GenesisRef(application.GenesisNamePKShard+strconv.Itoa(i)), ref)
 	}
 }
 
 func TestContractMigrationAddressShards(t *testing.T) {
 	for i, ref := range ContractMigrationAddressShards(100) {
-		require.Equal(t, GenesisRef(application.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
+		require.Equal(t, genesisrefs.GenesisRef(application.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
 	}
 }
 
@@ -44,14 +36,6 @@ func TestReferences(t *testing.T) {
 		application.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
 			expect: "insolar:1AAEAAciWtcmPVgAcaIvICkgnSsJmp4Clp650xOHjYks",
-		},
-		GenesisNameNodeDomain: {
-			got:    ContractNodeDomain,
-			expect: "insolar:1AAEAAUdxJyWoY-IjQatMYpOk51MZx9tEThkqd1dSB1U",
-		},
-		GenesisNameNodeRecord: {
-			got:    ContractNodeRecord,
-			expect: "insolar:1AAEAAQy4dc1JKDJGNd5YfU7ow3DFrW_9j7v772siVMQ",
 		},
 		application.GenesisNameRootMember: {
 			got:    ContractRootMember,
@@ -104,15 +88,6 @@ func TestReferences(t *testing.T) {
 
 func TestRootDomain(t *testing.T) {
 	ref1 := ContractRootDomain
-	ref2 := GenesisRef(application.GenesisNameRootDomain)
+	ref2 := genesisrefs.GenesisRef(application.GenesisNameRootDomain)
 	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
-}
-
-func TestGenesisRef(t *testing.T) {
-	var (
-		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "insolar:1AAEAAcEp7HwQByGOr6rZwkyiRA3wR2POYCrDIhqBJyY"
-	)
-	genesisRef := GenesisRef(pubKey)
-	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }

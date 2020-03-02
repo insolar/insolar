@@ -3,7 +3,6 @@
   "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEl3SUfUaw1UvYEszK5QoSN7UrJ1aO\nb0WoUEcRgwElT/Tbh0CPYZA+deaF1KO+6cGAxvTBJZpEedkLUgcM8S56Qg==\n-----END PUBLIC KEY-----\n",
   "reference": "2prKtCG51YhseciDY5EnnHapPskNHvrvhSc3HrCvYLKKxXn4K3kFQtiz3QLVD1acpQmaDBHUG2Q988xjSFhswJLs",
   "role": "virtual",
-  "root_domain_ref": "0987654321",
   "bootstrap_nodes": [
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n",

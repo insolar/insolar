@@ -51,22 +51,7 @@ To test Insolar locally, install it and deploy as described below.
    It generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.
    The default number of nodes is 5, you can uncomment more in `scripts/insolard/bootstrap_template.yaml`.
 
-2. When the pulse watcher says `INSOLAR STATE: READY`, you can run the following:
-
-   * Requester:
-
-     ```
-     bin/apirequester -k=.artifacts/launchnet/configs/ -p=http://127.0.0.1:19101/api/rpc
-     ```
-
-     The requester runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
-
-     Options:
-     * `-k`: Path to the root user's key pair. All requests for a new user creation must be signed by the root one.
-     * `-p`: Node's public API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
-
-   * Benchmark:
-
+2. When the pulse watcher says `INSOLAR STATE: READY`, you can run a benchmark:
      ```
      bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
      ```
@@ -111,4 +96,4 @@ Our social media:
 
 # License
 
-This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network) subdirectory, which is licensed under the terms of the [Insolar License 1.0](network/LICENSE.md).
+This project is licensed under the terms of the [Insolar License 1.0](LICENSE.md).

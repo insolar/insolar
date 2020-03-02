@@ -1,7 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
 // All rights reserved.
 // This material is licensed under the Insolar License version 1.0,
-// available at https://github.com/insolar/insolar/blob/master/network/LICENSE.md.
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package gateway
 
@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
 
-	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 

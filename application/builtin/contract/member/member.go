@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package member
 
@@ -333,7 +324,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 		return "", fmt.Errorf("only root member can register node")
 	}
 
-	nodeDomainRef := appfoundation.GetNodeDomain()
+	nodeDomainRef := foundation.GetNodeDomain()
 
 	nd := nodedomain.GetObject(nodeDomainRef)
 	cert, err := nd.RegisterNode(public, role)
@@ -345,7 +336,7 @@ func (m *Member) registerNode(public string, role string) (interface{}, error) {
 }
 
 func (m *Member) getNodeRef(publicKey string) (interface{}, error) {
-	nd := nodedomain.GetObject(appfoundation.GetNodeDomain())
+	nd := nodedomain.GetObject(foundation.GetNodeDomain())
 	nodeRef, err := nd.GetNodeRefByPublicKey(publicKey)
 	if err != nil {
 		return nil, fmt.Errorf("network node was not found by public key: %s", err.Error())

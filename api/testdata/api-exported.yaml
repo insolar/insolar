@@ -1,0 +1,10 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Test Insolar API
+paths:
+  '/api/rpc#test':
+    post:
+      responses:
+        '200':
+          description: OK

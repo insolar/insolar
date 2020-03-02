@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package genesis
 
@@ -25,7 +16,7 @@ import (
 	"github.com/insolar/insolar/applicationbase/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/applicationbase/builtin/contract/noderecord"
 
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/secrets"
@@ -40,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const ParentDomain = "parentDomain"
+
 func TestData_EmptyDomainData(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
@@ -48,7 +41,7 @@ func TestData_EmptyDomainData(t *testing.T) {
 	defer am.MinimockFinish()
 
 	dnm := NewDiscoveryNodeManager(am)
-	err := dnm.StoreDiscoveryNodes(ctx, nil)
+	err := dnm.StoreDiscoveryNodes(ctx, nil, ParentDomain)
 	require.NoError(t, err, "StoreDiscoveryNodes failed")
 }
 
@@ -67,7 +60,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 			PublicKey: platformpolicy.MustPublicKeyToString(n.key),
 		})
 	}
-	err = dCerts.StoreDiscoveryNodes(ctx, networkNodes)
+	err = dCerts.StoreDiscoveryNodes(ctx, networkNodes, ParentDomain)
 	require.NoError(t, err, "StoreDiscoveryNodes failed")
 
 	objDesc, err := am.GetObject(ctx, genesisrefs.ContractNodeDomain)
@@ -137,7 +130,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		obj artifact.ObjectDescriptor,
 		memory []byte,
 	) error {
-		if domain != genesisrefs.ContractRootDomain {
+		if domain != genesisrefs.GenesisRef(ParentDomain) {
 			return errors.Errorf("domain should be the contract root domain ref")
 		}
 		if request != genesisrefs.ContractNodeDomain {

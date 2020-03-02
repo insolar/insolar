@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package contracts
 
@@ -33,8 +24,6 @@ import (
 	"github.com/insolar/insolar/application/builtin/contract/wallet"
 
 	"github.com/insolar/insolar/application/appfoundation"
-	maProxy "github.com/insolar/insolar/application/builtin/proxy/migrationshard"
-	pkProxy "github.com/insolar/insolar/application/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/pulse"
@@ -204,17 +193,5 @@ func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) genesis.C
 			IsActive:              false,
 			MigrationDaemonMember: genesisrefs.ContractMigrationDaemonMembers[numberMigrationDaemon],
 		}),
-	}
-}
-
-func ContractPublicKeyShardRefs(pkShardCount int) {
-	for _, name := range genesisrefs.ContractPublicKeyNameShards(pkShardCount) {
-		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *pkProxy.PrototypeReference
-	}
-}
-
-func ContractMigrationAddressShardRefs(maShardCount int) {
-	for _, name := range genesisrefs.ContractMigrationAddressNameShards(maShardCount) {
-		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *maProxy.PrototypeReference
 	}
 }

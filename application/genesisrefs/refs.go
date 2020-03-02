@@ -1,166 +1,143 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package genesisrefs
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 const (
-	PrototypeType    = "prototype"
-	PrototypeSuffix  = "_proto"
 	FundsDepositName = "genesis_deposit"
 )
 
-// This constants are here temporary, after PENV-36 they will be moved
-const (
-	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
-	GenesisNameNodeDomain = "nodedomain"
-	// GenesisNameNodeRecord is the name of node contract for genesis record.
-	GenesisNameNodeRecord = "noderecord"
-)
-
-var PredefinedPrototypes = map[string]insolar.Reference{
-	application.GenesisNameRootDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameRootDomain, 0),
-	GenesisNameNodeDomain + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeDomain, 0),
-	GenesisNameNodeRecord + PrototypeSuffix:                        *GenerateProtoReferenceFromContractID(PrototypeType, GenesisNameNodeRecord, 0),
-	application.GenesisNameRootMember + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
-	application.GenesisNameRootWallet + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
-	application.GenesisNameRootAccount + PrototypeSuffix:           *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0),
-	application.GenesisNameCostCenter + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameCostCenter, 0),
-	application.GenesisNameFeeMember + PrototypeSuffix:             *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
-	application.GenesisNameFeeWallet + PrototypeSuffix:             *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
-	application.GenesisNameFeeAccount + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0),
-	application.GenesisNameDeposit + PrototypeSuffix:               *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0),
-	application.GenesisNameMember + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
-	application.GenesisNameMigrationAdminMember + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0),
-	application.GenesisNameMigrationAdmin + PrototypeSuffix:        *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMigrationAdmin, 0),
-	application.GenesisNameMigrationAdminWallet + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
-	application.GenesisNameMigrationAdminAccount + PrototypeSuffix: *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0),
-	application.GenesisNameMigrationAdminDeposit + PrototypeSuffix: *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0),
-	application.GenesisNameWallet + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0),
+var applicationPrototypes = map[string]insolar.Reference{
+	application.GenesisNameRootDomain + genesisrefs.PrototypeSuffix:            *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameRootDomain, 0),
+	application.GenesisNameRootMember + genesisrefs.PrototypeSuffix:            *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0),
+	application.GenesisNameRootWallet + genesisrefs.PrototypeSuffix:            *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0),
+	application.GenesisNameRootAccount + genesisrefs.PrototypeSuffix:           *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0),
+	application.GenesisNameCostCenter + genesisrefs.PrototypeSuffix:            *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameCostCenter, 0),
+	application.GenesisNameFeeMember + genesisrefs.PrototypeSuffix:             *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0),
+	application.GenesisNameFeeWallet + genesisrefs.PrototypeSuffix:             *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0),
+	application.GenesisNameFeeAccount + genesisrefs.PrototypeSuffix:            *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0),
+	application.GenesisNameDeposit + genesisrefs.PrototypeSuffix:               *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameDeposit, 0),
+	application.GenesisNameMember + genesisrefs.PrototypeSuffix:                *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0),
+	application.GenesisNameMigrationAdminMember + genesisrefs.PrototypeSuffix:  *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0),
+	application.GenesisNameMigrationAdmin + genesisrefs.PrototypeSuffix:        *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMigrationAdmin, 0),
+	application.GenesisNameMigrationAdminWallet + genesisrefs.PrototypeSuffix:  *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0),
+	application.GenesisNameMigrationAdminAccount + genesisrefs.PrototypeSuffix: *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0),
+	application.GenesisNameMigrationAdminDeposit + genesisrefs.PrototypeSuffix: *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameDeposit, 0),
+	application.GenesisNameWallet + genesisrefs.PrototypeSuffix:                *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0),
 }
 
 func init() {
+	for i, val := range applicationPrototypes {
+		genesisrefs.PredefinedPrototypes[i] = val
+	}
+
 	for _, el := range application.GenesisNameMigrationDaemonMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0)
 	}
 
 	for _, el := range application.GenesisNameMigrationDaemons {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMigrationDaemon, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMigrationDaemon, 0)
 	}
 
 	// Incentives Application
 	for _, el := range application.GenesisNameApplicationIncentivesMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0)
 	}
 	for _, el := range application.GenesisNameApplicationIncentivesWallets {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0)
 	}
 	for _, el := range application.GenesisNameApplicationIncentivesAccounts {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0)
 	}
 	for _, el := range application.GenesisNameApplicationIncentivesDeposits {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameDeposit, 0)
 	}
 
 	// Network Incentives
 	for _, el := range application.GenesisNameNetworkIncentivesMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0)
 	}
 	for _, el := range application.GenesisNameNetworkIncentivesWallets {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0)
 	}
 	for _, el := range application.GenesisNameNetworkIncentivesAccounts {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0)
 	}
 	for _, el := range application.GenesisNameNetworkIncentivesDeposits {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameDeposit, 0)
 	}
 
 	// Foundation
 	for _, el := range application.GenesisNameFoundationMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0)
 	}
 	for _, el := range application.GenesisNameFoundationWallets {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0)
 	}
 	for _, el := range application.GenesisNameFoundationAccounts {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0)
 	}
 	for _, el := range application.GenesisNameFoundationDeposits {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameDeposit, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameDeposit, 0)
 	}
 
 	// Enterprise
 	for _, el := range application.GenesisNameEnterpriseMembers {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameMember, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameMember, 0)
 	}
 	for _, el := range application.GenesisNameEnterpriseWallets {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameWallet, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameWallet, 0)
 	}
 	for _, el := range application.GenesisNameEnterpriseAccounts {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, application.GenesisNameAccount, 0)
+		genesisrefs.PredefinedPrototypes[el+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(genesisrefs.PrototypeType, application.GenesisNameAccount, 0)
 	}
 }
 
 var (
 	// ContractRootDomain is the root domain contract reference.
-	ContractRootDomain = GenesisRef(application.GenesisNameRootDomain)
-	// ContractNodeDomain is the node domain contract reference.
-	ContractNodeDomain = GenesisRef(GenesisNameNodeDomain)
-	// ContractNodeRecord is the node contract reference.
-	ContractNodeRecord = GenesisRef(GenesisNameNodeRecord)
+	ContractRootDomain = genesisrefs.GenesisRef(application.GenesisNameRootDomain)
 	// ContractRootMember is the root member contract reference.
-	ContractRootMember = GenesisRef(application.GenesisNameRootMember)
+	ContractRootMember = genesisrefs.GenesisRef(application.GenesisNameRootMember)
 	// ContractRootWallet is the root wallet contract reference.
-	ContractRootWallet = GenesisRef(application.GenesisNameRootWallet)
+	ContractRootWallet = genesisrefs.GenesisRef(application.GenesisNameRootWallet)
 	// ContractRootAccount is the root account contract reference.
-	ContractRootAccount = GenesisRef(application.GenesisNameRootAccount)
+	ContractRootAccount = genesisrefs.GenesisRef(application.GenesisNameRootAccount)
 	// ContractMigrationAdminMember is the migration admin member contract reference.
-	ContractMigrationAdminMember = GenesisRef(application.GenesisNameMigrationAdminMember)
+	ContractMigrationAdminMember = genesisrefs.GenesisRef(application.GenesisNameMigrationAdminMember)
 	// ContractMigrationAdmin is the migration wallet contract reference.
-	ContractMigrationAdmin = GenesisRef(application.GenesisNameMigrationAdmin)
+	ContractMigrationAdmin = genesisrefs.GenesisRef(application.GenesisNameMigrationAdmin)
 	// ContractMigrationWallet is the migration wallet contract reference.
-	ContractMigrationWallet = GenesisRef(application.GenesisNameMigrationAdminWallet)
+	ContractMigrationWallet = genesisrefs.GenesisRef(application.GenesisNameMigrationAdminWallet)
 	// ContractMigrationAccount is the migration account contract reference.
-	ContractMigrationAccount = GenesisRef(application.GenesisNameMigrationAdminAccount)
+	ContractMigrationAccount = genesisrefs.GenesisRef(application.GenesisNameMigrationAdminAccount)
 	// ContractMigrationDeposit is the migration deposit contract reference.
-	ContractMigrationDeposit = GenesisRef(application.GenesisNameMigrationAdminDeposit)
+	ContractMigrationDeposit = genesisrefs.GenesisRef(application.GenesisNameMigrationAdminDeposit)
 	// ContractDeposit is the deposit contract reference.
-	ContractDeposit = GenesisRef(application.GenesisNameDeposit)
+	ContractDeposit = genesisrefs.GenesisRef(application.GenesisNameDeposit)
 	// ContractCostCenter is the cost center contract reference.
-	ContractCostCenter = GenesisRef(application.GenesisNameCostCenter)
+	ContractCostCenter = genesisrefs.GenesisRef(application.GenesisNameCostCenter)
 	// ContractFeeMember is the fee member contract reference.
-	ContractFeeMember = GenesisRef(application.GenesisNameFeeMember)
+	ContractFeeMember = genesisrefs.GenesisRef(application.GenesisNameFeeMember)
 	// ContractFeeWallet is the fee wallet contract reference.
-	ContractFeeWallet = GenesisRef(application.GenesisNameFeeWallet)
+	ContractFeeWallet = genesisrefs.GenesisRef(application.GenesisNameFeeWallet)
 	// ContractFeeAccount is the fee account contract reference.
-	ContractFeeAccount = GenesisRef(application.GenesisNameFeeAccount)
+	ContractFeeAccount = genesisrefs.GenesisRef(application.GenesisNameFeeAccount)
 
 	// ContractMigrationDaemonMembers is the migration daemon members contracts references.
 	ContractMigrationDaemonMembers = func() (result [application.GenesisAmountMigrationDaemonMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameMigrationDaemonMembers {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -169,7 +146,7 @@ var (
 	ContractMigrationMap = func() (result map[insolar.Reference]insolar.Reference) {
 		result = make(map[insolar.Reference]insolar.Reference)
 		for i := 0; i < application.GenesisAmountMigrationDaemonMembers; i++ {
-			result[GenesisRef(application.GenesisNameMigrationDaemonMembers[i])] = GenesisRef(application.GenesisNameMigrationDaemons[i])
+			result[genesisrefs.GenesisRef(application.GenesisNameMigrationDaemonMembers[i])] = genesisrefs.GenesisRef(application.GenesisNameMigrationDaemons[i])
 		}
 		return
 	}()
@@ -177,7 +154,7 @@ var (
 	// ContractNetworkIncentivesMembers is the network incentives members contracts references.
 	ContractNetworkIncentivesMembers = func() (result [application.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameNetworkIncentivesMembers {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -185,7 +162,7 @@ var (
 	// ContractApplicationIncentivesMembers is the application incentives members contracts references.
 	ContractApplicationIncentivesMembers = func() (result [application.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameApplicationIncentivesMembers {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -193,7 +170,7 @@ var (
 	// ContractFoundationMembers is the foundation members contracts references.
 	ContractFoundationMembers = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationMembers {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -201,7 +178,7 @@ var (
 	// ContractEnterpriseMembers is the enterprise members contracts references.
 	ContractEnterpriseMembers = func() (result [application.GenesisAmountEnterpriseMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameEnterpriseMembers {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -209,7 +186,7 @@ var (
 	// ContractNetworkIncentivesWallets is the network incentives members contracts references.
 	ContractNetworkIncentivesWallets = func() (result [application.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameNetworkIncentivesWallets {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -217,7 +194,7 @@ var (
 	// ContractApplicationIncentivesWallets is the application incentives members contracts references.
 	ContractApplicationIncentivesWallets = func() (result [application.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameApplicationIncentivesWallets {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -225,7 +202,7 @@ var (
 	// ContractFoundationWallets is the foundation members contracts references.
 	ContractFoundationWallets = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationWallets {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -233,7 +210,7 @@ var (
 	// ContractEnterpriseWallets is the enterprise members contracts references.
 	ContractEnterpriseWallets = func() (result [application.GenesisAmountEnterpriseMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameEnterpriseWallets {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -241,7 +218,7 @@ var (
 	// ContractNetworkIncentivesDeposits is the network incentives deposits contracts references.
 	ContractNetworkIncentivesDeposits = func() (result [application.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameNetworkIncentivesDeposits {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -249,7 +226,7 @@ var (
 	// ContractApplicationIncentivesDeposits is the application incentives deposits contracts references.
 	ContractApplicationIncentivesDeposits = func() (result [application.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameApplicationIncentivesDeposits {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -257,7 +234,7 @@ var (
 	// ContractFoundationDeposits is the foundation deposits contracts references.
 	ContractFoundationDeposits = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationDeposits {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -265,7 +242,7 @@ var (
 	// ContractNetworkIncentivesAccounts is the network incentives accounts contracts references.
 	ContractNetworkIncentivesAccounts = func() (result [application.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameNetworkIncentivesAccounts {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -273,7 +250,7 @@ var (
 	// ContractApplicationIncentivesAccounts is the application incentives accounts contracts references.
 	ContractApplicationIncentivesAccounts = func() (result [application.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameApplicationIncentivesAccounts {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -281,7 +258,7 @@ var (
 	// ContractFoundationAccounts is the foundation accounts contracts references.
 	ContractFoundationAccounts = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameFoundationAccounts {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
@@ -289,50 +266,11 @@ var (
 	// ContractEnterpriseAccounts is the enterprise accounts contracts references.
 	ContractEnterpriseAccounts = func() (result [application.GenesisAmountFoundationMembers]insolar.Reference) {
 		for i, name := range application.GenesisNameEnterpriseAccounts {
-			result[i] = GenesisRef(name)
+			result[i] = genesisrefs.GenesisRef(name)
 		}
 		return
 	}()
 )
-
-// Generate reference from hash code.
-func GenerateProtoReferenceFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
-	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-	codeHash := hasher.Hash(code)
-	id := insolar.NewID(pulse, codeHash)
-	return insolar.NewReference(*id)
-}
-
-// Generate prototype reference from contract id.
-func GenerateProtoReferenceFromContractID(typeContractID string, name string, version int) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
-	return GenerateProtoReferenceFromCode(pulse.BuiltinContract, []byte(contractID))
-}
-
-// Generate contract reference from contract id.
-func GenerateCodeReferenceFromContractID(typeContractID string, name string, version int) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
-	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-	codeHash := hasher.Hash([]byte(contractID))
-	id := insolar.NewID(pulse.BuiltinContract, codeHash)
-	return insolar.NewRecordReference(*id)
-}
-
-// GenesisRef returns reference to any genesis records.
-func GenesisRef(name string) insolar.Reference {
-	if ref, ok := PredefinedPrototypes[name]; ok {
-		return ref
-	}
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	req := record.IncomingRequest{
-		CallType: record.CTGenesis,
-		Method:   name,
-	}
-	virtRec := record.Wrap(&req)
-	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-	id := insolar.NewID(pulse.MinTimePulse, hash)
-	return *insolar.NewReference(*id)
-}
 
 // ContractPublicKeyNameShards is the public key shards contracts names.
 func ContractPublicKeyNameShards(pkShardCount int) []string {
@@ -348,7 +286,7 @@ func ContractPublicKeyNameShards(pkShardCount int) []string {
 func ContractPublicKeyShards(pkShardCount int) []insolar.Reference {
 	result := make([]insolar.Reference, pkShardCount)
 	for i, name := range ContractPublicKeyNameShards(pkShardCount) {
-		result[i] = GenesisRef(name)
+		result[i] = genesisrefs.GenesisRef(name)
 	}
 	return result
 }
@@ -367,7 +305,19 @@ func ContractMigrationAddressNameShards(maShardCount int) []string {
 func ContractMigrationAddressShards(maShardCount int) []insolar.Reference {
 	result := make([]insolar.Reference, maShardCount)
 	for i, name := range ContractMigrationAddressNameShards(maShardCount) {
-		result[i] = GenesisRef(name)
+		result[i] = genesisrefs.GenesisRef(name)
 	}
 	return result
+}
+
+func ContractPublicKeyShardRefs(pkShardCount int) {
+	for _, name := range ContractPublicKeyNameShards(pkShardCount) {
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, application.GenesisNamePKShard, 0)
+	}
+}
+
+func ContractMigrationAddressShardRefs(maShardCount int) {
+	for _, name := range ContractMigrationAddressNameShards(maShardCount) {
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, application.GenesisNameMigrationShard, 0)
+	}
 }

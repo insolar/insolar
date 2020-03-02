@@ -1,16 +1,7 @@
 // Copyright 2020 Insolar Network Ltd.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
 package heavy
 
@@ -27,14 +18,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/insolar/store"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
 
-	"github.com/insolar/component-manager"
-	"github.com/insolar/insolar/application/api"
+	component "github.com/insolar/component-manager"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -46,6 +36,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifact"
@@ -119,6 +110,7 @@ func initWithPostgres(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -275,6 +267,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -291,6 +284,7 @@ func initWithPostgres(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -482,6 +476,7 @@ func initWithBadger(
 	genesisCfg genesis.HeavyConfig,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
+	apiOptions api.Options,
 ) (*components, error) {
 	// Cryptography.
 	var (
@@ -635,6 +630,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -651,6 +647,7 @@ func initWithBadger(
 			Coordinator,
 			NetworkService,
 			AvailabilityChecker,
+			apiOptions,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
@@ -814,12 +811,19 @@ func initWithBadger(
 	return c, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg genesis.HeavyConfig, genesisOptions genesis.Options, genesisOnly bool) (*components, error) {
+func newComponents(
+	ctx context.Context,
+	cfg configuration.Configuration,
+	genesisCfg genesis.HeavyConfig,
+	genesisOptions genesis.Options,
+	genesisOnly bool,
+	apiOptions api.Options,
+) (*components, error) {
 	if cfg.Ledger.IsPostgresBase {
-		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+		return initWithPostgres(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 	}
 
-	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly)
+	return initWithBadger(ctx, cfg, genesisCfg, genesisOptions, genesisOnly, apiOptions)
 }
 
 func (c *components) Start(ctx context.Context) error {
