@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const ApplicationShortDescription string = "The requester is a simple CLI for sending requests to Insolar Platform"
+const ApplicationShortDescription string = "Insolar API requester is a simple CLI tool for sending requests to Insolar Platform"
 
 var (
 	memberKeysPath       string
@@ -39,11 +39,12 @@ var (
 
 func parseInputParams(cmd *cobra.Command) {
 	flags := cmd.Flags()
-	flags.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to member key")
-	flags.StringVarP(&inputRequestParams, "request", "r", "", "The request body or path to request params file")
-	flags.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Should replace seed to correct value")
-	flags.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Should replace publicKey to correct value")
+	flags.StringVarP(&memberKeysPath, "memberkeys", "k", "", "Path to a key pair")
+	flags.StringVarP(&inputRequestParams, "request", "r", "", "JSON request body or path to the file containing it")
+	flags.BoolVarP(&shouldPasteSeed, "autocompleteseed", "s", true, "Request a new seed value and replace the corresponding one in the request body with the new")
+	flags.BoolVarP(&shouldPastePublicKey, "autocompletekey", "p", true, "Extract a public key value from the specified key pair and replace the corresponding one in the request body with it")
 	flags.BoolVarP(&verbose, "verbose", "v", false, "Print request information")
+	flags.BoolP("help", "h", false, "Help for requester")
 }
 
 func verifyParams() error {
@@ -140,10 +141,10 @@ func requireUrlArg() cobra.PositionalArgs {
 
 func GetRequesterCommand() *cobra.Command {
 	retCmd := &cobra.Command{
-		Use:     "requester <insolar url>",
+		Use:     "requester <insolar_endpoint>",
 		Short:   ApplicationShortDescription,
 		Args:    requireUrlArg(),
-		Example: "./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r params.json  -v",
+		Example: "./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r payload.json  -v",
 		RunE: func(_ *cobra.Command, args []string) error {
 
 			// no need to check args size because of requireUrlArg

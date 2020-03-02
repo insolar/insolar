@@ -1,52 +1,77 @@
-# The requester 
+# API requester 
 
-The requester is a simple CLI for sending requests to Insolar Platform. 
+Insolar API requester is a simple CLI tool for sending [API requests](https://apidocs.insolar.io/platform/latest/#section/Request-Specification) to Insolar Platform.
+
+The requester automates the following:
+
+1. Gets a seed value from a node.
+2. Extracts a public key from a provided ECDSA private key.
+3. Forms a correct request from a provided JSON payload — replaces the seed and public key with the values acquired in previous steps.
+4. Sends the formed request to a specified API endpoint.
 
 ## Usage
 
-### Build
+To use the requester, do the following:
 
-    make requester
+1. Build it. In your `insolar/insolar/` directory, run:
 
-### Options
-    The requester is a simple CLI for sending requests to Insolar Platform
+   ```console
+   make requester
+   ```
+   
+   This builds a `.bin/requester` binary in the `insolar/insolar/` directory.
+
+2. Generate a key pair. In the same directory, run:
+
+   ```console
+   ./bin/insolar gen-key-pair --target=user > /tmp/userkey
+   ```
+   
+   This generates an ECDSA key pair and puts it in the specified file.
+   
+3. Copy-paste a JSON payload of any Platform request sample from the [API specification](https://apidocs.insolar.io/platform/latest/#operation/member-create) into a `payload.json` file.
+   
+   For example, the `member.create` payload sample:
+
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "method": "contract.call",
+     "id": 1,
+     "params": {
+       "seed": "<value>",
+       "callSite": "member.create",
+       "publicKey": "<value>"
+     }
+   }
+   ```
+   
+4. To run the requester, specify:
+ 
+   - Insolar Platform RPC endpoint as a URL parameter.
+   - Path to the key pair as the `-k` option's value.
+   - Path to `payload.json` as the `-r` option's value.
+   
+   For example:
+
+   ```console
+   ./bin/requester https://<endpoint>/api/rpc -k /tmp/userkey -r payload.json  
+   ```
+
+## Requester options
+
+    Insolar API requester is a simple CLI tool for sending requests to Insolar Platform
     
     Usage:
-      requester <insolar url> [flags]
+      requester <insolar_endpoint> [flags]
     
     Examples:
-    ./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r params.json  -v
+    ./requester http://localhost:19101/api/rpc  -k /tmp/userkey  -r payload.json  -v
     
     Flags:
-      -p, --autocompletekey     Should replace publicKey to correct value (default true)
-      -s, --autocompleteseed    Should replace seed to correct value (default true)
-      -h, --help                help for requester
-      -k, --memberkeys string   Path to member key
-      -r, --request string      The request body or path to request params file
+      -p, --autocompletekey     Extract a public key value from the specified key pair and replace the corresponding one in the request body with it (default true)
+      -s, --autocompleteseed    Request a new seed value and replace the corresponding one in the request body with the new (default true)
+      -h, --help                Help for requester
+      -k, --memberkeys string   Path to a key pair
+      -r, --request string      JSON request body or path to the file containing it
       -v, --verbose             Print request information
-
-
-
-### how to generate keypair 
-
-    ./bin/insolar gen-key-pair --target=user > /tmp/userkey
-
-### CreateMember Example
-  ```
-    params.json    
-    {
-      "jsonrpc": "2.0",
-      "method": "contract.call",
-      "id": 1,
-      "params": {
-        "seed": "fhDEwRRbSnYnbMnALKMh8gXdzaSvRv/nfsGC9S7kqik=",
-        "callSite": "member.create",
-        "publicKey": "-----BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMSbA4KvO/jlwY+8WFDEdwhCLlsEC\\nF3/GYvu9iTWHwCctx1wTbGGjNLY03EjXyYxaf8coNbSbZeu+jXcWeMHG0A==\\n-----END PUBLIC KEY-----"
-      }
-    }
-```      
-
-`./bin/requester -k=/tmp/userkey -r params.json  http://localhost:19101/api/rpc` <br>
-or <br>
-```./bin/requester http://localhost:19101/api/rpc -k=/tmp/userkey -r="`cat params.json`" ```
-   
