@@ -64,14 +64,14 @@ func init() {
 			Description: TruncateHeadRetries.Description(),
 			Measure:     TruncateHeadRetries,
 			TagKeys:     []tag.Key{JetPostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        SetRetries.Name(),
 			Description: SetRetries.Description(),
 			Measure:     SetRetries,
 			TagKeys:     []tag.Key{JetPostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        GetTime.Name(),

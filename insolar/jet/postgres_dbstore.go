@@ -101,10 +101,11 @@ func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNu
 			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
 	}()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-		stats.Record(ctx, TruncateHeadRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -122,6 +123,7 @@ func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNu
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -196,10 +198,11 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 	}()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, SetRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -223,6 +226,7 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 		}
 
 		log.Infof("PostgresDBStore.set - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil

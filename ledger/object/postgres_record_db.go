@@ -359,7 +359,7 @@ func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseN
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
 
-		stats.Record(ctx, TruncateHeadRetries.M(1))
+		stats.Record(ctx, TruncateHeadRecordRetries.M(1))
 
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
