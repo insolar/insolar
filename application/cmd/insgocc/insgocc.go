@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"runtime"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -164,7 +165,8 @@ func openDefaultInitializationPath(output *outputFlag, initPath string) error {
 
 func checkError(err error) {
 	if err != nil {
-		fmt.Println(err)
+		_, f, l, _ := runtime.Caller(1)
+		fmt.Printf("%s:%d : %s\n", f, l, err)
 		os.Exit(1)
 	}
 }
@@ -239,7 +241,7 @@ func main() {
 	)
 	var cmdGenerateBuiltins = &cobra.Command{
 		Use:   "regen-builtin",
-		Short: "Build builtin proxy, wrappers and initializator",
+		Short: "Build builtin proxy, wrappers domain and initializator",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !path.IsAbs(contractsPath) {
@@ -276,6 +278,8 @@ func main() {
 				}
 			}
 
+
+
 			for _, contract := range contractList {
 				/* write proxy */
 				output := newOutputFlag("")
@@ -300,6 +304,11 @@ func main() {
 
 			err = preprocessor.GenerateInitializationList(initializeOutput.writer, contractList)
 			checkError(err)
+
+			// TODO decide how generate if domain exists
+			err = generateDomainBase(contractList, contractsPath)
+			checkError(err)
+
 		},
 	}
 	cmdGenerateBuiltins.Flags().StringVarP(
