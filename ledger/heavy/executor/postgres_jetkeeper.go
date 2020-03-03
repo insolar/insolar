@@ -9,8 +9,10 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v4"
+	"go.opencensus.io/stats"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -156,6 +158,12 @@ func (jk *PostgresDBJetKeeper) TopSyncPulse() insolar.PulseNumber {
 }
 
 func (jk *PostgresDBJetKeeper) topSyncPulse() insolar.PulseNumber {
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			topSyncPulseTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	errValue := insolar.GenesisPulse.PulseNumber
 	ctx := context.Background()
 	conn, err := insolar.AcquireConnection(ctx, jk.pool)
@@ -331,6 +339,12 @@ func (jk *PostgresDBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 }
 
 func (jk *PostgresDBJetKeeper) get(pn insolar.PulseNumber) (retInfo []JetInfo, retErr error) {
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			getTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	ctx := context.Background()
 	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
@@ -382,6 +396,12 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 		return errors.Wrap(err, "Unable to serialize jetsInfo")
 	}
 
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			setTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -390,6 +410,9 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(context.Background(), setRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -417,6 +440,13 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 
 func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	ctx := context.Background()
+
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			updateSyncPulseTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	val := pn.Bytes()
 	conn, err := insolar.AcquireConnection(ctx, jk.pool)
 	if err != nil {
@@ -426,6 +456,9 @@ func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(ctx, updateSyncPulseRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -455,6 +488,12 @@ func (jk *PostgresDBJetKeeper) TruncateHead(ctx context.Context, from insolar.Pu
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			TruncateHeadTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	if from <= jk.topSyncPulse() {
 		return errors.New("try to truncate top sync pulse")
 	}
@@ -468,6 +507,9 @@ func (jk *PostgresDBJetKeeper) TruncateHead(ctx context.Context, from insolar.Pu
 	log := inslogger.FromContext(ctx)
 
 	for { // retry loop
+
+		stats.Record(ctx, TruncateHeadRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")

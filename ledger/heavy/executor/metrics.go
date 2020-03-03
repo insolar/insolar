@@ -8,8 +8,13 @@ package executor
 import (
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
+)
+
+var (
+	JetKeeperPostgresDB = insmetrics.MustTagKey("jetkeeper_postgres_db")
 )
 
 var (
@@ -36,6 +41,51 @@ var (
 		"badger_value_gc_time",
 		"duration of badger's value GC",
 		"s",
+	)
+
+	topSyncPulseTime = stats.Float64(
+		"jetkeeper_topsync_time",
+		"time spent on topSyncPulse",
+		stats.UnitMilliseconds,
+	)
+
+	getTime = stats.Float64(
+		"jetkeeper_get_time",
+		"time spent on get",
+		stats.UnitMilliseconds,
+	)
+
+	setTime = stats.Float64(
+		"jetkeeper_set_time",
+		"time spent on set",
+		stats.UnitMilliseconds,
+	)
+	setRetries = stats.Int64(
+		"jetkeeper_set_retries",
+		"retries while jetkeeper set",
+		stats.UnitDimensionless,
+	)
+
+	updateSyncPulseTime = stats.Float64(
+		"jetkeeper_updatesyncpulse_time",
+		"time spent on updateSyncPulse",
+		stats.UnitMilliseconds,
+	)
+	updateSyncPulseRetries = stats.Int64(
+		"jetkeeper_updatesyncpuls_retries",
+		"retries while jetkeeper updatesyncpuls",
+		stats.UnitDimensionless,
+	)
+
+	TruncateHeadTime = stats.Float64(
+		"jetkeeper_truncate_head_time",
+		"time spent on TruncateHead",
+		stats.UnitMilliseconds,
+	)
+	TruncateHeadRetries = stats.Int64(
+		"jetkeeper_truncate_head_retries",
+		"retries while jetkeeper TruncateHead",
+		stats.UnitDimensionless,
 	)
 )
 

@@ -14,6 +14,7 @@ import (
 
 var (
 	inmemoryStorage = insmetrics.MustTagKey("inmemorystorage")
+	DropPostgresDB  = insmetrics.MustTagKey("drop_postgres_db")
 )
 
 var (
@@ -25,6 +26,31 @@ var (
 	statDropInMemoryRemovedCount = stats.Int64(
 		"dropstorage_removed_count",
 		"How many drop-records have been removed from a drop storage",
+		stats.UnitDimensionless,
+	)
+	ForPulseTime = stats.Float64(
+		"drop_for_pulse_time",
+		"time spent on ForPulse",
+		stats.UnitMilliseconds,
+	)
+	SetTime = stats.Float64(
+		"drop_set_time",
+		"time spent on Set",
+		stats.UnitMilliseconds,
+	)
+	SetRetries = stats.Int64(
+		"drop_set_retries",
+		"retries while set",
+		stats.UnitDimensionless,
+	)
+	TruncateHeadTime = stats.Float64(
+		"drop_truncate_head_time",
+		"time spent on TruncateHead",
+		stats.UnitMilliseconds,
+	)
+	TruncateHeadRetries = stats.Int64(
+		"drop_truncate_head_retries",
+		"retries while TruncateHead",
 		stats.UnitDimensionless,
 	)
 )
@@ -44,6 +70,13 @@ func init() {
 			Measure:     statDropInMemoryRemovedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+		&view.View{
+			Name:        ForPulseTime.Name(),
+			Description: ForPulseTime.Description(),
+			Measure:     ForPulseTime,
+			TagKeys:     []tag.Key{DropPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 	)
 	if err != nil {
