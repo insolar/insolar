@@ -47,9 +47,11 @@ func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node)
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
-	for { // retry loop
 
-		stats.Record(ctx, SetRetries.M(1))
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
+
+	for { // retry loop
 
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
@@ -78,6 +80,7 @@ func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node)
 		}
 
 		log.Infof("Append - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -175,7 +178,7 @@ func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.Pulse
 	truncateTime := time.Now()
 	defer func() {
 		stats.Record(context.Background(),
-			TruncateTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
 	}()
 
 	conn, err := insolar.AcquireConnection(ctx, s.pool)
@@ -186,9 +189,10 @@ func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.Pulse
 
 	log := inslogger.FromContext(ctx)
 
-	for { // retry loop
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
 
-		stats.Record(ctx, TruncateRetries.M(1))
+	for { // retry loop
 
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
@@ -207,6 +211,7 @@ func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.Pulse
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil

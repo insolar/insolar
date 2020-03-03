@@ -18,32 +18,32 @@ var (
 var (
 	SetRetries = stats.Int64(
 		"node_set_retries",
-		"retries while truncating head",
+		"retries on Set",
 		stats.UnitDimensionless,
 	)
 	SetTime = stats.Float64(
 		"node_set_time",
-		"time spent on truncating head",
+		"time spent on Set",
 		stats.UnitMilliseconds,
 	)
 	AllTime = stats.Float64(
 		"node_all_time",
-		"time spent on truncating head",
+		"time spent on All",
 		stats.UnitMilliseconds,
 	)
 	InRoleTime = stats.Float64(
 		"node_inrole_time",
-		"time spent on truncating head",
+		"time spent on InRole",
 		stats.UnitMilliseconds,
 	)
-	TruncateRetries = stats.Int64(
+	TruncateHeadRetries = stats.Int64(
 		"node_truncate_retries",
-		"retries while truncating head",
+		"retries on TruncateHead",
 		stats.UnitDimensionless,
 	)
-	TruncateTime = stats.Float64(
+	TruncateHeadTime = stats.Float64(
 		"node_truncate_time",
-		"time spent on truncating head",
+		"time spent on TruncateHead",
 		stats.UnitMilliseconds,
 	)
 )
@@ -62,7 +62,7 @@ func init() {
 			Description: SetRetries.Description(),
 			Measure:     SetRetries,
 			TagKeys:     []tag.Key{NodesPostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        AllTime.Name(),
@@ -79,18 +79,18 @@ func init() {
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
-			Name:        TruncateTime.Name(),
-			Description: TruncateTime.Description(),
-			Measure:     TruncateTime,
+			Name:        TruncateHeadTime.Name(),
+			Description: TruncateHeadTime.Description(),
+			Measure:     TruncateHeadTime,
 			TagKeys:     []tag.Key{NodesPostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
-			Name:        TruncateRetries.Name(),
-			Description: TruncateRetries.Description(),
-			Measure:     TruncateRetries,
+			Name:        TruncateHeadRetries.Name(),
+			Description: TruncateHeadRetries.Description(),
+			Measure:     TruncateHeadRetries,
 			TagKeys:     []tag.Key{NodesPostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 	)
 	if err != nil {
