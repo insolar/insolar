@@ -31,6 +31,96 @@ var (
 		"How many records have been removed from a in-memory storage",
 		stats.UnitDimensionless,
 	)
+	SetIndexRetries = stats.Int64(
+		"index_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	SetIndexTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	UpdateLastKnownPulseRetries = stats.Int64(
+		"index_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	UpdateLastKnownPulseTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	ForIDTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	ForPulseTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	LastKnownForIDTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	TruncateHeadRetries = stats.Int64(
+		"index_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	TruncateHeadTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	SetRecordsRetries = stats.Int64(
+		"record_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	SetRecordTime = stats.Float64(
+		"record_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	BatchRecordsRetries = stats.Int64(
+		"record_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	BatchRecordTime = stats.Float64(
+		"record_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	ForIDRecordTime = stats.Float64(
+		"record_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	AtPositionTime = stats.Float64(
+		"record_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	LastKnownPositionTime = stats.Float64(
+		"record_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
+	TruncateHeadRecordRetries = stats.Int64(
+		"index_set_retries",
+		"retries while truncating head",
+		stats.UnitDimensionless,
+	)
+	TruncateHeadRecordTime = stats.Float64(
+		"index_set_time",
+		"time spent on truncating head",
+		stats.UnitMilliseconds,
+	)
 )
 
 func init() {

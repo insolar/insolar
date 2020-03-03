@@ -7,10 +7,12 @@ package object
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
@@ -70,6 +72,12 @@ func (r *PostgresRecordDB) insertRecord(ctx context.Context, tx pgx.Tx, rec reco
 
 // Set saves new record-value in storage.
 func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			SetRecordTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -78,6 +86,9 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(ctx, SetRecordsRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -102,6 +113,12 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 
 // BatchSet saves a batch of records to storage with order-processing.
 func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			BatchRecordTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -110,6 +127,9 @@ func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material)
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(ctx, BatchRecordsRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -141,6 +161,12 @@ func (r *PostgresRecordDB) get(id insolar.ID) (record.Material, error) {
 
 // ForID returns record for provided id.
 func (r *PostgresRecordDB) ForID(ctx context.Context, id insolar.ID) (retRec record.Material, retErr error) {
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			ForIDRecordTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -217,6 +243,13 @@ func (r *PostgresRecordDB) ForID(ctx context.Context, id insolar.ID) (retRec rec
 // TODO optimize this. Actually user needs ID only to select the Record using .ForID method
 func (r *PostgresRecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (retID insolar.ID, retErr error) {
 	ctx := context.Background()
+
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			AtPositionTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -264,6 +297,13 @@ func (r *PostgresRecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (
 // LastKnownPosition returns last known position of record in Pulse.
 func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPosition uint32, retErr error) {
 	ctx := context.Background()
+
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			LastKnownPositionTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
@@ -303,6 +343,13 @@ func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPositio
 
 // TruncateHead remove all records >= from
 func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadRecordTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
 	conn, err := insolar.AcquireConnection(ctx, r.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
@@ -311,6 +358,9 @@ func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseN
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
+
+		stats.Record(ctx, TruncateHeadRetries.M(1))
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
