@@ -77,10 +77,10 @@ func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, SetRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 
 		if err != nil {
@@ -105,6 +105,7 @@ func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
 		if err == nil { // success
 			break
 		}
+		retries++
 	}
 
 	return nil
@@ -126,10 +127,10 @@ func (ds *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, TruncateHeadRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
