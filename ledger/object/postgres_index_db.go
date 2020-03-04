@@ -46,10 +46,10 @@ func (i *PostgresIndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, 
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetIndexRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, SetIndexRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -121,10 +121,10 @@ func (i *PostgresIndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.P
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, UpdateLastKnownPulseRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, UpdateLastKnownPulseRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -457,7 +457,7 @@ func (i *PostgresIndexDB) TruncateHead(ctx context.Context, from insolar.PulseNu
 	startTime := time.Now()
 	defer func() {
 		stats.Record(ctx,
-			TruncateHeadTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+			TruncateHeadIndexTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
 	}()
 
 	conn, err := insolar.AcquireConnection(ctx, i.pool)
@@ -466,10 +466,10 @@ func (i *PostgresIndexDB) TruncateHead(ctx context.Context, from insolar.PulseNu
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadIndexRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, TruncateHeadRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a read transaction")

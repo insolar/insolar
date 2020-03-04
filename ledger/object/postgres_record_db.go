@@ -84,11 +84,11 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRecordsRetries.M(int64(*retriesCount))) }(&retries)
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-
-		stats.Record(ctx, SetRecordsRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -125,11 +125,11 @@ func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material)
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, BatchRecordsRetries.M(int64(*retriesCount))) }(&retries)
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-
-		stats.Record(ctx, BatchRecordsRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -343,7 +343,6 @@ func (r *PostgresRecordDB) LastKnownPosition(pn insolar.PulseNumber) (retPositio
 
 // TruncateHead remove all records >= from
 func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-
 	startTime := time.Now()
 	defer func() {
 		stats.Record(ctx,
@@ -357,10 +356,11 @@ func (r *PostgresRecordDB) TruncateHead(ctx context.Context, from insolar.PulseN
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRecordRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, TruncateHeadRecordRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
