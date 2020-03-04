@@ -49,37 +49,37 @@ var (
 		stats.UnitMilliseconds,
 	)
 	UpdateLastKnownPulseRetries = stats.Int64(
-		"index_set_retries",
+		"index_update_last_known_pulse_retries",
 		"retries while UpdateLastKnownPulse",
 		stats.UnitDimensionless,
 	)
 	UpdateLastKnownPulseTime = stats.Float64(
-		"index_set_time",
+		"index_update_last_known_pulse_time",
 		"time spent on UpdateLastKnownPulse",
 		stats.UnitMilliseconds,
 	)
 	ForIDTime = stats.Float64(
-		"index_set_time",
+		"index_for_id_time",
 		"time spent on ForID",
 		stats.UnitMilliseconds,
 	)
 	ForPulseTime = stats.Float64(
-		"index_set_time",
+		"index_for_pulse_time",
 		"time spent on ForPulse",
 		stats.UnitMilliseconds,
 	)
 	LastKnownForIDTime = stats.Float64(
-		"index_set_time",
+		"index_last_known_for_id_time",
 		"time spent on LastKnownForID",
 		stats.UnitMilliseconds,
 	)
 	TruncateHeadIndexTime = stats.Float64(
-		"index_set_time",
+		"index_truncate_head_time",
 		"time spent on TruncateHead",
 		stats.UnitMilliseconds,
 	)
 	TruncateHeadIndexRetries = stats.Int64(
-		"index_set_retries",
+		"index_truncate_head_retries",
 		"retries while TruncateHead",
 		stats.UnitDimensionless,
 	)
@@ -94,37 +94,37 @@ var (
 		stats.UnitDimensionless,
 	)
 	BatchRecordsRetries = stats.Int64(
-		"record_set_retries",
+		"record_batch_retries",
 		"retries while BatchRecords",
 		stats.UnitDimensionless,
 	)
 	BatchRecordTime = stats.Float64(
-		"record_set_time",
+		"record_batch_record_time",
 		"time spent on BatchRecord",
 		stats.UnitMilliseconds,
 	)
 	ForIDRecordTime = stats.Float64(
-		"record_set_time",
+		"record_for_id_time",
 		"time spent on ForID",
 		stats.UnitMilliseconds,
 	)
 	AtPositionTime = stats.Float64(
-		"record_set_time",
+		"record_at_position_time",
 		"time spent on AtPosition",
 		stats.UnitMilliseconds,
 	)
 	LastKnownPositionTime = stats.Float64(
-		"record_set_time",
+		"record_last_known_position_time",
 		"time spent on LastKnownPosition",
 		stats.UnitMilliseconds,
 	)
 	TruncateHeadRecordRetries = stats.Int64(
-		"record_set_retries",
+		"record_truncate_head_retries",
 		"retries while TruncateHeadRecord",
 		stats.UnitDimensionless,
 	)
 	TruncateHeadRecordTime = stats.Float64(
-		"record_set_time",
+		"record_truncate_head_time",
 		"time spent on TruncateHeadRecord",
 		stats.UnitMilliseconds,
 	)
