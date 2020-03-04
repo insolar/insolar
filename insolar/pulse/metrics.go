@@ -18,7 +18,7 @@ var (
 
 var (
 	ForPulseNumberTime = stats.Float64(
-		"pulse_for_pulse_time",
+		"pulse_for_pulse_number_time",
 		"time spent on ForPulseNumber",
 		stats.UnitMilliseconds,
 	)
@@ -28,33 +28,33 @@ var (
 		stats.UnitMilliseconds,
 	)
 	TruncateHeadRetries = stats.Int64(
-		"pulse_truncate_retries",
-		"retries while truncating head",
+		"pulse_truncate_head_retries",
+		"retries while TruncateHead",
 		stats.UnitDimensionless,
 	)
 	TruncateHeadTime = stats.Float64(
-		"pulse_truncate_time",
-		"time spent on truncating head",
+		"pulse_truncate_head_time",
+		"time spent on TruncateHead",
 		stats.UnitMilliseconds,
 	)
 	AppendRetries = stats.Int64(
 		"pulse_append_retries",
-		"retries while appending pulse",
+		"retries while Append",
 		stats.UnitDimensionless,
 	)
 	AppendTime = stats.Float64(
 		"pulse_append_time",
-		"time spent on appending pulse",
+		"time spent on Append",
 		stats.UnitMilliseconds,
 	)
 	ForwardsTime = stats.Float64(
 		"pulse_forwards_time",
-		"time spent on forwards",
+		"time spent on Forwards",
 		stats.UnitMilliseconds,
 	)
 	BackwardsTime = stats.Float64(
 		"pulse_backwards_time",
-		"time spent on backwards",
+		"time spent on Backwards",
 		stats.UnitMilliseconds,
 	)
 )
