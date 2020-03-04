@@ -15,15 +15,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	baselaunchnet "github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(launchnet.Run(func() int {
-		err := setMigrationDaemonsRef()
-		if err != nil {
-			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
-		}
+	os.Exit(baselaunchnet.Run(
+		func() int {
+			err := setMigrationDaemonsRef()
+			if err != nil {
+				fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
+			}
 
-		return m.Run()
-	}))
+			return m.Run()
+		},
+		launchnet.AppPath,
+		launchnet.LoadAllMembersKeys,
+		launchnet.SetInfo,
+		launchnet.AfterSetup))
 }

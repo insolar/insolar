@@ -26,7 +26,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(launchnet.Run(func() int {
-		return m.Run()
-	}))
+	os.Exit(launchnet.Run(
+		func() int {
+			return m.Run()
+		},
+		launchnet.AppPath,
+		launchnet.LoadAllMembersKeys,
+		launchnet.SetInfo,
+		launchnet.AfterSetup,
+	))
 }

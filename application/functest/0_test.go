@@ -10,7 +10,7 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 // This test file contains tests what always must be first in the package.

@@ -55,10 +55,12 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
+var AppPath = []string{"insolar", "insolar"}
+
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(cb func() int) int {
-	err := setup()
+func Run(cb func() int, appPath []string, loadAllMembersKeys func() error, setInfo func() error, afterSetup func()) int {
+	err := setup(appPath, loadAllMembersKeys, setInfo, afterSetup)
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
@@ -118,7 +120,7 @@ func (m *CommonUser) GetPublicKey() string {
 	return m.PubKey
 }
 
-func launchnetPath(a ...string) (string, error) {
+func LaunchnetPath(appPath []string, a ...string) (string, error) {
 	keysPath := os.Getenv(keysPathVar)
 	if keysPath != "" {
 		p := []string{keysPath}
@@ -132,7 +134,7 @@ func launchnetPath(a ...string) (string, error) {
 	cwdList := strings.Split(cwd, "/")
 	var count int
 	for i := len(cwdList); i >= 0; i-- {
-		if cwdList[i-1] == "insolar" && cwdList[i-2] == "insolar" {
+		if cwdList[i-1] == appPath[0] && cwdList[i-2] == appPath[1] {
 			break
 		}
 		count++
@@ -159,7 +161,7 @@ func GetNodesCount() (int, error) {
 
 	var conf nodesConf
 
-	path, err := launchnetPath("bootstrap.yaml")
+	path, err := LaunchnetPath(AppPath, "bootstrap.yaml")
 	if err != nil {
 		return 0, err
 	}
@@ -195,8 +197,8 @@ func loadMemberKeys(keysPath string, member *CommonUser) error {
 	return nil
 }
 
-func loadAllMembersKeys() error {
-	path, err := launchnetPath("configs", insolarRootMemberKeys)
+func LoadAllMembersKeys() error {
+	path, err := LaunchnetPath(AppPath, "configs", insolarRootMemberKeys)
 	if err != nil {
 		return err
 	}
@@ -207,7 +209,7 @@ func loadAllMembersKeys() error {
 	return nil
 }
 
-func setInfo() error {
+func SetInfo() error {
 	var err error
 	info, err = sdk.Info(TestRPCUrl)
 	if err != nil {
@@ -292,7 +294,7 @@ func waitForNet() error {
 	return nil
 }
 
-func startNet() error {
+func startNet(appPath []string) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -302,7 +304,8 @@ func startNet() error {
 		_ = os.Chdir(cwd)
 	}()
 
-	for cwd[len(cwd)-15:] != "insolar/insolar" {
+	cwdList := strings.Split(cwd, "/")
+	for cwdList[len(cwdList)-1] != appPath[1] || cwdList[len(cwdList)-2] != appPath[0] {
 		err = os.Chdir("../")
 		if err != nil {
 			return errors.Wrap(err, "[ startNet  ] Can't change dir")
@@ -311,6 +314,10 @@ func startNet() error {
 		if err != nil {
 			return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 		}
+		if cwd == "/" {
+			return errors.Errorf("[ startNet ] Can't find directory with name `insolar/%s`", appPath)
+		}
+		cwdList = strings.Split(cwd, "/")
 	}
 
 	// If you want to add -n flag here please make sure that insgorund will
@@ -392,12 +399,16 @@ func RunOnlyWithLaunchnet(t *testing.T) {
 	}
 }
 
-func setup() error {
+func AfterSetup() {
+	Root.Ref = info.RootMember
+}
+
+func setup(appPath []string, loadAllMembersKeys func() error, setInfo func() error, afterSetup func()) error {
 	testRPCUrl := os.Getenv(testRPCUrlVar)
 	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
 
 	if testRPCUrl == "" || testRPCUrlPublic == "" {
-		err := startNet()
+		err := startNet(appPath)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] could't startNet")
 		}
@@ -430,7 +441,7 @@ func setup() error {
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	Root.Ref = info.RootMember
+	afterSetup()
 
 	return nil
 }
