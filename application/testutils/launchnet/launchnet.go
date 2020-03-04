@@ -24,13 +24,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/application/api/sdk"
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 )

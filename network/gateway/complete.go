@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
 
-	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/applicationbase/extractor"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 

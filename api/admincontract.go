@@ -8,8 +8,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/insolar/insolar/application/api/instrumenter"
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/instrumenter"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/rpc/v2"
@@ -23,18 +23,13 @@ type AdminContractService struct {
 
 // NewAdminContractService creates new AdminContract service instance.
 func NewAdminContractService(runner *Runner) *AdminContractService {
-	methods := map[string]bool{
-		"migration.deactivateDaemon": true,
-		"migration.activateDaemon":   true,
-		"migration.checkDaemon":      true,
-		"migration.addAddresses":     true,
-		"migration.getAddressCount":  true,
-		"deposit.migration":          true,
-		"member.getBalance":          true,
-		"contract.registerNode":      true,
-		"contract.getNodeRef":        true,
+	allowedMethods := map[string]bool{}
+	if runner.Options.AdminContractMethods != nil {
+		allowedMethods = runner.Options.AdminContractMethods
 	}
-	return &AdminContractService{runner: runner, allowedMethods: methods}
+	allowedMethods["contract.registerNode"] = true
+	allowedMethods["contract.getNodeRef"] = true
+	return &AdminContractService{runner: runner, allowedMethods: allowedMethods}
 }
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {

@@ -6,6 +6,7 @@
 package server
 
 import (
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	"github.com/insolar/insolar/server/internal/heavy"
@@ -18,8 +19,8 @@ type Server interface {
 }
 
 // NewLightServer creates instance of Server for node with Light role
-func NewLightServer(cfgPath string, apiInfoResponse map[string]interface{}) Server {
-	return light.New(cfgPath, apiInfoResponse)
+func NewLightServer(cfgPath string, apiOptions api.Options) Server {
+	return light.New(cfgPath, apiOptions)
 }
 
 // NewHeavyServer creates instance of Server for node with Heavy role
@@ -28,12 +29,13 @@ func NewHeavyServer(
 	genesisCfgPath string,
 	genesisOptions genesis.Options,
 	genesisOnly bool,
-	apiInfoResponse map[string]interface{},
+	apiOptions api.Options,
 ) Server {
-	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly, apiInfoResponse)
+	return heavy.New(cfgPath, genesisCfgPath, genesisOptions, genesisOnly, apiOptions)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role
-func NewVirtualServer(cfgPath string, builtinContracts builtin.BuiltinContracts, apiInfoResponse map[string]interface{}) Server {
-	return virtual.New(cfgPath, builtinContracts, apiInfoResponse)
+func NewVirtualServer(cfgPath string, builtinContracts builtin.BuiltinContracts, apiOptions api.Options,
+) Server {
+	return virtual.New(cfgPath, builtinContracts, apiOptions)
 }

@@ -16,8 +16,8 @@ import (
 	"github.com/insolar/rpc/v2/json2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
-	"github.com/insolar/insolar/application/api/seedmanager"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"

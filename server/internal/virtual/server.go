@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -24,14 +25,14 @@ import (
 type Server struct {
 	cfgPath          string
 	builtinContracts builtin.BuiltinContracts
-	apiInfoResponse  map[string]interface{}
+	apiOptions       api.Options
 }
 
-func New(cfgPath string, builtinContracts builtin.BuiltinContracts, apiInfoResponse map[string]interface{}) *Server {
+func New(cfgPath string, builtinContracts builtin.BuiltinContracts, apiOptions api.Options) *Server {
 	return &Server{
 		cfgPath:          cfgPath,
 		builtinContracts: builtinContracts,
-		apiInfoResponse:  apiInfoResponse,
+		apiOptions:       apiOptions,
 	}
 }
 
@@ -82,7 +83,7 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyProcessor,
 		certManager,
 		s.builtinContracts,
-		s.apiInfoResponse,
+		s.apiOptions,
 	)
 
 	var gracefulStop = make(chan os.Signal, 1)

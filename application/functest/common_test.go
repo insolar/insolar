@@ -16,7 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 )
 
