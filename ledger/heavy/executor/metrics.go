@@ -11,6 +11,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 )
 
 var (
@@ -18,7 +19,12 @@ var (
 )
 
 var (
-	statJets           = stats.Int64("heavy_jets", "jets counter", stats.UnitDimensionless)
+	statJets = stats.Int64(
+		"heavy_jets",
+		"jets counter",
+		stats.UnitDimensionless,
+	)
+
 	statFinalizedPulse = stats.Int64(
 		"heavy_finalized_pulse",
 		"last pulse with fully finalized data",
@@ -120,6 +126,62 @@ func init() {
 			Description: statBadgerValueGCTime.Description(),
 			Measure:     statBadgerValueGCTime,
 			Aggregation: view.Distribution(0.0, float64(time.Minute)*2),
+		},
+		&view.View{
+			Name:        topSyncPulseTime.Name(),
+			Description: topSyncPulseTime.Description(),
+			Measure:     topSyncPulseTime,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        getTime.Name(),
+			Description: getTime.Description(),
+			Measure:     getTime,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        setTime.Name(),
+			Description: setTime.Description(),
+			Measure:     setTime,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        setRetries.Name(),
+			Description: setRetries.Description(),
+			Measure:     setRetries,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
+		},
+		&view.View{
+			Name:        updateSyncPulseTime.Name(),
+			Description: updateSyncPulseTime.Description(),
+			Measure:     updateSyncPulseTime,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        updateSyncPulseRetries.Name(),
+			Description: updateSyncPulseRetries.Description(),
+			Measure:     updateSyncPulseRetries,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
+		},
+		&view.View{
+			Name:        TruncateHeadTime.Name(),
+			Description: TruncateHeadTime.Description(),
+			Measure:     TruncateHeadTime,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        TruncateHeadRetries.Name(),
+			Description: TruncateHeadRetries.Description(),
+			Measure:     TruncateHeadRetries,
+			TagKeys:     []tag.Key{JetKeeperPostgresDB},
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 	)
 	if err != nil {

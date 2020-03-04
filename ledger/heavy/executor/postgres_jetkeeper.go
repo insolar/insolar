@@ -408,11 +408,11 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, setRetries.M(int64(*retriesCount))) }(&retries)
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-
-		stats.Record(context.Background(), setRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -433,6 +433,7 @@ func (jk *PostgresDBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error
 		}
 
 		log.Infof("PostgresDBJetKeeper.set - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -454,11 +455,11 @@ func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 	}
 	defer conn.Release()
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, updateSyncPulseRetries.M(int64(*retriesCount))) }(&retries)
+
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
-
-		stats.Record(ctx, updateSyncPulseRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -479,6 +480,7 @@ func (jk *PostgresDBJetKeeper) updateSyncPulse(pn insolar.PulseNumber) error {
 		}
 
 		log.Infof("PostgresDBJetKeeper.updateSyncPulse - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -506,10 +508,10 @@ func (jk *PostgresDBJetKeeper) TruncateHead(ctx context.Context, from insolar.Pu
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, TruncateHeadRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
