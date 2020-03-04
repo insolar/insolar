@@ -13,6 +13,7 @@ import (
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/certificate"
 
 	"github.com/stretchr/testify/require"
@@ -21,11 +22,11 @@ import (
 func TestNodeCert(t *testing.T) {
 	publicKey := testutils.GenerateNodePublicKey(t)
 	const testRole = "virtual"
-	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
+	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 
-	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      1,

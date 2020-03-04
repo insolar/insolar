@@ -146,7 +146,7 @@ func TestIncorrectMethodName(t *testing.T) {
 func TestRequestReference(t *testing.T) {
 	publicKey := testutils.GenerateNodePublicKey(t)
 
-	_, ref, err := makeSignedRequest(
+	_, ref, err := testutils.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		&launchnet.Root,
 		"contract.registerNode",

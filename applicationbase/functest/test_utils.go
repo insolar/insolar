@@ -19,27 +19,20 @@
 package functest
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
-	"regexp"
-	"runtime"
-	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/insolar/secrets"
 
 	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/pkg/errors"
 )
 
 type contractInfo struct {
@@ -49,97 +42,10 @@ type contractInfo struct {
 
 var contracts = map[string]*contractInfo{}
 
-// type postParams map[string]interface{}
-
-// type RPCResponseInterface interface {
-// 	getRPCVersion() string
-// 	getError() map[string]interface{}
-// }
-//
-// type RPCResponse struct {
-// 	RPCVersion string                 `json:"jsonrpc"`
-// 	Error      map[string]interface{} `json:"error"`
-// }
-//
-// func (r *RPCResponse) getRPCVersion() string {
-// 	return r.RPCVersion
-// }
-//
-// func (r *RPCResponse) getError() map[string]interface{} {
-// 	return r.Error
-// }
-//
-// type getSeedResponse struct {
-// 	RPCResponse
-// 	Result struct {
-// 		Seed    string `json:"seed"`
-// 		TraceID string `json:"traceID"`
-// 	} `json:"result"`
-// }
-//
-// type infoResponse struct {
-// 	NodeDomain string `json:"NodeDomain"`
-// 	TraceID    string `json:"TraceID"`
-// }
-//
-// type rpcInfoResponse struct {
-// 	RPCResponse
-// 	Result infoResponse `json:"result"`
-// }
-//
-// type statusResponse struct {
-// 	NetworkState    string `json:"networkState"`
-// 	WorkingListSize int    `json:"workingListSize"`
-// }
-//
 type rpcStatusResponse struct {
 	testresponse.RPCResponse
 	Result testresponse.StatusResponse `json:"result"`
 }
-
-//
-// func checkConvertRequesterError(t *testing.T, err error) *requester.Error {
-// 	rv, ok := err.(*requester.Error)
-// 	require.Truef(t, ok, "got wrong error %T (expected *requester.Error) with text '%s'", err, err.Error())
-// 	return rv
-// }
-//
-// func getRPSResponseBody(t testing.TB, URL string, postParams map[string]interface{}) []byte {
-// 	jsonValue, _ := json.Marshal(postParams)
-//
-// 	postResp, err := http.Post(URL, "application/json", bytes.NewBuffer(jsonValue))
-// 	require.NoError(t, err)
-// 	require.Equal(t, http.StatusOK, postResp.StatusCode)
-// 	body, err := ioutil.ReadAll(postResp.Body)
-// 	require.NoError(t, err)
-// 	return body
-// }
-//
-// func getSeed(t testing.TB) string {
-// 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
-// 		"jsonrpc": "2.0",
-// 		"method":  "node.getSeed",
-// 		"id":      "",
-// 	})
-// 	getSeedResponse := &getSeedResponse{}
-// 	unmarshalRPCResponse(t, body, getSeedResponse)
-// 	require.NotNil(t, getSeedResponse.Result)
-// 	return getSeedResponse.Result.Seed
-// }
-//
-// func getInfo(t testing.TB) infoResponse {
-// 	pp := postParams{
-// 		"jsonrpc": "2.0",
-// 		"method":  "network.getInfo",
-// 		"id":      1,
-// 		"params":  map[string]string{},
-// 	}
-// 	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
-// 	rpcInfoResponse := &rpcInfoResponse{}
-// 	unmarshalRPCResponse(t, body, rpcInfoResponse)
-// 	require.NotNil(t, rpcInfoResponse.Result)
-// 	return rpcInfoResponse.Result
-// }
 
 func getStatus(t testing.TB) testresponse.StatusResponse {
 	body := testresponse.GetRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
@@ -151,105 +57,6 @@ func getStatus(t testing.TB) testresponse.StatusResponse {
 	testresponse.UnmarshalRPCResponse(t, body, rpcStatusResponse)
 	require.NotNil(t, rpcStatusResponse.Result)
 	return rpcStatusResponse.Result
-}
-
-//
-// func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
-// 	err := json.Unmarshal(body, &response)
-// 	require.NoError(t, err)
-// 	require.Equal(t, "2.0", response.getRPCVersion())
-// 	require.Nil(t, response.getError())
-// }
-//
-// func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractResponse) {
-// 	err := json.Unmarshal(body, &response)
-// 	require.NoError(t, err)
-// }
-
-func signedRequest(t *testing.T, URL string, user launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(URL, user, method, params)
-
-	if err != nil {
-		var suffix string
-		requesterError, ok := err.(*requester.Error)
-		if ok {
-			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
-		}
-		t.Error("[" + method + "]" + err.Error() + suffix)
-	}
-	require.NotEmpty(t, refStr, "request ref is empty")
-	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero")
-
-	_, err = insolar.NewReferenceFromString(refStr)
-	require.Nil(t, err)
-
-	return res, err
-}
-
-func signedRequestWithEmptyRequestRef(t *testing.T, URL string, user launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(URL, user, method, params)
-
-	require.Equal(t, "", refStr)
-
-	return res, err
-}
-
-func makeSignedRequest(URL string, user launchnet.User, method string, params interface{}) (interface{}, string, error) {
-	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(user.GetReference(), user.GetPrivateKey(), user.GetPublicKey())
-	if err != nil {
-		var suffix string
-		if requesterError, ok := err.(*requester.Error); ok {
-			suffix = " [" + strings.Join(requesterError.Data.Trace, ": ") + "]"
-		}
-		fmt.Println(err.Error() + suffix)
-		return nil, "", err
-	}
-
-	var caller string
-	fpcs := make([]uintptr, 1)
-	for i := 2; i < 10; i++ {
-		if n := runtime.Callers(i, fpcs); n == 0 {
-			break
-		}
-		caller = runtime.FuncForPC(fpcs[0] - 1).Name()
-		if ok, _ := regexp.MatchString(`\.Test`, caller); ok {
-			break
-		}
-		caller = ""
-	}
-
-	seed, err := requester.GetSeed(URL)
-	if err != nil {
-		return nil, "", err
-	}
-
-	res, err := requester.SendWithSeed(ctx, URL, rootCfg, &requester.Params{
-		CallSite:   method,
-		CallParams: params,
-		PublicKey:  user.GetPublicKey(),
-		Reference:  user.GetReference(),
-		Test:       caller}, seed)
-
-	if err != nil {
-		return nil, "", err
-	}
-
-	resp := requester.ContractResponse{}
-	err = json.Unmarshal(res, &resp)
-	if err != nil {
-		return nil, "", err
-	}
-
-	if resp.Error != nil {
-		return nil, "", resp.Error
-	}
-
-	if resp.Result == nil {
-		return nil, "", errors.New("Error and result are nil")
-	}
-	return resp.Result.CallResult, resp.Result.RequestReference, nil
-
 }
 
 func newUserWithKeys() (*launchnet.CommonUser, error) {
@@ -278,7 +85,7 @@ func createMember(t *testing.T) *launchnet.CommonUser {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.GetReference()
 
-	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
+	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)

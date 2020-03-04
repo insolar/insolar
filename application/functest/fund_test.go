@@ -18,6 +18,7 @@ import (
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils"
 )
 
 func TestFoundationMemberCreate(t *testing.T) {
@@ -57,7 +58,7 @@ func TestApplicationIncentivesMemberCreate(t *testing.T) {
 	}
 }
 
-func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.User, expectedBalance string, expectedDeposit string) {
+func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.AppUser, expectedBalance string, expectedDeposit string) {
 	var balance *big.Int
 	var depositStr string
 	for i := 0; i < times; i++ {
@@ -78,13 +79,13 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 	// for speed up test check only last member
 	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
 
-	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	require.NoError(t, err)
 	decodedRes2, ok := res2.(map[string]interface{})
 	m.Ref = decodedRes2["reference"].(string)
 	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
+	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 	)
 	data := checkConvertRequesterError(t, err).Data
@@ -95,13 +96,13 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 
 func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 	for _, m := range launchnet.ApplicationIncentives {
-		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+		res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
 		decodedRes2, ok := res2.(map[string]interface{})
 		m.Ref = decodedRes2["reference"].(string)
 		require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 
-		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
+		_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
 		data := checkConvertRequesterError(t, err).Data
@@ -113,13 +114,13 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 
 func TestFoundationTransferDeposit(t *testing.T) {
 	for _, m := range launchnet.Foundation {
-		res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+		res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
 		decodedRes2, ok := res2.(map[string]interface{})
 		m.Ref = decodedRes2["reference"].(string)
 		require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 
-		_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
+		_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 			"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 		)
 		data := checkConvertRequesterError(t, err).Data
@@ -132,7 +133,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 func TestMigrationDaemonTransferDeposit(t *testing.T) {
 	m := &launchnet.MigrationAdmin
 
-	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
+	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	require.NoError(t, err)
 	decodedRes2, ok := res2.(map[string]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
@@ -141,7 +142,7 @@ func TestMigrationDaemonTransferDeposit(t *testing.T) {
 	oldBalance, deposits := getBalanceAndDepositsNoErr(t, m, m.Ref)
 	oldDepositStr := deposits[genesisrefs.FundsDepositName].(map[string]interface{})["balance"].(string)
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
+	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, m,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": genesisrefs.FundsDepositName},
 	)
 	data := checkConvertRequesterError(t, err).Data

@@ -59,10 +59,10 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers]*User
-var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
-var Enterprise [application.GenesisAmountEnterpriseMembers]*User
-var Foundation [application.GenesisAmountFoundationMembers]*User
+var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers]*AppUser
+var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*AppUser
+var Enterprise [application.GenesisAmountEnterpriseMembers]*AppUser
+var Foundation [application.GenesisAmountFoundationMembers]*AppUser
 
 var appPath = []string{"insolar", "insolar"}
 
@@ -103,16 +103,28 @@ func Run(cb func() int) int {
 }
 
 var info *sdk.InfoResponse
-var Root User
-var MigrationAdmin User
-var FeeMember User
-var MigrationDaemons [application.GenesisAmountMigrationDaemonMembers]*User
+var Root AppUser
+var MigrationAdmin AppUser
+var FeeMember AppUser
+var MigrationDaemons [application.GenesisAmountMigrationDaemonMembers]*AppUser
 
-type User struct {
+type AppUser struct {
 	Ref              string
 	PrivKey          string
 	PubKey           string
 	MigrationAddress string
+}
+
+func (m *AppUser) GetReference() string {
+	return m.Ref
+}
+
+func (m *AppUser) GetPrivateKey() string {
+	return m.PrivKey
+}
+
+func (m *AppUser) GetPublicKey() string {
+	return m.PubKey
 }
 
 func launchnetPath(a ...string) (string, error) {
@@ -197,7 +209,7 @@ func GetNumShards() (int, error) {
 	return conf.PKShardCount, nil
 }
 
-func loadMemberKeys(keysPath string, member *User) error {
+func loadMemberKeys(keysPath string, member *AppUser) error {
 	text, err := ioutil.ReadFile(keysPath)
 	if err != nil {
 		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
@@ -246,7 +258,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		var md User
+		var md AppUser
 		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err
@@ -259,7 +271,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		var md User
+		var md AppUser
 		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err
@@ -272,7 +284,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		var md User
+		var md AppUser
 		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err
@@ -285,7 +297,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		var md User
+		var md AppUser
 		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err
@@ -298,7 +310,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		var md User
+		var md AppUser
 		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err

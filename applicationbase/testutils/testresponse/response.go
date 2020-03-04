@@ -35,8 +35,8 @@ import (
 type PostParams map[string]interface{}
 
 type RPCResponseInterface interface {
-	getRPCVersion() string
-	getError() map[string]interface{}
+	GetRPCVersion() string
+	GetError() map[string]interface{}
 }
 
 type RPCResponse struct {
@@ -44,11 +44,11 @@ type RPCResponse struct {
 	Error      map[string]interface{} `json:"error"`
 }
 
-func (r *RPCResponse) getRPCVersion() string {
+func (r *RPCResponse) GetRPCVersion() string {
 	return r.RPCVersion
 }
 
-func (r *RPCResponse) getError() map[string]interface{} {
+func (r *RPCResponse) GetError() map[string]interface{} {
 	return r.Error
 }
 
@@ -121,8 +121,8 @@ func GetInfo(t testing.TB) InfoResponse {
 func UnmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
-	require.Equal(t, "2.0", response.getRPCVersion())
-	require.Nil(t, response.getError())
+	require.Equal(t, "2.0", response.GetRPCVersion())
+	require.Nil(t, response.GetError())
 }
 
 func UnmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractResponse) {

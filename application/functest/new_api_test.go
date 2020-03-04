@@ -90,7 +90,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
+	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	data := checkConvertRequesterError(t, err).Data
 	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams"`)
 }
@@ -98,7 +98,7 @@ func TestIncorrectParams(t *testing.T) {
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
+	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	data := checkConvertRequesterError(t, err).Data
 	functestutils.ExpectedError(t, data.Trace, `doesn't match the schema: Error at "/params":Property 'callParams' is missing`)
 }
@@ -106,7 +106,7 @@ func TestNilParams(t *testing.T) {
 func TestNotAllowedMethod(t *testing.T) {
 	member := createMember(t)
 
-	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
+	_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
 		map[string]interface{}{"reference": member.Ref})
 	require.Error(t, err)
 	data := checkConvertRequesterError(t, err).Data
