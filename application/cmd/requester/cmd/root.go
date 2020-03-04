@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/insolar/insolar/application/api/requester"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/secrets"
