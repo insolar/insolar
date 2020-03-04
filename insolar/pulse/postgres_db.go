@@ -179,7 +179,7 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 	truncateTime := time.Now()
 	defer func() {
 		stats.Record(ctx,
-			TruncateTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
 	}()
 
 	conn, err := insolar.AcquireConnection(ctx, s.pool)
@@ -190,10 +190,10 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, TruncateRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -217,6 +217,7 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -239,10 +240,10 @@ func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, AppendRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
-
-		stats.Record(ctx, AppendRetries.M(1))
-
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -319,6 +320,7 @@ func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		}
 
 		log.Infof("Append - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil

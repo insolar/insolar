@@ -27,12 +27,12 @@ var (
 		"time spent on Latest",
 		stats.UnitMilliseconds,
 	)
-	TruncateRetries = stats.Int64(
+	TruncateHeadRetries = stats.Int64(
 		"pulse_truncate_retries",
 		"retries while truncating head",
 		stats.UnitDimensionless,
 	)
-	TruncateTime = stats.Float64(
+	TruncateHeadTime = stats.Float64(
 		"pulse_truncate_time",
 		"time spent on truncating head",
 		stats.UnitMilliseconds,
@@ -76,18 +76,18 @@ func init() {
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
-			Name:        TruncateTime.Name(),
-			Description: TruncateTime.Description(),
-			Measure:     TruncateTime,
+			Name:        TruncateHeadTime.Name(),
+			Description: TruncateHeadTime.Description(),
+			Measure:     TruncateHeadTime,
 			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
-			Name:        TruncateRetries.Name(),
-			Description: TruncateRetries.Description(),
-			Measure:     TruncateRetries,
+			Name:        TruncateHeadRetries.Name(),
+			Description: TruncateHeadRetries.Description(),
+			Measure:     TruncateHeadRetries,
 			TagKeys:     []tag.Key{PulsePostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        AppendTime.Name(),
@@ -101,7 +101,7 @@ func init() {
 			Description: AppendRetries.Description(),
 			Measure:     AppendRetries,
 			TagKeys:     []tag.Key{PulsePostgresDB},
-			Aggregation: view.Sum(),
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        ForwardsTime.Name(),
