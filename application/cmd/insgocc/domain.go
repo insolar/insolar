@@ -50,11 +50,8 @@ const  domainTemplate =
 `package domain
 
 import (
-	"fmt"
-	"math/big"
-
-	"github.com/insolar/insolar/application/appfoundation"
-	"github.com/insolar/insolar/insolar"
+//	"github.com/insolar/insolar/application/appfoundation"
+//	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
