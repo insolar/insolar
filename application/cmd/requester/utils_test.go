@@ -60,9 +60,6 @@ func handlers() http.Handler {
 }
 
 func runCmd(args ...string) (string, error) {
-	// cmd := exec.Command(binLocation, args...)
-	// out, err := cmd.CombinedOutput()
-	// return string(out), err
 	var executionError error
 	out, captureError := CaptureOutput(func() {
 		rootCmd := cmd.GetRequesterCommand()
