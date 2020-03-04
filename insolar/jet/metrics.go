@@ -7,7 +7,6 @@ package jet
 import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 )
 
 var (

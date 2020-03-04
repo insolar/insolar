@@ -7,7 +7,6 @@ package node
 import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 )
 
 var (
