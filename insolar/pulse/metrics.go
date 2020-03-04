@@ -6,14 +6,9 @@
 package pulse
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-)
-
-var (
-	PulsePostgresDB = insmetrics.MustTagKey("pulse_postgres_db")
 )
 
 var (
@@ -65,56 +60,48 @@ func init() {
 			Name:        ForPulseNumberTime.Name(),
 			Description: ForPulseNumberTime.Description(),
 			Measure:     ForPulseNumberTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        LatestTime.Name(),
 			Description: LatestTime.Description(),
 			Measure:     LatestTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        TruncateHeadTime.Name(),
 			Description: TruncateHeadTime.Description(),
 			Measure:     TruncateHeadTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        TruncateHeadRetries.Name(),
 			Description: TruncateHeadRetries.Description(),
 			Measure:     TruncateHeadRetries,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        AppendTime.Name(),
 			Description: AppendTime.Description(),
 			Measure:     AppendTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        AppendRetries.Name(),
 			Description: AppendRetries.Description(),
 			Measure:     AppendRetries,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        ForwardsTime.Name(),
 			Description: ForwardsTime.Description(),
 			Measure:     ForwardsTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        BackwardsTime.Name(),
 			Description: BackwardsTime.Description(),
 			Measure:     BackwardsTime,
-			TagKeys:     []tag.Key{PulsePostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 	)

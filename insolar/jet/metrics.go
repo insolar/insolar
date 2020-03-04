@@ -5,14 +5,9 @@
 package jet
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-)
-
-var (
-	JetPostgresDB = insmetrics.MustTagKey("jet_postgres_db")
 )
 
 var (
@@ -49,35 +44,30 @@ func init() {
 			Name:        TruncateHeadTime.Name(),
 			Description: TruncateHeadTime.Description(),
 			Measure:     TruncateHeadTime,
-			TagKeys:     []tag.Key{JetPostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        SetTime.Name(),
 			Description: SetTime.Description(),
 			Measure:     SetTime,
-			TagKeys:     []tag.Key{JetPostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 		&view.View{
 			Name:        TruncateHeadRetries.Name(),
 			Description: TruncateHeadRetries.Description(),
 			Measure:     TruncateHeadRetries,
-			TagKeys:     []tag.Key{JetPostgresDB},
 			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        SetRetries.Name(),
 			Description: SetRetries.Description(),
 			Measure:     SetRetries,
-			TagKeys:     []tag.Key{JetPostgresDB},
 			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 		&view.View{
 			Name:        GetTime.Name(),
 			Description: GetTime.Description(),
 			Measure:     GetTime,
-			TagKeys:     []tag.Key{JetPostgresDB},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
 		},
 	)
