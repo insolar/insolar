@@ -7,9 +7,7 @@ package launchnet
 
 import (
 	"encoding/json"
-	"io"
 	"io/ioutil"
-	"os/exec"
 	"strconv"
 
 	yaml "gopkg.in/yaml.v2"
@@ -21,23 +19,12 @@ import (
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
-const HOST = "http://localhost:"
-const AdminPort = "19002"
-const PublicPort = "19102"
-const TestAdminRPCUrl = "/admin-api/rpc"
-
-var TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
-var TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
+var TestRPCUrl = launchnet.TestRPCUrl
+var TestRPCUrlPublic = launchnet.TestRPCUrlPublic
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
 const insolarFeeMemberKeys = "fee_member_keys.json"
-
-var cmd *exec.Cmd
-var cmdCompleted = make(chan error, 1)
-var stdin io.WriteCloser
-var stdout io.ReadCloser
-var stderr io.ReadCloser
 
 var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers]*AppUser
 var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*AppUser
