@@ -21,7 +21,9 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +38,7 @@ func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, 
 
 func TestGetNodeRefByPublicKey(t *testing.T) {
 	const testRole = "light_material"
-	publicKey := generateNodePublicKey(t)
+	publicKey := testutils.GenerateNodePublicKey(t)
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
@@ -48,25 +50,25 @@ func TestGetNodeRefByPublicKey(t *testing.T) {
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	notExistingPublicKey := generateNodePublicKey(t)
+	notExistingPublicKey := testutils.GenerateNodePublicKey(t)
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": notExistingPublicKey})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "network node was not found by public key")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'publicKey' param")
 }

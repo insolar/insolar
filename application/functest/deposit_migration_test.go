@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	functestutils "github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -122,7 +123,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 		map[string]interface{}{"amount": "0", "ethTxHash": testutils.RandomEthHash(), "migrationAddress": member.MigrationAddress})
 
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
+	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
 	require.Nil(t, result)
 }
 
@@ -135,7 +136,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": testutils.RandomEthHash(), "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, "Property 'amount' is missing")
+	functestutils.ExpectedError(t, data.Trace, "Property 'amount' is missing")
 	require.Nil(t, result)
 }
 
@@ -145,7 +146,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	result, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, launchnet.MigrationDaemons[0],
 		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, `Error at "/params/callParams/ethTxHash":Value is not nullable`)
+	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/ethTxHash":Value is not nullable`)
 	require.Nil(t, result)
 
 }

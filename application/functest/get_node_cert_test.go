@@ -12,13 +12,14 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/certificate"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeCert(t *testing.T) {
-	publicKey := generateNodePublicKey(t)
+	publicKey := testutils.GenerateNodePublicKey(t)
 	const testRole = "virtual"
 	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})

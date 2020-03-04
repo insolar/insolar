@@ -92,12 +92,30 @@ func Run(cb func() int) int {
 }
 
 var info *sdk.InfoResponse
-var Root User
+var Root CommonUser
 
-type User struct {
+type User interface {
+	GetReference() string
+	GetPrivateKey() string
+	GetPublicKey() string
+}
+
+type CommonUser struct {
 	Ref     string
 	PrivKey string
 	PubKey  string
+}
+
+func (m *CommonUser) GetReference() string {
+	return m.Ref
+}
+
+func (m *CommonUser) GetPrivateKey() string {
+	return m.PrivKey
+}
+
+func (m *CommonUser) GetPublicKey() string {
+	return m.PubKey
 }
 
 func launchnetPath(a ...string) (string, error) {
@@ -158,7 +176,7 @@ func GetNodesCount() (int, error) {
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
 }
 
-func loadMemberKeys(keysPath string, member *User) error {
+func loadMemberKeys(keysPath string, member *CommonUser) error {
 	text, err := ioutil.ReadFile(keysPath)
 	if err != nil {
 		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")

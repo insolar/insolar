@@ -24,13 +24,12 @@ import (
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/insolar/secrets"
 
+	"github.com/insolar/rpc/v2/json2"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
-
-	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/stretchr/testify/require"
 
@@ -682,32 +681,4 @@ func verifyFundsMembersExist(t *testing.T, m *launchnet.User, expectedBalance st
 	require.Equal(t, expectedBalance, balance.String())
 	require.Empty(t, deposits)
 	return nil
-}
-
-func expectedError(t *testing.T, trace []string, expected string) {
-	found := hasSubstring(trace, expected)
-	require.True(t, found, "Expected error (%s) not found in trace: %v", expected, trace)
-}
-
-func hasSubstring(trace []string, expected string) bool {
-	found := false
-	for _, trace := range trace {
-		found = strings.Contains(trace, expected)
-		if found {
-			return found
-		}
-	}
-	return found
-}
-
-func generateNodePublicKey(t *testing.T) string {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privKey, err := ks.GeneratePrivateKey()
-	require.NoError(t, err)
-
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
-	require.NoError(t, err)
-
-	return string(pubKeyStr)
 }

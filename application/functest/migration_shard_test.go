@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	functestutils "github.com/insolar/insolar/applicationbase/testutils"
 )
 
 func TestGetFreeAddressCount(t *testing.T) {
@@ -44,7 +45,7 @@ func TestGetFreeAddressCount_IncorrectIndexType(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": "0"})
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, "doesn't match the schema")
+	functestutils.ExpectedError(t, data.Trace, "doesn't match the schema")
 }
 
 func TestGetFreeAddressCount_FromMember(t *testing.T) {

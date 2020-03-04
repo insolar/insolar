@@ -24,7 +24,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -43,7 +45,7 @@ func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -51,7 +53,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -59,7 +61,7 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -67,21 +69,21 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 
 func TestRegisterNodeWithSamePK(t *testing.T) {
 	const testRole = "light_material"
-	testPublicKey := generateNodePublicKey(t)
+	testPublicKey := testutils.GenerateNodePublicKey(t)
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "node already exist with this public key")
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
-		"contract.registerNode", map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": "some_not_fancy_role"})
-	data := checkConvertRequesterError(t, err).Data
+		"contract.registerNode", map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": "some_not_fancy_role"})
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "role is not supported")
 }
 
@@ -89,17 +91,17 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t)
 	const testRole = "virtual"
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
-		map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
-	data := checkConvertRequesterError(t, err).Data
+		map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
-	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
+	body := testresponse.GetRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      "",

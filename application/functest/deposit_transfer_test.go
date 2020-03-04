@@ -17,6 +17,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	functestutils "github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 )
@@ -104,7 +105,7 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": ethHash})
 	require.Error(t, err)
 	data := checkConvertRequesterError(t, err).Data
-	expectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
+	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {

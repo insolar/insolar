@@ -258,7 +258,6 @@ func (r *One) DoNothing() (error) {
 package main
 
 import (
-    "github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	one "github.com/insolar/insolar/applicationbase/proxy/parent_one"
@@ -278,7 +277,7 @@ func New() (*Two, error) {
 func NewWithOne(oneNumber int) (*Two, error) {
 	holder := one.NewWithNumber(oneNumber)
 
-	objOne, err := holder.AsChild(appfoundation.GetRootDomain())
+	objOne, err := holder.AsChild(foundation.GetNodeDomain())
 
 	if err != nil {
 		return nil, err

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +26,7 @@ func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, 
 
 func TestGetNodeRefByPublicKey(t *testing.T) {
 	const testRole = "light_material"
-	publicKey := generateNodePublicKey(t)
+	publicKey := testutils.GenerateNodePublicKey(t)
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
@@ -37,11 +38,11 @@ func TestGetNodeRefByPublicKey(t *testing.T) {
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	notExistingPublicKey := generateNodePublicKey(t)
+	notExistingPublicKey := testutils.GenerateNodePublicKey(t)
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": notExistingPublicKey})
 	data := checkConvertRequesterError(t, err).Data
@@ -50,7 +51,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": generateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
