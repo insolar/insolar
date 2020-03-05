@@ -17,7 +17,7 @@ import (
 	"github.com/insolar/insolar/insolar/secrets"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 func TestIncorrectSign(t *testing.T) {

@@ -17,12 +17,12 @@ import (
 
 	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/application/genesisrefs"
-	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 func TestFoundationMemberCreate(t *testing.T) {
-	for _, m := range launchnet.Foundation {
+	for _, m := range Foundation {
 		err := verifyFundsMembersAndDeposits(t, m, application.FoundationDistributionAmount)
 		if err != nil {
 			require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestFoundationMemberCreate(t *testing.T) {
 }
 
 func TestEnterpriseMemberCreate(t *testing.T) {
-	for _, m := range launchnet.Enterprise {
+	for _, m := range Enterprise {
 		err := verifyFundsMembersExist(t, m, application.EnterpriseDistributionAmount)
 		if err != nil {
 			require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestEnterpriseMemberCreate(t *testing.T) {
 
 func TestNetworkIncentivesMemberCreate(t *testing.T) {
 	// for speed up test check only last member
-	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
+	m := NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
 
 	err := verifyFundsMembersAndDeposits(t, m, application.NetworkIncentivesDistributionAmount)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestNetworkIncentivesMemberCreate(t *testing.T) {
 }
 
 func TestApplicationIncentivesMemberCreate(t *testing.T) {
-	for _, m := range launchnet.ApplicationIncentives {
+	for _, m := range ApplicationIncentives {
 		err := verifyFundsMembersAndDeposits(t, m, application.AppIncentivesDistributionAmount)
 		if err != nil {
 			require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestApplicationIncentivesMemberCreate(t *testing.T) {
 	}
 }
 
-func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.AppUser, expectedBalance string, expectedDeposit string) {
+func checkBalanceAndDepositFewTimes(t *testing.T, m *AppUser, expectedBalance string, expectedDeposit string) {
 	var balance *big.Int
 	var depositStr string
 	for i := 0; i < times; i++ {
@@ -77,7 +77,7 @@ func checkBalanceAndDepositFewTimes(t *testing.T, m *launchnet.AppUser, expected
 
 func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 	// for speed up test check only last member
-	m := launchnet.NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
+	m := NetworkIncentives[application.GenesisAmountNetworkIncentivesMembers-1]
 
 	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestNetworkIncentivesTransferDeposit(t *testing.T) {
 }
 
 func TestApplicationIncentivesTransferDeposit(t *testing.T) {
-	for _, m := range launchnet.ApplicationIncentives {
+	for _, m := range ApplicationIncentives {
 		res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
 		decodedRes2, ok := res2.(map[string]interface{})
@@ -113,7 +113,7 @@ func TestApplicationIncentivesTransferDeposit(t *testing.T) {
 }
 
 func TestFoundationTransferDeposit(t *testing.T) {
-	for _, m := range launchnet.Foundation {
+	for _, m := range Foundation {
 		res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 		require.NoError(t, err)
 		decodedRes2, ok := res2.(map[string]interface{})
@@ -131,7 +131,7 @@ func TestFoundationTransferDeposit(t *testing.T) {
 }
 
 func TestMigrationDaemonTransferDeposit(t *testing.T) {
-	m := &launchnet.MigrationAdmin
+	m := &MigrationAdmin
 
 	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	require.NoError(t, err)

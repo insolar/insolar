@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +54,7 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.MigrationAdmin, "member.get", nil)
+	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, &MigrationAdmin, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, launchnet.MigrationAdmin.Ref, res.(map[string]interface{})["reference"].(string))
+	require.Equal(t, MigrationAdmin.Ref, res.(map[string]interface{})["reference"].(string))
 }

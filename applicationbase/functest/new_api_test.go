@@ -35,7 +35,7 @@ import (
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	rootCfg, err := requester.CreateUserConfig(Root.Ref, Root.PrivKey, Root.PubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:  "contract.getNodeRef",
@@ -50,7 +50,7 @@ func TestBadSeed(t *testing.T) {
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	rootCfg, err := requester.CreateUserConfig(Root.Ref, Root.PrivKey, Root.PubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:  "contract.getNodeRef",
@@ -107,7 +107,7 @@ func TestEmptySign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, PublicKey: launchnet.Root.PubKey,
+			Params: requester.Params{Seed: seed, PublicKey: Root.PubKey,
 				CallSite: "contract.getNodeRef", CallParams: map[string]interface{}{}},
 		},
 		"",
@@ -148,7 +148,7 @@ func TestRequestReference(t *testing.T) {
 
 	_, ref, err := testutils.MakeSignedRequest(
 		launchnet.TestRPCUrl,
-		&launchnet.Root,
+		&Root,
 		"contract.registerNode",
 		map[string]interface{}{"publicKey": publicKey, "role": "light_material"},
 	)

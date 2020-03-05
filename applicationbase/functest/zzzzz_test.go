@@ -34,7 +34,7 @@ func TestMnt_DumpMetrics(t *testing.T) {
 		t.Skip("dump metrics disabled")
 	}
 
-	res, err := launchnet.FetchAndSaveMetrics(functestCount - 1)
+	res, err := launchnet.FetchAndSaveMetrics(functestCount-1, AppPath)
 	if err != nil {
 		t.Errorf("metrics save failed: %v", err.Error())
 	}

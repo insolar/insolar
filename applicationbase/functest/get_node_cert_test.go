@@ -33,7 +33,7 @@ import (
 func TestNodeCert(t *testing.T) {
 	publicKey := testutils.GenerateNodePublicKey(t)
 	const testRole = "virtual"
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
+	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 

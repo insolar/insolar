@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/certificate"
 
@@ -22,7 +22,7 @@ import (
 func TestNodeCert(t *testing.T) {
 	publicKey := testutils.GenerateNodePublicKey(t)
 	const testRole = "virtual"
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.Root,
+	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 

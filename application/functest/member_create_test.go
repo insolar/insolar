@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 )

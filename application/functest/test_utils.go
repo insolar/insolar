@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 
@@ -57,10 +57,10 @@ func checkConvertRequesterError(t *testing.T, err error) *requester.Error {
 	return rv
 }
 
-func createMember(t *testing.T) *launchnet.AppUser {
+func createMember(t *testing.T) *AppUser {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.Ref = launchnet.Root.Ref
+	member.Ref = Root.Ref
 
 	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
@@ -70,10 +70,10 @@ func createMember(t *testing.T) *launchnet.AppUser {
 	return member
 }
 
-func createMigrationMemberForMA(t *testing.T) *launchnet.AppUser {
+func createMigrationMemberForMA(t *testing.T) *AppUser {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.Ref = launchnet.Root.Ref
+	member.Ref = Root.Ref
 
 	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -88,12 +88,12 @@ func createMigrationMemberForMA(t *testing.T) *launchnet.AppUser {
 
 }
 
-func getBalanceNoErr(t *testing.T, caller *launchnet.AppUser, reference string) *big.Int {
+func getBalanceNoErr(t *testing.T, caller *AppUser, reference string) *big.Int {
 	balance, _ := getBalanceAndDepositsNoErr(t, caller, reference)
 	return balance
 }
 
-func getAdminDepositBalance(t *testing.T, caller *launchnet.AppUser, reference string) (*big.Int, error) {
+func getAdminDepositBalance(t *testing.T, caller *AppUser, reference string) (*big.Int, error) {
 	_, deposits := getBalanceAndDepositsNoErr(t, caller, reference)
 	mapd, ok := deposits[genesisrefs.FundsDepositName].(map[string]interface{})
 	if !ok {
@@ -106,13 +106,13 @@ func getAdminDepositBalance(t *testing.T, caller *launchnet.AppUser, reference s
 	return amount, nil
 }
 
-func getBalanceAndDepositsNoErr(t *testing.T, caller *launchnet.AppUser, reference string) (*big.Int, map[string]interface{}) {
+func getBalanceAndDepositsNoErr(t *testing.T, caller *AppUser, reference string) (*big.Int, map[string]interface{}) {
 	balance, deposits, err := getBalanceAndDeposits(t, caller, reference)
 	require.NoError(t, err)
 	return balance, deposits
 }
 
-func getBalanceAndDeposits(t *testing.T, caller *launchnet.AppUser, reference string) (*big.Int, map[string]interface{}, error) {
+func getBalanceAndDeposits(t *testing.T, caller *AppUser, reference string) (*big.Int, map[string]interface{}, error) {
 	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, caller, "member.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, nil, err
@@ -165,7 +165,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 
 	_, err := testutils.SignedRequest(t,
 		launchnet.TestRPCUrl,
-		launchnet.MigrationDaemons[mdNum],
+		MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
@@ -173,14 +173,14 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposit, ok := deposits[tx].(map[string]interface{})
 	require.True(t, ok)
 	confirmations := deposit["confirmerReferences"].(map[string]interface{})
-	require.Equal(t, amount+"0", confirmations[launchnet.MigrationDaemons[mdNum].Ref])
+	require.Equal(t, amount+"0", confirmations[MigrationDaemons[mdNum].Ref])
 
 	return deposit
 }
 
 const migrationAmount = "360000"
 
-func fullMigration(t *testing.T, txHash string) *launchnet.AppUser {
+func fullMigration(t *testing.T, txHash string) *AppUser {
 	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 
 	member := createMigrationMemberForMA(t)
@@ -215,22 +215,22 @@ func getInfo(t testing.TB) infoResponse {
 	return rpcInfoResponse.Result
 }
 
-func activateDaemons(t *testing.T, countDaemon int) []*launchnet.AppUser {
-	var activeDaemons []*launchnet.AppUser
+func activateDaemons(t *testing.T, countDaemon int) []*AppUser {
+	var activeDaemons []*AppUser
 	for i := 0; i < countDaemon; i++ {
-		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
-			res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
-				map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+		if len(MigrationDaemons[i].Ref) > 0 {
+			res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &MigrationAdmin, "migration.checkDaemon",
+				map[string]interface{}{"reference": MigrationDaemons[i].Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)
 
 			if status == "inactive" {
-				_, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
-					"migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+				_, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &MigrationAdmin,
+					"migration.activateDaemon", map[string]interface{}{"reference": MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
-			activeDaemons = append(activeDaemons, launchnet.MigrationDaemons[i])
+			activeDaemons = append(activeDaemons, MigrationDaemons[i])
 		}
 	}
 	return activeDaemons
@@ -248,7 +248,7 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func newUserWithKeys() (*launchnet.AppUser, error) {
+func newUserWithKeys() (*AppUser, error) {
 	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func newUserWithKeys() (*launchnet.AppUser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &launchnet.AppUser{
+	return &AppUser{
 		PrivKey: string(privKeyStr),
 		PubKey:  string(pubKeyStr),
 	}, nil
@@ -305,20 +305,20 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 }
 
 func setMigrationDaemonsRef() error {
-	for i, mDaemon := range launchnet.MigrationDaemons {
+	for i, mDaemon := range MigrationDaemons {
 		daemon := mDaemon
-		daemon.Ref = launchnet.Root.Ref
+		daemon.Ref = Root.Ref
 		res, _, err := testutils.MakeSignedRequest(launchnet.TestRPCUrlPublic, daemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}
-		launchnet.MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
+		MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
 	}
 	return nil
 }
 
 func getAddressCount(t *testing.T, startWithIndex int) map[int]int {
-	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
+	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": startWithIndex})
 	require.NoError(t, err)
 	resultsSliced, ok := result.([]interface{})
@@ -336,7 +336,7 @@ func getAddressCount(t *testing.T, startWithIndex int) map[int]int {
 	return migrationShardsMap
 }
 
-func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.AppUser, expectedBalance string) error {
+func verifyFundsMembersAndDeposits(t *testing.T, m *AppUser, expectedBalance string) error {
 	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err
@@ -360,7 +360,7 @@ func verifyFundsMembersAndDeposits(t *testing.T, m *launchnet.AppUser, expectedB
 	return nil
 }
 
-func verifyFundsMembersExist(t *testing.T, m *launchnet.AppUser, expectedBalance string) error {
+func verifyFundsMembersExist(t *testing.T, m *AppUser, expectedBalance string) error {
 	res2, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, m, "member.get", nil)
 	if err != nil {
 		return err

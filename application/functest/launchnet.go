@@ -3,7 +3,7 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-package launchnet
+package functest
 
 import (
 	"encoding/json"
@@ -18,9 +18,6 @@ import (
 	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
-
-var TestRPCUrl = launchnet.TestRPCUrl
-var TestRPCUrlPublic = launchnet.TestRPCUrlPublic
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
@@ -196,7 +193,7 @@ func LoadAllMembersKeys() error {
 
 func SetInfo() error {
 	var err error
-	info, err = sdk.Info(TestRPCUrl)
+	info, err = sdk.Info(launchnet.TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}

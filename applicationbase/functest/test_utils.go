@@ -59,7 +59,7 @@ func getStatus(t testing.TB) testresponse.StatusResponse {
 	return rpcStatusResponse.Result
 }
 
-func newUserWithKeys() (*launchnet.CommonUser, error) {
+func newUserWithKeys() (*CommonUser, error) {
 	privateKey, err := secrets.GeneratePrivateKeyEthereum()
 	if err != nil {
 		return nil, err
@@ -74,16 +74,16 @@ func newUserWithKeys() (*launchnet.CommonUser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &launchnet.CommonUser{
+	return &CommonUser{
 		PrivKey: string(privKeyStr),
 		PubKey:  string(pubKeyStr),
 	}, nil
 }
 
-func createMember(t *testing.T) *launchnet.CommonUser {
+func createMember(t *testing.T) *CommonUser {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.Ref = launchnet.Root.GetReference()
+	member.Ref = Root.GetReference()
 
 	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)

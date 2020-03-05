@@ -36,7 +36,7 @@ var scheme = platformpolicy.NewPlatformCryptographyScheme()
 var keyProcessor = platformpolicy.NewKeyProcessor()
 
 func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &launchnet.Root, "contract.registerNode", params)
+	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &Root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}
@@ -74,14 +74,14 @@ func TestRegisterNodeWithSamePK(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
+	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "node already exist with this public key")
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
+	_, err := testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": "some_not_fancy_role"})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "role is not supported")

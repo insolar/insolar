@@ -14,12 +14,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
-	baselaunchnet "github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(baselaunchnet.Run(
+	os.Exit(launchnet.Run(
 		func() int {
 			err := setMigrationDaemonsRef()
 			if err != nil {
@@ -28,8 +27,8 @@ func TestMain(m *testing.M) {
 
 			return m.Run()
 		},
-		launchnet.AppPath,
-		launchnet.LoadAllMembersKeys,
-		launchnet.SetInfo,
-		launchnet.AfterSetup))
+		AppPath,
+		LoadAllMembersKeys,
+		SetInfo,
+		AfterSetup))
 }

@@ -7,7 +7,6 @@ package launchnet
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 )
@@ -47,15 +45,11 @@ var testRPCUrlVar = "INSOLAR_FUNC_RPC_URL"
 var testRPCUrlPublicVar = "INSOLAR_FUNC_RPC_URL_PUBLIC"
 var keysPathVar = "INSOLAR_FUNC_KEYS_PATH"
 
-const insolarRootMemberKeys = "root_member_keys.json"
-
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
-
-var AppPath = []string{"insolar", "insolar"}
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
@@ -93,31 +87,10 @@ func Run(cb func() int, appPath []string, loadAllMembersKeys func() error, setIn
 	return code
 }
 
-var info *sdk.InfoResponse
-var Root CommonUser
-
 type User interface {
 	GetReference() string
 	GetPrivateKey() string
 	GetPublicKey() string
-}
-
-type CommonUser struct {
-	Ref     string
-	PrivKey string
-	PubKey  string
-}
-
-func (m *CommonUser) GetReference() string {
-	return m.Ref
-}
-
-func (m *CommonUser) GetPrivateKey() string {
-	return m.PrivKey
-}
-
-func (m *CommonUser) GetPublicKey() string {
-	return m.PubKey
 }
 
 func LaunchnetPath(appPath []string, a ...string) (string, error) {
@@ -153,7 +126,7 @@ func LaunchnetPath(appPath []string, a ...string) (string, error) {
 	return filepath.Join(parts...), nil
 }
 
-func GetNodesCount() (int, error) {
+func GetNodesCount(appPath []string) (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 		Nodes         []interface{} `yaml:"nodes"`
@@ -161,7 +134,7 @@ func GetNodesCount() (int, error) {
 
 	var conf nodesConf
 
-	path, err := LaunchnetPath(AppPath, "bootstrap.yaml")
+	path, err := LaunchnetPath(appPath, "bootstrap.yaml")
 	if err != nil {
 		return 0, err
 	}
@@ -176,46 +149,6 @@ func GetNodesCount() (int, error) {
 	}
 
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
-}
-
-func loadMemberKeys(keysPath string, member *CommonUser) error {
-	text, err := ioutil.ReadFile(keysPath)
-	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
-	}
-	var data map[string]string
-	err = json.Unmarshal(text, &data)
-	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't unmarshal member keys")
-	}
-	if data["private_key"] == "" || data["public_key"] == "" {
-		return errors.New("[ loadMemberKeys ] could't find any keys")
-	}
-	member.PrivKey = data["private_key"]
-	member.PubKey = data["public_key"]
-
-	return nil
-}
-
-func LoadAllMembersKeys() error {
-	path, err := LaunchnetPath(AppPath, "configs", insolarRootMemberKeys)
-	if err != nil {
-		return err
-	}
-	err = loadMemberKeys(path, &Root)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func SetInfo() error {
-	var err error
-	info, err = sdk.Info(TestRPCUrl)
-	if err != nil {
-		return errors.Wrap(err, "[ setInfo ] error sending request")
-	}
-	return nil
 }
 
 func stopInsolard() error {
@@ -399,10 +332,6 @@ func RunOnlyWithLaunchnet(t *testing.T) {
 	}
 }
 
-func AfterSetup() {
-	Root.Ref = info.RootMember
-}
-
 func setup(appPath []string, loadAllMembersKeys func() error, setInfo func() error, afterSetup func()) error {
 	testRPCUrl := os.Getenv(testRPCUrlVar)
 	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
@@ -501,8 +430,8 @@ func DumpMetricsEnabled() bool {
 
 // FetchAndSaveMetrics fetches all nodes metric endpoints and saves result to files in
 // logs/metrics/$iteration/<node-addr>.txt files.
-func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
-	n, err := GetNodesCount()
+func FetchAndSaveMetrics(iteration int, appPath []string) ([][]byte, error) {
+	n, err := GetNodesCount(appPath)
 	if err != nil {
 		return nil, err
 	}

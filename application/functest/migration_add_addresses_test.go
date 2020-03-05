@@ -18,7 +18,7 @@ import (
 
 	"github.com/insolar/insolar/application/bootstrap"
 	"github.com/insolar/insolar/application/cmd/insolar/insolarcmd"
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/insolar/insolar/insolar/defaults"
 )
 

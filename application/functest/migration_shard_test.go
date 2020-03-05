@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
 	functestutils "github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
 func TestGetFreeAddressCount(t *testing.T) {
@@ -26,23 +26,23 @@ func TestGetFreeAddressCount(t *testing.T) {
 
 func TestGetFreeAddressCount_WithIndex_NotAllRange(t *testing.T) {
 	numLeftShards := 2
-	numShards, err := launchnet.GetNumShards()
+	numShards, err := GetNumShards()
 	require.NoError(t, err)
 	var migrationShards = getAddressCount(t, numShards-numLeftShards)
 	require.Len(t, migrationShards, numLeftShards)
 }
 
 func TestGetFreeAddressCount_StartIndexTooBig(t *testing.T) {
-	numShards, err := launchnet.GetNumShards()
+	numShards, err := GetNumShards()
 	require.NoError(t, err)
-	_, _, err = functestutils.MakeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
+	_, _, err = functestutils.MakeSignedRequest(launchnet.TestRPCUrl, &MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": numShards + 2})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "incorrect start shard index")
 }
 
 func TestGetFreeAddressCount_IncorrectIndexType(t *testing.T) {
-	_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
+	_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrl, &MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": "0"})
 	data := checkConvertRequesterError(t, err).Data
 	functestutils.ExpectedError(t, data.Trace, "doesn't match the schema")

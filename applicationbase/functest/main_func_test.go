@@ -30,9 +30,9 @@ func TestMain(m *testing.M) {
 		func() int {
 			return m.Run()
 		},
-		launchnet.AppPath,
-		launchnet.LoadAllMembersKeys,
-		launchnet.SetInfo,
-		launchnet.AfterSetup,
+		AppPath,
+		LoadAllMembersKeys,
+		SetInfo,
+		AfterSetup,
 	))
 }
