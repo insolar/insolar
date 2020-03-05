@@ -52,4 +52,5 @@ network_cache
 /docs/build
 
 # contracts generated files
+applicationbase/contract
 applicationbase/proxy
