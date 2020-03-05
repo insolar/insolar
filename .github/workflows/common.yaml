@@ -157,11 +157,12 @@ jobs:
           make build
           make functest
       - name: directories
-        run:  ls -la go/src/github.com/insolar/insolar
-      - name: tree
         run: |
-          sudo apt-get install tree
-          tree
+          ls -la go/src/github.com/insolar/insolar
+          sudo apt-get install zip
+          du -sh go/src/github.com/insolar/insolar/.artifacts
+          zip -r9q art.zip go/src/github.com/insolar/insolar/.artifacts
+          du -sh art.zip
       - name: cleanup
         run: |
           docker rm -f $(docker ps -aq) || sleep 1
