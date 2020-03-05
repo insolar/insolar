@@ -1,0 +1,13 @@
+name: build_canceller
+on:
+  pull_request:
+jobs:
+  build_canceller:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: shot
+      uses: yellowmegaman/gh-build-canceller@v1.3
+      with:
+        github_token: ${{secrets.PERSONAL_TOKEN}}
+        workflows_filter: "common"
