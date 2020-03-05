@@ -7,6 +7,7 @@ package object
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
@@ -31,13 +32,22 @@ func NewPostgresIndexDB(pool *pgxpool.Pool, records *PostgresRecordDB) *Postgres
 
 // SetIndex adds a bucket with provided pulseNumber and ID
 func (i *PostgresIndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			SetIndexTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetIndexRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
@@ -99,11 +109,20 @@ func (i *PostgresIndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, 
 func (i *PostgresIndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			UpdateLastKnownPulseTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, UpdateLastKnownPulseRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
@@ -160,7 +179,13 @@ func (i *PostgresIndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.P
 func (i *PostgresIndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
 	log := inslogger.FromContext(ctx)
 
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			ForIDTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -247,7 +272,13 @@ func (i *PostgresIndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, obj
 func (i *PostgresIndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
 	log := inslogger.FromContext(ctx)
 
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			ForPulseTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return nil, errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -388,7 +419,13 @@ func (i *PostgresIndexDB) lastKnownForID(ctx context.Context, tx pgx.Tx, objID i
 
 // LastKnownForID returns latest bucket for provided ID
 func (i *PostgresIndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			LastKnownForIDTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return record.Index{}, errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -417,11 +454,20 @@ func (i *PostgresIndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) 
 func (i *PostgresIndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	log := inslogger.FromContext(ctx)
 
-	conn, err := i.pool.Acquire(ctx)
+	startTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadIndexTime.M(float64(time.Since(startTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, i.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadIndexRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)

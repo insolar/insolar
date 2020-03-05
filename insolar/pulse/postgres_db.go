@@ -7,10 +7,12 @@ package pulse
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -84,7 +86,7 @@ func (s *PostgresDB) selectPulse(ctx context.Context, tx pgx.Tx, pn insolar.Puls
 }
 
 func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args ...interface{}) (retPulse insolar.Pulse, retErr error) {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -127,7 +129,13 @@ func (s *PostgresDB) selectByCondition(ctx context.Context, query string, args .
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
 func (s *PostgresDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (retPulse insolar.Pulse, retErr error) {
-	conn, err := s.pool.Acquire(ctx)
+	forPulseNumberTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			ForPulseNumberTime.M(float64(time.Since(forPulseNumberTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -156,19 +164,34 @@ func (s *PostgresDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber)
 
 // Latest returns a latest pulse saved in PostgresDB. If not found, ErrNotFound will be returned.
 func (s *PostgresDB) Latest(ctx context.Context) (retPulse insolar.Pulse, retErr error) {
+	latestTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			LatestTime.M(float64(time.Since(latestTime).Nanoseconds())/1e6))
+	}()
+
 	retPulse, retErr = s.selectByCondition(ctx, "SELECT max(pulse_number) as latest FROM pulses")
 	return
 }
 
 // TruncateHead remove all records with pulse_number >= `from`
 func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	truncateTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
@@ -194,6 +217,7 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -202,13 +226,22 @@ func (s *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber)
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
-	conn, err := s.pool.Acquire(ctx)
+	appendTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			AppendTime.M(float64(time.Since(appendTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, AppendRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
@@ -287,6 +320,7 @@ func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		}
 
 		log.Infof("Append - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -295,6 +329,12 @@ func (s *PostgresDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *PostgresDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+	forwardsTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			ForwardsTime.M(float64(time.Since(forwardsTime).Nanoseconds())/1e6))
+	}()
+
 	// There can be "holes" in pulses double-linked list, e.g.
 	// 1) Between fake genesis pulse and first real pulse
 	// 2) If pulsar is separated from the rest of the network for N pulses
@@ -310,6 +350,12 @@ SELECT pulse_number FROM pulses WHERE pulse_number >= $1 ORDER BY pulse_number a
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *PostgresDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (retPulse insolar.Pulse, retErr error) {
+	backwardsTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			BackwardsTime.M(float64(time.Since(backwardsTime).Nanoseconds())/1e6))
+	}()
+
 	retPulse, retErr = s.selectByCondition(ctx, `
 SELECT pulse_number FROM pulses WHERE pulse_number <= $1 ORDER BY pulse_number desc offset $2 limit 1;
 	`, pn, steps)

@@ -13,7 +13,12 @@ import (
 )
 
 var (
-	statJets           = stats.Int64("heavy_jets", "jets counter", stats.UnitDimensionless)
+	statJets = stats.Int64(
+		"heavy_jets",
+		"jets counter",
+		stats.UnitDimensionless,
+	)
+
 	statFinalizedPulse = stats.Int64(
 		"heavy_finalized_pulse",
 		"last pulse with fully finalized data",
@@ -36,6 +41,51 @@ var (
 		"badger_value_gc_time",
 		"duration of badger's value GC",
 		"s",
+	)
+
+	topSyncPulseTime = stats.Float64(
+		"jetkeeper_topsync_time",
+		"time spent on topSyncPulse",
+		stats.UnitMilliseconds,
+	)
+
+	getTime = stats.Float64(
+		"jetkeeper_get_time",
+		"time spent on get",
+		stats.UnitMilliseconds,
+	)
+
+	setTime = stats.Float64(
+		"jetkeeper_set_time",
+		"time spent on set",
+		stats.UnitMilliseconds,
+	)
+	setRetries = stats.Int64(
+		"jetkeeper_set_retries",
+		"retries while jetkeeper set",
+		stats.UnitDimensionless,
+	)
+
+	updateSyncPulseTime = stats.Float64(
+		"jetkeeper_updatesyncpulse_time",
+		"time spent on updateSyncPulse",
+		stats.UnitMilliseconds,
+	)
+	updateSyncPulseRetries = stats.Int64(
+		"jetkeeper_updatesyncpuls_retries",
+		"retries while jetkeeper updatesyncpuls",
+		stats.UnitDimensionless,
+	)
+
+	TruncateHeadTime = stats.Float64(
+		"jetkeeper_truncate_head_time",
+		"time spent on TruncateHead",
+		stats.UnitMilliseconds,
+	)
+	TruncateHeadRetries = stats.Int64(
+		"jetkeeper_truncate_head_retries",
+		"retries while jetkeeper TruncateHead",
+		stats.UnitDimensionless,
 	)
 )
 
@@ -70,6 +120,54 @@ func init() {
 			Description: statBadgerValueGCTime.Description(),
 			Measure:     statBadgerValueGCTime,
 			Aggregation: view.Distribution(0.0, float64(time.Minute)*2),
+		},
+		&view.View{
+			Name:        topSyncPulseTime.Name(),
+			Description: topSyncPulseTime.Description(),
+			Measure:     topSyncPulseTime,
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        getTime.Name(),
+			Description: getTime.Description(),
+			Measure:     getTime,
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        setTime.Name(),
+			Description: setTime.Description(),
+			Measure:     setTime,
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        setRetries.Name(),
+			Description: setRetries.Description(),
+			Measure:     setRetries,
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
+		},
+		&view.View{
+			Name:        updateSyncPulseTime.Name(),
+			Description: updateSyncPulseTime.Description(),
+			Measure:     updateSyncPulseTime,
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        updateSyncPulseRetries.Name(),
+			Description: updateSyncPulseRetries.Description(),
+			Measure:     updateSyncPulseRetries,
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
+		},
+		&view.View{
+			Name:        TruncateHeadTime.Name(),
+			Description: TruncateHeadTime.Description(),
+			Measure:     TruncateHeadTime,
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000),
+		},
+		&view.View{
+			Name:        TruncateHeadRetries.Name(),
+			Description: TruncateHeadRetries.Description(),
+			Measure:     TruncateHeadRetries,
+			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
 		},
 	)
 	if err != nil {
