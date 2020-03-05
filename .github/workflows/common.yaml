@@ -157,7 +157,7 @@ jobs:
           make build
           make functest
       - name: directories
-        run:  ls -la
+        run:  ls -la go/src/github.com/insolar/insolar
       - name: tree
         run: |
           sudo apt-get install tree
