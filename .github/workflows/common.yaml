@@ -156,6 +156,12 @@ jobs:
         run: |
           make build
           make functest
+      - name: directories
+        run:  ls -la
+      - name: tree
+        run: |
+          sudo apt-get install tree
+          tree
       - name: cleanup
         run: |
           docker rm -f $(docker ps -aq) || sleep 1
