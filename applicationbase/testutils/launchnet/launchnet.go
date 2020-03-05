@@ -53,8 +53,8 @@ var stderr io.ReadCloser
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(cb func() int, appPath []string, loadAllMembersKeys func() error, setInfo func() error, afterSetup func()) int {
-	err := setup(appPath, loadAllMembersKeys, setInfo, afterSetup)
+func Run(cb func() int, appPath []string, setInfo func() error, afterSetup func()) int {
+	err := setup(appPath, setInfo, afterSetup)
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
@@ -332,7 +332,7 @@ func RunOnlyWithLaunchnet(t *testing.T) {
 	}
 }
 
-func setup(appPath []string, loadAllMembersKeys func() error, setInfo func() error, afterSetup func()) error {
+func setup(appPath []string, setInfo func() error, afterSetup func()) error {
 	testRPCUrl := os.Getenv(testRPCUrlVar)
 	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
 
@@ -349,11 +349,12 @@ func setup(appPath []string, loadAllMembersKeys func() error, setInfo func() err
 		disableLaunchnet = true
 	}
 
-	err := loadAllMembersKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load keys: ")
-	}
-	fmt.Println("[ setup ] all keys successfully loaded")
+	var err error
+	// err := loadAllMembersKeys()
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ setup ] could't load keys: ")
+	// }
+	// fmt.Println("[ setup ] all keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {

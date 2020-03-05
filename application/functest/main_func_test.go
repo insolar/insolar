@@ -20,7 +20,14 @@ import (
 func TestMain(m *testing.M) {
 	os.Exit(launchnet.Run(
 		func() int {
-			err := setMigrationDaemonsRef()
+			err := LoadAllMembersKeys()
+			if err != nil {
+				fmt.Println("[ setup ] error while loading keys: ", err.Error())
+				return 1
+			}
+			fmt.Println("[ setup ] all keys successfully loaded")
+
+			err = setMigrationDaemonsRef()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
 			}
@@ -28,7 +35,6 @@ func TestMain(m *testing.M) {
 			return m.Run()
 		},
 		AppPath,
-		LoadAllMembersKeys,
 		SetInfo,
 		AfterSetup))
 }
