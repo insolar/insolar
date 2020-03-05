@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -36,7 +36,7 @@ var scheme = platformpolicy.NewPlatformCryptographyScheme()
 var keyProcessor = platformpolicy.NewKeyProcessor()
 
 func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &Root, "contract.registerNode", params)
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrl, &Root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}
@@ -45,7 +45,7 @@ func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string
 
 func TestRegisterNodeVirtual(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -53,7 +53,7 @@ func TestRegisterNodeVirtual(t *testing.T) {
 
 func TestRegisterNodeHeavyMaterial(t *testing.T) {
 	const testRole = "heavy_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -61,7 +61,7 @@ func TestRegisterNodeHeavyMaterial(t *testing.T) {
 
 func TestRegisterNodeLightMaterial(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	require.NotNil(t, ref)
@@ -69,20 +69,20 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 
 func TestRegisterNodeWithSamePK(t *testing.T) {
 	const testRole = "light_material"
-	testPublicKey := testutils.GenerateNodePublicKey(t)
+	testPublicKey := testrequest.GenerateNodePublicKey(t)
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "node already exist with this public key")
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
-		"contract.registerNode", map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": "some_not_fancy_role"})
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
+		"contract.registerNode", map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": "some_not_fancy_role"})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "role is not supported")
 }
@@ -90,15 +90,15 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t)
 	const testRole = "virtual"
-	_, err := testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
-		map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
+		map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {
 	const testRole = "virtual"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
 	body := testresponse.GetRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{

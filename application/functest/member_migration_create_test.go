@@ -13,14 +13,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 )
 
 func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
@@ -32,7 +32,7 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.PubKey = "fake"
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, fmt.Sprintf("problems with parsing. Key - %s", member.PubKey))
 }
@@ -41,10 +41,10 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
+	_, err = testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", map[string]interface{}{})
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", map[string]interface{}{})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't set reference because this key already exists")
 }

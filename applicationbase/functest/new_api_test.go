@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 )
 
 func TestBadSeed(t *testing.T) {
@@ -140,13 +140,13 @@ func TestIncorrectMethodName(t *testing.T) {
 	require.NoError(t, err)
 	require.Error(t, res.Error)
 	data := res.Error.Data
-	testutils.ExpectedError(t, data.Trace, "unknown method")
+	testrequest.ExpectedError(t, data.Trace, "unknown method")
 }
 
 func TestRequestReference(t *testing.T) {
-	publicKey := testutils.GenerateNodePublicKey(t)
+	publicKey := testrequest.GenerateNodePublicKey(t)
 
-	_, ref, err := testutils.MakeSignedRequest(
+	_, ref, err := testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		&Root,
 		"contract.registerNode",

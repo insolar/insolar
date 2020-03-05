@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api"
-	functestutils "github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 )
@@ -32,7 +32,7 @@ func TestDepositTransferToken(t *testing.T) {
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	anon := func() api.CallMethodReply {
-		_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
+		_, _, err := testrequest.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 
 		data := checkConvertRequesterError(t, err).Data
@@ -49,7 +49,7 @@ func TestDepositTransferToken(t *testing.T) {
 	_, err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
 	anon = func() api.CallMethodReply {
-		_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
+		_, _, err := testrequest.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 		if err == nil {
 			return api.CallMethodReply{}
@@ -68,7 +68,7 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 
 	member := fullMigration(t, ethHash)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "hold period didn't end", "check lockup_pulse_period param at bootstrap.yaml: it maybe too low")
@@ -79,7 +79,7 @@ func TestDepositTransferBiggerAmount(t *testing.T) {
 
 	member := fullMigration(t, ethHash)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")
@@ -90,7 +90,7 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 
 	member := fullMigration(t, ethHash)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": testutils.RandomEthHash()})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "can't find deposit")
@@ -101,11 +101,11 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 
 	member := fullMigration(t, ethHash)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": ethHash})
 	require.Error(t, err)
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
+	testrequest.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
@@ -115,7 +115,7 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	member := createMigrationMemberForMA(t)
 	_ = migrate(t, member.Ref, "1000", ethHash, member.MigrationAddress, 2)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": ethHash})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "not enough balance for transfer")

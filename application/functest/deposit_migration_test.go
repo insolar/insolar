@@ -15,8 +15,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	functestutils "github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -81,7 +81,7 @@ func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 		_ = migrate(t, member.Ref, "1000", ethHash, member.MigrationAddress, i)
 	}
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[countThreeActiveDaemon-1],
 		"deposit.migration",
@@ -105,7 +105,7 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
 	migrationAddress := testutils.RandomEthMigrationAddress()
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
 		&MigrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": testutils.RandomEthHash(), "migrationAddress": migrationAddress})
@@ -116,37 +116,37 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 func TestMigrationTokenZeroAmount(t *testing.T) {
 	member := createMigrationMemberForMA(t)
 
-	result, err := functestutils.SignedRequestWithEmptyRequestRef(t,
+	result, err := testrequest.SignedRequestWithEmptyRequestRef(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "0", "ethTxHash": testutils.RandomEthHash(), "migrationAddress": member.MigrationAddress})
 
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
+	testrequest.ExpectedError(t, data.Trace, `Error at "/params/callParams/amount":JSON string doesn't match the regular expression '^[1-9][0-9]*$`)
 	require.Nil(t, result)
 }
 
 func TestMigrationTokenMistakeField(t *testing.T) {
 	member := createMigrationMemberForMA(t)
 
-	result, err := functestutils.SignedRequestWithEmptyRequestRef(t,
+	result, err := testrequest.SignedRequestWithEmptyRequestRef(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": testutils.RandomEthHash(), "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, "Property 'amount' is missing")
+	testrequest.ExpectedError(t, data.Trace, "Property 'amount' is missing")
 	require.Nil(t, result)
 }
 
 func TestMigrationTokenNilValue(t *testing.T) {
 	member := createMigrationMemberForMA(t)
 
-	result, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, MigrationDaemons[0],
+	result, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, MigrationDaemons[0],
 		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": member.MigrationAddress})
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams/ethTxHash":Value is not nullable`)
+	testrequest.ExpectedError(t, data.Trace, `Error at "/params/callParams/ethTxHash":Value is not nullable`)
 	require.Nil(t, result)
 
 }
@@ -155,7 +155,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
-	result, err := functestutils.SignedRequest(t,
+	result, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0],
 		"deposit.migration",
@@ -170,14 +170,14 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	resultMigr1, err := functestutils.SignedRequest(t,
+	resultMigr1, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 	require.Equal(t, member.Ref, resultMigr1.(map[string]interface{})["memberReference"].(string))
 
-	resultMigr2, err := functestutils.SignedRequest(t,
+	resultMigr2, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
@@ -191,14 +191,14 @@ func TestMigrationDoubleMigrationFromSameDaemon_WithDifferentAmount(t *testing.T
 
 	ethHash := testutils.RandomEthHash()
 
-	resultMigr1, err := functestutils.SignedRequest(t,
+	resultMigr1, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 	require.Equal(t, member.Ref, resultMigr1.(map[string]interface{})["memberReference"].(string))
 
-	_, err = functestutils.SignedRequestWithEmptyRequestRef(t,
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0],
 		"deposit.migration",
@@ -218,13 +218,13 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[2],
 		"deposit.migration",
@@ -242,13 +242,13 @@ func TestMigration_WrongSecondAMount(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "100", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[1],
 		"deposit.migration",
@@ -258,7 +258,7 @@ func TestMigration_WrongSecondAMount(t *testing.T) {
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 1000", MigrationDaemons[0].Ref))
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 2000", MigrationDaemons[1].Ref))
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[2],
 		"deposit.migration",
@@ -287,13 +287,13 @@ func TestMigration_WrongFirstAmount(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "200", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[1],
 		"deposit.migration",
@@ -303,7 +303,7 @@ func TestMigration_WrongFirstAmount(t *testing.T) {
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 2000", MigrationDaemons[0].Ref))
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 1000", MigrationDaemons[1].Ref))
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[2],
 		"deposit.migration",
@@ -332,19 +332,19 @@ func TestMigration_WrongThirdAmount(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "100", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, err = functestutils.SignedRequest(t,
+	_, err = testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[1], "deposit.migration",
 		map[string]interface{}{"amount": "100", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[2],
 		"deposit.migration",
@@ -372,13 +372,13 @@ func TestMigration_WrongAllAmount(t *testing.T) {
 
 	ethHash := testutils.RandomEthHash()
 
-	_, err := functestutils.SignedRequest(t,
+	_, err := testrequest.SignedRequest(t,
 		launchnet.TestRPCUrl,
 		MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "100", "ethTxHash": ethHash, "migrationAddress": member.MigrationAddress})
 	require.NoError(t, err)
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[1],
 		"deposit.migration",
@@ -388,7 +388,7 @@ func TestMigration_WrongAllAmount(t *testing.T) {
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 1000", MigrationDaemons[0].Ref))
 	require.Contains(t, data.Trace, fmt.Sprintf("%s send amount 2000", MigrationDaemons[1].Ref))
 
-	_, _, err = functestutils.MakeSignedRequest(
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrl,
 		MigrationDaemons[2],
 		"deposit.migration",
@@ -430,7 +430,7 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 
 	for i := 1; i < countThreeActiveDaemon; i++ {
 		go func(i int) {
-			res, _, err := functestutils.MakeSignedRequest(
+			res, _, err := testrequest.MakeSignedRequest(
 				launchnet.TestRPCUrl,
 				MigrationDaemons[i],
 				"deposit.migration",

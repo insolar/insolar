@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package testutils
+package testrequest
 
 import (
 	"context"

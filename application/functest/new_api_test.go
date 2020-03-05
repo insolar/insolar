@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	functestutils "github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/insolar/secrets"
 
 	"github.com/insolar/insolar/api/requester"
@@ -90,25 +90,25 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, `Error at "/params/callParams"`)
+	testrequest.ExpectedError(t, data.Trace, `Error at "/params/callParams"`)
 }
 
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := functestutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, `doesn't match the schema: Error at "/params":Property 'callParams' is missing`)
+	testrequest.ExpectedError(t, data.Trace, `doesn't match the schema: Error at "/params":Property 'callParams' is missing`)
 }
 
 func TestNotAllowedMethod(t *testing.T) {
 	member := createMember(t)
 
-	_, _, err := functestutils.MakeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
+	_, _, err := testrequest.MakeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
 		map[string]interface{}{"reference": member.Ref})
 	require.Error(t, err)
 	data := checkConvertRequesterError(t, err).Data
-	functestutils.ExpectedError(t, data.Trace, "unknown method")
+	testrequest.ExpectedError(t, data.Trace, "unknown method")
 }

@@ -21,15 +21,15 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/applicationbase/testutils"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 
 	"github.com/stretchr/testify/require"
 )
 
 func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := testutils.SignedRequest(t, launchnet.TestRPCUrl, &Root, "contract.getNodeRef", params)
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrl, &Root, "contract.getNodeRef", params)
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +38,7 @@ func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, 
 
 func TestGetNodeRefByPublicKey(t *testing.T) {
 	const testRole = "light_material"
-	publicKey := testutils.GenerateNodePublicKey(t)
+	publicKey := testrequest.GenerateNodePublicKey(t)
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
@@ -50,12 +50,12 @@ func TestGetNodeRefByPublicKey(t *testing.T) {
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	notExistingPublicKey := testutils.GenerateNodePublicKey(t)
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
+	notExistingPublicKey := testrequest.GenerateNodePublicKey(t)
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": notExistingPublicKey})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "network node was not found by public key")
@@ -63,11 +63,11 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testutils.GenerateNodePublicKey(t), "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	_, err = testutils.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
+	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
 	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'publicKey' param")

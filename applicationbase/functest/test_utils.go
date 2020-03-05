@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/applicationbase/testutils"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/insolar/secrets"
 
@@ -85,7 +85,7 @@ func createMember(t *testing.T) *CommonUser {
 	require.NoError(t, err)
 	member.Ref = Root.GetReference()
 
-	result, err := testutils.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
