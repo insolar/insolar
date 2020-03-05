@@ -159,7 +159,7 @@ jobs:
       - name: directories
         run: |
           ls -la go/src/github.com/insolar/insolar
-          sudo apt-get install zip
+          sudo apt-get install -y zip
           du -sh go/src/github.com/insolar/insolar/.artifacts
           zip -r9q art.zip go/src/github.com/insolar/insolar/.artifacts
           du -sh art.zip
