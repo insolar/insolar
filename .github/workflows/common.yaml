@@ -158,11 +158,13 @@ jobs:
           make functest
       - name: directories
         run: |
+          env | sort
           ls -la go/src/github.com/insolar/insolar
           sudo apt-get install -y zip
           du -sh go/src/github.com/insolar/insolar/.artifacts
           zip -r9q art.zip go/src/github.com/insolar/insolar/.artifacts
           du -sh art.zip
+          sleep 100
       - name: cleanup
         run: |
           docker rm -f $(docker ps -aq) || sleep 1
