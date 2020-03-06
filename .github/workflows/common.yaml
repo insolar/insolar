@@ -141,6 +141,12 @@ jobs:
     env:
       GOPATH: ${{github.workspace}}/go
     steps:
+      - name: cleanup
+        run: |
+          docker rm -f $(docker ps -aq) || sleep 1
+          docker rmi -f $(docker images -aq) || sleep 1
+          docker volume rm -f $(docker volume ls -q) || sleep 1
+          rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
@@ -156,18 +162,27 @@ jobs:
         run: |
           make build
           make functest
-      - name: cleanup
+      - name: archive_logs
+        if: failure()
         run: |
-          docker rm -f $(docker ps -aq) || sleep 1
-          docker rmi -f $(docker images -aq) || sleep 1
-          docker volume rm -f $(docker volume ls -q) || sleep 1
-          rm -rf $GITHUB_WORKSPACE/*
+          tar -czvf logs-badger.tar.gz go/src/github.com/insolar/insolar/.artifacts/launchnet/logs
+      - uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: logs-badger
+          path: logs-badger.tar.gz
   func-tests-pgsql:
     runs-on: self-hosted
     name: func-tests-pgsql
     env:
       GOPATH: ${{github.workspace}}/go
     steps:
+      - name: cleanup
+        run: |
+          docker rm -f $(docker ps -aq) || sleep 1
+          docker rmi -f $(docker images -aq) || sleep 1
+          docker volume rm -f $(docker volume ls -q) || sleep 1
+          rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
@@ -185,9 +200,12 @@ jobs:
         run: |
           make build
           make functest
-      - name: cleanup
+      - name: archive_logs
+        if: failure()
         run: |
-          docker rm -f $(docker ps -aq) || sleep 1
-          docker rmi -f $(docker images -aq) || sleep 1
-          docker volume rm -f $(docker volume ls -q) || sleep 1
-          rm -rf $GITHUB_WORKSPACE/*
+          tar -czvf logs-pgsql.tar.gz go/src/github.com/insolar/insolar/.artifacts/launchnet/logs
+      - uses: actions/upload-artifact@v1
+        if: failure()
+        with:
+          name: logs-pgsql
+          path: logs-pgsql.tar.gz
