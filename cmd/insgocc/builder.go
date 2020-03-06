@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	contractSources = insolar.RootModule + "/application/contract"
-	proxySources    = insolar.RootModule + "/application/proxy"
+	contractSources = insolar.RootModule + "/applicationbase/contract"
+	proxySources    = insolar.RootModule + "/applicationbase/proxy"
 )
 
 type contractsBuilder struct {

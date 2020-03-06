@@ -41,7 +41,7 @@ func genesisCompile() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&outDir, "output-dir", "o", ".", "output dir")
-	cmd.Flags().StringVarP(&srcDir, "sources-dir", "s", "", "sources dir (default is application/contract)")
+	cmd.Flags().StringVarP(&srcDir, "sources-dir", "s", "", "sources dir (default is applicationbase/contract)")
 	cmd.Flags().StringVarP(&tmpDir, "temp-dir", "t", "", "temporary dir")
 	// default value for bool flags is not displayed automatically, thus it's done manually here
 	cmd.Flags().BoolVarP(&keepTemp, "keep-temp", "k", false, "keep temp directory (default \"false\")")

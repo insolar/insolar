@@ -11,7 +11,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/insolar/gen"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestGetBalance(t *testing.T) {
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root, "member.getBalance",
+	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root, "member.getBalance",
 		map[string]interface{}{"reference": gen.Reference().String()})
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to fetch index from heavy")

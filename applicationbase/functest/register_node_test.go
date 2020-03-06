@@ -65,14 +65,14 @@ func TestRegisterNodeWithSamePK(t *testing.T) {
 
 	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testPublicKey, "role": testRole})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "node already exist with this public key")
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": "some_not_fancy_role"})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "role is not supported")
 }
 
@@ -81,7 +81,7 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	const testRole = "virtual"
 	_, err := testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
 		map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "only root member can register node")
 }
 
@@ -90,7 +90,7 @@ func TestReceiveNodeCert(t *testing.T) {
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": testrequest.GenerateNodePublicKey(t), "role": testRole})
 	require.NoError(t, err)
 
-	body := getRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
+	body := testresponse.GetRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      "",

@@ -7,7 +7,6 @@ package launchnet
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,7 +16,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -29,8 +27,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
 )
@@ -49,25 +45,16 @@ var testRPCUrlVar = "INSOLAR_FUNC_RPC_URL"
 var testRPCUrlPublicVar = "INSOLAR_FUNC_RPC_URL_PUBLIC"
 var keysPathVar = "INSOLAR_FUNC_KEYS_PATH"
 
-const insolarRootMemberKeys = "root_member_keys.json"
-const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
-const insolarFeeMemberKeys = "fee_member_keys.json"
-
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var ApplicationIncentives [application.GenesisAmountApplicationIncentivesMembers]*User
-var NetworkIncentives [application.GenesisAmountNetworkIncentivesMembers]*User
-var Enterprise [application.GenesisAmountEnterpriseMembers]*User
-var Foundation [application.GenesisAmountFoundationMembers]*User
-
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(cb func() int) int {
-	err := setup()
+func Run(cb func() int, appPath []string, setInfo func() error, afterSetup func()) int {
+	err := setup(appPath, setInfo, afterSetup)
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
@@ -100,20 +87,13 @@ func Run(cb func() int) int {
 	return code
 }
 
-var info *sdk.InfoResponse
-var Root User
-var MigrationAdmin User
-var FeeMember User
-var MigrationDaemons [application.GenesisAmountMigrationDaemonMembers]*User
-
-type User struct {
-	Ref              string
-	PrivKey          string
-	PubKey           string
-	MigrationAddress string
+type User interface {
+	GetReference() string
+	GetPrivateKey() string
+	GetPublicKey() string
 }
 
-func launchnetPath(a ...string) (string, error) {
+func LaunchnetPath(appPath []string, a ...string) (string, error) {
 	keysPath := os.Getenv(keysPathVar)
 	if keysPath != "" {
 		p := []string{keysPath}
@@ -127,7 +107,7 @@ func launchnetPath(a ...string) (string, error) {
 	cwdList := strings.Split(cwd, "/")
 	var count int
 	for i := len(cwdList); i >= 0; i-- {
-		if cwdList[i-1] == "insolar" && cwdList[i-2] == "insolar" {
+		if cwdList[i-1] == appPath[0] && cwdList[i-2] == appPath[1] {
 			break
 		}
 		count++
@@ -146,7 +126,7 @@ func launchnetPath(a ...string) (string, error) {
 	return filepath.Join(parts...), nil
 }
 
-func GetNodesCount() (int, error) {
+func GetNodesCount(appPath []string) (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 		Nodes         []interface{} `yaml:"nodes"`
@@ -154,7 +134,7 @@ func GetNodesCount() (int, error) {
 
 	var conf nodesConf
 
-	path, err := launchnetPath("bootstrap.yaml")
+	path, err := LaunchnetPath(appPath, "bootstrap.yaml")
 	if err != nil {
 		return 0, err
 	}
@@ -169,151 +149,6 @@ func GetNodesCount() (int, error) {
 	}
 
 	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
-}
-
-func GetNumShards() (int, error) {
-	type bootstrapConf struct {
-		PKShardCount int `yaml:"ma_shard_count"`
-	}
-
-	var conf bootstrapConf
-
-	path, err := launchnetPath("bootstrap.yaml")
-	if err != nil {
-		return 0, err
-	}
-	buff, err := ioutil.ReadFile(path)
-	if err != nil {
-		return 0, errors.Wrap(err, "[ GetNumShards ] Can't read bootstrap config")
-	}
-
-	err = yaml.Unmarshal(buff, &conf)
-	if err != nil {
-		return 0, errors.Wrap(err, "[ GetNumShards ] Can't parse bootstrap config")
-	}
-
-	return conf.PKShardCount, nil
-}
-
-func loadMemberKeys(keysPath string, member *User) error {
-	text, err := ioutil.ReadFile(keysPath)
-	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
-	}
-	var data map[string]string
-	err = json.Unmarshal(text, &data)
-	if err != nil {
-		return errors.Wrapf(err, "[ loadMemberKeys ] could't unmarshal member keys")
-	}
-	if data["private_key"] == "" || data["public_key"] == "" {
-		return errors.New("[ loadMemberKeys ] could't find any keys")
-	}
-	member.PrivKey = data["private_key"]
-	member.PubKey = data["public_key"]
-
-	return nil
-}
-
-func loadAllMembersKeys() error {
-	path, err := launchnetPath("configs", insolarRootMemberKeys)
-	if err != nil {
-		return err
-	}
-	err = loadMemberKeys(path, &Root)
-	if err != nil {
-		return err
-	}
-	path, err = launchnetPath("configs", insolarFeeMemberKeys)
-	if err != nil {
-		return err
-	}
-	err = loadMemberKeys(path, &FeeMember)
-	if err != nil {
-		return err
-	}
-	path, err = launchnetPath("configs", insolarMigrationAdminMemberKeys)
-	if err != nil {
-		return err
-	}
-	err = loadMemberKeys(path, &MigrationAdmin)
-	if err != nil {
-		return err
-	}
-	for i := range MigrationDaemons {
-		path, err := launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		MigrationDaemons[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountApplicationIncentivesMembers; i++ {
-		path, err := launchnetPath("configs", "application_incentives_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		ApplicationIncentives[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountNetworkIncentivesMembers; i++ {
-		path, err := launchnetPath("configs", "network_incentives_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		NetworkIncentives[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountFoundationMembers; i++ {
-		path, err := launchnetPath("configs", "foundation_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		Foundation[i] = &md
-	}
-
-	for i := 0; i < application.GenesisAmountEnterpriseMembers; i++ {
-		path, err := launchnetPath("configs", "enterprise_"+strconv.Itoa(i)+"_member_keys.json")
-		if err != nil {
-			return err
-		}
-		var md User
-		err = loadMemberKeys(path, &md)
-		if err != nil {
-			return err
-		}
-		Enterprise[i] = &md
-	}
-
-	return nil
-}
-
-func setInfo() error {
-	var err error
-	info, err = sdk.Info(TestRPCUrl)
-	if err != nil {
-		return errors.Wrap(err, "[ setInfo ] error sending request")
-	}
-	return nil
 }
 
 func stopInsolard() error {
@@ -392,7 +227,7 @@ func waitForNet() error {
 	return nil
 }
 
-func startNet() error {
+func startNet(appPath []string) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -402,7 +237,8 @@ func startNet() error {
 		_ = os.Chdir(cwd)
 	}()
 
-	for cwd[len(cwd)-15:] != "insolar/insolar" {
+	cwdList := strings.Split(cwd, "/")
+	for cwdList[len(cwdList)-1] != appPath[1] || cwdList[len(cwdList)-2] != appPath[0] {
 		err = os.Chdir("../")
 		if err != nil {
 			return errors.Wrap(err, "[ startNet  ] Can't change dir")
@@ -411,6 +247,10 @@ func startNet() error {
 		if err != nil {
 			return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 		}
+		if cwd == "/" {
+			return errors.Errorf("[ startNet ] Can't find directory with name `insolar/%s`", appPath)
+		}
+		cwdList = strings.Split(cwd, "/")
 	}
 
 	// If you want to add -n flag here please make sure that insgorund will
@@ -492,12 +332,12 @@ func RunOnlyWithLaunchnet(t *testing.T) {
 	}
 }
 
-func setup() error {
+func setup(appPath []string, setInfo func() error, afterSetup func()) error {
 	testRPCUrl := os.Getenv(testRPCUrlVar)
 	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
 
 	if testRPCUrl == "" || testRPCUrlPublic == "" {
-		err := startNet()
+		err := startNet(appPath)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] could't startNet")
 		}
@@ -509,11 +349,12 @@ func setup() error {
 		disableLaunchnet = true
 	}
 
-	err := loadAllMembersKeys()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't load keys: ")
-	}
-	fmt.Println("[ setup ] all keys successfully loaded")
+	var err error
+	// err := loadAllMembersKeys()
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ setup ] could't load keys: ")
+	// }
+	// fmt.Println("[ setup ] all keys successfully loaded")
 
 	numAttempts := 60
 	for i := 0; i < numAttempts; i++ {
@@ -530,8 +371,7 @@ func setup() error {
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	Root.Ref = info.RootMember
-	MigrationAdmin.Ref = info.MigrationAdminMember
+	afterSetup()
 
 	return nil
 }
@@ -591,8 +431,8 @@ func DumpMetricsEnabled() bool {
 
 // FetchAndSaveMetrics fetches all nodes metric endpoints and saves result to files in
 // logs/metrics/$iteration/<node-addr>.txt files.
-func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
-	n, err := GetNodesCount()
+func FetchAndSaveMetrics(iteration int, appPath []string) ([][]byte, error) {
+	n, err := GetNodesCount(appPath)
 	if err != nil {
 		return nil, err
 	}

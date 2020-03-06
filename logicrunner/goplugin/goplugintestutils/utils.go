@@ -221,7 +221,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 
 func (cb *ContractsBuilder) proxy(name string, _ BuildOptions) error {
 	root := insolar.RootModuleDir()
-	dstDir := filepath.Join(root, "application/proxy", name)
+	dstDir := filepath.Join(root, "applicationbase/proxy", name)
 
 	err := os.MkdirAll(dstDir, 0777)
 	if err != nil {

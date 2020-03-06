@@ -1,8 +1,8 @@
 run:
   tests: false
   skip-dirs:
-    - application/contract/
-    - application/proxy/
+    - applicationbase/contract/
+    - applicationbase/proxy/
     - logicrunner/goplugin/ginsider/healthcheck
 
 linters:

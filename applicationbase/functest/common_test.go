@@ -17,7 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 )
 
 func TestGetRequest(t *testing.T) {
@@ -28,7 +29,7 @@ func TestGetRequest(t *testing.T) {
 }
 
 func TestWrongUrl(t *testing.T) {
-	jsonValue, _ := json.Marshal(postParams{})
+	jsonValue, _ := json.Marshal(testresponse.PostParams{})
 	testURL := launchnet.AdminHostPort + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	defer postResp.Body.Close()
@@ -45,7 +46,7 @@ func TestWrongJson(t *testing.T) {
 	require.NoError(t, err)
 
 	response := &requester.ContractResponse{}
-	unmarshalCallResponse(t, body, response)
+	testresponse.UnmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 
 	require.Equal(t, "The JSON received is not a valid request payload.", response.Error.Message)
