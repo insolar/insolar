@@ -162,12 +162,15 @@ jobs:
         run: |
           make build
           make functest
-          exit 1
+      - name: archive_logs
+        if: failure()
+        run: |
+          tar -czvf logs-badger.tar.gz go/src/github.com/insolar/insolar/.artifacts/launchnet/logs
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
           name: logs-badger
-          path: go/src/github.com/insolar/insolar/.artifacts/launchnet/logs
+          path: logs-badger.tar.gz
   func-tests-pgsql:
     runs-on: self-hosted
     name: func-tests-pgsql
