@@ -162,6 +162,7 @@ jobs:
         run: |
           make build
           make functest
+          exit 1
       - name: archive_logs
         if: failure()
         run: |
