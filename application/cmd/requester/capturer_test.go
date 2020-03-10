@@ -74,16 +74,16 @@ func (capturer *Capturer) capture(fn func(), duration time.Duration) (string, er
 		if e == io.EOF {
 			return result{string(line), nil}
 		} else if e != nil {
-			return result{"nil", e}
+			return result{"", e}
 		}
 		return result{string(line), e}
 	}
 
 	res, err := waitForFunction(anon, duration*2)
 	if err != nil {
-		return "nil", err
+		return "", err
 	}
-	return res.(result).str, err
+	return res.(result).str, res.(result).err
 }
 
 type result struct {
