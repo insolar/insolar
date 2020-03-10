@@ -226,61 +226,6 @@ generate_pulsar_keys()
     bin/insolar gen-key-pair --target=node > ${PULSAR_KEYS}
 }
 
-generate_root_member_keys()
-{
-    echo "generate members keys in dir: $CONFIGS_DIR"
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}root_member_keys.json
-
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}fee_member_keys.json
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}migration_admin_member_keys.json
-    for (( b = 0; b < 10; b++ ))
-    do
-    bin/insolar gen-key-pair --target=node > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
-    done
-
-    for (( b = 0; b < 140; b++ ))
-    do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
-    done
-
-    for (( b = 0; b < 40; b++ ))
-    do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
-    done
-
-    for (( b = 0; b < 40; b++ ))
-    do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}foundation_${b}_member_keys.json
-    done
-
-    for (( b = 0; b < 1; b++ ))
-    do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}funds_${b}_member_keys.json
-    done
-
-    for (( b = 0; b < 8; b++ ))
-    do
-    bin/insolar gen-key-pair --target=user > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
-    done
-}
-
-generate_migration_addresses()
-{
-    echo "generate migration addresses: ${CONFIGS_DIR}migration_addresses.json"
-    bin/insolar gen-migration-addresses > ${CONFIGS_DIR}migration_addresses.json
-}
-
-check_working_dir()
-{
-    echo "check_working_dir() starts ..."
-    if ! pwd | grep -q "src/github.com/insolar/insolar$"
-    then
-        echo "Run me from insolar root"
-        exit 1
-    fi
-    echo "check_working_dir() end."
-}
-
 usage()
 {
     echo "usage: $0 [options]"
