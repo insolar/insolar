@@ -40,20 +40,20 @@ var (
 	nodeCertificatePathTemplate      = "nodes/%d/cert.json"
 	pulsewatcherFileName             = withBaseDir("pulsewatcher.yaml")
 
-	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
+	prometheusConfigTmpl = "insolar-scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
 
 	bootstrapConfigTmpl = "scripts/insolard/bootstrap_template.yaml"
 	bootstrapFileName   = withBaseDir("bootstrap.yaml")
 
-	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
+	pulsardConfigTmpl = "insolar-scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
 
-	keeperdConfigTmpl = "scripts/insolard/keeperd_template.yaml"
+	keeperdConfigTmpl = "insolar-scripts/insolard/keeperd_template.yaml"
 	keeperdFileName   = withBaseDir("keeperd.yaml")
 
-	insolardDefaultsConfigWithBadger   = "scripts/insolard/defaults/insolard_badger.yaml"
-	insolardDefaultsConfigWithPostgres = "scripts/insolard/defaults/insolard_postgres.yaml"
+	insolardDefaultsConfigWithBadger   = "insolar-scripts/insolard/defaults/insolard_badger.yaml"
+	insolardDefaultsConfigWithPostgres = "insolar-scripts/insolard/defaults/insolard_postgres.yaml"
 )
 
 var (

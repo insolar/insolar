@@ -3,16 +3,16 @@
 #
 # 1. without arguments just (re)creates all containers:
 #
-# ./scripts/monitor.sh
+# ./insolar-scripts/monitor.sh
 #
 # 2. with arguments just wraps docker-compose command:
 #
-# ./scripts/monitor.sh -h
+# ./insolar-scripts/monitor.sh -h
 #
 # examples:
 #
-# ./scripts/monitor.sh logs -f jaeger
-# ./scripts/monitor.sh restart jaeger
+# ./insolar-scripts/monitor.sh logs -f jaeger
+# ./insolar-scripts/monitor.sh restart jaeger
 
 # strict mode
 set -euo pipefail
@@ -37,10 +37,10 @@ if [[ $# -lt 1 ]]; then
 # * shutdown ans start all monitoring services
 # * wait until Jaeger starts (we want to be sure tracer works before start benchmark)
     echo "pre-gen launchnet configs (required for prometheus config generation)"
-    ./scripts/insolard/launchnet.sh -C
+    ./insolar-scripts/insolard/launchnet.sh -C
 
     echo "start monitoring stack"
-    cd scripts/
+    cd insolar-scripts/
 
     docker-compose down
     docker-compose up -d
@@ -71,5 +71,5 @@ fi
 
 # 2) with arguments just work as thin docker-compose wrapper
 
-cd scripts/
+cd insolar-scripts/
 docker-compose $@

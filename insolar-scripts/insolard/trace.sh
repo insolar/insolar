@@ -3,7 +3,7 @@
 # Example of running tracing for 60 second on all insolard node
 # (by default trace works for 30 seconds):
 #
-# ./scripts/insolard/trace.sh [60]
+# ./insolar-scripts/insolard/trace.sh [60]
 
 set -e
 

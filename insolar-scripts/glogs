@@ -5,15 +5,15 @@ read -r -d '' help <<'EOF'
 #
 # Usage:
 #
-# ./scripts/glogs "PATTERN" [grep flags]
+# ./insolar-scripts/glogs "PATTERN" [grep flags]
 #
 # Examples:
 #
-# ./scripts/glogs "synchronize" -C1
+# ./insolar-scripts/glogs "synchronize" -C1
 #
 # force grep usage:
 #
-# USE_GREP=1 ./scripts/glogs "panic|error" -E -A10
+# USE_GREP=1 ./insolar-scripts/glogs "panic|error" -E -A10
 #
 EOF
 

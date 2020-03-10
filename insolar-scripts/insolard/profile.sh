@@ -3,7 +3,7 @@
 # Example of profiling 60 second profile on all insolard node
 # (by default profiles 30 seconds):
 #
-# ./scripts/insolard/profile.sh [60]
+# ./insolar-scripts/insolard/profile.sh [60]
 
 set -e
 

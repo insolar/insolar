@@ -257,7 +257,7 @@ func startNet(appPath []string) error {
 	// be eventually started with --log-level=debug. Otherwise someone will spent
 	// a lot of time trying to figure out why insgorund debug logs are missing
 	// during execution of functests.
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
+	cmd = exec.Command("./insolar-scripts/insolard/launchnet.sh", "-gw")
 	stdout, _ = cmd.StdoutPipe()
 
 	stderr, err = cmd.StderrPipe()

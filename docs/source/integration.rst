@@ -85,7 +85,7 @@ To set up the network locally, do the following:
 
    .. code-block:: bash
 
-      scripts/insolard/launchnet.sh -g
+      insolar-scripts/insolard/launchnet.sh -g
 
    The launcher generates bootstrap data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
 
@@ -96,7 +96,7 @@ When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has 
 Logging and Monitoring
 ----------------------
 
-To manually bring up :ref:`logging and monitoring <logs_and_monitor>`, run ``scripts/monitor.sh``.
+To manually bring up :ref:`logging and monitoring <logs_and_monitor>`, run ``insolar-scripts/monitor.sh``.
 
 To see the node’s logs, open Kibana in a web browser (``http://<your_server_IP>:5601/``) and click :guilabel:`Discover` in the menu.
 

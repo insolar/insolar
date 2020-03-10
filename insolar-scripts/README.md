@@ -1,4 +1,4 @@
-# how to start launchnet, bench and monitor
+# how to start launchnet and monitor
 
 ## run
 
@@ -7,10 +7,6 @@
 ## monitor
 
     ./insolar-scripts/monitor.sh
-
-## bench
-
-    ./scripts/bench.sh -c=2 -r=40
 
 ## if you want to use jaeger in launchnet, add ENV param
 

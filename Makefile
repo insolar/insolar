@@ -75,7 +75,7 @@ clean: ## run all cleanup tasks
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
-	./scripts/insolard/launchnet.sh -l
+	./insolar-scripts/insolard/launchnet.sh -l
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen

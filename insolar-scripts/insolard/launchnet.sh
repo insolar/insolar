@@ -75,20 +75,14 @@ done
 # LOGROTATOR_ENABLE enables log rotation before every functest start
 LOGROTATOR_ENABLE=${LOGROTATOR_ENABLE:-""}
 LOGROTATOR=tee
-LOGROTATOR_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
 if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
-  LOGROTATOR=${LOGROTATOR_BIN}
+  LOGROTATOR=inslogrotator
 fi
 
 build_logger()
 {
     echo "build logger binaries"
-    set -x
-    pushd scripts/_logger
-    GO111MODULE=on go build -o inslogrotator .
-    popd
-    mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
-    { set +x; } 2>/dev/null
+    go get github.com/insolar/insolar/scripts/inslogrotator
 }
 
 kill_port()
@@ -195,7 +189,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run -mod=vendor scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
+    go run -mod=vendor insolar-scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 
@@ -386,7 +380,7 @@ wait_for_complete_network_state()
 {
     while true
     do
-        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
+        num=`insolar-scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
         echo "$num/$NUM_DISCOVERY_NODES discovery nodes ready"
         if [[ "$num" -eq "$NUM_DISCOVERY_NODES" ]]
         then
@@ -406,9 +400,8 @@ bootstrap()
         echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"
     fi
     generate_pulsar_keys
-    generate_root_member_keys
+    ./scripts/insolard/generate_initial_data.sh
     generate_insolard_configs
-    generate_migration_addresses
 
     echo "start bootstrap ..."
     CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG}"
@@ -478,7 +471,7 @@ if [[ "$POSTGRES_ENABLE" == "1" ]]; then
   # Build PostgreSQL Docker image with custom postgresql.conf
   OLD_PWD=`pwd`
   echo "pwd: $OLD_PWD"
-  cd scripts/insolard/postgresql-docker
+  cd insolar-scripts/insolard/postgresql-docker
   docker build --no-cache -t insolar-functests-postgresql .
   cd $OLD_PWD
   # Start a new PostgreSQL container
@@ -533,9 +526,9 @@ if [[ "$NUM_NODES" -ne "0"  && "$run_insgorund" == "true" ]]
 then
     wait_for_complete_network_state
     if [[ "$GENESIS" == "1" ]]; then
-        ./scripts/insolard/start_nodes.sh -g
+        ./insolar-scripts/insolard/start_nodes.sh -g
     else
-        ./scripts/insolard/start_nodes.sh
+        ./insolar-scripts/insolard/start_nodes.sh
     fi
 fi
 

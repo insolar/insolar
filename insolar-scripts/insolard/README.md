@@ -8,10 +8,6 @@ Check that all nodes are in the complete network state:
 
     ./insolar-scripts/insolard/check_status.sh
 
-Start benchmark:
-
-    ./bin/benchmark -c=10 -r=1000 -k=.artifacts/launchnet/configs/
-
 Start profiler:
 
     ./insolar-scripts/insolard/profile.sh

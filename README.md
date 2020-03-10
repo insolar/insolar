@@ -45,7 +45,7 @@ To test Insolar locally, install it and deploy as described below.
 1. Run the launcher:
 
    ```
-   scripts/insolard/launchnet.sh -g
+   insolar-scripts/insolard/launchnet.sh -g
    ```
 
    It generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.

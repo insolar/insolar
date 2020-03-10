@@ -5,7 +5,7 @@ read -r -d '' help <<'EOF'
 #
 # Usage:
 #
-# ./scripts/tails [tail flags]
+# ./insolar-scripts/tails [tail flags]
 ##
 EOF
 
