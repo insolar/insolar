@@ -144,7 +144,7 @@ jobs:
       - name: cleanup
         run: |
           env | sort
-          exit
+          exit 1
           docker rm -f $(docker ps -aq) || sleep 1
           docker rmi -f $(docker images -aq) || sleep 1
           docker volume rm -f $(docker volume ls -q) || sleep 1
