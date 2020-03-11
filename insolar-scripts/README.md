@@ -6,6 +6,17 @@ To run launchnet, you must provide several files:
 
 `/scripts/insolard/generate_initial_data.sh` - script, which creates init data for application (members keys, migration addresses, etc.)
 
+`/bin/insolard` - insolard binary
+
+`/bin/insolard` - insolard binary
+
+Make file must containes:
+
+`make build` build binaries
+
+`make clean` clear binaries
+
+
 ## run
 
     ./insolar-scripts/insolard/launchnet.sh -g
