@@ -164,6 +164,9 @@ jobs:
         run: |
           make build
           make functest
+      - name: slack
+        if: failure()
+        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'"}'
       - name: archive_logs
         if: failure()
         run: |
@@ -173,9 +176,6 @@ jobs:
         with:
           name: logs-badger
           path: logs-badger.tar.gz
-      - name: slack
-        if: failure()
-        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'"}'
   func-tests-pgsql:
     runs-on: self-hosted
     name: func-tests-pgsql
