@@ -84,10 +84,10 @@ build_logger()
 {
     echo "build logger binaries"
     set -x
-    pushd scripts/_logger
+    pushd scripts/inslogrotator
     GO111MODULE=on go build -o inslogrotator .
     popd
-    mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
+    mv scripts/inslogrotator/inslogrotator ${LOGROTATOR_BIN}
     { set +x; } 2>/dev/null
 }
 
