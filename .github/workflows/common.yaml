@@ -160,6 +160,7 @@ jobs:
       - name: test_func
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
+          make submodule
           make build
           make functest
       - name: archive_logs
@@ -198,6 +199,7 @@ jobs:
         env:
           POSTGRES_ENABLE: 1
         run: |
+          make submodule
           make build
           make functest
       - name: archive_logs
