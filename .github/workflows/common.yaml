@@ -143,6 +143,8 @@ jobs:
     steps:
       - name: cleanup
         run: |
+          env | sort
+          exit
           docker rm -f $(docker ps -aq) || sleep 1
           docker rmi -f $(docker images -aq) || sleep 1
           docker volume rm -f $(docker volume ls -q) || sleep 1
@@ -171,6 +173,9 @@ jobs:
         with:
           name: logs-badger
           path: logs-badger.tar.gz
+      - name: slack
+        if: failure()
+        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'"}'
   func-tests-pgsql:
     runs-on: self-hosted
     name: func-tests-pgsql
