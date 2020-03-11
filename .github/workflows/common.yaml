@@ -166,7 +166,7 @@ jobs:
           make functest
       - name: slack
         if: failure()
-        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'"}'
+        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'\nHave a look! '$GITHUB_ACTOR'"}'
       - name: archive_logs
         if: failure()
         run: |
