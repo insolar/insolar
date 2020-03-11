@@ -67,7 +67,7 @@ func (capturer *Capturer) capture(fn func(), duration time.Duration) (string, er
 
 	fn()
 
-	anon := func() interface{} {
+	getPipeResultFunction := func() interface{} {
 		defer r.Close()
 		reader := bufio.NewReader(r)
 		line, _, e := reader.ReadLine()
@@ -79,7 +79,7 @@ func (capturer *Capturer) capture(fn func(), duration time.Duration) (string, er
 		return result{string(line), e}
 	}
 
-	res, err := waitForFunction(anon, duration*2)
+	res, err := waitForFunction(getPipeResultFunction, duration*2)
 	if err != nil {
 		return "", err
 	}
