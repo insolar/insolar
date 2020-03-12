@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/application/testutils/launchnet"
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -137,7 +137,7 @@ package main
 
 import "github.com/insolar/insolar/insolar"
 import "github.com/insolar/insolar/logicrunner/builtin/foundation"
-import "github.com/insolar/insolar/application/proxy/testCoinPassing"
+import "github.com/insolar/insolar/applicationbase/proxy/testCoinPassing"
 import "errors"
 
 type One struct {

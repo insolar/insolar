@@ -8,11 +8,13 @@ package jet
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 type PostgresDBStore struct {
@@ -87,11 +89,20 @@ func (s *PostgresDBStore) Clone(ctx context.Context, from, to insolar.PulseNumbe
 
 // TruncateHead remove all records >= from
 func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
+
+	truncateTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+	}()
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
 
 	log := inslogger.FromContext(ctx)
 	for { // retry loop
@@ -112,6 +123,7 @@ func (s *PostgresDBStore) TruncateHead(ctx context.Context, from insolar.PulseNu
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -121,12 +133,18 @@ func (s *PostgresDBStore) get(pn insolar.PulseNumber) *Tree {
 	ctx := context.Background()
 	log := inslogger.FromContext(ctx)
 	ErrResult := NewTree(pn == insolar.GenesisPulse.PulseNumber)
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		log.Errorf("PostgresDBStore.get - s.pool.Acquire failed: %v", err)
 		return ErrResult
 	}
 	defer conn.Release()
+
+	getTimeStart := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			GetTime.M(float64(time.Since(getTimeStart).Nanoseconds())/1e6))
+	}()
 
 	tx, err := conn.BeginTx(ctx, insolar.PGReadTxOptions)
 	if err != nil {
@@ -167,13 +185,23 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 		return errors.Wrap(err, "failed to serialize jet.Tree")
 	}
 
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
+	setTimeStart := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			SetTime.M(float64(time.Since(setTimeStart).Nanoseconds())/1e6))
+	}()
+
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
@@ -198,6 +226,7 @@ func (s *PostgresDBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 		}
 
 		log.Infof("PostgresDBStore.set - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil

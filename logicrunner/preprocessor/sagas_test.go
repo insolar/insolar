@@ -521,7 +521,7 @@ package main
 import (
 "github.com/insolar/insolar/insolar"
 "github.com/insolar/insolar/logicrunner/builtin/foundation"
-"github.com/insolar/insolar/application/proxy/test_saga_simple_contract"
+"github.com/insolar/insolar/applicationbase/proxy/test_saga_simple_contract"
 )
 
 type TestSagaSimpleCallContract struct {

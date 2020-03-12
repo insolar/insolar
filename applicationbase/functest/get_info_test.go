@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 )
 
-func TestGetSeed(t *testing.T) {
-	seed1 := getSeed(t)
-	seed2 := getSeed(t)
-
-	require.NotEqual(t, seed1, seed2)
-
+func TestGetInfo(t *testing.T) {
+	info := testresponse.GetInfo(t)
+	require.NotNil(t, info)
+	require.NotEqual(t, "", info.NodeDomain)
 }

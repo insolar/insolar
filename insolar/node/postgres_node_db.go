@@ -7,9 +7,11 @@ package node
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/jackc/pgx/v4"
 
@@ -31,14 +33,26 @@ func NewPostgresStorageDB(pool *pgxpool.Pool) *PostgresStorageDB {
 // Set saves active nodes for pulse in memory.
 func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 	ctx := context.Background()
-	conn, err := s.pool.Acquire(ctx)
+
+	setTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			SetTime.M(float64(time.Since(setTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -66,6 +80,7 @@ func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node)
 		}
 
 		log.Infof("Append - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil
@@ -73,7 +88,7 @@ func (s *PostgresStorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node)
 
 func (s *PostgresStorageDB) selectByCondition(where string, args ...interface{}) (retNodes []insolar.Node, retErr error) {
 	ctx := context.Background()
-	conn, err := s.pool.Acquire(ctx)
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		retErr = errors.Wrap(err, "Unable to acquire a database connection")
 		return
@@ -132,11 +147,23 @@ func (s *PostgresStorageDB) selectByCondition(where string, args ...interface{})
 
 // All return active nodes for specified pulse.
 func (s *PostgresStorageDB) All(pulse insolar.PulseNumber) ([]insolar.Node, error) {
+	allTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			AllTime.M(float64(time.Since(allTime).Nanoseconds())/1e6))
+	}()
+
 	return s.selectByCondition("WHERE pulse_number = $1", pulse)
 }
 
 // InRole return active nodes for specified pulse and role.
 func (s *PostgresStorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error) {
+	inRoleTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			InRoleTime.M(float64(time.Since(inRoleTime).Nanoseconds())/1e6))
+	}()
+
 	return s.selectByCondition("WHERE pulse_number = $1 AND role = $2", pulse, role)
 }
 
@@ -148,7 +175,13 @@ func (s *PostgresStorageDB) DeleteForPN(_ insolar.PulseNumber) {
 
 // TruncateHead remove all records >= from
 func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := s.pool.Acquire(ctx)
+	truncateTime := time.Now()
+	defer func() {
+		stats.Record(context.Background(),
+			TruncateHeadTime.M(float64(time.Since(truncateTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, s.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -156,7 +189,11 @@ func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.Pulse
 
 	log := inslogger.FromContext(ctx)
 
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
+
 	for { // retry loop
+
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
 		if err != nil {
 			return errors.Wrap(err, "Unable to start a write transaction")
@@ -174,6 +211,7 @@ func (s *PostgresStorageDB) TruncateHead(ctx context.Context, from insolar.Pulse
 		}
 
 		log.Infof("TruncateHead - commit failed: %v - retrying transaction", err)
+		retries++
 	}
 
 	return nil

@@ -25,7 +25,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	recursive "github.com/insolar/insolar/application/proxy/recursive_call_one"
+	recursive "github.com/insolar/insolar/applicationbase/proxy/recursive_call_one"
 )
 type One struct {
 	foundation.BaseContract

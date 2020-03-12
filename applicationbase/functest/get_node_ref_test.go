@@ -12,6 +12,7 @@ import (
 
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
+	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +46,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	notExistingPublicKey := testrequest.GenerateNodePublicKey(t)
 	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": notExistingPublicKey})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "network node was not found by public key")
 }
 
@@ -57,6 +58,6 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 
 	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
-	data := checkConvertRequesterError(t, err).Data
+	data := testresponse.CheckConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "failed to get 'publicKey' param")
 }

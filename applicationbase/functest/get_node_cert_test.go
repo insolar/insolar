@@ -26,7 +26,7 @@ func TestNodeCert(t *testing.T) {
 		"contract.registerNode", map[string]interface{}{"publicKey": publicKey, "role": testRole})
 	require.NoError(t, err)
 
-	body := getRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
+	body := testresponse.GetRPSResponseBody(t, launchnet.TestRPCUrl, testresponse.PostParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      1,

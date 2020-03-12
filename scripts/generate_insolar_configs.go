@@ -74,11 +74,6 @@ func parseInputParams() {
 
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
-
-	if gorundPortsPath == "" {
-		err := rootCmd.Usage()
-		check("[ parseInputParams ]", err)
-	}
 }
 
 func writeGorundPorts(gorundPorts [][]string) {
@@ -224,7 +219,9 @@ func main() {
 	writePromConfig(promVars)
 	writeInsolardConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
 	writeInsolardConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
-	writeGorundPorts(gorundPorts)
+	if gorundPortsPath != "" {
+		writeGorundPorts(gorundPorts)
+	}
 
 	pulsarConf := &pulsarConfigVars{}
 	pulsarConf.DataDir = withBaseDir("pulsar_data")
