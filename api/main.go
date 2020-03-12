@@ -126,7 +126,7 @@ func (ar *Runner) registerAdminServices(rpcServer *rpc.Server) error {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
 	}
 
-	err = rpcServer.RegisterService(NewSchemaService(ar), "funcTestContract")
+	err = rpcServer.RegisterService(NewSchemaService(ar), "schema")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
 	}

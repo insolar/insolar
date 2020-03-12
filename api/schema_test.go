@@ -63,3 +63,16 @@ func TestSchemaService_Get(t *testing.T) {
 		require.IsType(t, "string", reply["openapi"], "right openapi")
 	})
 }
+
+func TestNewSchemaService(t *testing.T) {
+	cfg := configuration.NewAPIRunner(false)
+	cfg.SwaggerPath = "mamamylaramu"
+	runner := Runner{
+		cfg: &cfg,
+	}
+
+	defer func() {
+		require.NotNil(t, recover(), "panic on unexistent file")
+	}()
+	NewSchemaService(&runner)
+}

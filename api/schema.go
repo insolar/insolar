@@ -25,11 +25,11 @@ func NewSchemaService(ar *Runner) *SchemaService {
 
 	f, err := os.OpenFile(path, os.O_RDONLY, 0)
 	if err != nil {
-		log.Fatalf("Can't read schema from '%s'", path)
+		log.Panicf("Can't read schema from '%s'", path)
 	}
 	err = yaml.NewDecoder(f).Decode(&ss.Data)
 	if err != nil {
-		log.Fatalf("Can't parse schema from '%s' : %s", path, err)
+		log.Panicf("Can't parse schema from '%s' : %s", path, err)
 	}
 
 	return ss
