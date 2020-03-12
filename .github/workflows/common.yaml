@@ -146,7 +146,7 @@ jobs:
           docker rm -f $(docker ps -aq) || sleep 1
           docker rmi -f $(docker images -aq) || sleep 1
           docker volume rm -f $(docker volume ls -q) || sleep 1
-          rm -rf $GITHUB_WORKSPACE/*
+          sudo rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
@@ -162,6 +162,9 @@ jobs:
         run: |
           make build
           make functest
+      - name: slack
+        if: failure()
+        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'\nHave a look! @'$GITHUB_ACTOR'"}'
       - name: archive_logs
         if: failure()
         run: |
@@ -182,7 +185,7 @@ jobs:
           docker rm -f $(docker ps -aq) || sleep 1
           docker rmi -f $(docker images -aq) || sleep 1
           docker volume rm -f $(docker volume ls -q) || sleep 1
-          rm -rf $GITHUB_WORKSPACE/*
+          sudo rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
@@ -200,6 +203,9 @@ jobs:
         run: |
           make build
           make functest
+      - name: slack
+        if: failure()
+        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-postgresql failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'\nHave a look! @'$GITHUB_ACTOR'"}'
       - name: archive_logs
         if: failure()
         run: |
