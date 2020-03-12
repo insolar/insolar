@@ -176,6 +176,7 @@ test_unit: ## run all unit tests
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
+	sleep 10 # workaround for a "bind: address already in use" problem
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race

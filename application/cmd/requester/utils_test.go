@@ -7,12 +7,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/application/cmd/requester/cmd"
 	"github.com/insolar/insolar/insolar/secrets"
@@ -65,7 +67,7 @@ func runCmd(args ...string) (string, error) {
 		rootCmd := cmd.GetRequesterCommand()
 		rootCmd.SetArgs(args)
 		executionError = rootCmd.Execute()
-	})
+	}, 10*time.Second)
 	if captureError != nil {
 		return out, captureError
 	}
@@ -124,4 +126,19 @@ func getRequestParamsFile() *os.File {
 		log.Fatal("Cannot write to temp paramsFile", err)
 	}
 	return tempFile
+}
+
+// waitForFunction waits until function will be executed
+func waitForFunction(customFunction func() interface{}, functionTimeout time.Duration) (interface{}, error) {
+	ch := make(chan interface{}, 1)
+	go func() {
+		ch <- customFunction()
+	}()
+
+	select {
+	case result := <-ch:
+		return result, nil
+	case <-time.After(functionTimeout):
+		return nil, errors.New("timeout was exceeded")
+	}
 }
