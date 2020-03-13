@@ -36,5 +36,7 @@ func TestMain(m *testing.M) {
 		},
 		AppPath,
 		SetInfo,
-		AfterSetup))
+		AfterSetup,
+		"-gwn",
+	))
 }

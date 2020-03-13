@@ -53,8 +53,8 @@ var stderr io.ReadCloser
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(cb func() int, appPath []string, setInfo func() error, afterSetup func()) int {
-	err := setup(appPath, setInfo, afterSetup)
+func Run(cb func() int, appPath []string, setInfo func() error, afterSetup func(), launchnetArgs string) int {
+	err := setup(appPath, setInfo, afterSetup, launchnetArgs)
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
@@ -107,7 +107,7 @@ func LaunchnetPath(appPath []string, a ...string) (string, error) {
 	cwdList := strings.Split(cwd, "/")
 	var count int
 	for i := len(cwdList); i >= 0; i-- {
-		if cwdList[i-1] == appPath[0] && cwdList[i-2] == appPath[1] {
+		if cwdList[i-1] == appPath[1] && cwdList[i-2] == appPath[0] {
 			break
 		}
 		count++
@@ -227,7 +227,7 @@ func waitForNet() error {
 	return nil
 }
 
-func startNet(appPath []string) error {
+func startNet(appPath []string, launchnetArgs string) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -257,7 +257,7 @@ func startNet(appPath []string) error {
 	// be eventually started with --log-level=debug. Otherwise someone will spent
 	// a lot of time trying to figure out why insgorund debug logs are missing
 	// during execution of functests.
-	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
+	cmd = exec.Command("./insolar-scripts/insolard/launchnet.sh", launchnetArgs)
 	stdout, _ = cmd.StdoutPipe()
 
 	stderr, err = cmd.StderrPipe()
@@ -332,12 +332,12 @@ func RunOnlyWithLaunchnet(t *testing.T) {
 	}
 }
 
-func setup(appPath []string, setInfo func() error, afterSetup func()) error {
+func setup(appPath []string, setInfo func() error, afterSetup func(), launchnetArgs string) error {
 	testRPCUrl := os.Getenv(testRPCUrlVar)
 	testRPCUrlPublic := os.Getenv(testRPCUrlPublicVar)
 
 	if testRPCUrl == "" || testRPCUrlPublic == "" {
-		err := startNet(appPath)
+		err := startNet(appPath, launchnetArgs)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] could't startNet")
 		}
@@ -377,11 +377,9 @@ func setup(appPath []string, setInfo func() error, afterSetup func()) error {
 }
 
 func pulseWatcherPath() (string, string) {
-	insDir := insolar.RootModuleDir()
-	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
+	pulseWatcher := "pulsewatcher"
 
-	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
-	config := filepath.Join(baseDir, "pulsewatcher.yaml")
+	config := filepath.Join(defaults.LaunchnetDir(), "pulsewatcher.yaml")
 	return pulseWatcher, config
 }
 

@@ -1,5 +1,0 @@
-log:
-  level: info
-keeper:
-  listenaddress: ':12012'
-  faketrue: true

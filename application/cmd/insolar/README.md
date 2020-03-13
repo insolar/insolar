@@ -8,7 +8,7 @@
 
 ### Start insolard
 
-    ./scripts/insolard/launchnet.sh -g
+    ./insolar-scripts/insolard/launchnet.sh -g
 
 ### Send request example (RegisterNode)
 

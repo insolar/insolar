@@ -2,11 +2,11 @@
 
 ## run
 
-    ./scripts/insolard/launchnet.sh -g
+    ./insolar-scripts/insolard/launchnet.sh -g
 
 ## monitor
 
-    ./scripts/monitor.sh
+    ./insolar-scripts/monitor.sh
 
 ## bench
 
