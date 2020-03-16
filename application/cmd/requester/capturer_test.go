@@ -9,8 +9,11 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
+
+var mutex sync.Mutex
 
 // Capturer has flags whether capture stdout/stderr or not.
 type Capturer struct {
@@ -37,6 +40,9 @@ func CaptureOutput(f func(), d time.Duration) (string, error) {
 }
 
 func (capturer *Capturer) capture(fn func(), duration time.Duration) (string, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	r, w, err := os.Pipe()
 	if err != nil {
 		return "", err
