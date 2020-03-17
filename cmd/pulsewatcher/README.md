@@ -9,7 +9,7 @@ Usage
 
 #### Start blockchain
 
-    ./scripts/insolard/launchnet.sh -g
+    ./insolar-scripts/insolard/launchnet.sh -g
 
 #### Start pulsewatcher
 

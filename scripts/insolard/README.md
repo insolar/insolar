@@ -2,11 +2,11 @@
 
 Start insolar network:
 
-    ./scripts/insolard/launchnet.sh -g
+    ./insolar-scripts/insolard/launchnet.sh -g
 
 Check that all nodes are in the complete network state:
 
-    ./scripts/insolard/check_status.sh
+    ./insolar-scripts/insolard/check_status.sh
 
 Start benchmark:
 
@@ -14,6 +14,6 @@ Start benchmark:
 
 Start profiler:
 
-    ./scripts/insolard/profile.sh
+    ./insolar-scripts/insolard/profile.sh
 
 As soon as profiler collects statistics (default 30s), web pages with profile info will be opened for each node.

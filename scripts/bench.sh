@@ -9,7 +9,7 @@ LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 echo "wait for launchnet..."
 for i in {1..10}; do
     echo "Attempt $i"
-    scripts/insolard/check_status.sh > /dev/null
+    insolar-scripts/insolard/check_status.sh > /dev/null
     if [ $? -eq 0 ]; then
         break
     fi

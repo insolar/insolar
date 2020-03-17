@@ -17,6 +17,7 @@ HEALTHCHECK = healthcheck
 KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
+REQUESTER= requester
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -56,7 +57,12 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
 
 .PHONY: all
-all: clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: submodule clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+
+.PHONY: submodule
+submodule: ## init git submodule
+	git submodule init
+	git submodule update
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
@@ -74,7 +80,7 @@ clean: ## run all cleanup tasks
 	go clean $(ALL_PACKAGES)
 	rm -f $(COVERPROFILE)
 	rm -rf $(BIN_DIR)
-	./scripts/insolard/launchnet.sh -l
+	./insolar-scripts/insolard/launchnet.sh -l
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
@@ -105,8 +111,7 @@ vendor: ## update vendor dependencies
 
 .PHONY: build
 build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
-
+build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL) $(REQUESTER)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
@@ -119,8 +124,8 @@ $(INSOLAR):
 	$(GOBUILD) -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): application/cmd/insgocc/insgocc.go logicrunner/preprocessor
-	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" application/cmd/insgocc/*.go
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
+	$(GOBUILD) -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
 
@@ -160,6 +165,10 @@ $(KEEPERD):
 $(HEAVY_BADGER_TOOL):
 	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
+.PHONY: $(REQUESTER)
+$(REQUESTER):
+	$(GOBUILD) -o $(BIN_DIR)/$(REQUESTER) application/cmd/requester/*.go
+
 .PHONY: test_unit
 test_unit: ## run all unit tests
 	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) $(ALL_PACKAGES)
@@ -167,6 +176,8 @@ test_unit: ## run all unit tests
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
+	sleep 10 # workaround for a "bind: address already in use" problem
+	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -234,6 +245,8 @@ ci-test-func-base: ## run functest, redirects json output to file (CI)
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
+		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./applicationbase/functest -count=$(FUNCTEST_COUNT) -failfast
 
 .PHONY: ci-test-func
 ci-test-func:  ## run functest 3 times
@@ -275,9 +288,9 @@ ci-test-integrtest-nightly: ## run networktest with race and a little count
 
 
 .PHONY: regen-proxies
-CONTRACTS = $(wildcard application/contract/*)
+CONTRACTS = $(wildcard applicationbase/contract/*)
 regen-proxies: $(BININSGOCC) ## regen contracts proxies
-	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
+	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy applicationbase/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
 .PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs

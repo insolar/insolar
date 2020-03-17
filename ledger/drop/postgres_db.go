@@ -8,10 +8,12 @@ package drop
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -29,7 +31,13 @@ func NewPostgresDB(pool *pgxpool.Pool) *PostgresDB {
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
 func (ds *PostgresDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
-	conn, err := ds.pool.Acquire(ctx)
+	forPulseTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			ForPulseTime.M(float64(time.Since(forPulseTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, ds.pool)
 	if err != nil {
 		return Drop{}, errors.Wrap(err, "Unable to acquire a database connection")
 	}
@@ -57,11 +65,20 @@ func (ds *PostgresDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse i
 
 // Set saves a provided Drop to a db.
 func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
-	conn, err := ds.pool.Acquire(ctx)
+	setTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			SetTime.M(float64(time.Since(setTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, ds.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, SetRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)
@@ -88,6 +105,7 @@ func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
 		if err == nil { // success
 			break
 		}
+		retries++
 	}
 
 	return nil
@@ -95,13 +113,22 @@ func (ds *PostgresDB) Set(ctx context.Context, drop Drop) error {
 
 // TruncateHead remove all records after lastPulse
 func (ds *PostgresDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	conn, err := ds.pool.Acquire(ctx)
+	trunTime := time.Now()
+	defer func() {
+		stats.Record(ctx,
+			TruncateHeadTime.M(float64(time.Since(trunTime).Nanoseconds())/1e6))
+	}()
+
+	conn, err := insolar.AcquireConnection(ctx, ds.pool)
 	if err != nil {
 		return errors.Wrap(err, "Unable to acquire a database connection")
 	}
 	defer conn.Release()
 
 	log := inslogger.FromContext(ctx)
+
+	retries := 0
+	defer func(retriesCount *int) { stats.Record(ctx, TruncateHeadRetries.M(int64(*retriesCount))) }(&retries)
 
 	for { // retry loop
 		tx, err := conn.BeginTx(ctx, insolar.PGWriteTxOptions)

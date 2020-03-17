@@ -1,0 +1,3 @@
+[submodule "insolar-scripts"]
+	path = insolar-scripts
+	url = https://github.com/insolar/insolar-scripts

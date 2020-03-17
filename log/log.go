@@ -44,14 +44,12 @@ func NewGlobalLogger(cfg configuration.Log) (insolar.Logger, error) {
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
-	return NewLogExt(cfg, 0)
+	return NewLogExt(cfg, logadapter.DefaultLoggerSettings(), 0)
 }
 
-// NewLog creates logger instance with particular configuration
-func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
-
-	defaults := logadapter.DefaultLoggerSettings()
-	pCfg, err := logadapter.ParseLogConfigWithDefaults(cfg, defaults)
+// NewLogExt creates logger instance depends on configs
+func NewLogExt(cfg configuration.Log, parsedConfig logadapter.ParsedLogConfig, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
+	pCfg, err := logadapter.ParseLogConfigWithDefaults(cfg, parsedConfig)
 
 	if err == nil {
 		var logger insolar.Logger

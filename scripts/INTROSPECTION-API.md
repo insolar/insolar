@@ -4,7 +4,7 @@
 
 build insolard with introspection api and run launchnet:
 
-    BUILD_TAGS='-tags "introspection"' ./scripts/insolard/launchnet.sh -g
+    BUILD_TAGS='-tags "introspection"' ./insolar-scripts/insolard/launchnet.sh -g
 
 check is introspector API works on heavy node:
 
@@ -26,7 +26,7 @@ check gRPC endpoint with [grpcurl](https://github.com/fullstorydev/grpcurl):
 
 check API ports after launchnet's start:
 
-    ./scripts/glogs 'started introspection server on'
+    ./insolar-scripts/glogs 'started introspection server on'
 
 lock message type `TypeSetOutgoingRequest` on Virtual nodes:
 
