@@ -49,12 +49,12 @@ func Yaml2Json(in interface{}) interface{} {
 			case string:
 				ret[ii] = Yaml2Json(v)
 			default:
-				log.Panicf("TYPE1 %#v", k)
+				log.Panicf("[Schema yaml parser] unexpected type in key: %#v", k)
 			}
 		}
 		return ret
 
-	case map[string]interface{}:
+	case map[string]interface{}, []interface{}:
 		ret := i
 		for k, v := range i {
 			ret[k] = Yaml2Json(v)
@@ -73,7 +73,7 @@ func Yaml2Json(in interface{}) interface{} {
 	case int, uint, byte, []byte, string, bool:
 		return i
 	default:
-		log.Panicf("TYPE2 %#v", in)
+		log.Panicf("[Schema yaml parser] unexpected type in value %#v", in)
 	}
 	return "Compiler fail to recognize previous switch"
 }

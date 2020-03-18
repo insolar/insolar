@@ -9,7 +9,6 @@ package functest
 
 import (
 	"encoding/json"
-	"github.com/insolar/insolar/log"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -37,8 +36,6 @@ func TestSchemaServiceGet(t *testing.T) {
 	requester.SetVerbose(true)
 	ret, err := MakeRPCRequest(t, "schema.get", map[string]interface{}{})
 	require.NoError(t, err)
-
-	log.Panicf(">>> %#v", ret)
 
 	r := ret.(*map[string]interface{})
 	rr := *r
