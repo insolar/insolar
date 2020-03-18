@@ -194,8 +194,8 @@ func runLightNode(configPath string) {
 // psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
 var psAgentLauncher = func() error { return nil }
 
-func readHeavyBadgerConfig(path string) (*configuration.HolderHeavyBadger, error) {
-	cfg := configuration.NewHolderHeavyBadger(path)
+func readHeavyBadgerConfig(path string) (*configuration.HeavyBadgerHolder, error) {
+	cfg := configuration.NewHeavyBadgerHolder(path)
 	err := cfg.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load configuration")
@@ -203,8 +203,8 @@ func readHeavyBadgerConfig(path string) (*configuration.HolderHeavyBadger, error
 	return cfg, nil
 }
 
-func readHeavyPgConfig(path string) (*configuration.HolderHeavyPg, error) {
-	cfg := configuration.NewHolderHeavyPg(path)
+func readHeavyPgConfig(path string) (*configuration.HeavyPgHolder, error) {
+	cfg := configuration.NewHeavyPgHolder(path)
 	err := cfg.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load configuration")
@@ -212,8 +212,8 @@ func readHeavyPgConfig(path string) (*configuration.HolderHeavyPg, error) {
 	return cfg, nil
 }
 
-func readLightConfig(path string) (*configuration.HolderLight, error) {
-	cfg := configuration.NewHolderLight(path)
+func readLightConfig(path string) (*configuration.LightHolder, error) {
+	cfg := configuration.NewLightHolder(path)
 	err := cfg.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load configuration")
@@ -221,8 +221,8 @@ func readLightConfig(path string) (*configuration.HolderLight, error) {
 	return cfg, nil
 }
 
-func readVirtualConfig(path string) (*configuration.HolderVirtual, error) {
-	cfg := configuration.NewHolderVirtual(path)
+func readVirtualConfig(path string) (*configuration.VirtualHolder, error) {
+	cfg := configuration.NewVirtualHolder(path)
 	err := cfg.Load()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load configuration")

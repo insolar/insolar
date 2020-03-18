@@ -12,8 +12,8 @@ import (
 const DbTypeBadger = "badger"
 const DbTypePg = "postgres"
 
-// ConfigHeavyBadger contains configuration params for HeavyBadger
-type ConfigHeavyBadger struct {
+// HeavyBadgerConfig contains configuration params for HeavyBadger
+type HeavyBadgerConfig struct {
 	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	DatabaseType         string
 	Ledger               Ledger
@@ -28,9 +28,9 @@ type ConfigHeavyPg struct {
 	Exporter             Exporter
 }
 
-// NewConfigurationHeavyBadger creates new default configuration
-func NewConfigurationHeavyBadger() ConfigHeavyBadger {
-	return ConfigHeavyBadger{
+// NewHeavyBadgerConfig creates new default configuration
+func NewHeavyBadgerConfig() HeavyBadgerConfig {
+	return HeavyBadgerConfig{
 		DatabaseType:         DbTypeBadger,
 		Ledger:               NewLedger(),
 		Exporter:             NewExporter(),
@@ -38,8 +38,8 @@ func NewConfigurationHeavyBadger() ConfigHeavyBadger {
 	}
 }
 
-// NewConfigurationHeavyBadger creates new default configuration
-func NewConfigurationHeavyPg() ConfigHeavyPg {
+// NewHeavyPgConfig creates new default configuration
+func NewHeavyPgConfig() ConfigHeavyPg {
 	cfg := ConfigHeavyPg{
 		DatabaseType:         DbTypePg,
 		Ledger:               NewLedgerPg(),
@@ -49,21 +49,21 @@ func NewConfigurationHeavyPg() ConfigHeavyPg {
 	return cfg
 }
 
-// HolderHeavyBadger provides methods to manage heavy configuration
-type HolderHeavyBadger struct {
-	Configuration *ConfigHeavyBadger
+// HeavyBadgerHolder provides methods to manage heavy configuration
+type HeavyBadgerHolder struct {
+	Configuration *HeavyBadgerConfig
 	Params        insconfig.Params
 }
 
-func (h *HolderHeavyBadger) GetGenericConfig() GenericConfiguration {
+func (h *HeavyBadgerHolder) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h *HolderHeavyBadger) GetNodeConfig() interface{} {
+func (h *HeavyBadgerHolder) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 
 // MustLoad wrapper around Load function which panics on error.
-func (h *HolderHeavyBadger) MustLoad() *HolderHeavyBadger {
+func (h *HeavyBadgerHolder) MustLoad() *HeavyBadgerHolder {
 	err := h.Load()
 	if err != nil {
 		panic(err)
@@ -71,17 +71,17 @@ func (h *HolderHeavyBadger) MustLoad() *HolderHeavyBadger {
 	return h
 }
 
-// NewHolderHeavyBadger creates new HolderHeavyBadger with config path
-func NewHolderHeavyBadger(path string) *HolderHeavyBadger {
+// NewHeavyBadgerHolder creates new HeavyBadgerHolder with config path
+func NewHeavyBadgerHolder(path string) *HeavyBadgerHolder {
 	params := insconfig.Params{
 		EnvPrefix:        InsolarEnvPrefix,
 		ConfigPathGetter: &stringPathGetter{Path: path},
 	}
-	return &HolderHeavyBadger{Configuration: &ConfigHeavyBadger{}, Params: params}
+	return &HeavyBadgerHolder{Configuration: &HeavyBadgerConfig{}, Params: params}
 }
 
 // Load method reads configuration from params file path
-func (h *HolderHeavyBadger) Load() error {
+func (h *HeavyBadgerHolder) Load() error {
 	insConfigurator := insconfig.New(h.Params)
 	if err := insConfigurator.Load(h.Configuration); err != nil {
 		return err
@@ -89,21 +89,21 @@ func (h *HolderHeavyBadger) Load() error {
 	return nil
 }
 
-// HolderHeavyPg provides methods to manage heavy configuration
-type HolderHeavyPg struct {
+// HeavyPgHolder provides methods to manage heavy configuration
+type HeavyPgHolder struct {
 	Configuration *ConfigHeavyPg
 	Params        insconfig.Params
 }
 
-func (h *HolderHeavyPg) GetGenericConfig() GenericConfiguration {
+func (h *HeavyPgHolder) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h *HolderHeavyPg) GetNodeConfig() interface{} {
+func (h *HeavyPgHolder) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 
 // MustLoad wrapper around Load function which panics on error.
-func (h *HolderHeavyPg) MustLoad() *HolderHeavyPg {
+func (h *HeavyPgHolder) MustLoad() *HeavyPgHolder {
 	err := h.Load()
 	if err != nil {
 		panic(err)
@@ -111,17 +111,17 @@ func (h *HolderHeavyPg) MustLoad() *HolderHeavyPg {
 	return h
 }
 
-// NewHolderHeavyPg creates new HolderHeavyPg with config path
-func NewHolderHeavyPg(path string) *HolderHeavyPg {
+// NewHeavyPgHolder creates new HeavyPgHolder with config path
+func NewHeavyPgHolder(path string) *HeavyPgHolder {
 	params := insconfig.Params{
 		EnvPrefix:        InsolarEnvPrefix,
 		ConfigPathGetter: &stringPathGetter{Path: path},
 	}
-	return &HolderHeavyPg{Configuration: &ConfigHeavyPg{}, Params: params}
+	return &HeavyPgHolder{Configuration: &ConfigHeavyPg{}, Params: params}
 }
 
 // Load method reads configuration from params file path
-func (h *HolderHeavyPg) Load() error {
+func (h *HeavyPgHolder) Load() error {
 	insConfigurator := insconfig.New(h.Params)
 	if err := insConfigurator.Load(h.Configuration); err != nil {
 		return err

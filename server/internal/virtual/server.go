@@ -23,12 +23,12 @@ import (
 )
 
 type Server struct {
-	cfgHolder        *configuration.HolderVirtual
+	cfgHolder        *configuration.VirtualHolder
 	builtinContracts builtin.BuiltinContracts
 	apiOptions       api.Options
 }
 
-func New(cfgHolder *configuration.HolderVirtual, builtinContracts builtin.BuiltinContracts, apiOptions api.Options) *Server {
+func New(cfgHolder *configuration.VirtualHolder, builtinContracts builtin.BuiltinContracts, apiOptions api.Options) *Server {
 	return &Server{
 		cfgHolder:        cfgHolder,
 		builtinContracts: builtinContracts,

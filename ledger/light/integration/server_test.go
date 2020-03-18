@@ -87,8 +87,8 @@ type Server struct {
 	metrics *metrics.Metrics
 }
 
-func DefaultLightConfig() configuration.ConfigLight {
-	cfg := configuration.ConfigLight{}
+func DefaultLightConfig() configuration.LightConfig {
+	cfg := configuration.LightConfig{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.LightChainLimit = math.MaxInt32
 	cfg.Ledger.JetSplit.DepthLimit = math.MaxUint8
@@ -134,7 +134,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 
 func NewServer(
 	ctx context.Context,
-	cfg configuration.ConfigLight,
+	cfg configuration.LightConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
 	// Cryptography.

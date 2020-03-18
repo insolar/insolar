@@ -9,48 +9,48 @@ import (
 	"github.com/insolar/insconfig"
 )
 
-// ConfigVirtual contains configuration params for Virtual node
-type ConfigVirtual struct {
+// VirtualConfig contains configuration params for Virtual node
+type VirtualConfig struct {
 	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	LogicRunner          LogicRunner
 }
 
-func (c ConfigVirtual) GetConfig() interface{} {
+func (c VirtualConfig) GetConfig() interface{} {
 	return &c
 }
 
-// NewConfigurationVirtual creates new default configuration
-func NewConfigurationVirtual() ConfigVirtual {
-	return ConfigVirtual{
+// NewVirtualConfig creates new default configuration
+func NewVirtualConfig() VirtualConfig {
+	return VirtualConfig{
 		LogicRunner:          NewLogicRunner(),
 		GenericConfiguration: NewGenericConfiguration(),
 	}
 }
 
-// HolderVirtual provides methods to manage virtual node configuration
-type HolderVirtual struct {
-	Configuration *ConfigVirtual
+// VirtualHolder provides methods to manage virtual node configuration
+type VirtualHolder struct {
+	Configuration *VirtualConfig
 	Params        insconfig.Params
 }
 
-func (h *HolderVirtual) GetGenericConfig() GenericConfiguration {
+func (h *VirtualHolder) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h *HolderVirtual) GetNodeConfig() interface{} {
+func (h *VirtualHolder) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 
-// NewHolderVirtual creates new HolderVirtual with config path
-func NewHolderVirtual(path string) *HolderVirtual {
+// NewVirtualHolder creates new VirtualHolder with config path
+func NewVirtualHolder(path string) *VirtualHolder {
 	params := insconfig.Params{
 		EnvPrefix:        InsolarEnvPrefix,
 		ConfigPathGetter: &stringPathGetter{Path: path},
 	}
-	return &HolderVirtual{Configuration: &ConfigVirtual{}, Params: params}
+	return &VirtualHolder{Configuration: &VirtualConfig{}, Params: params}
 }
 
 // Load method reads configuration from params file path
-func (h *HolderVirtual) Load() error {
+func (h *VirtualHolder) Load() error {
 	insConfigurator := insconfig.New(h.Params)
 	if err := insConfigurator.Load(h.Configuration); err != nil {
 		return err

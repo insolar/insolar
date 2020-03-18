@@ -9,44 +9,44 @@ import (
 	"github.com/insolar/insconfig"
 )
 
-// ConfigLight contains configuration params for Light
-type ConfigLight struct {
+// LightConfig contains configuration params for Light
+type LightConfig struct {
 	GenericConfiguration `mapstructure:",squash" yaml:",inline"`
 	Ledger               LedgerLight
 }
 
-// NewConfigurationLight creates new default
-func NewConfigurationLight() ConfigLight {
-	return ConfigLight{
+// NewLightConfig creates new default
+func NewLightConfig() LightConfig {
+	return LightConfig{
 		Ledger:               NewLedgerLight(),
 		GenericConfiguration: NewGenericConfiguration(),
 	}
 }
 
-// HolderLight provides methods to manage light configuration
-type HolderLight struct {
-	Configuration *ConfigLight
+// LightHolder provides methods to manage light configuration
+type LightHolder struct {
+	Configuration *LightConfig
 	Params        insconfig.Params
 }
 
-func (h *HolderLight) GetGenericConfig() GenericConfiguration {
+func (h *LightHolder) GetGenericConfig() GenericConfiguration {
 	return h.Configuration.GenericConfiguration
 }
-func (h *HolderLight) GetNodeConfig() interface{} {
+func (h *LightHolder) GetNodeConfig() interface{} {
 	return h.Configuration
 }
 
-// NewHolderLight creates new HolderLight with config path
-func NewHolderLight(path string) *HolderLight {
+// NewLightHolder creates new LightHolder with config path
+func NewLightHolder(path string) *LightHolder {
 	params := insconfig.Params{
 		EnvPrefix:        InsolarEnvPrefix,
 		ConfigPathGetter: &stringPathGetter{Path: path},
 	}
-	return &HolderLight{Configuration: &ConfigLight{}, Params: params}
+	return &LightHolder{Configuration: &LightConfig{}, Params: params}
 }
 
 // Load method reads configuration from params file path
-func (h *HolderLight) Load() error {
+func (h *LightHolder) Load() error {
 	insConfigurator := insconfig.New(h.Params)
 	if err := insConfigurator.Load(h.Configuration); err != nil {
 		return err
@@ -55,7 +55,7 @@ func (h *HolderLight) Load() error {
 }
 
 // MustLoad wrapper around Load function which panics on error.
-func (h *HolderLight) MustLoad() *HolderLight {
+func (h *LightHolder) MustLoad() *LightHolder {
 	err := h.Load()
 	if err != nil {
 		panic(err)

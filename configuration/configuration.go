@@ -96,7 +96,6 @@ func (g *stringPathGetter) GetConfigPath() string {
 	return g.Path
 }
 
-// Deprecated
 // ToString converts any configuration struct to yaml string
 func ToString(in interface{}) string {
 	d, err := yaml.Marshal(in)

@@ -22,7 +22,7 @@ func TestComponents(t *testing.T) {
 	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
 		return logger.Copy().WithBuffer(100, false).Build()
 	})
-	cfg := configuration.NewConfigurationLight()
+	cfg := configuration.NewLightConfig()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"

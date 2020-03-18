@@ -30,7 +30,7 @@ func TestComponents(t *testing.T) {
 	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
 		return logger.Copy().WithBuffer(100, false).Build()
 	})
-	cfg := configuration.NewConfigurationHeavyBadger()
+	cfg := configuration.NewHeavyBadgerConfig()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
@@ -41,7 +41,7 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	holder := &configuration.HolderHeavyBadger{
+	holder := &configuration.HeavyBadgerHolder{
 		Configuration: &cfg,
 	}
 

@@ -96,12 +96,12 @@ type Server struct {
 }
 
 // After using it you have to remove directory configuration.Storage.DataDirectory by yourself
-func DefaultHeavyConfig() configuration.ConfigHeavyBadger {
+func DefaultHeavyConfig() configuration.HeavyBadgerConfig {
 	tmpDir, err := ioutil.TempDir("", "heavy-integr-test-")
 	if err != nil {
 		panic(err)
 	}
-	cfg := configuration.ConfigHeavyBadger{}
+	cfg := configuration.HeavyBadgerConfig{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.LightChainLimit = math.MaxInt32
 	cfg.Bus.ReplyTimeout = time.Minute
@@ -117,7 +117,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 
 func NewBadgerServer(
 	ctx context.Context,
-	cfg configuration.ConfigHeavyBadger,
+	cfg configuration.HeavyBadgerConfig,
 	genesisCfg genesis.HeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {

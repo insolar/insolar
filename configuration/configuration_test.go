@@ -15,34 +15,34 @@ import (
 )
 
 func TestConfiguration_Load_Default(t *testing.T) {
-	holder := NewHolderLight("testdata/insolard-light.yaml")
+	holder := NewLightHolder("testdata/insolard-light.yaml")
 	err := holder.Load()
 	require.NoError(t, err)
 
-	cfg := NewConfigurationLight()
+	cfg := NewLightConfig()
 	fmt.Println(ToString(cfg))
 	require.Equal(t, cfg, holder.Configuration)
 }
 
 func TestConfiguration_DoubleLoad(t *testing.T) {
-	holder := NewHolderLight("testdata/insolard-light.yaml")
+	holder := NewLightHolder("testdata/insolard-light.yaml")
 	err := holder.Load()
 	require.NoError(t, err)
 
-	holder2 := NewHolderLight("testdata/insolard-light.yaml")
+	holder2 := NewLightHolder("testdata/insolard-light.yaml")
 	err = holder2.Load()
 	require.NoError(t, err)
 	require.Equal(t, holder2.Configuration, holder.Configuration)
 }
 
 func TestConfiguration_Load_Invalid(t *testing.T) {
-	holder := NewHolderLight("testdata/invalid.yaml")
+	holder := NewLightHolder("testdata/invalid.yaml")
 	err := holder.Load()
 	require.Error(t, err)
 }
 
 func TestConfiguration_LoadEnv(t *testing.T) {
-	holder := NewHolderLight("testdata/insolard-light.yaml")
+	holder := NewLightHolder("testdata/insolard-light.yaml")
 
 	require.NoError(t, os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555"))
 	err := holder.Load()
@@ -52,22 +52,22 @@ func TestConfiguration_LoadEnv(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
 
-	defaultCfg := NewConfigurationLight()
+	defaultCfg := NewLightConfig()
 	require.Equal(t, "127.0.0.1:0", defaultCfg.Host.Transport.Address)
 }
 
 func TestConfiguration_Load_EmptyPath(t *testing.T) {
-	holder := NewHolderLight("")
+	holder := NewLightHolder("")
 	err := holder.Load()
 	require.Error(t, err)
 
-	require.Panics(t, func() { NewHolderLight("").MustLoad() })
+	require.Panics(t, func() { NewLightHolder("").MustLoad() })
 }
 
 func TestConfiguration_Load_ENVOverridesEmpty(t *testing.T) {
 	_ = os.Setenv("INSOLAR_HOST_TRANSPORT_ADDRESS", "127.0.0.2:5555")
 	defer os.Unsetenv("INSOLAR_HOST_TRANSPORT_ADDRESS")
-	holder := NewHolderLight("testdata/insolard-light-empty.yaml")
+	holder := NewLightHolder("testdata/insolard-light-empty.yaml")
 	err := holder.Load()
 	require.NoError(t, err)
 

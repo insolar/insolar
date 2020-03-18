@@ -23,11 +23,11 @@ import (
 )
 
 type Server struct {
-	cfgHolder  *configuration.HolderLight
+	cfgHolder  *configuration.LightHolder
 	apiOptions api.Options
 }
 
-func New(cfgHolder *configuration.HolderLight, apiOptions api.Options) *Server {
+func New(cfgHolder *configuration.LightHolder, apiOptions api.Options) *Server {
 	return &Server{
 		cfgHolder:  cfgHolder,
 		apiOptions: apiOptions,

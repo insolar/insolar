@@ -48,7 +48,7 @@ type bootstrapComponents struct {
 	KeyProcessor               insolar.KeyProcessor
 }
 
-func initBootstrapComponents(ctx context.Context, cfg configuration.ConfigVirtual) bootstrapComponents {
+func initBootstrapComponents(ctx context.Context, cfg configuration.VirtualConfig) bootstrapComponents {
 	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -71,7 +71,7 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.ConfigVirtua
 
 func initCertificateManager(
 	ctx context.Context,
-	cfg configuration.ConfigVirtual,
+	cfg configuration.VirtualConfig,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -90,7 +90,7 @@ func initCertificateManager(
 // initComponents creates and links all insolard components
 func initComponents(
 	ctx context.Context,
-	cfg configuration.ConfigVirtual,
+	cfg configuration.VirtualConfig,
 	cryptographyService insolar.CryptographyService,
 	pcs insolar.PlatformCryptographyScheme,
 	keyStore insolar.KeyStore,

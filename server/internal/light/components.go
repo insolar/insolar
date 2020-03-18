@@ -50,7 +50,7 @@ type components struct {
 	cleaner           executor.Cleaner
 }
 
-func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.ConfigLight) (*certificate.CertificateManager, error) {
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.LightConfig) (*certificate.CertificateManager, error) {
 	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -78,7 +78,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.ConfigLight, apiOptions api.Options) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.LightConfig, apiOptions api.Options) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
