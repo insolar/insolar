@@ -18,10 +18,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type MAP map[interface{}]interface{}
-
 type SchemaService struct {
-	Data MAP
+	Data interface{}
 }
 
 func NewSchemaService(ar *Runner) *SchemaService {
@@ -37,10 +35,50 @@ func NewSchemaService(ar *Runner) *SchemaService {
 		log.Panicf("Can't parse schema from '%s' : %s", path, err)
 	}
 
+	ss.Data = Yaml2Json(ss.Data)
+
 	return ss
 }
 
-func (s *SchemaService) Get(r *http.Request, args *SeedArgs, _ *rpc.RequestBody, reply *MAP) error {
+func Yaml2Json(in interface{}) interface{} {
+	switch i := in.(type) {
+	case map[interface{}]interface{}:
+		ret := map[string]interface{}{}
+		for k, v := range i {
+			switch ii := k.(type) {
+			case string:
+				ret[ii] = Yaml2Json(v)
+			default:
+				log.Panicf("TYPE1 %#v", k)
+			}
+		}
+		return ret
+
+	case map[string]interface{}:
+		ret := i
+		for k, v := range i {
+			ret[k] = Yaml2Json(v)
+		}
+		return ret
+
+	case []interface{}:
+		{
+			ret := i
+			for k, v := range i {
+				ret[k] = Yaml2Json(v)
+			}
+			return ret
+		}
+
+	case int, uint, byte, []byte, string, bool:
+		return i
+	default:
+		log.Panicf("TYPE2 %#v", in)
+	}
+	return "Compiler fail to recognize previous switch"
+}
+
+func (s *SchemaService) Get(r *http.Request, args *SeedArgs, _ *rpc.RequestBody, reply *interface{}) error {
 	ctx, instr := instrumenter.NewMethodInstrument("SchemaService.get")
 	defer instr.End()
 
@@ -49,8 +87,6 @@ func (s *SchemaService) Get(r *http.Request, args *SeedArgs, _ *rpc.RequestBody,
 
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ SchemaService.get ] ", msg)
-
 	*reply = s.Data
-
 	return nil
 }

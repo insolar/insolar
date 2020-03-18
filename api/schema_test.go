@@ -56,11 +56,12 @@ func TestSchemaService_Get(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		availableFlag = true
-		reply := MAP{}
+		reply := new(interface{})
 
-		err := s.Get(&http.Request{}, &SeedArgs{}, &body, &reply)
+		err := s.Get(&http.Request{}, &SeedArgs{}, &body, reply)
 		require.Nil(t, err)
-		require.IsType(t, "string", reply["openapi"], "right openapi")
+		r := (*reply).(map[string]interface{})
+		require.IsType(t, "string", r["openapi"], "right openapi")
 	})
 }
 

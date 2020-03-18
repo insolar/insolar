@@ -89,6 +89,7 @@ func TestTimeoutSuite(t *testing.T) {
 		Options{
 			ContractMethods: map[string]bool{
 				"contract.registerNode": true,
+				"schema.get":            true,
 			},
 		},
 	)
