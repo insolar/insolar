@@ -35,19 +35,19 @@ func NewSchemaService(ar *Runner) *SchemaService {
 		log.Panicf("Can't parse schema from '%s' : %s", path, err)
 	}
 
-	ss.Data = Yaml2Json(ss.Data)
+	ss.Data = ConvertInnerYamlRepresentatinToJsonSerializable(ss.Data)
 
 	return ss
 }
 
-func Yaml2Json(in interface{}) interface{} {
+func ConvertInnerYamlRepresentatinToJsonSerializable(in interface{}) interface{} {
 	switch i := in.(type) {
 	case map[interface{}]interface{}:
 		ret := map[string]interface{}{}
 		for k, v := range i {
 			switch ii := k.(type) {
 			case string:
-				ret[ii] = Yaml2Json(v)
+				ret[ii] = ConvertInnerYamlRepresentatinToJsonSerializable(v)
 			default:
 				log.Panicf("[Schema yaml parser] unexpected type in key: %#v", k)
 			}
@@ -57,14 +57,14 @@ func Yaml2Json(in interface{}) interface{} {
 	case map[string]interface{}:
 		ret := i
 		for k, v := range i {
-			ret[k] = Yaml2Json(v)
+			ret[k] = ConvertInnerYamlRepresentatinToJsonSerializable(v)
 		}
 		return ret
 
 	case []interface{}:
 		ret := i
 		for k, v := range i {
-			ret[k] = Yaml2Json(v)
+			ret[k] = ConvertInnerYamlRepresentatinToJsonSerializable(v)
 		}
 		return ret
 

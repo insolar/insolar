@@ -1,3 +1,8 @@
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 package api
 
 import (
@@ -61,7 +66,7 @@ func TestSchemaService_Get(t *testing.T) {
 		err := s.Get(&http.Request{}, &SeedArgs{}, &body, reply)
 		require.Nil(t, err)
 		r := (*reply).(map[string]interface{})
-		require.IsType(t, "string", r["openapi"], "right openapi")
+		require.IsType(t, "string", r["openapi"], "openapi presented and it's string")
 	})
 }
 
@@ -73,7 +78,9 @@ func TestNewSchemaService(t *testing.T) {
 	}
 
 	defer func() {
-		require.NotNil(t, recover(), "panic on unexistent file")
+		pan, ok := recover().(string)
+		require.True(t, ok, "expected panic on unexistent file")
+		require.Equal(t, "Can't read schema from 'mamamylaramu'", pan, "expected panic from file reading routine")
 	}()
 	NewSchemaService(&runner)
 }
