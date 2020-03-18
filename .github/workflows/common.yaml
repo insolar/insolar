@@ -136,17 +136,11 @@ jobs:
           yml:  ./codecov.yml
           fail_ci_if_error: true
   func-tests-badger:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: func-tests-badger
     env:
-      GOPATH: ${{github.workspace}}/go
+      GOPATH: /home/runner/work/insolar/insolar/go
     steps:
-      - name: cleanup
-        run: |
-          docker rm -f $(docker ps -aq) || sleep 1
-          docker rmi -f $(docker images -aq) || sleep 1
-          docker volume rm -f $(docker volume ls -q) || sleep 1
-          sudo rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
@@ -176,17 +170,11 @@ jobs:
           name: logs-badger
           path: logs-badger.tar.gz
   func-tests-pgsql:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: func-tests-pgsql
     env:
-      GOPATH: ${{github.workspace}}/go
+      GOPATH: /home/runner/work/insolar/insolar/go
     steps:
-      - name: cleanup
-        run: |
-          docker rm -f $(docker ps -aq) || sleep 1
-          docker rmi -f $(docker images -aq) || sleep 1
-          docker volume rm -f $(docker volume ls -q) || sleep 1
-          sudo rm -rf $GITHUB_WORKSPACE/*
       - name: checkout code
         uses: actions/checkout@master
         with:
