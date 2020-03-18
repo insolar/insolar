@@ -1,0 +1,20 @@
+name: Tag processing
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  tag_processing:
+    name: Tag processing
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/insolar/git-tag-handler
+    steps:
+      - run: git-tag-handler
+        env:
+          SLACK_CHANNEL: notify-mainnet
+          SLACK_API_TOKEN: ${{ secrets.SLACK_API_TOKEN }}
+          JIRA_PASSWORD: ${{ secrets.JIRA_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
