@@ -54,7 +54,7 @@ func Yaml2Json(in interface{}) interface{} {
 		}
 		return ret
 
-	case map[string]interface{}, []interface{}:
+	case map[string]interface{}:
 		ret := i
 		for k, v := range i {
 			ret[k] = Yaml2Json(v)
@@ -62,13 +62,11 @@ func Yaml2Json(in interface{}) interface{} {
 		return ret
 
 	case []interface{}:
-		{
-			ret := i
-			for k, v := range i {
-				ret[k] = Yaml2Json(v)
-			}
-			return ret
+		ret := i
+		for k, v := range i {
+			ret[k] = Yaml2Json(v)
 		}
+		return ret
 
 	case int, uint, byte, []byte, string, bool:
 		return i
