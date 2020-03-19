@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -108,7 +107,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	s.NoError(err)
 	defer os.RemoveAll(tmpDir) // nolint: errcheck
 
-	err = goplugintestutils.WriteFile(tmpDir, "main.go", randomTestCode)
+	err = WriteFile(tmpDir, "main.go", randomTestCode)
 	s.NoError(err)
 
 	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"), insolar.MachineTypeGoPlugin)
@@ -171,7 +170,7 @@ func NewFromString(s string) (*One, error) {
 }
 `
 
-	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
+	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
 	info, err := ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
@@ -194,7 +193,7 @@ func New() {
 }
 `
 
-	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
+	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
 	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
@@ -212,62 +211,11 @@ func New() *One {
 }
 `
 
-	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
+	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
 	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
 	s.Error(err)
-}
-
-func (s *PreprocessorSuite) TestCompileContractProxy() {
-	s.T().Skip("skip this strange test")
-	tmpDir := insolar.ContractBuildTmpDir("test-")
-	defer os.RemoveAll(tmpDir) // nolint: errcheck
-
-	err := os.MkdirAll(filepath.Join(tmpDir, "secondary"), 0777)
-	s.NoError(err)
-
-	// cwd, err := os.Getwd()
-	// s.NoError(err)
-
-	// XXX: dirty hack to make `dep` installed packages available in generated code
-	// err = os.Symlink(filepath.Join(cwd, "../../../vendor"), filepath.Join(tmpDir, "src/secondary/vendor"))
-	// s.NoError(err)
-
-	proxyFh, err := os.OpenFile(filepath.Join(tmpDir, "/secondary/main.go"), os.O_WRONLY|os.O_CREATE, 0644)
-	s.NoError(err)
-
-	err = goplugintestutils.WriteFile(filepath.Join(tmpDir, "/contracts/secondary/"), "main.go", randomTestCode)
-	s.NoError(err)
-
-	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"), insolar.MachineTypeGoPlugin)
-	s.NoError(err)
-
-	err = parsed.WriteProxy(gen.Reference().String(), proxyFh)
-	s.NoError(err)
-
-	err = proxyFh.Close()
-	s.NoError(err)
-
-	err = goplugintestutils.WriteFile(filepath.Join(tmpDir, "secondary"), "/test.go", `
-package secondary
-
-import (
-	"github.com/insolar/insolar/insolar"
-	"secondary"
-)
-
-func main() {
-	ref, _ := insolar.NewReferenceFromString("insolar:1MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI")
-	_ = secondary.GetObject(*ref)
-}
-	`)
-	s.NoError(err)
-
-	cmd := exec.Command("go", "build", "-mod=vendor", filepath.Join(tmpDir, "secondary", "test.go"))
-	cmd.Env = append(os.Environ(), "GOPATH="+goplugintestutils.PrependGoPath(tmpDir))
-	out, err := cmd.CombinedOutput()
-	s.NoError(err, string(out))
 }
 
 func (s *PreprocessorSuite) TestFailIfThereAreNoContract() {
@@ -276,7 +224,7 @@ func (s *PreprocessorSuite) TestFailIfThereAreNoContract() {
 	defer os.RemoveAll(tmpDir) //nolint: errcheck
 
 	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 type A struct{
 	ttt ppp.TTT
@@ -295,7 +243,7 @@ func (s *PreprocessorSuite) TestInitializationFunctionParamsProxy() {
 
 	testContract := "/test.go"
 
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 
 type A struct{
@@ -339,7 +287,7 @@ func (s *PreprocessorSuite) TestInitializationFunctionParamsWrapper() {
 
 	testContract := "/test.go"
 
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 
 type A struct{
@@ -382,7 +330,7 @@ func (s *PreprocessorSuite) TestConstructorsWrapper() {
 
 	testContract := "/test.go"
 
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 
 type A struct{
@@ -418,7 +366,7 @@ func (s *PreprocessorSuite) TestContractOnlyIfEmbedBaseContract() {
 
 	testContract := "/test.go"
 
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 // A contains object of type foundation.BaseContract, but it must embed it
 type A struct{
@@ -438,7 +386,7 @@ func (s *PreprocessorSuite) TestOnlyOneSmartContractMustExist() {
 
 	testContract := "/test.go"
 
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 
 type A struct{
@@ -461,7 +409,7 @@ func (s *PreprocessorSuite) TestImportsFromContract() {
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -509,7 +457,7 @@ func (s *PreprocessorSuite) TestAliasImportsFromContract() {
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -551,7 +499,7 @@ func (s *PreprocessorSuite) TestImportsFromContractUseInsideFunc() {
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -592,7 +540,7 @@ func (s *PreprocessorSuite) TestImportsFromContractUseForReturnValue() {
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test.go"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -631,7 +579,7 @@ func (s *PreprocessorSuite) TestNotMatchFileNameForProxy() {
 	defer os.RemoveAll(tmpDir)
 
 	testContract := "/test_not_go_file.test"
-	err = goplugintestutils.WriteFile(tmpDir, testContract, `
+	err = WriteFile(tmpDir, testContract, `
 package main
 
 type A struct{
@@ -702,4 +650,14 @@ func TestPreprocessor(t *testing.T) {
 		t.Parallel()
 	}
 	suite.Run(t, new(PreprocessorSuite))
+}
+
+// WriteFile dumps `text` into file named `name` into directory `dir`.
+// Creates directory if needed as well as file
+func WriteFile(dir string, name string, text string) error {
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
 }

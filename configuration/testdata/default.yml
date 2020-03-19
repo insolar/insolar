@@ -27,12 +27,7 @@ log:
 metrics:
   listenaddress: 0.0.0.0:9091
 logicrunner:
-  rpclisten: 127.0.0.1:7778
-  rpcprotocol: tcp
   builtin: {}
-  goplugin:
-    runnerlisten: 127.0.0.1:7777
-    runnerprotocol: tcp
 apirunner:
   port: 19191
   location: /api/v1
