@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/x-crypto"
+	crypto "github.com/insolar/x-crypto"
 
 	"github.com/insolar/rpc/v2"
 	jsonrpc "github.com/insolar/rpc/v2/json2"
@@ -121,10 +121,6 @@ func (ar *Runner) registerAdminServices(rpcServer *rpc.Server) error {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 	}
 
-	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
-	}
 	return nil
 }
 
