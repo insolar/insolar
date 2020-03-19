@@ -180,6 +180,7 @@ func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, 
 		}
 
 		certFile := path.Join(g.config.CertificatesOutDir, node.certName)
+		fmt.Println(certFile)
 
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
