@@ -1,7 +1,7 @@
 host:
   transport:
     protocol: TCP
-    address: 127.0.0.1:13831
+    address: 127.0.0.1:0
     fixedpublicaddress: ""
   mintimeout: 10
   maxtimeout: 2000
@@ -11,7 +11,7 @@ host:
 service:
   cachedirectory: network_cache
 log:
-  level: Debug
+  level: Info
   adapter: zerolog
   formatter: json
   outputtype: stderr
@@ -20,35 +20,27 @@ log:
   buffersize: 0
   llbuffersize: 0
 metrics:
-  listenaddress: 127.0.0.1:8001
+  listenaddress: 0.0.0.0:9091
   namespace: insolar
-  zpagesenabled: false
+  zpagesenabled: true
   reportingperiod: 0s
-logicrunner:
-  rpclisten: 127.0.0.1:33306
-  rpcprotocol: tcp
-  builtin: true
-  goplugin:
-    runnerlisten: 127.0.0.1:33305
-    runnerprotocol: tcp
-  pulselrusize: 100
 apirunner:
-  address: 127.0.0.1:19101
+  address: localhost:19101
   rpc: /api/rpc
   isadmin: false
   swaggerpath: application/api/spec/api-exported.yaml
 adminapirunner:
-  address: 127.0.0.1:19001
+  address: localhost:19001
   rpc: /admin-api/rpc
   isadmin: true
   swaggerpath: application/api/spec/api-exported.yaml
 availabilitychecker:
   enabled: true
-  keeperurl: http://127.0.0.1:12012/check
+  keeperurl: ""
   requesttimeout: 15
   checkperiod: 5
-keyspath: .artifacts/launchnet/reusekeys/discovery//node_01.json
-certificatepath: .artifacts/launchnet/discoverynodes/certs/discovery_cert_1.json
+keyspath: ./
+certificatepath: ""
 tracer:
   jaeger:
     collectorendpoint: ""
@@ -56,7 +48,15 @@ tracer:
     probabilityrate: 1
   samplingrules: {}
 introspection:
-  addr: 127.0.0.1:55501
+  addr: ""
 bus:
   replytimeout: 15s
 lightchainlimit: 5
+logicrunner:
+  rpclisten: 127.0.0.1:7778
+  rpcprotocol: tcp
+  builtin: true
+  goplugin:
+    runnerlisten: 127.0.0.1:7777
+    runnerprotocol: tcp
+  pulselrusize: 100

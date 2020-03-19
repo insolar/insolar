@@ -20,8 +20,8 @@ func TestConfiguration_Load_Default(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := NewLightConfig()
-	fmt.Println(ToString(cfg))
-	require.Equal(t, cfg, holder.Configuration)
+	t.Log(ToString(cfg))
+	require.Equal(t, cfg, *holder.Configuration)
 }
 
 func TestConfiguration_DoubleLoad(t *testing.T) {
@@ -74,6 +74,15 @@ func TestConfiguration_Load_ENVOverridesEmpty(t *testing.T) {
 	require.Equal(t, "127.0.0.2:5555", holder.Configuration.Host.Transport.Address)
 }
 
+func TestNewVirtualHolder_LoadDefault(t *testing.T) {
+	holder := NewVirtualHolder("testdata/insolard-virtual.yaml")
+	err := holder.Load()
+	require.NoError(t, err)
+
+	cfg := NewVirtualConfig()
+	require.Equal(t, cfg, *holder.Configuration)
+}
+
 func TestMain(m *testing.M) {
 	// backup and delete INSOLAR_ env variables, that may interfere with tests
 	variablesBackup := make(map[string]string)
@@ -91,7 +100,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// run tests
-	m.Run()
+	exitCode := m.Run()
 
 	// restore back variables
 	for varName, varValue := range variablesBackup {
@@ -101,4 +110,5 @@ func TestMain(m *testing.M) {
 		}
 
 	}
+	os.Exit(exitCode)
 }
