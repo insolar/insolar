@@ -1,4 +1,4 @@
-[<img src="https://insolar.io/st/github-readme-banner.png">](http://insolar.io/?utm_source=Github)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/github-readme-banner.png">](http://insolar.io/?utm_source=Github)
 
 Insolar platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily. Whether a minimum viable product or full-scale production software, Insolar builds and integrates applications for your enterprise's existing systems.
 
@@ -12,9 +12,7 @@ Insolar platform is the most secure, scalable, and comprehensive business-ready 
 
 To learn what distinguishes Insolar from other blockchain projects, go through the [list of our features](https://insolar.io/platform?utm_source=Github). 
 
-To get a grip on how Insolar works, take a look at its [architecture overview](https://docs.insolar.io/en/latest/architecture.html#architecture).
-
-To join the Insolar network, download the [latest release](https://github.com/insolar/insolar/releases) and follow the [integration instructions](https://docs.insolar.io/en/latest/integration.html).
+To get a grip on how Insolar works, take a look at the [big picture](https://docs.insolar.io/en/latest/basics.html) and explore the [architecture](https://docs.insolar.io/en/latest/architecture.html).
 
 To test Insolar locally, install it and deploy as described below.
 
@@ -85,14 +83,14 @@ If you have any additional questions, join our [developers chat](https://t.me/In
 
 Our social media:
 
-[<img src="https://insolar.io/st/ico-social-facebook.png" width="36" height="36">](https://facebook.com/insolario)
-[<img src="https://insolar.io/st/ico-social-twitter.png" width="36" height="36">](https://twitter.com/insolario)
-[<img src="https://insolar.io/st/ico-social-medium.png" width="36" height="36">](https://medium.com/insolar)
-[<img src="https://insolar.io/st/ico-social-youtube.png" width="36" height="36">](https://youtube.com/insolar)
-[<img src="https://insolar.io/st/ico-social-reddit.png" width="36" height="36">](https://www.reddit.com/r/insolar/)
-[<img src="https://insolar.io/st/ico-social-linkedin.png" width="36" height="36">](https://www.linkedin.com/company/insolario/)
-[<img src="https://insolar.io/st/ico-social-instagram.png" width="36" height="36">](https://instagram.com/insolario)
-[<img src="https://insolar.io/st/ico-social-telegram.png" width="36" height="36">](https://t.me/InsolarAnnouncements)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-facebook.png" width="36" height="36">](https://facebook.com/insolario)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-twitter.png" width="36" height="36">](https://twitter.com/insolario)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-medium.png" width="36" height="36">](https://medium.com/insolar)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-youtube.png" width="36" height="36">](https://youtube.com/insolar)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-reddit.png" width="36" height="36">](https://www.reddit.com/r/insolar/)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-linkedin.png" width="36" height="36">](https://www.linkedin.com/company/insolario/)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-instagram.png" width="36" height="36">](https://instagram.com/insolario)
+[<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-telegram.png" width="36" height="36">](https://t.me/InsolarAnnouncements)
 
 # License
 
