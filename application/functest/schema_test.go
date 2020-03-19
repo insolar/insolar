@@ -32,9 +32,9 @@ func MakeRPCRequest(t testing.TB, m string, params interface{}) (interface{}, er
 	return res, err
 }
 
-func TestSchemaServiceGet(t *testing.T) {
+func TestSpecServiceGet(t *testing.T) {
 	requester.SetVerbose(true)
-	ret, err := MakeRPCRequest(t, "schema.get", map[string]interface{}{})
+	ret, err := MakeRPCRequest(t, "spec.get", map[string]interface{}{})
 	require.NoError(t, err)
 
 	r := ret.(*map[string]interface{})

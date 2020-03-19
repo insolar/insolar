@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestSchemaService_Get(t *testing.T) {
+func TestSpecService_Get(t *testing.T) {
 	defer testutils.LeakTester(t)
 
 	availableFlag := false
@@ -54,7 +54,7 @@ func TestSchemaService_Get(t *testing.T) {
 		SeedManager:         seedmanager.New(),
 		SeedGenerator:       seedmanager.SeedGenerator{},
 	}
-	s := NewSchemaService(&runner)
+	s := NewSpecService(&runner)
 	defer runner.SeedManager.Stop()
 
 	body := rpc.RequestBody{Raw: []byte(`{}`)}
@@ -70,7 +70,7 @@ func TestSchemaService_Get(t *testing.T) {
 	})
 }
 
-func TestNewSchemaService(t *testing.T) {
+func TestNewSpecService(t *testing.T) {
 	cfg := configuration.NewAPIRunner(false)
 	cfg.SwaggerPath = "mamamylaramu"
 	runner := Runner{
@@ -80,7 +80,7 @@ func TestNewSchemaService(t *testing.T) {
 	defer func() {
 		pan, ok := recover().(string)
 		require.True(t, ok, "expected panic on unexistent file")
-		require.Equal(t, "Can't read schema from 'mamamylaramu'", pan, "expected panic from file reading routine")
+		require.Equal(t, "Can't read Spec from 'mamamylaramu'", pan, "expected panic from file reading routine")
 	}()
-	NewSchemaService(&runner)
+	NewSpecService(&runner)
 }

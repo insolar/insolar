@@ -115,3 +115,4 @@ func UnmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
+

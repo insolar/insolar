@@ -18,21 +18,21 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type SchemaService struct {
+type SpecService struct {
 	Data interface{}
 }
 
-func NewSchemaService(ar *Runner) *SchemaService {
-	ss := new(SchemaService)
+func NewSpecService(ar *Runner) *SpecService {
+	ss := new(SpecService)
 	path := ar.cfg.SwaggerPath
 
 	f, err := os.OpenFile(path, os.O_RDONLY, 0)
 	if err != nil {
-		log.Panicf("Can't read schema from '%s'", path)
+		log.Panicf("Can't read Spec from '%s'", path)
 	}
 	err = yaml.NewDecoder(f).Decode(&ss.Data)
 	if err != nil {
-		log.Panicf("Can't parse schema from '%s' : %s", path, err)
+		log.Panicf("Can't parse Spec from '%s' : %s", path, err)
 	}
 
 	ss.Data = ConvertInnerYamlRepresentatinToJsonSerializable(ss.Data)
@@ -49,7 +49,7 @@ func ConvertInnerYamlRepresentatinToJsonSerializable(in interface{}) interface{}
 			case string:
 				ret[ii] = ConvertInnerYamlRepresentatinToJsonSerializable(v)
 			default:
-				log.Panicf("[Schema yaml parser] unexpected type in key: %#v", k)
+				log.Panicf("[spec yaml parser] unexpected type in key: %#v", k)
 			}
 		}
 		return ret
@@ -71,20 +71,20 @@ func ConvertInnerYamlRepresentatinToJsonSerializable(in interface{}) interface{}
 	case int, uint, byte, []byte, string, bool:
 		return i
 	default:
-		log.Panicf("[Schema yaml parser] unexpected type in value %#v", in)
+		log.Panicf("[Spec yaml parser] unexpected type in value %#v", in)
 	}
 	return "Compiler fail to recognize previous switch"
 }
 
-func (s *SchemaService) Get(r *http.Request, args *SeedArgs, _ *rpc.RequestBody, reply *interface{}) error {
-	ctx, instr := instrumenter.NewMethodInstrument("SchemaService.get")
+func (s *SpecService) Get(r *http.Request, args *SeedArgs, _ *rpc.RequestBody, reply *interface{}) error {
+	ctx, instr := instrumenter.NewMethodInstrument("SpecService.get")
 	defer instr.End()
 
 	msg := fmt.Sprint("Incoming request: ", r.RequestURI)
 	instr.Annotate(msg)
 
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ SchemaService.get ] ", msg)
+	logger.Info("[ SpecService.get ] ", msg)
 	*reply = s.Data
 	return nil
 }

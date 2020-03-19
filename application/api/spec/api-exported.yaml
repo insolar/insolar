@@ -846,11 +846,11 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/definitions-responses-Status-yaml'
                   - $ref: '#/components/schemas/response-unsignedRequestError'
-  '/admin-api/rpc#schema.get':
+  '/admin-api/rpc#spec.get':
     post:
-      summary: schema.get
+      summary: spec.get
       description: >
-        returns this schema
+        returns this spec
       operationId: get
       tags:
         - Internal
