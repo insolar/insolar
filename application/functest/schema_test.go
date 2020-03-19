@@ -37,7 +37,7 @@ func TestSpecServiceGet(t *testing.T) {
 	ret, err := MakeRPCRequest(t, "spec.get", map[string]interface{}{})
 	require.NoError(t, err)
 
-	r := ret.(*map[string]interface{})
-	rr := *r
-	require.IsType(t, "string", rr["openapi"], "right openapi")
+	r := *(ret.(*interface{}))
+	rr := r.(map[string]interface{})
+	require.IsType(t, map[string]interface{}{}, rr["result"], "spec.get returns resilt")
 }
