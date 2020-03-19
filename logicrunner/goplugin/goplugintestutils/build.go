@@ -31,10 +31,6 @@ func buildCLI(name string) (string, error) {
 	return binPath, nil
 }
 
-func buildInsiderCLI() (string, error) {
-	return buildCLI("cmd/insgorund")
-}
-
 func BuildPreprocessor() (string, error) {
 	return buildCLI("cmd/insgocc")
 }
@@ -47,16 +43,11 @@ func testdataPath() string {
 	return filepath.Join(p.Dir, "testdata", "logicrunner")
 }
 
-// Build compiles and return path to insgorund and insgocc binaries.
-func Build() (string, string, error) {
-	icc, err := buildInsiderCLI()
-	if err != nil {
-		return "", "", err
-	}
-
+// Build compiles and return path to insgocc binary.
+func Build() (string, error) {
 	insgocc, err := BuildPreprocessor()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-	return icc, insgocc, nil
+	return insgocc, nil
 }

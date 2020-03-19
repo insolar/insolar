@@ -253,10 +253,6 @@ func startNet(appPath []string, launchnetArgs string) error {
 		cwdList = strings.Split(cwd, "/")
 	}
 
-	// If you want to add -n flag here please make sure that insgorund will
-	// be eventually started with --log-level=debug. Otherwise someone will spent
-	// a lot of time trying to figure out why insgorund debug logs are missing
-	// during execution of functests.
 	cmd = exec.Command("./insolar-scripts/insolard/launchnet.sh", launchnetArgs)
 	stdout, _ = cmd.StdoutPipe()
 

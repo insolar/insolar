@@ -9,7 +9,6 @@ INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
 TESTPULSARD = testpulsard
-INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 BACKUPMANAGER = backupmanager
@@ -110,7 +109,7 @@ vendor: ## update vendor dependencies
 	go mod vendor
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
 build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL) $(REQUESTER)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -136,10 +135,6 @@ $(PULSARD):
 .PHONY: $(TESTPULSARD)
 $(TESTPULSARD):
 	$(GOBUILD) -o $(BIN_DIR)/$(TESTPULSARD) -ldflags "${LDFLAGS}" cmd/testpulsard/*.go
-
-.PHONY: $(INSGORUND)
-$(INSGORUND):
-	CGO_ENABLED=1 $(GOBUILD) -o $(BIN_DIR)/$(INSGORUND) -ldflags "${LDFLAGS}" cmd/insgorund/*.go
 
 .PHONY: $(BENCHMARK)
 $(BENCHMARK):

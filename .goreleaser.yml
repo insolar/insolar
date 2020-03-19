@@ -32,17 +32,6 @@ builds:
     goarch:
       - amd64
 
-  - # Go runner daemon
-    main: './cmd/insgorund'
-    binary: insgorund
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-
   - # Golang contracts compiler tool
     main: './cmd/insgocc'
     binary: insgocc
