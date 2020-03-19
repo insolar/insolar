@@ -60,8 +60,8 @@ all: submodule clean pre-build build ## cleanup, install deps, (re)generate all 
 
 .PHONY: submodule
 submodule: ## init git submodule
-    git submodule init
-    git submodule update
+		git submodule init
+		git submodule update
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
