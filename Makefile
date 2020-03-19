@@ -56,7 +56,12 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./application/api
 
 .PHONY: all
-all: clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: submodule clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+
+.PHONY: submodule
+submodule: ## init git submodule
+    git submodule init
+    git submodule update
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
