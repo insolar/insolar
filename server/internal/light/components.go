@@ -50,7 +50,7 @@ type components struct {
 	cleaner           executor.Cleaner
 }
 
-func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Configuration) (*certificate.CertificateManager, error) {
+func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.LightConfig) (*certificate.CertificateManager, error) {
 	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -78,7 +78,7 @@ func initTemporaryCertificateManager(ctx context.Context, cfg *configuration.Con
 	return certManager, nil
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, apiOptions api.Options) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.LightConfig, apiOptions api.Options) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -142,7 +142,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, apiOpti
 	{
 		var err error
 		// External communication.
-		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, comps.cmp)
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg.Host, comps.cmp)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
@@ -160,7 +160,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, apiOpti
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -288,7 +288,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, apiOpti
 			Pulses,
 			indexes,
 			filamentCalculator,
-			conf.LightChainLimit,
+			cfg.LightChainLimit,
 			conf.CleanerDelay,
 			conf.FilamentCacheLimit,
 		)
@@ -315,12 +315,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, apiOpti
 			indexes,
 			Pulses,
 			Jets,
-			conf.LightChainLimit,
+			cfg.LightChainLimit,
 			Sender,
 		)
 
 		stateIniter := executor.NewStateIniter(
-			conf, Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
+			cfg.LightChainLimit, Jets, hotWaitReleaser, drops, Nodes, Sender, Pulses, Pulses, jetCalculator, indexes,
 		)
 
 		dep := proc.NewDependencies(

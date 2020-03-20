@@ -48,7 +48,7 @@ func writeBootstrapConfig(outputDir string) {
 }
 
 func writeNodeConfig(outputDir string) {
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewGenericConfiguration()
 	raw, err := yaml.Marshal(cfg)
 	if err != nil {
 		panic(err)

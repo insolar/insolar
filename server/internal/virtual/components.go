@@ -48,7 +48,7 @@ type bootstrapComponents struct {
 	KeyProcessor               insolar.KeyProcessor
 }
 
-func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
+func initBootstrapComponents(ctx context.Context, cfg configuration.VirtualConfig) bootstrapComponents {
 	earlyComponents := component.NewManager(nil)
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
@@ -71,7 +71,7 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 
 func initCertificateManager(
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.VirtualConfig,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -90,7 +90,7 @@ func initCertificateManager(
 // initComponents creates and links all insolard components
 func initComponents(
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.VirtualConfig,
 	cryptographyService insolar.CryptographyService,
 	pcs insolar.PlatformCryptographyScheme,
 	keyStore insolar.KeyStore,
@@ -117,12 +117,12 @@ func initComponents(
 		publisher = internal.PublisherWrapper(ctx, cm, cfg.Introspection, publisher)
 	}
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, cm)
+	nw, err := servicenetwork.NewServiceNetwork(cfg.Host, cm)
 	checkError(ctx, err, "failed to start Network")
 
 	metricsComp := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 
-	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
+	jc := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
 
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
