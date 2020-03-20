@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -19,8 +18,8 @@ import (
 )
 
 type SendInitialState struct {
-	meta payload.Meta
-	cfg  configuration.Ledger
+	meta            payload.Meta
+	lightChainLimit int
 
 	dep struct {
 		startPulse    pulse.StartPulse
@@ -45,10 +44,10 @@ func (p *SendInitialState) Dep(
 	p.dep.sender = sender
 }
 
-func NewSendInitialState(meta payload.Meta, cfg configuration.Ledger) *SendInitialState {
+func NewSendInitialState(meta payload.Meta, lightChainLimit int) *SendInitialState {
 	return &SendInitialState{
-		meta: meta,
-		cfg:  cfg,
+		meta:            meta,
+		lightChainLimit: lightChainLimit,
 	}
 }
 
@@ -112,7 +111,7 @@ func (p *SendInitialState) sendForNetworkStart(
 		Drops:           state.Drops,
 		Indexes:         state.Indexes,
 		Pulse:           *pulse.ToProto(&topSyncPulse),
-		LightChainLimit: uint32(p.cfg.LightChainLimit),
+		LightChainLimit: uint32(p.lightChainLimit),
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)
@@ -126,7 +125,7 @@ func (p *SendInitialState) sendForJoiner(ctx context.Context, topSyncPulse insol
 	msg, err := payload.NewMessage(&payload.LightInitialState{
 		NetworkStart:    false,
 		Pulse:           *pulse.ToProto(&topSyncPulse),
-		LightChainLimit: uint32(p.cfg.LightChainLimit),
+		LightChainLimit: uint32(p.lightChainLimit),
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)

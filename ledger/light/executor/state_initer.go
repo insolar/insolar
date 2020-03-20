@@ -13,7 +13,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
@@ -41,7 +40,7 @@ const timeout = 10 * time.Second
 
 // NewStateIniter creates StateIniterDefault with all required components.
 func NewStateIniter(
-	cfg configuration.Ledger,
+	lightChainLimit int,
 	jetModifier jet.Modifier,
 	jetReleaser JetReleaser,
 	drops drop.Modifier,
@@ -53,16 +52,16 @@ func NewStateIniter(
 	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
-		cfg:           cfg,
-		jetModifier:   jetModifier,
-		jetReleaser:   jetReleaser,
-		drops:         drops,
-		nodes:         nodes,
-		sender:        sender,
-		pulseAppender: pulseAppender,
-		pulseAccessor: pulseAccessor,
-		jetCalculator: calc,
-		indexes:       indexes,
+		lightChainLimit: lightChainLimit,
+		jetModifier:     jetModifier,
+		jetReleaser:     jetReleaser,
+		drops:           drops,
+		nodes:           nodes,
+		sender:          sender,
+		pulseAppender:   pulseAppender,
+		pulseAccessor:   pulseAccessor,
+		jetCalculator:   calc,
+		indexes:         indexes,
 		backoff: backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -74,17 +73,17 @@ func NewStateIniter(
 
 // StateIniterDefault implements StateIniter.
 type StateIniterDefault struct {
-	cfg           configuration.Ledger
-	jetModifier   jet.Modifier
-	jetReleaser   JetReleaser
-	drops         drop.Modifier
-	nodes         node.Accessor
-	sender        bus.Sender
-	pulseAppender insolarPulse.Appender
-	pulseAccessor insolarPulse.Accessor
-	jetCalculator JetCalculator
-	backoff       backoff.Backoff
-	indexes       object.MemoryIndexModifier
+	lightChainLimit int
+	jetModifier     jet.Modifier
+	jetReleaser     JetReleaser
+	drops           drop.Modifier
+	nodes           node.Accessor
+	sender          bus.Sender
+	pulseAppender   insolarPulse.Appender
+	pulseAccessor   insolarPulse.Accessor
+	jetCalculator   JetCalculator
+	backoff         backoff.Backoff
+	indexes         object.MemoryIndexModifier
 }
 
 func (s *StateIniterDefault) PrepareState(
@@ -184,11 +183,11 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
-	if uint32(s.cfg.LightChainLimit) != state.LightChainLimit {
+	if uint32(s.lightChainLimit) != state.LightChainLimit {
 		panic(fmt.Sprintf(
 			"configuration mismatch: LightChainLimit: from heavy %v, from light %v",
 			state.LightChainLimit,
-			s.cfg.LightChainLimit,
+			s.lightChainLimit,
 		))
 	}
 

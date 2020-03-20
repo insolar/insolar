@@ -147,6 +147,8 @@ github.com/insolar/go-actors/actor
 github.com/insolar/go-actors/actor/errors
 github.com/insolar/go-actors/actor/system
 github.com/insolar/go-actors/actor/mailbox
+# github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866
+github.com/insolar/insconfig
 # github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
 github.com/insolar/rpc/v2
 github.com/insolar/rpc/v2/json2
@@ -251,7 +253,7 @@ github.com/ory/dockertest/v3/docker/types/strslice
 github.com/ory/dockertest/v3/docker/types/versions
 # github.com/pelletier/go-toml v1.4.0
 github.com/pelletier/go-toml
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -286,14 +288,16 @@ github.com/spf13/cast
 github.com/spf13/cobra
 # github.com/spf13/jwalterweatherman v1.1.0
 github.com/spf13/jwalterweatherman
-# github.com/spf13/pflag v1.0.3
+# github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.4.0
+# github.com/spf13/viper v1.6.2
 github.com/spf13/viper
 # github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/require
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/suite
+# github.com/subosito/gotenv v1.2.0
+github.com/subosito/gotenv
 # github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
 github.com/tylerb/gls
 # github.com/uber/jaeger-client-go v2.19.0+incompatible
@@ -449,5 +453,7 @@ google.golang.org/grpc/balancer/base
 google.golang.org/grpc/credentials/internal
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
-# gopkg.in/yaml.v2 v2.2.7
+# gopkg.in/ini.v1 v1.51.0
+gopkg.in/ini.v1
+# gopkg.in/yaml.v2 v2.2.8
 gopkg.in/yaml.v2

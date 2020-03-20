@@ -36,8 +36,7 @@ type Options struct {
 }
 
 // ConfigureOptions convert daemon configuration to controller options
-func ConfigureOptions(conf configuration.Configuration) *Options {
-	config := conf.Host
+func ConfigureOptions(config configuration.HostNetwork) *Options {
 	return &Options{
 		TimeoutMult:          time.Duration(config.TimeoutMult) * time.Millisecond,
 		MinTimeout:           time.Duration(config.MinTimeout) * time.Millisecond,

@@ -29,7 +29,7 @@ import (
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
-	cfg configuration.Configuration
+	cfg configuration.HostNetwork
 	cm  *component.Manager
 
 	// dependencies
@@ -58,7 +58,7 @@ type ServiceNetwork struct {
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
-func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager) (*ServiceNetwork, error) {
+func NewServiceNetwork(conf configuration.HostNetwork, rootCm *component.Manager) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf}
 	return serviceNetwork, nil
 }
@@ -75,7 +75,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	cert := n.CertificateManager.GetCertificate()
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(n.cfg.Host.Transport, cert)
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(n.cfg.Transport, cert)
 	if err != nil {
 		return errors.Wrap(err, "failed to create NodeNetwork")
 	}
@@ -88,7 +88,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		table,
 		cert,
-		transport.NewFactory(n.cfg.Host.Transport),
+		transport.NewFactory(n.cfg.Transport),
 		hostNetwork,
 		nodeNetwork,
 		controller.NewRPCController(options),

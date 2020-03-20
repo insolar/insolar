@@ -23,32 +23,22 @@ import (
 )
 
 type Server struct {
-	cfgPath    string
+	cfgHolder  *configuration.LightHolder
 	apiOptions api.Options
 }
 
-func New(cfgPath string, apiOptions api.Options) *Server {
+func New(cfgHolder *configuration.LightHolder, apiOptions api.Options) *Server {
 	return &Server{
-		cfgPath:    cfgPath,
+		cfgHolder:  cfgHolder,
 		apiOptions: apiOptions,
 	}
 }
 
 func (s *Server) Serve() {
-	cfgHolder := configuration.NewHolder()
-	var err error
-	if len(s.cfgPath) != 0 {
-		err = cfgHolder.LoadFromFile(s.cfgPath)
-	} else {
-		err = cfgHolder.Load()
-	}
-	if err != nil {
-		log.Warn("failed to load configuration from file: ", err.Error())
-	}
-	cfg := &cfgHolder.Configuration
+	cfg := *s.cfgHolder.Configuration
 
 	fmt.Println("Version: ", version.GetFullVersion())
-	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
+	fmt.Println("Starts with configuration:\n", configuration.ToString(s.cfgHolder.Configuration))
 
 	var (
 		ctx         = context.Background()
@@ -60,7 +50,7 @@ func (s *Server) Serve() {
 			nodeRole      = "light_material"
 			nodeReference = ""
 		)
-		certManager, err := initTemporaryCertificateManager(ctx, cfg)
+		certManager, err := initTemporaryCertificateManager(ctx, &cfg)
 		if err != nil {
 			log.Warn("Failed to initialize nodeRef, nodeRole fields: ", err.Error())
 		} else {
@@ -72,7 +62,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, *cfg, s.apiOptions)
+	cmp, err := newComponents(ctx, cfg, s.apiOptions)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

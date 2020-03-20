@@ -530,13 +530,13 @@ func (p *PublisherMock) Close() error {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
-	cfg := configuration.NewConfiguration()
+	cfg := configuration.NewGenericConfiguration()
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.CacheDirectory = cacheDir + node.host
 
 	node.componentManager = component.NewManager(nil)
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg.Host, node.componentManager)
 	require.NoError(s.t, err)
 
 	certManager, cryptographyService := s.initCrypto(node)
