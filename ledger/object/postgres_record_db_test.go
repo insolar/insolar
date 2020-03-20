@@ -176,6 +176,7 @@ func TestPostgresBatchSet(t *testing.T) {
 	}
 
 	records := make([]record.Material, len(ids))
+	pulseBatches := make(map[insolar.PulseNumber][]record.Material)
 	for i := 0; i < len(records); i++ {
 		records[i] = record.Material{
 			Virtual:  record.Virtual{},
@@ -185,10 +186,14 @@ func TestPostgresBatchSet(t *testing.T) {
 		}
 		f.Fuzz(&records[i].Polymorph)
 		f.NilChance(0).Fuzz(&records[i].Signature)
+		pulseBatches[records[i].ID.Pulse()] = append(pulseBatches[records[i].ID.Pulse()], records[i])
 	}
 
-	err := db.BatchSet(ctx, records)
-	require.NoError(t, err)
+	// We separate them by pulse since BatchSet doesn't support multi pulse batching
+	for _, rec := range pulseBatches {
+		err := db.BatchSet(ctx, rec)
+		require.NoError(t, err)
+	}
 
 	for i := 0; i < len(ids); i++ {
 		rec, err := db.ForID(ctx, ids[i])

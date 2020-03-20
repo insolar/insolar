@@ -111,6 +111,63 @@ func (r *PostgresRecordDB) Set(ctx context.Context, rec record.Material) error {
 	return nil
 }
 
+func (r *PostgresRecordDB) insertRecordsBatch(ctx context.Context, tx pgx.Tx, recs []record.Material) error {
+	numRecords := len(recs)
+	rawPositionResult := tx.QueryRow(ctx, `
+			INSERT INTO records_last_position (pulse_number, position)
+			VALUES ($1, $2)
+			ON CONFLICT(pulse_number) DO
+			UPDATE SET position = records_last_position.position + $2
+			RETURNING position;
+		`, recs[0].ID.Pulse(), numRecords)
+
+	var startPosition uint32
+
+	err := rawPositionResult.Scan(&startPosition)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return errors.Wrap(err, "Unable to INSERT into records_last_position")
+	}
+
+	startPosition = startPosition - uint32(numRecords) + 1
+
+	var batch pgx.Batch
+	pulseMap := make(map[insolar.PulseNumber]struct{})
+	for _, rec := range recs {
+		// Insert the record
+		recordIDBinary, err := rec.ID.MarshalBinary()
+		if err != nil {
+			return errors.Wrap(err, "rec.ID.MarshalBinary failed")
+		}
+		objectIDBinary, err := rec.ObjectID.MarshalBinary()
+		if err != nil {
+			return errors.Wrap(err, "rec.ObjectID.MarshalBinary failed")
+		}
+		jetIDBinary, err := rec.JetID.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "rec.JetID.Marshal failed")
+		}
+		virtualBinary, err := rec.Virtual.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "rec.Virtual.Marshal failed")
+		}
+		batch.Queue(`INSERT INTO records (pulse_number, position, record_id, object_id, jet_id, signature, polymorph, virtual)
+			VALUES ($1, $2, $3, $4, $5,
+			coalesce($6, ''::bytea), $7, $8)
+		`, rec.ID.Pulse(), startPosition, recordIDBinary, objectIDBinary, jetIDBinary, rec.Signature, rec.Polymorph, virtualBinary)
+		startPosition++
+
+		pulseMap[rec.ID.Pulse()] = struct{}{}
+	}
+
+	if len(pulseMap) > 1 {
+		panic("Doesn't support multipulse batching")
+	}
+
+	batchResults := tx.SendBatch(ctx, &batch)
+	return errors.Wrap(batchResults.Close(), "Failed to close batch")
+}
+
 // BatchSet saves a batch of records to storage with order-processing.
 func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	startTime := time.Now()
@@ -135,8 +192,9 @@ func (r *PostgresRecordDB) BatchSet(ctx context.Context, recs []record.Material)
 			return errors.Wrap(err, "Unable to start a write transaction")
 		}
 
-		for _, rec := range recs {
-			err = r.insertRecord(ctx, tx, rec)
+		numRecords := len(recs)
+		if numRecords > 0 {
+			err = r.insertRecordsBatch(ctx, tx, recs)
 			if err != nil {
 				_ = tx.Rollback(ctx)
 				return err

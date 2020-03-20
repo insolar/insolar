@@ -688,7 +688,10 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	recordPosition := object.NewPostgresRecordDB(getPool())
 
 	// Save records to DB
-	err := recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec, thirdRec})
+	err := recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec})
+	require.NoError(t, err)
+
+	err = recordStorage.BatchSet(ctx, []record.Material{thirdRec})
 	require.NoError(t, err)
 
 	// Pulses
