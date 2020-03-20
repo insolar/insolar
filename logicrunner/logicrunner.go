@@ -157,10 +157,8 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	if lr.Cfg.BuiltIn != nil {
-		if err := lr.initializeBuiltin(ctx); err != nil {
-			return errors.Wrap(err, "Failed to initialize builtin VM")
-		}
+	if err := lr.initializeBuiltin(ctx); err != nil {
+		return errors.Wrap(err, "Failed to initialize builtin VM")
 	}
 
 	lr.ArtifactManager.InjectFinish()

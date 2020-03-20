@@ -27,7 +27,6 @@ log:
 metrics:
   listenaddress: 0.0.0.0:9091
 logicrunner:
-  builtin: {}
 apirunner:
   port: 19191
   location: /api/v1
