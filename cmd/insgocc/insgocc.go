@@ -308,8 +308,6 @@ func main() {
 		&contractsPath, "contractsPath", "c", "", "dir path to builtin contracts, example: application/builtin/contract")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
-	rootCmd.AddCommand(
-		cmdProxy, cmdWrapper, cmdGenerateBuiltins, genesisCompile())
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
