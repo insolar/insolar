@@ -29,6 +29,7 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 	}
 	allowedMethods["contract.registerNode"] = true
 	allowedMethods["contract.getNodeRef"] = true
+
 	return &AdminContractService{runner: runner, allowedMethods: allowedMethods}
 }
 

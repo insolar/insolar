@@ -846,6 +846,18 @@ paths:
                 oneOf:
                   - $ref: '#/components/schemas/definitions-responses-Status-yaml'
                   - $ref: '#/components/schemas/response-unsignedRequestError'
+  '/admin-api/rpc#spec.get':
+    post:
+      summary: spec.get
+      description: >
+        returns this spec
+      operationId: get
+      tags:
+        - Internal
+      responses:
+        '200':
+          description: OK
+
   '/admin-api/rpc#network.getInfo':
     post:
       summary: network.getInfo
