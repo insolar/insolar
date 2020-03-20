@@ -53,10 +53,4 @@ bus:
   replytimeout: 15s
 lightchainlimit: 5
 logicrunner:
-  rpclisten: 127.0.0.1:7778
-  rpcprotocol: tcp
-  builtin: true
-  goplugin:
-    runnerlisten: 127.0.0.1:7777
-    runnerprotocol: tcp
   pulselrusize: 100
