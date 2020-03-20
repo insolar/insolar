@@ -77,8 +77,6 @@ func (r *machineTypeFlag) Set(arg string) error {
 		fallthrough
 	case "go":
 		fallthrough
-	case "golang":
-		r.num = insolar.MachineTypeGoPlugin
 	case "builtin":
 		r.num = insolar.MachineTypeBuiltin
 	default:
@@ -109,8 +107,6 @@ var (
 func getAppropriateContractDir(machineType insolar.MachineType, dir string) string {
 	if machineType == insolar.MachineTypeBuiltin {
 		return path.Join(dir, "proxy")
-	} else if machineType == insolar.MachineTypeGoPlugin {
-		return path.Join(dir, "..", "proxy")
 	}
 	panic(fmt.Sprintf("unknown machine type %v", machineType))
 }

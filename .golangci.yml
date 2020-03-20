@@ -3,7 +3,6 @@ run:
   skip-dirs:
     - applicationbase/contract/
     - applicationbase/proxy/
-    - logicrunner/goplugin/ginsider/healthcheck
 
 linters:
   enable:

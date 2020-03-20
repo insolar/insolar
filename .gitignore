@@ -50,7 +50,3 @@ network_cache
 
 # Local doc build directory
 /docs/build
-
-# contracts generated files
-applicationbase/contract
-applicationbase/proxy

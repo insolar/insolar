@@ -110,7 +110,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	err = WriteFile(tmpDir, "main.go", randomTestCode)
 	s.NoError(err)
 
-	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"), insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"), insolar.MachineTypeBuiltin)
 	s.NoError(err)
 	s.NotNil(parsed)
 
@@ -173,7 +173,7 @@ func NewFromString(s string) (*One, error) {
 	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	info, err := ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
+	info, err := ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	s.Equal(1, len(info.constructors))
@@ -196,7 +196,7 @@ func New() {
 	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeBuiltin)
 	s.Error(err)
 
 	code = `
@@ -214,7 +214,7 @@ func New() *One {
 	err = WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeBuiltin)
 	s.Error(err)
 }
 
@@ -232,7 +232,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.EqualError(err, "Only one smart contract must exist")
 }
 
@@ -261,7 +261,7 @@ func ( a *A ) Get(
 
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -304,7 +304,7 @@ func (a *A) Get(
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
@@ -347,7 +347,7 @@ func NewWithNumber(i int) (*A, error) {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
@@ -375,7 +375,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.EqualError(err, "Only one smart contract must exist")
 }
 
@@ -399,7 +399,7 @@ type B struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.EqualError(err, ": more than one contract in a file")
 }
 
@@ -431,7 +431,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -474,7 +474,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -517,7 +517,7 @@ func ( A ) Get() error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -556,7 +556,7 @@ func ( A ) Get() (path.SomeValue, error) {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -588,7 +588,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -617,7 +617,7 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 			}
 			a, r := assert.New(t), require.New(t)
 
-			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeGoPlugin)
+			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeBuiltin)
 			a.NotNil(parsed, "have parsed object")
 			a.NoError(err)
 

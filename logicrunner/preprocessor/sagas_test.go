@@ -65,7 +65,7 @@ func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 	err = WriteFile(tmpDir, testContract, sagaTestContract)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -93,7 +93,7 @@ func (s *SagasSuite) TestSagaMetaInfoIsPresentInWrapper() {
 	err = WriteFile(tmpDir, testContract, sagaTestContract)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
@@ -150,7 +150,7 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -200,7 +200,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -248,7 +248,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -297,7 +297,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -346,7 +346,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount int) (string, error) {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -390,7 +390,7 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
@@ -444,7 +444,7 @@ func (w *SagaTestWallet) TheRollbackMethod(arg1 int, arg2 string) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -494,7 +494,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -546,7 +546,7 @@ func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	err = WriteFile(tmpDir, testContract, testSaga)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeBuiltin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer

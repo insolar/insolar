@@ -244,8 +244,7 @@ func (pf *ParsedFile) ContractName() string {
 }
 
 func checkMachineType(machineType insolar.MachineType) error {
-	if machineType != insolar.MachineTypeGoPlugin &&
-		machineType != insolar.MachineTypeBuiltin {
+	if machineType != insolar.MachineTypeBuiltin {
 		return errors.New("Unsupported machine type")
 	}
 	return nil

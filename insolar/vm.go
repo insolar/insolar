@@ -16,7 +16,6 @@ type MachineType int
 const (
 	MachineTypeNotExist             = 0
 	MachineTypeBuiltin  MachineType = iota + 1
-	MachineTypeGoPlugin
 
 	MachineTypesLastID
 )

@@ -509,7 +509,7 @@ func (s *ArtifactsMangerClientSuite) TestDeployCode() {
 	// Arrange
 	codeID := gen.ID()
 	code := []byte(testutils.RandomString())
-	machineType := insolar.MachineTypeGoPlugin
+	machineType := insolar.MachineTypeBuiltin
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 
 	for name, test := range map[string]struct {
@@ -606,7 +606,7 @@ func (s *ArtifactsMangerClientSuite) TestDeployCode() {
 func (s *ArtifactsMangerClientSuite) TestDeployCode_FailedToSend() {
 	// Arrange
 	code := []byte(testutils.RandomString())
-	machineType := insolar.MachineTypeGoPlugin
+	machineType := insolar.MachineTypeBuiltin
 
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 	s.pulseAccessor.LatestMock.Return(pulseObject, nil)
@@ -871,7 +871,7 @@ func (s *ArtifactsMangerClientSuite) TestGetCode() {
 	codeRef := insolar.NewRecordReference(codeID)
 
 	code := []byte(testutils.RandomString())
-	machineType := insolar.MachineTypeGoPlugin
+	machineType := insolar.MachineTypeBuiltin
 
 	for name, test := range map[string]struct {
 		response payload.Payload
