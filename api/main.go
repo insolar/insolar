@@ -125,6 +125,12 @@ func (ar *Runner) registerAdminServices(rpcServer *rpc.Server) error {
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
 	}
+
+	err = rpcServer.RegisterService(NewSpecService(ar), "spec")
+	if err != nil {
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: spec")
+	}
+
 	return nil
 }
 
