@@ -96,14 +96,14 @@ type Server struct {
 }
 
 // After using it you have to remove directory configuration.Storage.DataDirectory by yourself
-func DefaultHeavyConfig() configuration.Configuration {
+func DefaultHeavyConfig() configuration.HeavyBadgerConfig {
 	tmpDir, err := ioutil.TempDir("", "heavy-integr-test-")
 	if err != nil {
 		panic(err)
 	}
-	cfg := configuration.Configuration{}
+	cfg := configuration.HeavyBadgerConfig{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.Ledger.LightChainLimit = math.MaxInt32
+	cfg.LightChainLimit = math.MaxInt32
 	cfg.Bus.ReplyTimeout = time.Minute
 	cfg.Ledger.Storage = configuration.Storage{
 		DataDirectory: tmpDir,
@@ -117,7 +117,7 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 
 func NewBadgerServer(
 	ctx context.Context,
-	cfg configuration.Configuration,
+	cfg configuration.HeavyBadgerConfig,
 	genesisCfg genesis.HeavyConfig,
 	receiveCallback func(meta payload.Meta, pl payload.Payload) []payload.Payload,
 ) (*Server, error) {
@@ -174,7 +174,7 @@ func NewBadgerServer(
 		Pulses = insolarPulse.NewBadgerDB(DB)
 		Jets = jet.NewBadgerDBStore(DB)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -195,7 +195,7 @@ func NewBadgerServer(
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
+		c := jetcoordinator.NewJetCoordinator(cfg.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
@@ -239,9 +239,9 @@ func NewBadgerServer(
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = Jets
 		pm.StartPulse = sp
-		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.LightChainLimit)
 
-		h := handler.New(cfg.Ledger, gcRunInfo)
+		h := handler.New(cfg.LightChainLimit, gcRunInfo)
 		h.RecordAccessor = Records
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator

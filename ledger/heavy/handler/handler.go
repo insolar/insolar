@@ -11,7 +11,6 @@ import (
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
@@ -32,8 +31,8 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	cfg      configuration.Ledger
-	gcRunner executor.GCRunInfo
+	lightChainLimit int
+	gcRunner        executor.GCRunInfo
 
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -62,10 +61,10 @@ type Handler struct {
 }
 
 // New creates a new handler.
-func New(cfg configuration.Ledger, gcRunner executor.GCRunInfo) *Handler {
+func New(lightChainLimit int, gcRunner executor.GCRunInfo) *Handler {
 	h := &Handler{
-		cfg:      cfg,
-		gcRunner: gcRunner,
+		lightChainLimit: lightChainLimit,
+		gcRunner:        gcRunner,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -192,7 +191,7 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 		h.dep.SendCode(p)
 		err = p.Proceed(ctx)
 	case payload.TypeReplication:
-		p := proc.NewReplication(meta, h.cfg)
+		p := proc.NewReplication(meta)
 		h.dep.Replication(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetJet:
@@ -214,7 +213,7 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
 	case payload.TypeGetLightInitialState:
-		p := proc.NewSendInitialState(meta, h.cfg)
+		p := proc.NewSendInitialState(meta, h.lightChainLimit)
 		h.dep.SendInitialState(p)
 		err = p.Proceed(ctx)
 	case payload.TypeGetPulse:

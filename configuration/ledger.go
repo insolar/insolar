@@ -17,55 +17,14 @@ type Storage struct {
 	GCRunFrequency uint
 }
 
-type PostgreSQL struct {
-	URL           string // postgresql:// connection string
-	MigrationPath string // path to the directory with migration scripts
-}
-
-// JetSplit holds configuration for jet split.
-type JetSplit struct {
-	// RecordsCountThreshold is a drop threshold in records to perform split for jet.
-	ThresholdRecordsCount int
-	// ThresholdOverflowCount is a how many times in row ThresholdRecordsCount should be surpassed.
-	ThresholdOverflowCount int
-	// DepthLimit limits jet tree depth (maximum possible jets = 2^DepthLimit)
-	DepthLimit uint8
-}
-
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
 	Storage Storage
 
-	// PostgreSQL defines configuration related to PostgreSQL.
-	PostgreSQL PostgreSQL
-
-	// JetSplit holds jet split configuration.
-	JetSplit JetSplit
-
 	// common/sharable values:
-
-	// LightChainLimit is maximum pulse difference (NOT number of pulses)
-	// between current and the latest replicated on heavy.
-	//
-	// IMPORTANT: It should be the same on ALL nodes.
-	LightChainLimit int
-
 	// Backup holds configuration of BackupMaker
 	Backup Backup
-
-	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
-	// of LME's data cleaning
-	CleanerDelay int
-
-	// MaxNotificationsPerPulse holds the limit for abandoned requests notifications limit
-	MaxNotificationsPerPulse uint
-
-	// FilamentCacheLimit holds the limit for cache items for an object
-	FilamentCacheLimit int
-
-	// IsPostgresBase indicates that heavy uses Postgres as a database
-	IsPostgresBase bool
 }
 
 // Backup holds configuration for backuping.
@@ -118,14 +77,6 @@ func NewLedger() Ledger {
 			GCRunFrequency:               1,
 		},
 
-		JetSplit: JetSplit{
-			// TODO: find best default values
-			ThresholdRecordsCount:  100,
-			ThresholdOverflowCount: 3,
-			DepthLimit:             5, // limit to 32 jets
-		},
-		LightChainLimit: 5, // 5 pulses
-
 		Backup: Backup{
 			Enabled:          false,
 			DirNameTemplate:  "pulse-%d",
@@ -134,10 +85,5 @@ func NewLedger() Ledger {
 			BackupFile:       "incr.bkp",
 			ConfirmFile:      "BACKUPED",
 		},
-
-		CleanerDelay:             3,    // 3 pulses
-		MaxNotificationsPerPulse: 100,  // 100 objects
-		FilamentCacheLimit:       3000, // 3000 records for every object
-		IsPostgresBase:           false,
 	}
 }

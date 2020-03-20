@@ -9,27 +9,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 type Replication struct {
 	message payload.Meta
-	cfg     configuration.Ledger
 
 	dep struct {
 		replicator executor.HeavyReplicator
 	}
 }
 
-func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
+func NewReplication(msg payload.Meta) *Replication {
 	return &Replication{
 		message: msg,
-		cfg:     cfg,
 	}
 }
 

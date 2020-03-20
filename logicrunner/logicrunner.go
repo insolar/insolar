@@ -190,7 +190,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	if lr.Cfg.BuiltIn != nil {
+	if lr.Cfg.BuiltIn {
 		if err := lr.initializeBuiltin(ctx); err != nil {
 			return errors.Wrap(err, "Failed to initialize builtin VM")
 		}
