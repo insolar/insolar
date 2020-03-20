@@ -14,18 +14,10 @@ import (
 	"github.com/insolar/insolar/applicationbase/testutils/testresponse"
 	"github.com/insolar/insolar/insolar/secrets"
 
-	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
-	"github.com/insolar/insolar/insolar"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
-
-type contractInfo struct {
-	reference *insolar.Reference
-	testName  string
-}
-
-var contracts = map[string]*contractInfo{}
 
 type rpcStatusResponse struct {
 	testresponse.RPCResponse
