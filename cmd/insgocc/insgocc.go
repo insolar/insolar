@@ -75,8 +75,6 @@ func (r *machineTypeFlag) Set(arg string) error {
 	switch arg {
 	case "":
 		fallthrough
-	case "go":
-		fallthrough
 	case "builtin":
 		r.num = insolar.MachineTypeBuiltin
 	default:
