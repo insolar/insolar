@@ -178,7 +178,7 @@ func main() {
 	var reference string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
-	machineType := newMachineTypeFlag("go")
+	machineType := newMachineTypeFlag("builtin")
 	var panicIsLogicalError bool
 
 	var cmdProxy = &cobra.Command{
