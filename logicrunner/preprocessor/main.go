@@ -20,7 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,8 +43,6 @@ var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
 
 const (
-	TemplateDirectory = "templates"
-
 	mainPkg   = "main"
 	errorType = "error"
 )
@@ -250,13 +247,8 @@ func checkMachineType(machineType insolar.MachineType) error {
 	return nil
 }
 
-func templatePathConstruct(tplType string) string {
-	return path.Join(TemplateDirectory, tplType+".go.tpl")
-}
-
 func formatAndWrite(out io.Writer, templateName string, data map[string]interface{}) error {
-	templatePath := templatePathConstruct(templateName)
-	tmpl, err := openTemplate(templatePath)
+	tmpl, err := openTemplate(templateName)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
@@ -626,14 +618,21 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 
 func openTemplate(fileName string) (*template.Template, error) {
 	functions := template.FuncMap{"Title": strings.Title}
-	tmpl := template.New(path.Base(fileName)).Funcs(functions)
+	tmpl := template.New(fileName).Funcs(functions)
 
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, errors.Wrap(nil, "couldn't find info about current file")
+	var t string
+	switch fileName {
+	case "proxy":
+		t = proxyTmpl
+	case "wrapper":
+		t = wrapperTmpl
+	case "initialization":
+		t = initializationTmpl
+	default:
+		return nil, errors.New("unknown template")
 	}
-	templateDir := filepath.Join(filepath.Dir(currentFile), fileName)
-	tmpl, err := tmpl.ParseFiles(templateDir)
+
+	tmpl, err := tmpl.Parse(t)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't parse template for output")
 	}
