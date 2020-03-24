@@ -197,7 +197,10 @@ func main() {
 				checkError(err)
 			}
 
-			err = parsed.WriteProxy(reference, proxyOut.writer)
+			templatePath := preprocessor.TemplatePathConstruct("proxy")
+			tmpl, err := preprocessor.OpenTemplate(templatePath)
+			checkError(err)
+			err = parsed.WriteProxy(reference, proxyOut.writer, tmpl)
 			checkError(err)
 		},
 	}
@@ -219,7 +222,10 @@ func main() {
 				parsed.SetPanicIsLogicalError()
 			}
 
-			err = parsed.WriteWrapper(output.writer, "main")
+			templatePath := preprocessor.TemplatePathConstruct("wrapper")
+			tmpl, err := preprocessor.OpenTemplate(templatePath)
+			checkError(err)
+			err = parsed.WriteWrapper(output.writer, "main", tmpl)
 			checkError(err)
 		},
 	}
@@ -276,14 +282,21 @@ func main() {
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed, buildInPath)
 				checkError(err)
 				reference := genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
-				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
+
+				templatePath := preprocessor.TemplatePathConstruct("proxy")
+				tmpl, err := preprocessor.OpenTemplate(templatePath)
+				checkError(err)
+				err = contract.Parsed.WriteProxy(reference.String(), output.writer, tmpl)
 				checkError(err)
 
 				/* write wrappers */
 				err = output.SetJoin(path.Dir(contract.Path), contract.Name+".wrapper.go")
 				checkError(err)
 
-				err = contract.Parsed.WriteWrapper(output.writer, contract.Parsed.ContractName())
+				templatePath = preprocessor.TemplatePathConstruct("wrapper")
+				tmpl, err = preprocessor.OpenTemplate(templatePath)
+				checkError(err)
+				err = contract.Parsed.WriteWrapper(output.writer, contract.Parsed.ContractName(), tmpl)
 				checkError(err)
 			}
 
@@ -292,7 +305,10 @@ func main() {
 			err = openDefaultInitializationPath(initializeOutput, buildInPath)
 			checkError(err)
 
-			err = preprocessor.GenerateInitializationList(initializeOutput.writer, contractList)
+			templatePath := preprocessor.TemplatePathConstruct("initialization")
+			tmpl, err := preprocessor.OpenTemplate(templatePath)
+			checkError(err)
+			err = preprocessor.GenerateInitializationList(initializeOutput.writer, contractList, tmpl)
 			checkError(err)
 		},
 	}

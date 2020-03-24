@@ -250,20 +250,20 @@ func checkMachineType(machineType insolar.MachineType) error {
 	return nil
 }
 
-func templatePathConstruct(tplType string) string {
+func TemplatePathConstruct(tplType string) string {
 	return path.Join(TemplateDirectory, tplType+".go.tpl")
 }
 
-func formatAndWrite(out io.Writer, templateName string, data map[string]interface{}) error {
-	templatePath := templatePathConstruct(templateName)
-	tmpl, err := openTemplate(templatePath)
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for wrapper")
-	}
+func formatAndWrite(out io.Writer, templateName string, data map[string]interface{}, tmpl *template.Template) error {
+	// templatePath := TemplatePathConstruct(templateName)
+	// tmpl, err := OpenTemplate(templatePath)
+	// if err != nil {
+	// 	return errors.Wrap(err, "couldn't open template file for wrapper")
+	// }
 
 	var buff bytes.Buffer
 
-	err = tmpl.Execute(&buff, data)
+	err := tmpl.Execute(&buff, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
@@ -288,7 +288,7 @@ func formatAndWrite(out io.Writer, templateName string, data map[string]interfac
 
 // WriteWrapper generates and writes into `out` source code
 // of wrapper for the contract
-func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
+func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string, tmpl *template.Template) error {
 	if err := checkMachineType(pf.machineType); err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		"PanicIsLogicalError": pf.panicIsLogicalError,
 	}
 
-	return formatAndWrite(out, "wrapper", data)
+	return formatAndWrite(out, "wrapper", data, tmpl)
 }
 
 func (pf *ParsedFile) checkSagaIsNotImmutable(methodsInfo []map[string]interface{}) error {
@@ -473,7 +473,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 }
 
 // WriteProxy generates and writes into `out` source code of contract's proxy
-func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
+func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer, tmpl *template.Template) error {
 	proxyPackageName, err := pf.ProxyPackageName()
 	if err != nil {
 		return err
@@ -549,7 +549,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"Imports":             pf.generateImports(false),
 	}
 
-	return formatAndWrite(out, "proxy", data)
+	return formatAndWrite(out, "proxy", data, tmpl)
 }
 
 func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]interface{} {
@@ -624,7 +624,7 @@ func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	return imports
 }
 
-func openTemplate(fileName string) (*template.Template, error) {
+func OpenTemplate(fileName string) (*template.Template, error) {
 	functions := template.FuncMap{"Title": strings.Title}
 	tmpl := template.New(path.Base(fileName)).Funcs(functions)
 
@@ -993,11 +993,11 @@ func generateContractList(contracts ContractList) interface{} {
 	return importList
 }
 
-func GenerateInitializationList(out io.Writer, contracts ContractList) error {
+func GenerateInitializationList(out io.Writer, contracts ContractList, tmpl *template.Template) error {
 	data := map[string]interface{}{
 		"Contracts": generateContractList(contracts),
 		"Package":   "builtin",
 	}
 
-	return formatAndWrite(out, "initialization", data)
+	return formatAndWrite(out, "initialization", data, tmpl)
 }
