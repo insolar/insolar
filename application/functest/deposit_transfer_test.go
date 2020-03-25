@@ -15,7 +15,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -31,34 +30,30 @@ func TestDepositTransferToken(t *testing.T) {
 	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
-	anon := func() api.CallMethodReply {
+	anon := func() *foundation.Error {
 		_, _, err := testrequest.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 
 		data := checkConvertRequesterError(t, err).Data
 		for _, v := range data.Trace {
 			if !strings.Contains(v, "hold period didn't end") {
-				return api.CallMethodReply{}
+				return nil
 			}
 		}
-		return api.CallMethodReply{
-			Error: &foundation.Error{S: err.Error()},
-		}
+		return &foundation.Error{S: err.Error()}
 	}
 
-	_, err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
+	err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
-	anon = func() api.CallMethodReply {
+	anon = func() *foundation.Error {
 		_, _, err := testrequest.MakeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": ethHash})
 		if err == nil {
-			return api.CallMethodReply{}
+			return nil
 		}
-		return api.CallMethodReply{
-			Error: &foundation.Error{S: err.Error()},
-		}
+		return &foundation.Error{S: err.Error()}
 	}
-	_, err = waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
+	err = waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }

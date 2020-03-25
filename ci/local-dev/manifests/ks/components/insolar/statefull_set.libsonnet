@@ -63,53 +63,6 @@ local image_params = params.insolar.image;
 				],
 				"containers": [
 					{
-						"name": "insgorund",
-						"imagePullPolicy": image_params.image_pull_policy,
-						"image": image_params.image + ":" + image_params.tag,
-						"workingDir": "/opt/insolar",
-						"tty": true,
-						"stdin": true,
-						launch_cmd :: "/go/bin/insgorund -l 127.0.0.1:18181 --rpc 127.0.0.1:18182 -d /tmp/code 2>&1",
-						"command": [
-							"bash",
-							"-c",
-							if params.insolar.local_launch == true
-							then
-								self.launch_cmd + " | tee /logs/$(POD_NAME).insolard.log 2>&1"
-							else
-								self.launch_cmd
-
-						],
-						"env": [
-							{
-								"name": "HOME",
-								"value": "/opt/insolar"
-							},
-							{
-								"name": "POD_NAME",
-								"valueFrom": {
-									"fieldRef": {
-										"fieldPath": "metadata.name"
-									}
-								}
-							}
-						],
-						"volumeMounts": [
-							{
-								"name": "work",
-								"mountPath": "/opt/insolar"
-							},
-							{
-								"name": "code",
-								"mountPath": "/tmp/code"
-							},
-							{
-								"name": "node-log",
-								"mountPath": "/logs"
-							}
-						]
-					},
-					{
 						"name": "insolard",
 						"imagePullPolicy": image_params.image_pull_policy,
 						"image": image_params.image + ":" + image_params.tag,

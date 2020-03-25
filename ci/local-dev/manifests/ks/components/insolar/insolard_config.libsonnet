@@ -24,11 +24,7 @@ local insolar_params = params.insolar;
         "adapter": "zerolog"
     },
     "logicrunner": {
-        "rpclisten": "127.0.0.1:18182",
         "builtin": {},
-        "goplugin": {
-            "runnerlisten": "127.0.0.1:18181"
-        }
     },
     "apirunner": {
         "address": "127.0.0.1:" + insolar_params.api_port,

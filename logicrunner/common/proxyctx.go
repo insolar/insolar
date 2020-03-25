@@ -25,6 +25,5 @@ type ProxyHelper interface {
 	MakeErrorSerializable(error) error
 }
 
-// CurrentProxyCtx - hackish way to give proxies access to the current environment. Also,
-// to avoid compiling in whole Insolar platform into every contract based on GoPlugin.
+// CurrentProxyCtx - hackish way to give proxies access to the current environment.
 var CurrentProxyCtx ProxyHelper

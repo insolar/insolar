@@ -30,8 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
-	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/shutdown"
@@ -61,8 +59,6 @@ type LogicRunner struct {
 	ShutdownFlag               shutdown.Flag
 
 	Cfg *configuration.LogicRunner
-
-	rpc *lrCommon.RPC
 
 	builtinContracts builtin.BuiltinContracts
 }
@@ -103,17 +99,6 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.ShutdownFlag,
 	)
 	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
-
-	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(
-			lr.ArtifactManager,
-			lr.DescriptorsCache,
-			lr.ContractRequester,
-			lr.StateStorage,
-			lr.OutgoingSender,
-		),
-		lr.Cfg,
-	)
 
 	lr.WriteController = writecontroller.NewWriteController()
 	err := lr.WriteController.Open(ctx, pulse.MinTimePulse)
@@ -170,40 +155,10 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 	return nil
 }
 
-func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-	if lr.Cfg.RPCListen == "" {
-		logger.Error("Starting goplugin VM with RPC turned off")
-	}
-
-	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.ArtifactManager)
-	if err != nil {
-		return err
-	}
-
-	if err := lr.MachinesManager.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
-	if lr.Cfg.BuiltIn {
-		if err := lr.initializeBuiltin(ctx); err != nil {
-			return errors.Wrap(err, "Failed to initialize builtin VM")
-		}
-	}
-
-	if lr.Cfg.GoPlugin != nil {
-		if err := lr.initializeGoPlugin(ctx); err != nil {
-			return errors.Wrap(err, "Failed to initialize goplugin VM")
-		}
-	}
-
-	if lr.Cfg.RPCListen != "" {
-		lr.rpc.Start(ctx)
+	if err := lr.initializeBuiltin(ctx); err != nil {
+		return errors.Wrap(err, "Failed to initialize builtin VM")
 	}
 
 	lr.ArtifactManager.InjectFinish()
@@ -216,9 +171,6 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
 	if lr.OutgoingSender != nil {
 		lr.OutgoingSender.Stop(ctx)
-	}
-	if err := lr.rpc.Stop(ctx); err != nil {
-		return err
 	}
 
 	return reterr

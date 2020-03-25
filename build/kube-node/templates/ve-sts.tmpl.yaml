@@ -15,12 +15,6 @@ spec:
         app: insolar-ve
     spec:
       containers:
-      - name: insgorund
-        image: "insolar/insgorund:$INSOLAR_VERSION"
-        env:
-          - { name: "INSOLARD_LOG_LEVEL", value: "warn" }
-          - { name: "INSOLARD_RPC_ENDPOINT", "insolard:18182" }
-
       - name: insolard
         image: "insolar/insolard:$INSOLAR_VERSION"
 
@@ -42,8 +36,6 @@ spec:
             value: '$EXTERNAL_IP'
           - name: 'INSOLARD_TRANSPORT_ADDRESS'
             value: '0.0.0.0:30000'
-          - name: 'INSGORUND_ENDPOINT'
-            value: 'insgorund:18181'
           - name: 'INSOLARD_LOG_LEVEL'
             value: 'info'
         volumeMounts:

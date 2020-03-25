@@ -17,7 +17,7 @@ RUN BUILD_NUMBER=${BUILD_NUMBER} \
     BUILD_TIME=${BUILD_TIME} \
     BUILD_HASH=${BUILD_HASH} \
     BUILD_VERSION=${BUILD_VERSION} \
-    make insgorund build
+    make build
 
 FROM debian:buster-slim
 WORKDIR /go/src/github.com/insolar/insolar
@@ -29,7 +29,6 @@ COPY --from=build /go/src/github.com/insolar/insolar/application/api/spec/api-ex
 # add script and configs required for network bootstrap
 ADD scripts/kube/bootstrap/* /app/bootstrap/
 COPY --from=build \
-    /go/src/github.com/insolar/insolar/bin/insgorund \
     /go/src/github.com/insolar/insolar/bin/insolar \
     /go/src/github.com/insolar/insolar/bin/insolard \
     /go/src/github.com/insolar/insolar/bin/keeperd \

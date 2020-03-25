@@ -235,9 +235,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 }
 
 func (suite *LogicRunnerTestSuite) TestStartStop() {
-	lr, err := NewLogicRunner(&configuration.LogicRunner{
-		BuiltIn: true,
-	}, suite.pub, suite.sender, builtin.BuiltinContracts{})
+	lr, err := NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender, builtin.BuiltinContracts{})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
 

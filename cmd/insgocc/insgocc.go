@@ -75,10 +75,6 @@ func (r *machineTypeFlag) Set(arg string) error {
 	switch arg {
 	case "":
 		fallthrough
-	case "go":
-		fallthrough
-	case "golang":
-		r.num = insolar.MachineTypeGoPlugin
 	case "builtin":
 		r.num = insolar.MachineTypeBuiltin
 	default:
@@ -109,8 +105,6 @@ var (
 func getAppropriateContractDir(machineType insolar.MachineType, dir string) string {
 	if machineType == insolar.MachineTypeBuiltin {
 		return path.Join(dir, "proxy")
-	} else if machineType == insolar.MachineTypeGoPlugin {
-		return path.Join(dir, "..", "proxy")
 	}
 	panic(fmt.Sprintf("unknown machine type %v", machineType))
 }
@@ -184,7 +178,7 @@ func main() {
 	var reference string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
-	machineType := newMachineTypeFlag("go")
+	machineType := newMachineTypeFlag("builtin")
 	var panicIsLogicalError bool
 
 	var cmdProxy = &cobra.Command{
@@ -309,7 +303,7 @@ func main() {
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(
-		cmdProxy, cmdWrapper, cmdGenerateBuiltins, genesisCompile())
+		cmdProxy, cmdWrapper, cmdGenerateBuiltins)
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)

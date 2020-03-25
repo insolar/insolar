@@ -57,15 +57,3 @@ Generates contract's wrapper.
 
 #### Example:
         ./bin/insgocc wrapper -p -m=builtin -o=contact_wrapper.go <path to single contract file>
-
-### compile-genesis-plugins
-Compile plugins from provided contracts.
-#### Flags:
-        -o, --output-dir string    output dir for plugins
-        -s, --sources-dir string   source contrats dir
-        -t, --temp-dir string      temporary dir for generated wrappers (we need wrapper file in order to compile plugin)
-        -k, --keep-temp            don't delete temporary directory after exucution (default "false")
-        --no-proxy                 skip proxy compilation (default "false")
-
-#### Example:
-        ./bin/insgocc compile-genesis-plugins -p -m=builtin -o=contact_wrapper.go

@@ -52,7 +52,6 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 
 		cfg.LogicRunner = configuration.NewLogicRunner()
-		cfg.LogicRunner.RPCListen = ":0"
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 			lifeTime := &record.Lifeline{
