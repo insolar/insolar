@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pkg/errors"
 
@@ -41,6 +42,7 @@ func createKeysInDir(
 	keyFilenameFormat string,
 	nodes []Node,
 	reuse bool,
+        properName bool,
 ) ([]nodeInfo, error) {
 	amount := len(nodes)
 
@@ -58,7 +60,11 @@ func createKeysInDir(
 	}
 
 	nodeInfos := make([]nodeInfo, 0, amount)
-	for _, n := range nodes {
+	for i, n := range nodes {
+		keyname := fmt.Sprintf(keyFilenameFormat, i+certNamesStartFrom)
+		if len(n.KeyName) > 0 {
+			keyname = n.KeyName
+		}
 		pair, err := secrets.GenerateKeyPair()
 
 		if err != nil {
@@ -84,8 +90,14 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't marshal keys")
 		}
 
-		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, n.CertName))
-		err = makeFileWithDir(dir, n.CertName, result)
+		if properName {
+			inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, n.CertName), ", properName: " + strconv.FormatBool(properName))
+			err = makeFileWithDir(dir, n.CertName, result)
+		} else if !properName {
+			inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
+			err = makeFileWithDir(dir, keyname, result)
+		}
+
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
