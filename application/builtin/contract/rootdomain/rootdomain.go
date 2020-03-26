@@ -13,3 +13,7 @@ import (
 type RootDomain struct {
 	foundation.BaseContract
 }
+
+func (r *RootDomain) Test() error {
+	return nil
+}
