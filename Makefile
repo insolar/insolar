@@ -9,14 +9,12 @@ INSOLARD = insolard
 INSGOCC = insgocc
 PULSARD = pulsard
 TESTPULSARD = testpulsard
-BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 BACKUPMANAGER = backupmanager
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
 BADGER = badger
 HEAVY_BADGER_TOOL= heavy-badger
-REQUESTER= requester
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -109,8 +107,8 @@ vendor: ## update vendor dependencies
 	go mod vendor
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
-build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL) $(REQUESTER)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(HEALTHCHECK) ## build all binaries
+build: $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(HEAVY_BADGER_TOOL)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
@@ -136,10 +134,6 @@ $(PULSARD):
 $(TESTPULSARD):
 	$(GOBUILD) -o $(BIN_DIR)/$(TESTPULSARD) -ldflags "${LDFLAGS}" cmd/testpulsard/*.go
 
-.PHONY: $(BENCHMARK)
-$(BENCHMARK):
-	$(GOBUILD) -o $(BIN_DIR)/$(BENCHMARK) -ldflags "${LDFLAGS}" application/cmd/benchmark/*.go
-
 .PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
@@ -160,10 +154,6 @@ $(KEEPERD):
 $(HEAVY_BADGER_TOOL):
 	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
-.PHONY: $(REQUESTER)
-$(REQUESTER):
-	$(GOBUILD) -o $(BIN_DIR)/$(REQUESTER) application/cmd/requester/*.go
-
 .PHONY: test_unit
 test_unit: ## run all unit tests
 	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) $(ALL_PACKAGES)
@@ -171,6 +161,7 @@ test_unit: ## run all unit tests
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag

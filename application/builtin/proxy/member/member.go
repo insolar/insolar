@@ -9,7 +9,6 @@
 package member
 
 import (
-	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -17,18 +16,6 @@ import (
 
 type CreateResponse struct {
 	Reference string `json:"reference"`
-}
-type GetBalanceResponse struct {
-	Balance  string        `json:"balance"`
-	Deposits []interface{} `json:"deposits"`
-}
-type GetResponse struct {
-	Reference        string `json:"reference"`
-	MigrationAddress string `json:"migrationAddress,omitempty"`
-}
-type MigrationCreateResponse struct {
-	Reference        string `json:"reference"`
-	MigrationAddress string `json:"migrationAddress"`
 }
 type Params struct {
 	Seed       string      `json:"seed"`
@@ -44,9 +31,6 @@ type Request struct {
 	ID      uint64 `json:"id"`
 	Method  string `json:"method"`
 	Params  Params `json:"params"`
-}
-type TransferResponse struct {
-	Fee string `json:"fee"`
 }
 
 // PrototypeReference to prototype of this contract
@@ -108,11 +92,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(key string, migrationAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
-	var args [3]interface{}
+func New(key string) *ContractConstructorHolder {
+	var args [1]interface{}
 	args[0] = key
-	args[1] = migrationAddress
-	args[2] = walletRef
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -185,164 +167,6 @@ func (r *Member) GetCode() (insolar.Reference, error) {
 	}
 
 	return r.Code, nil
-}
-
-// GetWallet is proxy generated method
-func (r *Member) GetWalletAsMutable() (*insolar.Reference, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetWallet", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetWalletAsImmutable is proxy generated method
-func (r *Member) GetWallet() (*insolar.Reference, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetWallet", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetAccount is proxy generated method
-func (r *Member) GetAccountAsMutable(assetName string) (*insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = assetName
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetAccount", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetAccountAsImmutable is proxy generated method
-func (r *Member) GetAccount(assetName string) (*insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = assetName
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetAccount", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
 }
 
 // Call is proxy generated method
@@ -423,105 +247,4 @@ func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 		return ret0, ret1
 	}
 	return ret0, nil
-}
-
-// GetMigrationAddress is proxy generated method
-func (r *Member) GetMigrationAddressAsMutable() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetMigrationAddressAsImmutable is proxy generated method
-func (r *Member) GetMigrationAddress() (string, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// Accept is proxy generated method
-func (r *Member) Accept(arg appfoundation.SagaAcceptInfo) error {
-	var args [1]interface{}
-	args[0] = arg
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 1)
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, true, "Accept", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-	return nil
 }
