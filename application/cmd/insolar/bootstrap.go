@@ -41,7 +41,7 @@ func bootstrapCommand() *cobra.Command {
 	}
 	c.Flags().StringVarP(
 		&configPath, "config", "c", "bootstrap.yaml", "path to bootstrap config")
-        c.Flags().BoolVarP(
+	c.Flags().BoolVarP(
 		&properName, "propername", "p", false, "whenever to use proper cert names")
 	c.Flags().StringVarP(
 		&certificatesOutDir, "certificates-out-dir", "o", "", "dir with certificate files")
