@@ -91,12 +91,11 @@ func createKeysInDir(
 		}
 
 		if properName {
-			inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, n.CertName), ", properName: " + strconv.FormatBool(properName))
-			err = makeFileWithDir(dir, n.CertName, result)
-		} else if !properName {
-			inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
-			err = makeFileWithDir(dir, keyname, result)
+			keyname = n.CertName
 		}
+
+		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
+		err = makeFileWithDir(dir, keyname, result)
 
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
