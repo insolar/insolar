@@ -304,6 +304,8 @@ generate-protobuf: ## generate protobuf structs
 .PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
 	$(BININSGOCC) regen-builtin -c application/builtin/contract -i github.com/insolar/insolar/application/builtin/contract
+# 	rebuild wrapper for panicAsLogicalError to make panic logical error
+	$(BININSGOCC) wrapper -p -o application/builtin/contract/panicAsLogicalError/panicAsLogicalError.wrapper.go application/builtin/contract/panicAsLogicalError/panicAsLogicalError.go -m builtin
 	$(BININSGOCC) regen-builtin -c applicationbase/builtin/contract -i github.com/insolar/insolar/applicationbase/builtin/contract
 
 .PHONY: build-track

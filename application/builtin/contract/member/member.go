@@ -8,9 +8,14 @@ package member
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/insolar/insolar/application/appfoundation"
+	"github.com/insolar/insolar/application/builtin/proxy/first"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
+	"github.com/insolar/insolar/application/builtin/proxy/panicAsLogicalError"
+	"github.com/insolar/insolar/application/builtin/proxy/second"
+	"github.com/insolar/insolar/application/builtin/proxy/third"
 	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/insolar/insolar/applicationbase/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/insolar"
@@ -55,7 +60,6 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
 	var rawRequest []byte
-	selfSigned := false
 
 	err := unmarshalParams(signedRequest, &rawRequest, &signature, &pulseTimeStamp)
 	if err != nil {
@@ -67,15 +71,61 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal: %s", err.Error())
 	}
-
-	switch request.Params.CallSite {
-	case "member.create":
-		selfSigned = true
+	if request.Params.CallSite == "first.New" {
+		instanceHolder := first.New()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create first instance from New: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
 	}
-
-	err = foundation.VerifySignature(rawRequest, signature, m.PublicKey, request.Params.PublicKey, selfSigned)
-	if err != nil {
-		return nil, fmt.Errorf("error while verify signature: %s", err.Error())
+	if request.Params.CallSite == "first.NewPanic" {
+		instanceHolder := first.NewPanic()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create first instance from NewPanic: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	if request.Params.CallSite == "panicAsLogicalError.New" {
+		instanceHolder := panicAsLogicalError.New()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create panicAsLogicalError instance from New: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	if request.Params.CallSite == "panicAsLogicalError.NewPanic" {
+		instanceHolder := panicAsLogicalError.NewPanic()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create panicAsLogicalError instance from NewPanic: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	if request.Params.CallSite == "third.New" {
+		instanceHolder := third.New()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create third instance from New: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	if request.Params.CallSite == "first.NewZero" {
+		instanceHolder := first.NewZero()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create first instance from NewZero: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	if request.Params.CallSite == "first.NewSaga" {
+		instanceHolder := first.NewSaga()
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create first instance from NewSaga: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
 	}
 
 	// Requests signed with key not stored on ledger
@@ -99,11 +149,192 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
 	}
+
+	if request.Params.CallSite == "second.NewWithOne" {
+		oneNumber, ok := params["oneNumber"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'oneNumber' param")
+		}
+		n, err := strconv.Atoi(oneNumber)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse 'oneNumber': %s", err.Error())
+		}
+		instanceHolder := second.NewWithOne(n)
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create second instance from NewWithOne: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	}
+	reference, err := call(params)
+	if err != nil {
+		return nil, err
+	}
+	if request.Params.CallSite == "first.Panic" {
+		instance := first.GetObject(*reference)
+		return nil, instance.Panic()
+	}
+	if request.Params.CallSite == "panicAsLogicalError.Panic" {
+		instance := panicAsLogicalError.GetObject(*reference)
+		return nil, instance.Panic()
+	}
+	if request.Params.CallSite == "first.Recursive" {
+		instance := first.GetObject(*reference)
+		return nil, instance.Recursive()
+	}
+	if request.Params.CallSite == "first.Test" {
+		instance := first.GetObject(*reference)
+		firstRef, ok := params["firstRef"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'firstRef' param")
+		}
+		firstReference, err := insolar.NewObjectReferenceFromString(firstRef)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse 'firstRef': %s", err.Error())
+		}
+		return instance.Test(firstReference)
+	}
+	if request.Params.CallSite == "first.Get" {
+		instance := first.GetObject(*reference)
+		return instance.Get()
+	}
+	if request.Params.CallSite == "first.Inc" {
+		instance := first.GetObject(*reference)
+		return instance.Inc()
+	}
+	if request.Params.CallSite == "first.Dec" {
+		instance := first.GetObject(*reference)
+		return instance.Dec()
+	}
+	if request.Params.CallSite == "first.Hello" {
+		name, ok := params["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'name' param")
+		}
+		instance := first.GetObject(*reference)
+		return instance.Hello(name)
+	}
+	if request.Params.CallSite == "first.Again" {
+		name, ok := params["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'name' param")
+		}
+		instance := first.GetObject(*reference)
+		return instance.Again(name)
+	}
+	if request.Params.CallSite == "first.GetFriend" {
+		instance := first.GetObject(*reference)
+		return instance.GetFriend()
+	}
+	if request.Params.CallSite == "second.Hello" {
+		name, ok := params["name"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'name' param")
+		}
+		instance := second.GetObject(*reference)
+		return instance.Hello(name)
+	}
+	if request.Params.CallSite == "first.TestPayload" {
+		instance := first.GetObject(*reference)
+		return instance.TestPayload()
+	}
+	if request.Params.CallSite == "first.ManyTimes" {
+		instance := first.GetObject(*reference)
+		return nil, instance.ManyTimes()
+	}
+	if request.Params.CallSite == "first.Transfer" {
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instance := first.GetObject(*reference)
+		return instance.Transfer(int(amount))
+	}
+	if request.Params.CallSite == "first.GetBalance" {
+		instance := first.GetObject(*reference)
+		return instance.GetBalance()
+	}
+	if request.Params.CallSite == "first.TransferWithRollback" {
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instance := first.GetObject(*reference)
+		return instance.TransferWithRollback(int(amount))
+	}
+	if request.Params.CallSite == "first.TransferTwice" {
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instance := first.GetObject(*reference)
+		return instance.TransferTwice(int(amount))
+	}
+	if request.Params.CallSite == "first.TransferToAnotherContract" {
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instance := first.GetObject(*reference)
+		return instance.TransferToAnotherContract(int(amount))
+	}
+	if request.Params.CallSite == "second.GetBalance" {
+		instance := second.GetObject(*reference)
+		return instance.GetBalance()
+	}
+	if request.Params.CallSite == "third.GetSagaCallsNum" {
+		instance := third.GetObject(*reference)
+		return instance.GetSagaCallsNum()
+	}
+	if request.Params.CallSite == "third.Transfer" {
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instance := third.GetObject(*reference)
+		return nil, instance.Transfer(int(amount))
+	}
+	if request.Params.CallSite == "first.SelfRef" {
+		instance := first.GetObject(*reference)
+		return instance.SelfRef()
+	}
+	if request.Params.CallSite == "first.AnError" {
+		instance := first.GetObject(*reference)
+		return nil, instance.AnError()
+	}
+	if request.Params.CallSite == "first.NoError" {
+		instance := first.GetObject(*reference)
+		return nil, instance.NoError()
+	}
+	if request.Params.CallSite == "first.ReturnNil" {
+		instance := first.GetObject(*reference)
+		return instance.ReturnNil()
+	}
+	if request.Params.CallSite == "first.ConstructorReturnNil" {
+		instance := first.GetObject(*reference)
+		return instance.ConstructorReturnNil()
+	}
+	if request.Params.CallSite == "first.ConstructorReturnError" {
+		instance := first.GetObject(*reference)
+		return instance.ConstructorReturnError()
+	}
 	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
 }
 
 func unmarshalParams(data []byte, to ...interface{}) error {
 	return insolar.Deserialize(data, to)
+}
+
+func call(params map[string]interface{}) (*insolar.Reference, error) {
+	referenceStr, ok := params["reference"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to get 'reference' param")
+	}
+	reference, err := insolar.NewObjectReferenceFromString(referenceStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse 'reference': %s", err.Error())
+	}
+	return reference, nil
 }
 
 func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, error) {

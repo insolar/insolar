@@ -99,6 +99,8 @@ func IsInternalMethod(method string) bool {
 		return true
 	case "contract.registerNode", "contract.getNodeRef", "cert.get":
 		return true
+	// case "first.New", "first.NewPanic", "first.Panic":
+	// 	return true
 	default:
 		return false
 	}

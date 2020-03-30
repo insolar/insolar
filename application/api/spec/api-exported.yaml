@@ -222,6 +222,181 @@ servers:
   - url: 'https://wallet-api.insolar.io'
     description: Production server
 paths:
+  '/api/rpc#first.New':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Panic':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.NewPanic':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#panicAsLogicalError.New':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#panicAsLogicalError.Panic':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#panicAsLogicalError.NewPanic':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Recursive':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Test':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#third.New':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.NewZero':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#second.NewWithOne':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Get':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Inc':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Dec':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Hello':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Again':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.GetFriend':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#second.Hello':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.TestPayload':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.ManyTimes':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.NewSaga':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Transfer':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.GetBalance':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.TransferWithRollback':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.TransferTwice':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.TransferToAnotherContract':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#second.GetBalance':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#third.GetSagaCallsNum':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#third.Transfer':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.SelfRef':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.AnError':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.NoError':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.ReturnNil':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.ConstructorReturnNil':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.ConstructorReturnError':
+    post:
+      responses:
+        '200':
+          description: OK
   '/api/rpc#node.getSeed':
     post:
       summary: node.getSeed
