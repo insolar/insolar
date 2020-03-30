@@ -17,6 +17,7 @@ import (
 func bootstrapCommand() *cobra.Command {
 	var (
 		configPath         string
+		properName         bool
 		certificatesOutDir string
 	)
 	c := &cobra.Command{
@@ -34,13 +35,14 @@ func bootstrapCommand() *cobra.Command {
 				config.CertificatesOutDir = certificatesOutDir
 			}
 
-			err = basebootstrap.NewGeneratorWithConfig(config, contractsConfig).Run(ctx)
+			err = basebootstrap.NewGeneratorWithConfig(config, contractsConfig).Run(ctx, properName)
 			check("base bootstrap failed to start", err)
 		},
 	}
 	c.Flags().StringVarP(
 		&configPath, "config", "c", "bootstrap.yaml", "path to bootstrap config")
-
+	c.Flags().BoolVarP(
+		&properName, "propername", "p", false, "whenever to use proper cert names")
 	c.Flags().StringVarP(
 		&certificatesOutDir, "certificates-out-dir", "o", "", "dir with certificate files")
 	c.Flags().MarkDeprecated("certificates-out-dir", "please switch to 'certificates_out_dir:' in config")

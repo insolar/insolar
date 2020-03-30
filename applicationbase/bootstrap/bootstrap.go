@@ -55,7 +55,7 @@ func NewGeneratorWithConfig(config *Config, contractsConfig map[string]interface
 //
 // 1. read root keys file and generates keys and certificates for discovery nodes.
 // 2. generates genesis config for heavy node.
-func (g *Generator) Run(ctx context.Context) error {
+func (g *Generator) Run(ctx context.Context, properName bool) error {
 	fmt.Printf("[ bootstrap ] config:\n%v\n", DumpAsJSON(g.config))
 
 	inslog := inslogger.FromContext(ctx)
@@ -67,6 +67,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		g.config.KeysNameFormat,
 		g.config.DiscoveryNodes,
 		g.config.ReuseKeys,
+		properName,
 	)
 	if err != nil {
 		return errors.Wrapf(err, "create keys step failed")
@@ -86,6 +87,7 @@ func (g *Generator) Run(ctx context.Context) error {
 			g.config.KeysNameFormat,
 			g.config.Nodes,
 			g.config.ReuseKeys,
+			properName,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "create keys step failed")

@@ -41,6 +41,7 @@ func createKeysInDir(
 	keyFilenameFormat string,
 	nodes []Node,
 	reuse bool,
+        properName bool,
 ) ([]nodeInfo, error) {
 	amount := len(nodes)
 
@@ -63,7 +64,6 @@ func createKeysInDir(
 		if len(n.KeyName) > 0 {
 			keyname = n.KeyName
 		}
-
 		pair, err := secrets.GenerateKeyPair()
 
 		if err != nil {
@@ -89,8 +89,13 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't marshal keys")
 		}
 
+		if properName {
+			keyname = n.CertName
+		}
+
 		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
 		err = makeFileWithDir(dir, keyname, result)
+
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
