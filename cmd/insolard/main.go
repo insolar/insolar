@@ -101,7 +101,7 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 	if role != insolar.StaticRoleHeavyMaterial {
-		log.Fatal(errors.Wrap(err, "role in cert is not heavy"))
+		log.Fatal(errors.New("role in cert is not heavy"))
 	}
 
 	if err := psAgentLauncher(); err != nil {
@@ -140,7 +140,7 @@ func runVirtualNode(configPath string) {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 	if role != insolar.StaticRoleVirtual {
-		log.Fatal(errors.Wrap(err, "role in cert is not virtual executor"))
+		log.Fatal(errors.New("role in cert is not virtual executor"))
 	}
 
 	if err := psAgentLauncher(); err != nil {
@@ -175,7 +175,7 @@ func runLightNode(configPath string) {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 	if role != insolar.StaticRoleLightMaterial {
-		log.Fatal(errors.Wrap(err, "role in cert is not light material"))
+		log.Fatal(errors.New("role in cert is not light material"))
 	}
 
 	apiOptions, err := initAPIOptions()
