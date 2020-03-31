@@ -12,8 +12,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/applicationbase/testutils/launchnet"
 )
 
@@ -26,12 +24,6 @@ func TestMain(m *testing.M) {
 				return 1
 			}
 			fmt.Println("[ setup ] all keys successfully loaded")
-
-			err = setMigrationDaemonsRef()
-			if err != nil {
-				fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
-			}
-
 			return m.Run()
 		},
 		AppPath,

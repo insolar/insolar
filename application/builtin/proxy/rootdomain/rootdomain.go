@@ -136,91 +136,9 @@ func (r *RootDomain) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetMemberByPublicKey is proxy generated method
-func (r *RootDomain) GetMemberByPublicKeyAsMutable(publicKey string) (*insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = publicKey
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetMemberByPublicKeyAsImmutable is proxy generated method
-func (r *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = publicKey
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 *insolar.Reference
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMemberByPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// AddNewMemberToPublicKeyMap is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMapAsMutable(publicKey string, memberRef insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = memberRef
+// Test is proxy generated method
+func (r *RootDomain) Test() error {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -233,7 +151,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapAsMutable(publicKey string, membe
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Test", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -255,11 +173,9 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapAsMutable(publicKey string, membe
 	return nil
 }
 
-// AddNewMemberToPublicKeyMapAsImmutable is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = memberRef
+// TestAsImmutable is proxy generated method
+func (r *RootDomain) TestAsImmutable() error {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -272,7 +188,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef inso
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddNewMemberToPublicKeyMap", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Test", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

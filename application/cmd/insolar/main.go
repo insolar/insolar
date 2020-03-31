@@ -18,7 +18,6 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/application/cmd/insolar/insolarcmd"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -86,19 +85,6 @@ func main() {
 	genKeysPairCmd.Flags().StringVarP(
 		&targetValue, "target", "t", "", "target for whom need to generate keys (possible values: node, user)")
 	rootCmd.AddCommand(genKeysPairCmd)
-
-	var addresses int
-	var genMigrationAddressesCmd = &cobra.Command{
-		Use:   "gen-migration-addresses",
-		Short: "generates fake migration addresses",
-		Run: func(cmd *cobra.Command, args []string) {
-			err := insolarcmd.GenerateMigrationAddresses(os.Stdout, addresses)
-			check("failed to generate addresses:", err)
-		},
-	}
-	genMigrationAddressesCmd.Flags().IntVarP(
-		&addresses, "count", "c", 40000, "how many addresses to generate")
-	rootCmd.AddCommand(genMigrationAddressesCmd)
 
 	var rootKeysFile string
 
@@ -173,53 +159,6 @@ func main() {
 	}
 	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
 	rootCmd.AddCommand(generateDefaultConfigs)
-
-	var (
-		alertLevel         int
-		shardsCount        int
-		migrationAdminKeys string
-	)
-	var freeMigrationCountCmd = &cobra.Command{
-		Use: "free-migration-count",
-		Run: func(cmd *cobra.Command, args []string) {
-			getfreeMigrationCount([]string{adminURL}, []string{sendURL}, migrationAdminKeys, shardsCount, alertLevel)
-		},
-	}
-	addURLFlag(freeMigrationCountCmd.Flags())
-	freeMigrationCountCmd.Flags().StringVarP(
-		&migrationAdminKeys, "migration-admin-keys", "k", "",
-		"Config that contains public/private keys of root member",
-	)
-	freeMigrationCountCmd.Flags().IntVarP(
-		&alertLevel, "alert-level", "l", 0,
-		"If one of shard have less free addresses than this value, command will print alert message",
-	)
-	freeMigrationCountCmd.Flags().IntVarP(
-		&shardsCount, "shards-count", "s", 10,
-		"Count of shards at platform (must be a multiple of ten)",
-	)
-	rootCmd.AddCommand(freeMigrationCountCmd)
-
-	var addressesDir string
-	var addMigrationAddressesCmd = &cobra.Command{
-		Use: "add-migration-addresses",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("generate random migration addresses")
-			err := insolarcmd.AddMigrationAddresses([]string{adminURL}, []string{sendURL}, migrationAdminKeys, addressesDir)
-			check("", err)
-			fmt.Println("All addresses were added successfully")
-		},
-	}
-	addURLFlag(addMigrationAddressesCmd.Flags())
-	addMigrationAddressesCmd.Flags().StringVarP(
-		&migrationAdminKeys, "migration-admin-keys", "k", "",
-		"Dir with config that contains public/private keys of admin member",
-	)
-	addMigrationAddressesCmd.Flags().StringVarP(
-		&addressesDir, "addresses-dir", "d", "",
-		"Path to dir with address files. We expect files will be match generator utility output (from insolar/migrationAddressGenerator)",
-	)
-	rootCmd.AddCommand(addMigrationAddressesCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -382,10 +321,6 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
 			userCfg.Caller = info.RootMember
-		}
-		if maAsCaller {
-			userCfg.Caller = info.MigrationAdminMember
-			reqCfg.PublicKey = userCfg.PublicKey
 		}
 	}
 
