@@ -67,7 +67,7 @@ func (s *requesterSuiteTest) TestRequester_UserShouldPassUrl() {
 }
 
 func (s *requesterSuiteTest) TestRequester_UserShouldNotPassInvalidUrl() {
-	sout, err := runCmd(getArgs(s.userKeyFile.Name(), "http://localhost:-1", s.paramsFile.Name(), true, true)...)
+	sout, err := runCmd(getArgs(s.userKeyFile.Name(), "://localhost:-1", s.paramsFile.Name(), true, true)...)
 	assert.Error(s.T(), err)
 	assert.Contains(s.T(), sout, "URL parameter is incorrect")
 }
