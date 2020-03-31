@@ -149,7 +149,7 @@ github.com/insolar/go-actors/actor/system
 github.com/insolar/go-actors/actor/mailbox
 # github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866
 github.com/insolar/insconfig
-# github.com/insolar/rpc v1.2.2-0.20190812143745-c27e1d218f1f
+# github.com/insolar/rpc v1.2.2-0.20200331123021-db57b8833f82
 github.com/insolar/rpc/v2
 github.com/insolar/rpc/v2/json2
 # github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
