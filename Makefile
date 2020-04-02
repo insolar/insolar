@@ -26,10 +26,13 @@ FUNCTEST_COUNT ?= 1
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?= -timeout 1200s
+TEST_ARGS_NIGHTLY ?= -timeout 1000m
 BUILD_TAGS ?=
+LONG_TESTS_SCRIPT_PATH = ./scripts/dev/run-tests-with-repeat.sh
 
 CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
+CI_LONG_TIMEOUT ?= "1*60*60" # one hour
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 # skip git parsing commands if no git
@@ -204,6 +207,15 @@ ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output t
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
 
+.PHONY: ci-test-unit-long
+ci-test-unit-long: ## run unit tests 10 times and -race flag, repeat until temeout exceeded
+	MAKE_TARGET="ci-test-unit" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+
+.PHONY: ci-test-unit-nightly
+ci-test-unit-nightly: ## run unit tests 800 times and -race flag, repeat until temeout exceeded
+	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
+         $(GOTEST) $(TEST_ARGS_NIGHTLY) -json -v -failfast -p 10 -race -count 800 $(ALL_PACKAGES)
+
 .PHONY: ci-test-slow
 ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
@@ -216,12 +228,20 @@ ci-test-slow-long: ## run slow tests with race and count
 	TEST_COUNT=50 \
 		$(MAKE) ci-test-slow
 
+.PHONY: ci-test-slow-long-repeat
+ci-test-slow-long-repeat: ## run slow tests with race and count, repeat until temeout exceeded
+	MAKE_TARGET="ci-test-slow-long" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+
 .PHONY: ci-test-slow-nightly
 ci-test-slow-nightly: ## run slow tests with race and count (nightly run)
 	CI_TEST_ARGS=" -race " \
 	TEST_ARGS=" -timeout 480m  " \
 	TEST_COUNT=80 \
 		$(MAKE) ci-test-slow
+
+.PHONY: ci-test-slow-nightly-repeat
+ci-test-slow-nightly-repeat: ## run slow tests with race and count (nightly run), repeat until temeout exceeded
+	MAKE_TARGET="ci-test-slow-nightly" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
 
 .PHONY: ci-test-func-base
 ci-test-func-base: ## run functest, redirects json output to file (CI)
@@ -262,6 +282,10 @@ ci-test-integrtest-long: ## run networktest with race and a little count
 	TEST_ARGS=" -timeout 600m " \
     TEST_COUNT=20 \
     	$(MAKE) ci-test-integrtest
+
+.PHONY: ci-test-integrtest-long-repeat
+ci-test-integrtest-long-repeat: ## run networktest with race and a little count, repeat until temeout exceeded
+	MAKE_TARGET="ci-test-integrtest-long" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
 
 .PHONY: ci-test-integrtest-nightly
 ci-test-integrtest-nightly: ## run networktest with race and a little count
