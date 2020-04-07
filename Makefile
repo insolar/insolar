@@ -161,6 +161,7 @@ test_unit: ## run all unit tests
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
+# 	sleep 10 # workaround for a "bind: address already in use" problem
 	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
@@ -360,5 +361,5 @@ application-git-config: ## change remote repo url from HTTPS to SSH in 'applicat
 	perl -i.bak -pe 's!url\s*=\s*https?://github.com/!url = git\@github.com:!' .git/modules/application/config
 
 .PHONY: help
-help: ## display help screen
+help: ## display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
