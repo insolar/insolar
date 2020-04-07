@@ -360,5 +360,5 @@ application-git-config: ## change remote repo url from HTTPS to SSH in 'applicat
 	perl -i.bak -pe 's!url\s*=\s*https?://github.com/!url = git\@github.com:!' .git/modules/application/config
 
 .PHONY: help
-help: ## display this help screen
+help: ## display help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
