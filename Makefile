@@ -209,7 +209,7 @@ ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output t
 
 .PHONY: ci-test-unit-long
 ci-test-unit-long: ## run unit tests 10 times and -race flag, repeat until temeout exceeded
-	MAKE_TARGET="ci-test-unit" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+	TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH) "ci-test-unit"
 
 .PHONY: ci-test-unit-nightly
 ci-test-unit-nightly: ## run unit tests 800 times and -race flag, repeat until temeout exceeded
@@ -230,7 +230,7 @@ ci-test-slow-long: ## run slow tests with race and count
 
 .PHONY: ci-test-slow-long-repeat
 ci-test-slow-long-repeat: ## run slow tests with race and count, repeat until temeout exceeded
-	MAKE_TARGET="ci-test-slow-long" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+	TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH) "ci-test-slow-long"
 
 .PHONY: ci-test-slow-nightly
 ci-test-slow-nightly: ## run slow tests with race and count (nightly run)
@@ -241,7 +241,7 @@ ci-test-slow-nightly: ## run slow tests with race and count (nightly run)
 
 .PHONY: ci-test-slow-nightly-repeat
 ci-test-slow-nightly-repeat: ## run slow tests with race and count (nightly run), repeat until temeout exceeded
-	MAKE_TARGET="ci-test-slow-nightly" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+	TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH) "ci-test-slow-nightly"
 
 .PHONY: ci-test-func-base
 ci-test-func-base: ## run functest, redirects json output to file (CI)
@@ -285,7 +285,7 @@ ci-test-integrtest-long: ## run networktest with race and a little count
 
 .PHONY: ci-test-integrtest-long-repeat
 ci-test-integrtest-long-repeat: ## run networktest with race and a little count, repeat until temeout exceeded
-	MAKE_TARGET="ci-test-integrtest-long" TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH)
+	TESTS_TIMEOUT=$(CI_LONG_TIMEOUT) $(LONG_TESTS_SCRIPT_PATH) "ci-test-integrtest-long"
 
 .PHONY: ci-test-integrtest-nightly
 ci-test-integrtest-nightly: ## run networktest with race and a little count
