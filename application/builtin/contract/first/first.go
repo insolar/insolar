@@ -291,3 +291,13 @@ func (r *One) ConstructorReturnError() (*string, error) {
 	ok := "all was well"
 	return &ok, nil
 }
+
+func (r *One) GetChildPrototype() (string, error) {
+	holder := second.New()
+	child, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+	ref, err := child.GetPrototype()
+	return ref.String(), err
+}

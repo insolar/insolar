@@ -9,6 +9,7 @@ package builtin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/applicationbase/builtin"
@@ -151,7 +152,7 @@ func (b *BuiltIn) CallMethod(
 
 	methodFunc, ok := contract.Methods[method]
 	if !ok {
-		return nil, nil, errors.New("failed to find contracts method")
+		return nil, nil, errors.New(fmt.Sprintf("failed to find contracts method, method: %s; map: %v", method, contract.Methods))
 	}
 
 	return methodFunc(data, args)

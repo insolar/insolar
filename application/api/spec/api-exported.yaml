@@ -397,6 +397,11 @@ paths:
       responses:
         '200':
           description: OK
+  '/api/rpc#first.GetChildPrototype':
+    post:
+      responses:
+        '200':
+          description: OK
   '/api/rpc#node.getSeed':
     post:
       summary: node.getSeed

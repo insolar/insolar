@@ -484,3 +484,64 @@ func TestConstructorReturnError(t *testing.T) {
 	data := checkConvertRequesterError(t, err).Data
 	require.Contains(t, data.Trace, "Epic fail in NewWithErr()")
 }
+
+func TestGetRemoteData(t *testing.T) {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
+		map[string]interface{}{})
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.GetChildPrototype",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.(string))
+}
+
+func TestGetRemoteDataOLD(t *testing.T) {
+	launchnet.RunOnlyWithLaunchnet(t)
+	var contractOneCode = `	
+package main	
+import (	
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"	
+	two "github.com/insolar/insolar/applicationbase/proxy/get_remote_data_two"	
+)	
+type One struct {	
+	foundation.BaseContract	
+}	
+func New() (*One, error) {	
+	return &One{}, nil	
+}	
+var INSATTR_GetChildPrototype_API = true	
+func (r *One) GetChildPrototype() (string, error) {	
+	holder := two.New()	
+	child, err := holder.AsChild(r.GetReference())	
+	if err != nil {	
+		return "", err	
+	}	
+	ref, err := child.GetPrototype()	
+ 	return ref.String(), err	
+}	
+`
+	var contractTwoCode = `	
+package main	
+import (	
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"	
+)	
+ 	
+type Two struct {	
+	foundation.BaseContract	
+}	
+func New() (*Two, error) {	
+	return &Two{}, nil	
+}
+`
+	print(contractOneCode)
+	print(contractTwoCode)
+	// codeTwoRef := uploadContractOnce(t, "get_remote_data_two", contractTwoCode)
+	// obj := callConstructor(t, uploadContractOnce(t, "get_remote_data_one", contractOneCode), "New")
+	//
+	// resp := callMethod(t, obj, "GetChildPrototype")
+	// require.Empty(t, resp.Error)
+	// require.Equal(t, codeTwoRef.String(), resp.ExtractedReply.(string))
+}

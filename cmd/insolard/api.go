@@ -74,6 +74,7 @@ func initAPIOptions() (api.Options, error) {
 		"first.ReturnNil":                 true,
 		"first.ConstructorReturnNil":      true,
 		"first.ConstructorReturnError":    true,
+		"first.GetChildPrototype":         true,
 	}
 	proxyToRootMethods := []string{"member.create"}
 

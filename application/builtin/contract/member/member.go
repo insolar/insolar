@@ -318,6 +318,10 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		instance := first.GetObject(*reference)
 		return instance.ConstructorReturnError()
 	}
+	if request.Params.CallSite == "first.GetChildPrototype" {
+		instance := first.GetObject(*reference)
+		return instance.GetChildPrototype()
+	}
 	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
 }
 
