@@ -329,15 +329,15 @@ prepare-inrospector-proto: ## install tools required for grpc development
 
 .PHONY: docker_base_build
 docker_base_build: ## build base image with source dependencies and compiled binaries
-	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
+	docker build -t insolar/insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
 		--build-arg BUILD_DATE="$(BUILD_DATE)" \
 		--build-arg BUILD_TIME="$(BUILD_TIME)" \
 		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
 		--build-arg BUILD_HASH="$(BUILD_HASH)" \
 		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
-		-f docker/Dockerfile .
-	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
-	docker images "insolar-base"
+		-f ./scripts/kube/bootstrap/Dockerfile .
+	docker tag insolar/insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar/insolar-base:latest
+	docker images "insolar/insolar-base"
 
 .PHONY: docker_build
 docker_build: ## build image with binaries and files required for kubernetes deployment.

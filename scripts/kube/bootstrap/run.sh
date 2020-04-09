@@ -70,7 +70,7 @@ bootstrap
 $INSOLAR_BIN bootstrap -c $BOOTSTRAP_CONFIG
 
 if [[ "$HEAVY_GENESIS" ]]; then
-    insolard -c /app/bootstrap/insolard.yaml --heavy-genesis=/var/data/bootstrap/heavy_genesis.json --genesis-only
+    insolard heavy --config=/app/bootstrap/insolard.yaml --heavy-genesis=/var/data/bootstrap/heavy_genesis.json --genesis-only --database=badger
 fi
 
 MY_BIN_DIR=$( dirname "${BASH_SOURCE[0]}" )
