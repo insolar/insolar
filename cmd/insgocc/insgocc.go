@@ -210,24 +210,6 @@ func main() {
 		Short: "Generate contract's wrapper",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-
-			// /* write wrappers */
-			// err = output.SetJoin(path.Dir(contract.Path), contract.Name+".wrapper.go")
-			// checkError(err)
-			//
-			// err = contract.Parsed.WriteWrapper(output.writer, contract.Parsed.ContractName())
-			// checkError(err)
-			//
-			// parsedFile, err := preprocessor.ParseFile(*contractPath, insolar.MachineTypeBuiltin)
-			// checkError(err)
-			//
-			// contract := preprocessor.ContractListEntry{
-			// 	Name:       file.Name(),
-			// 	Path:       *contractPath,
-			// 	Parsed:     parsedFile,
-			// 	ImportPath: path.Join(importPath, file.Name()),
-			// }
-
 			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
