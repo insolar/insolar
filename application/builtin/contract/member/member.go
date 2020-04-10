@@ -364,6 +364,18 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		instance := third.GetObject(*reference)
 		return nil, instance.DoNothing()
 	}
+	if request.Params.CallSite == "first.AddChildAndReturnMyselfAsParent" {
+		instance := first.GetObject(*reference)
+		return instance.AddChildAndReturnMyselfAsParent()
+	}
+	if request.Params.CallSite == "second.GetParent" {
+		instance := second.GetObject(*reference)
+		return instance.GetParent()
+	}
+	if request.Params.CallSite == "first.Kill" {
+		instance := first.GetObject(*reference)
+		return nil, instance.Kill()
+	}
 	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
 }
 

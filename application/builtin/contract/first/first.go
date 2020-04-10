@@ -335,3 +335,17 @@ func (r *One) ExternalImmutableCallMakesExternalCall() error {
 	}
 	return objTwo.ExternalCallDoNothing()
 }
+
+func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
+	holder := second.New()
+	friend, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return "", err
+	}
+	return friend.GetParent()
+}
+
+func (r *One) Kill() error {
+	err := r.SelfDestruct()
+	return err
+}

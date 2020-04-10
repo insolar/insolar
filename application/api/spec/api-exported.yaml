@@ -432,6 +432,21 @@ paths:
       responses:
         '200':
           description: OK
+  '/api/rpc#first.AddChildAndReturnMyselfAsParent':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#second.GetParent':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.Kill':
+    post:
+      responses:
+        '200':
+          description: OK
   '/api/rpc#node.getSeed':
     post:
       summary: node.getSeed

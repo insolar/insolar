@@ -80,7 +80,10 @@ func initAPIOptions() (api.Options, error) {
 		"second.ExternalCallDoNothing":    true,
 		"third.DoNothing":                 true,
 		"first.ExternalImmutableCallMakesExternalCall": true,
-		"first.TransferTo": true,
+		"first.TransferTo":                      true,
+		"first.AddChildAndReturnMyselfAsParent": true,
+		"second.GetParent":                      true,
+		"first.Kill":                            true,
 	}
 	proxyToRootMethods := []string{"member.create"}
 

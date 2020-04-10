@@ -108,6 +108,10 @@ func (r *Second) ExternalCallDoNothing() error {
 	return objThree.DoNothing()
 }
 
+func (r *Second) GetParent() (string, error) {
+	return r.GetContext().Parent.String(), nil
+}
+
 func NewNil() (*Second, error) {
 	// nil, nil is considered a logical error in the constructor
 	return nil, nil

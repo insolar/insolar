@@ -517,5 +517,19 @@ func TestMultipleConstructorsCall(t *testing.T) {
 		map[string]interface{}{"reference": ref})
 	require.NoError(t, err)
 	require.Equal(t, float64(12), res.(float64))
+}
 
+func TestGetParent(t *testing.T) {
+	ref := callConstructor(t, "first", "New")
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.AddChildAndReturnMyselfAsParent",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+	require.Equal(t, ref, res.(string))
+}
+
+func TestDeactivation(t *testing.T) {
+	ref := callConstructor(t, "first", "New")
+	_, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.Kill",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
 }

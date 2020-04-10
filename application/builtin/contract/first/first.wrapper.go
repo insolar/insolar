@@ -2789,6 +2789,167 @@ func INSMETHOD_ExternalImmutableCallMakesExternalCall(object []byte, data []byte
 	return
 }
 
+func INSMETHOD_AddChildAndReturnMyselfAsParent(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(One)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeAddChildAndReturnMyselfAsParent ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeAddChildAndReturnMyselfAsParent ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeAddChildAndReturnMyselfAsParent ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 string
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0, ret1 = self.AddChildAndReturnMyselfAsParent()
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func INSMETHOD_Kill(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(One)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeKill ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeKill ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeKill ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret0 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0 = self.Kill()
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -3214,6 +3375,8 @@ func Initialize() insolar.ContractWrapper {
 			"GetChildPrototype":                      INSMETHOD_GetChildPrototype,
 			"ExternalImmutableCall":                  INSMETHOD_ExternalImmutableCall,
 			"ExternalImmutableCallMakesExternalCall": INSMETHOD_ExternalImmutableCallMakesExternalCall,
+			"AddChildAndReturnMyselfAsParent":        INSMETHOD_AddChildAndReturnMyselfAsParent,
+			"Kill":                                   INSMETHOD_Kill,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New":           INSCONSTRUCTOR_New,
