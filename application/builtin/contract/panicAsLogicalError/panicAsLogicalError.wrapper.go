@@ -311,10 +311,11 @@ func INSCONSTRUCTOR_NewPanic(ref insolar.Reference, data []byte) (state []byte, 
 
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
-		GetCode:      INSMETHOD_GetCode,
-		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			"Panic": INSMETHOD_Panic,
+
+			"GetCode":      INSMETHOD_GetCode,
+			"GetPrototype": INSMETHOD_GetPrototype,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New":      INSCONSTRUCTOR_New,

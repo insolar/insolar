@@ -1683,8 +1683,6 @@ func INSCONSTRUCTOR_NewWithErr(ref insolar.Reference, data []byte) (state []byte
 
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
-		GetCode:      INSMETHOD_GetCode,
-		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			"GetName":               INSMETHOD_GetName,
 			"DoNothing":             INSMETHOD_DoNothing,
@@ -1700,6 +1698,9 @@ func Initialize() insolar.ContractWrapper {
 			"ReturnNil":             INSMETHOD_ReturnNil,
 			"ExternalCallDoNothing": INSMETHOD_ExternalCallDoNothing,
 			"GetParent":             INSMETHOD_GetParent,
+
+			"GetCode":      INSMETHOD_GetCode,
+			"GetPrototype": INSMETHOD_GetPrototype,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New":        INSCONSTRUCTOR_New,

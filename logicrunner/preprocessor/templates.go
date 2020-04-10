@@ -497,12 +497,12 @@ func INSCONSTRUCTOR_{{ $f.Name }}(ref insolar.Reference, data []byte) (state []b
 {{ if $.GenerateInitialize -}}
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
-		GetCode: INSMETHOD_GetCode,
-		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			{{ range $method := .Methods -}}
 					"{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
 			{{ end }}
+			"GetCode": INSMETHOD_GetCode,
+			"GetPrototype": INSMETHOD_GetPrototype,
 		},
 		Constructors: insolar.ContractConstructors{
 			{{ range $f := .Functions -}}

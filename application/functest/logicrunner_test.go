@@ -477,7 +477,6 @@ func TestConstructorReturnError(t *testing.T) {
 }
 
 func TestGetRemoteData(t *testing.T) {
-	t.Skip("https://insolar.atlassian.net/browse/PENV-164")
 	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
 		map[string]interface{}{})
 	require.NoError(t, err)

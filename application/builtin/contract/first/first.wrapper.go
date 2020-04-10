@@ -3339,8 +3339,6 @@ func INSCONSTRUCTOR_NewSaga(ref insolar.Reference, data []byte) (state []byte, r
 
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
-		GetCode:      INSMETHOD_GetCode,
-		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			"Panic":                                  INSMETHOD_Panic,
 			"Recursive":                              INSMETHOD_Recursive,
@@ -3377,6 +3375,9 @@ func Initialize() insolar.ContractWrapper {
 			"ExternalImmutableCallMakesExternalCall": INSMETHOD_ExternalImmutableCallMakesExternalCall,
 			"AddChildAndReturnMyselfAsParent":        INSMETHOD_AddChildAndReturnMyselfAsParent,
 			"Kill":                                   INSMETHOD_Kill,
+
+			"GetCode":      INSMETHOD_GetCode,
+			"GetPrototype": INSMETHOD_GetPrototype,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New":           INSCONSTRUCTOR_New,
