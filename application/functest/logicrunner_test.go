@@ -102,15 +102,6 @@ func TestContractWithEmbeddedConstructor(t *testing.T) {
 	require.Contains(t, data.Trace, "object is not activated")
 }
 
-func callConstructor(t *testing.T, contract string, method string) string {
-	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, fmt.Sprintf("%s.%s", contract, method),
-		map[string]interface{}{})
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-	return ref
-}
-
 func TestSingleContract(t *testing.T) {
 	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
 		map[string]interface{}{})
@@ -544,4 +535,34 @@ func New() (*Two, error) {
 	// resp := callMethod(t, obj, "GetChildPrototype")
 	// require.Empty(t, resp.Error)
 	// require.Equal(t, codeTwoRef.String(), resp.ExtractedReply.(string))
+}
+
+func TestImmutableAnnotation(t *testing.T) {
+	ref := callConstructor(t, "first", "New")
+
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.ExternalImmutableCall",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+	require.Equal(t, float64(10), res.(float64))
+
+	res, err = testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.ExternalImmutableCallMakesExternalCall",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+}
+
+func TestMultipleConstructorsCall(t *testing.T) {
+	ref := callConstructor(t, "first", "NewZero")
+
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.Get",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+	require.Equal(t, float64(0), res.(float64))
+
+	ref = callConstructorWithParameters(t, "first", "NewWithNumber", map[string]interface{}{"amount": 12})
+
+	res, err = testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.Get",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+	require.Equal(t, float64(12), res.(float64))
+
 }

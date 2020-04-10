@@ -148,6 +148,32 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
+	case "first.NewWithNumber":
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		instanceHolder := first.NewWithNumber(int(amount))
+		instance, err := instanceHolder.AsChild(m.GetReference())
+		if err != nil {
+			return nil, fmt.Errorf("failed to create first instance from NewWithNumber: %s", err.Error())
+		}
+		return instance.Reference.String(), nil
+	case "first.TransferTo":
+		toRef, ok := params["toRef"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'toRef' param, %T", params["toRef"])
+		}
+		amount, ok := params["amount"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to get 'amount' param, %T", params["amount"])
+		}
+		reference, err := call(params)
+		if err != nil {
+			return nil, err
+		}
+		instance := first.GetObject(*reference)
+		return nil, instance.TransferTo(toRef, int(amount))
 	}
 
 	if request.Params.CallSite == "second.NewWithOne" {
@@ -321,6 +347,22 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	if request.Params.CallSite == "first.GetChildPrototype" {
 		instance := first.GetObject(*reference)
 		return instance.GetChildPrototype()
+	}
+	if request.Params.CallSite == "first.ExternalImmutableCall" {
+		instance := first.GetObject(*reference)
+		return instance.ExternalImmutableCall()
+	}
+	if request.Params.CallSite == "first.ExternalImmutableCallMakesExternalCall" {
+		instance := first.GetObject(*reference)
+		return nil, instance.ExternalImmutableCallMakesExternalCall()
+	}
+	if request.Params.CallSite == "second.ExternalCallDoNothing" {
+		instance := second.GetObject(*reference)
+		return nil, instance.ExternalCallDoNothing()
+	}
+	if request.Params.CallSite == "third.DoNothing" {
+		instance := third.GetObject(*reference)
+		return nil, instance.DoNothing()
 	}
 	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
 }

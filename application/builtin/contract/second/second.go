@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	one "github.com/insolar/insolar/application/builtin/proxy/first"
+	"github.com/insolar/insolar/application/builtin/proxy/third"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
@@ -96,6 +97,15 @@ func (r *Second) NoError() error {
 
 func (r *Second) ReturnNil() (*string, error) {
 	return nil, nil
+}
+
+func (r *Second) ExternalCallDoNothing() error {
+	holder := third.New()
+	objThree, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objThree.DoNothing()
 }
 
 func NewNil() (*Second, error) {

@@ -403,3 +403,77 @@ func (r *Third) Accept(delta int) error {
 	}
 	return nil
 }
+
+// DoNothing is proxy generated method
+func (r *Third) DoNothing() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "DoNothing", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// DoNothingAsImmutable is proxy generated method
+func (r *Third) DoNothingAsImmutable() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "DoNothing", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}

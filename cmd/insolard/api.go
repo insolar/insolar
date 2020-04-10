@@ -60,6 +60,7 @@ func initAPIOptions() (api.Options, error) {
 		"first.TestPayload":               true,
 		"first.ManyTimes":                 true,
 		"first.NewSaga":                   true,
+		"first.NewWithNumber":             true,
 		"first.Transfer":                  true,
 		"first.GetBalance":                true,
 		"first.TransferWithRollback":      true,
@@ -75,6 +76,11 @@ func initAPIOptions() (api.Options, error) {
 		"first.ConstructorReturnNil":      true,
 		"first.ConstructorReturnError":    true,
 		"first.GetChildPrototype":         true,
+		"first.ExternalImmutableCall":     true,
+		"second.ExternalCallDoNothing":    true,
+		"third.DoNothing":                 true,
+		"first.ExternalImmutableCallMakesExternalCall": true,
+		"first.TransferTo": true,
 	}
 	proxyToRootMethods := []string{"member.create"}
 

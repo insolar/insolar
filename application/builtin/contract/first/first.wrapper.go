@@ -1157,6 +1157,90 @@ func INSMETHOD_Transfer(object []byte, data []byte) (newState []byte, result []b
 	return
 }
 
+func INSMETHOD_TransferTo(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(One)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeTransferTo ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeTransferTo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := make([]interface{}, 2)
+	var args0 string
+	args[0] = &args0
+	var args1 int
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeTransferTo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret0 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0 = self.TransferTo(args0, args1)
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func INSMETHOD_GetBalance(object []byte, data []byte) (newState []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -2544,6 +2628,167 @@ func INSMETHOD_GetChildPrototype(object []byte, data []byte) (newState []byte, r
 	return
 }
 
+func INSMETHOD_ExternalImmutableCall(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(One)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 int
+	var ret1 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0, ret1}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret1 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0, ret1 = self.ExternalImmutableCall()
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func INSMETHOD_ExternalImmutableCallMakesExternalCall(object []byte, data []byte) (newState []byte, result []byte, err error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+
+	self := new(One)
+
+	if len(object) == 0 {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCallMakesExternalCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return
+	}
+
+	err = ph.Deserialize(object, self)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCallMakesExternalCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return
+	}
+
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		err = &foundation.Error{S: "[ FakeExternalImmutableCallMakesExternalCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return
+	}
+
+	var ret0 error
+
+	serializeResults := func() error {
+		return ph.Serialize(
+			foundation.Result{Returns: []interface{}{ret0}},
+			&result,
+		)
+	}
+
+	needRecover := true
+	defer func() {
+		if !needRecover {
+			return
+		}
+		if r := recover(); r != nil {
+			recoveredError := errors.Wrap(errors.Errorf("%v", r), "Failed to execute method (panic)")
+			recoveredError = ph.MakeErrorSerializable(recoveredError)
+
+			if PanicIsLogicalError {
+				ret0 = recoveredError
+
+				newState = object
+				err = serializeResults()
+				if err == nil {
+					newState = object
+				}
+			} else {
+				err = recoveredError
+			}
+		}
+	}()
+
+	ret0 = self.ExternalImmutableCallMakesExternalCall()
+
+	needRecover = false
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	err = ph.Serialize(self, &newState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	err = serializeResults()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func INSCONSTRUCTOR_New(ref insolar.Reference, data []byte) (state []byte, result []byte, err error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -2936,36 +3181,39 @@ func Initialize() insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
-			"Panic":                     INSMETHOD_Panic,
-			"Recursive":                 INSMETHOD_Recursive,
-			"Test":                      INSMETHOD_Test,
-			"DoNothing":                 INSMETHOD_DoNothing,
-			"Inc":                       INSMETHOD_Inc,
-			"Get":                       INSMETHOD_Get,
-			"Dec":                       INSMETHOD_Dec,
-			"Hello":                     INSMETHOD_Hello,
-			"Again":                     INSMETHOD_Again,
-			"GetFriend":                 INSMETHOD_GetFriend,
-			"TestPayload":               INSMETHOD_TestPayload,
-			"ManyTimes":                 INSMETHOD_ManyTimes,
-			"Transfer":                  INSMETHOD_Transfer,
-			"GetBalance":                INSMETHOD_GetBalance,
-			"Accept":                    INSMETHOD_Accept,
-			"Rollback":                  INSMETHOD_Rollback,
-			"TransferWithRollback":      INSMETHOD_TransferWithRollback,
-			"AcceptStepOne":             INSMETHOD_AcceptStepOne,
-			"RollbackStepOne":           INSMETHOD_RollbackStepOne,
-			"AcceptStepTwo":             INSMETHOD_AcceptStepTwo,
-			"RollbackStepTwo":           INSMETHOD_RollbackStepTwo,
-			"TransferTwice":             INSMETHOD_TransferTwice,
-			"TransferToAnotherContract": INSMETHOD_TransferToAnotherContract,
-			"SelfRef":                   INSMETHOD_SelfRef,
-			"AnError":                   INSMETHOD_AnError,
-			"NoError":                   INSMETHOD_NoError,
-			"ReturnNil":                 INSMETHOD_ReturnNil,
-			"ConstructorReturnNil":      INSMETHOD_ConstructorReturnNil,
-			"ConstructorReturnError":    INSMETHOD_ConstructorReturnError,
-			"GetChildPrototype":         INSMETHOD_GetChildPrototype,
+			"Panic":                                  INSMETHOD_Panic,
+			"Recursive":                              INSMETHOD_Recursive,
+			"Test":                                   INSMETHOD_Test,
+			"DoNothing":                              INSMETHOD_DoNothing,
+			"Inc":                                    INSMETHOD_Inc,
+			"Get":                                    INSMETHOD_Get,
+			"Dec":                                    INSMETHOD_Dec,
+			"Hello":                                  INSMETHOD_Hello,
+			"Again":                                  INSMETHOD_Again,
+			"GetFriend":                              INSMETHOD_GetFriend,
+			"TestPayload":                            INSMETHOD_TestPayload,
+			"ManyTimes":                              INSMETHOD_ManyTimes,
+			"Transfer":                               INSMETHOD_Transfer,
+			"TransferTo":                             INSMETHOD_TransferTo,
+			"GetBalance":                             INSMETHOD_GetBalance,
+			"Accept":                                 INSMETHOD_Accept,
+			"Rollback":                               INSMETHOD_Rollback,
+			"TransferWithRollback":                   INSMETHOD_TransferWithRollback,
+			"AcceptStepOne":                          INSMETHOD_AcceptStepOne,
+			"RollbackStepOne":                        INSMETHOD_RollbackStepOne,
+			"AcceptStepTwo":                          INSMETHOD_AcceptStepTwo,
+			"RollbackStepTwo":                        INSMETHOD_RollbackStepTwo,
+			"TransferTwice":                          INSMETHOD_TransferTwice,
+			"TransferToAnotherContract":              INSMETHOD_TransferToAnotherContract,
+			"SelfRef":                                INSMETHOD_SelfRef,
+			"AnError":                                INSMETHOD_AnError,
+			"NoError":                                INSMETHOD_NoError,
+			"ReturnNil":                              INSMETHOD_ReturnNil,
+			"ConstructorReturnNil":                   INSMETHOD_ConstructorReturnNil,
+			"ConstructorReturnError":                 INSMETHOD_ConstructorReturnError,
+			"GetChildPrototype":                      INSMETHOD_GetChildPrototype,
+			"ExternalImmutableCall":                  INSMETHOD_ExternalImmutableCall,
+			"ExternalImmutableCallMakesExternalCall": INSMETHOD_ExternalImmutableCallMakesExternalCall,
 		},
 		Constructors: insolar.ContractConstructors{
 			"New":           INSCONSTRUCTOR_New,

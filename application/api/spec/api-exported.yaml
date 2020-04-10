@@ -402,6 +402,36 @@ paths:
       responses:
         '200':
           description: OK
+  '/api/rpc#first.ExternalImmutableCall':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.ExternalImmutableCallMakesExternalCall':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#second.ExternalCallDoNothing':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#third.DoNothing':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.NewWithNumber':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/api/rpc#first.TransferTo':
+    post:
+      responses:
+        '200':
+          description: OK
   '/api/rpc#node.getSeed':
     post:
       summary: node.getSeed

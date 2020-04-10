@@ -1214,6 +1214,84 @@ func (r *One) TransferAsImmutable(n int) (string, error) {
 	return ret0, nil
 }
 
+// TransferTo is proxy generated method
+func (r *One) TransferTo(ref string, n int) error {
+	var args [2]interface{}
+	args[0] = ref
+	args[1] = n
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "TransferTo", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToAsImmutable is proxy generated method
+func (r *One) TransferToAsImmutable(ref string, n int) error {
+	var args [2]interface{}
+	args[0] = ref
+	args[1] = n
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "TransferTo", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
 // GetBalance is proxy generated method
 func (r *One) GetBalance() (int, error) {
 	var args [0]interface{}
@@ -2137,4 +2215,156 @@ func (r *One) GetChildPrototypeAsImmutable() (string, error) {
 		return ret0, ret1
 	}
 	return ret0, nil
+}
+
+// ExternalImmutableCall is proxy generated method
+func (r *One) ExternalImmutableCall() (int, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 int
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "ExternalImmutableCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// ExternalImmutableCallAsImmutable is proxy generated method
+func (r *One) ExternalImmutableCallAsImmutable() (int, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 int
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "ExternalImmutableCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// ExternalImmutableCallMakesExternalCall is proxy generated method
+func (r *One) ExternalImmutableCallMakesExternalCall() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "ExternalImmutableCallMakesExternalCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// ExternalImmutableCallMakesExternalCallAsImmutable is proxy generated method
+func (r *One) ExternalImmutableCallMakesExternalCallAsImmutable() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "ExternalImmutableCallMakesExternalCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }

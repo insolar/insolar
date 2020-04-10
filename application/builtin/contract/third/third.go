@@ -45,3 +45,7 @@ func (c *Third) Rollback(delta int) error {
 	c.SagaCallsNum -= delta
 	return nil
 }
+
+func (c *Third) DoNothing() error {
+	return nil
+}

@@ -45,6 +45,7 @@ func (r *One) Test(firstRef *insolar.Reference) (string, error) {
 func NewZero() (*One, error) {
 	return &One{Number: 0}, nil
 }
+
 func NewWithNumber(num int) (*One, error) {
 	return &One{Number: num}, nil
 }
@@ -144,6 +145,21 @@ func (r *One) Transfer(n int) (string, error) {
 		return "2", err
 	}
 	return w2.GetReference().String(), nil
+}
+
+func (r *One) TransferTo(ref string, n int) error {
+	recipientReference, err := insolar.NewObjectReferenceFromString(ref)
+	if err != nil {
+		return err
+	}
+	to := recursive.GetObject(*recipientReference)
+
+	r.Number -= n
+	err = to.Accept(n)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *One) GetBalance() (int, error) {
@@ -300,4 +316,22 @@ func (r *One) GetChildPrototype() (string, error) {
 	}
 	ref, err := child.GetPrototype()
 	return ref.String(), err
+}
+
+func (r *One) ExternalImmutableCall() (int, error) {
+	holder := second.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return -1, err
+	}
+	return objTwo.GetAsImmutable()
+}
+
+func (r *One) ExternalImmutableCallMakesExternalCall() error {
+	holder := second.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objTwo.ExternalCallDoNothing()
 }
