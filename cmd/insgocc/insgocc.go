@@ -219,7 +219,7 @@ func main() {
 				parsed.SetPanicIsLogicalError()
 			}
 
-			err = parsed.WriteWrapper(output.writer, "main")
+			err = parsed.WriteWrapper(output.writer, parsed.ContractName())
 			checkError(err)
 		},
 	}
