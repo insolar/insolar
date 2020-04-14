@@ -322,11 +322,12 @@ func INSCONSTRUCTOR_NewNodeDomain(ref insolar.Reference, data []byte) (state []b
 
 func Initialize() insolar.ContractWrapper {
 	return insolar.ContractWrapper{
-		GetCode:      INSMETHOD_GetCode,
-		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: insolar.ContractMethods{
 			"RegisterNode":          INSMETHOD_RegisterNode,
 			"GetNodeRefByPublicKey": INSMETHOD_GetNodeRefByPublicKey,
+
+			"GetCode":      INSMETHOD_GetCode,
+			"GetPrototype": INSMETHOD_GetPrototype,
 		},
 		Constructors: insolar.ContractConstructors{
 			"NewNodeDomain": INSCONSTRUCTOR_NewNodeDomain,
