@@ -74,9 +74,7 @@ func main() {
 	var err error
 
 	ctx := context.Background()
-	cLog := configuration.NewLog()
-	cLog.Level = cfg.LogLevel
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cLog, "", "pulsar")
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, "", "pulsar")
 
 	jaegerflush := func() {}
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
