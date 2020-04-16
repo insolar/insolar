@@ -49,7 +49,7 @@ type ConfigHolder interface {
 
 // PulsarConfiguration contains configuration params for the pulsar node
 type PulsarConfiguration struct {
-	Log      Log
+	LogLevel string
 	Pulsar   Pulsar
 	Tracer   Tracer
 	KeysPath string
@@ -80,7 +80,7 @@ func NewGenericConfiguration() GenericConfiguration {
 // NewPulsarConfiguration creates new default configuration for pulsar
 func NewPulsarConfiguration() PulsarConfiguration {
 	return PulsarConfiguration{
-		Log:      NewLog(),
+		LogLevel: "info",
 		Pulsar:   NewPulsar(),
 		Tracer:   NewTracer(),
 		KeysPath: "./",

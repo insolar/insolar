@@ -66,7 +66,9 @@ func main() {
 	}
 
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, "", "test_pulsar")
+	cLog := configuration.NewLog()
+	cLog.Level = pCfg.LogLevel
+	ctx, _ = inslogger.InitNodeLogger(ctx, cLog, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {

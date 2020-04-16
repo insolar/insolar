@@ -43,7 +43,7 @@ func (i inputParams) GetConfigPath() string {
 }
 
 func parseInputParams() inputParams {
-	var rootCmd = &cobra.Command{Use: "insolard"}
+	var rootCmd = &cobra.Command{Use: "pulsard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.AddCommand(version.GetCommand("pulsard"))
@@ -57,7 +57,8 @@ func parseInputParams() inputParams {
 
 // Need to fix problem with start pulsar
 func main() {
-	cfg := configuration.NewPulsarConfiguration()
+	_cfg := configuration.NewPulsarConfiguration()
+	cfg := &_cfg
 	params := parseInputParams()
 
 	cfgParams := insconfig.Params{
@@ -73,7 +74,9 @@ func main() {
 	var err error
 
 	ctx := context.Background()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, "", "pulsar")
+	cLog := configuration.NewLog()
+	cLog.Level = cfg.LogLevel
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cLog, "", "pulsar")
 
 	jaegerflush := func() {}
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
@@ -119,7 +122,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) (*component.Manager, *pulsar.Pulsar) {
+func initPulsar(ctx context.Context, cfg *configuration.PulsarConfiguration) (*component.Manager, *pulsar.Pulsar) {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
