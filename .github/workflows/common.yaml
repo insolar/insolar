@@ -81,7 +81,7 @@ jobs:
            make pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_net-integration
-        run: make ci-test-integrtest
+        run: make test-integrtest
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
   codegen:
     name: codegen
@@ -124,7 +124,7 @@ jobs:
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: generate codecov
         run: |
-           make ci-test-with-coverage
+           make test-with-coverage
            content=`cat coverage.txt | ./scripts/dev/cover-filter.sh` 
            echo "$content" | tee $GITHUB_WORKSPACE/coverage.txt
            cat ./coverage.txt | wc 
