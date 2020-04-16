@@ -89,7 +89,7 @@ Read-only API provided by an Observer service that pulls information from the ne
 Users: Swap INS to XNS
 ----------------------
 
-If you are a user, learn how to swap the token for the coin.
+If you are a user, learn how to swap the token for the coin and manage coins.
 
 .. raw:: html
 
@@ -108,6 +108,13 @@ In the TestNet.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the MainNet.
+
+.. rst-class:: column column2
+
+:ref:`Store XNS in a hardware wallet <ledger-nano-user-guide>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Manage your XNS via Ledger Nano S.
 
 .. toctree::
    :hidden:
@@ -131,3 +138,4 @@ In the MainNet.
 
    migration-test
    swap
+   ledger-nano
