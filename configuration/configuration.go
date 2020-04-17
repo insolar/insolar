@@ -80,7 +80,7 @@ func NewGenericConfiguration() GenericConfiguration {
 // NewPulsarConfiguration creates new default configuration for pulsar
 func NewPulsarConfiguration() PulsarConfiguration {
 	return PulsarConfiguration{
-		Log: NewLog(),
+		Log:      NewLog(),
 		Pulsar:   NewPulsar(),
 		Tracer:   NewTracer(),
 		KeysPath: "./",
