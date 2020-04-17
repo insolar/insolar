@@ -184,7 +184,7 @@ jobs:
       - name: archive_logs
         if: failure()
         run: |
-          tar -czvf logs-badger.tar.gz go/src/github.com/insolar/insolar/.artifacts/launchnet/logs
+          tar -czvf logs-badger.tar.gz go/src/github.com/insolar/insolar/.artifacts/launchnet
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
