@@ -57,7 +57,7 @@ func parseInputParams() inputParams {
 
 // Need to fix problem with start pulsar
 func main() {
-	_cfg := configuration.NewPulsarConfiguration()
+	_cfg := configuration.PulsarConfiguration{}
 	cfg := &_cfg
 	params := parseInputParams()
 
