@@ -63,7 +63,7 @@ jobs:
       - name: test_prepare
         run: |
            go mod download
-           make pre-build build
+           make submodule pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_slow
         run: make test_slow
