@@ -1,8 +1,8 @@
 .. _exchanges:
 
-=====================
-Explore the Use Cases
-=====================
+=================
+Explore use cases
+=================
 
 In short, to integrate with Insolar MainNet, do the following:
 
@@ -23,7 +23,7 @@ To simplify testing, Insolar can provide a testing environment on demand.
 
 .. _general_API_invocation:
 
-General API Invocation Sequence
+General API invocation sequence
 -------------------------------
 
 The general API invocation sequence is as follows:
@@ -62,14 +62,14 @@ The general API invocation sequence is as follows:
 
 .. _integration_use_cases:
 
-Integration Use Cases
+Integration use cases
 ---------------------
 
 Below is the list of integration use cases.
 
 .. _create_wallet:
 
-Use Case: Create a Wallet
+Use case: Create a wallet
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To create a wallet:
@@ -113,18 +113,18 @@ The wallet creation sequence is as follows:
 
 API requests used:
 
-* ``node.getSeed``,
-* ``member.create``.
+* ``node.getSeed``
+* ``member.create``
 
 .. _get_balance:
 
-Use Case: Get the Wallet's Balance
+Use case: Get the wallet's balance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To view the balance, a user (exchange or any other user) can either:
 
-* use the Insolar's Web Wallet,
-* or invoke the API using the Insolar's credentials (``memberReference`` or ``publicKey``).
+* Use the Insolar's Web Wallet.
+* Or invoke the API using the Insolar's credentials (``memberReference`` or ``publicKey``).
 
 The viewing sequence is as follows:
 
@@ -174,23 +174,23 @@ The viewing sequence is as follows:
 
 API requests used:
 
-* ``node.getSeed``,
-* ``member.get``.
+* ``node.getSeed``
+* ``member.get``
 
 API endpoints used:
 
-* GET ``<observer_URL>/member/{memberReference}``,
-* GET ``<observer_URL>/member/{memberReference}/balance``.
+* GET ``<observer_URL>/member/{memberReference}``
+* GET ``<observer_URL>/member/{memberReference}/balance``
 
 .. _transfer_coins:
 
-Use Case: Transfer Coins
+Use case: Transfer coins
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 To transfer XNS coins to another user, a user (exchange or any other) can either:
 
-* use the Insolar's Web Wallet,
-* or invoke the API.
+* Use the Insolar's Web Wallet.
+* Or invoke the API.
 
 To transfer coins via API, provide:
 
@@ -242,44 +242,44 @@ The transfer sequence is as follows:
 
 API requests used:
 
-* ``node.getSeed``,
-* (optional) ``member.get``,
-* ``member.transfer``.
+* ``node.getSeed``
+* (optional) ``member.get``
+* ``member.transfer``
 
 .. _deposit_funds_to_ex:
 
-Use Case: Deposit Funds to Exchange
+Use case: Deposit funds to exchange
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a user deposits funds to the exchange and immediately converts them to XNS, an accompanying transfer between wallets should be performed.
 
 This case is analogous to :ref:`coin transfer <transfer_coins>`, where:
 
-* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn;
+* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn.
 * ``toMemberReference`` is the reference to the exchange's wallet.
 
 .. _deposit_coins_to_ex:
 
-Use Case: Deposit Coins to Exchange
+Use case: Deposit coins to exchange
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a user deposits XNS coins to the exchange, an accompanying transfer between wallets should be performed.
 
 This case is analogous to :ref:`coin transfer <transfer_coins>`, where:
 
-* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn;
+* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn.
 * ``toMemberReference`` is the reference to the exchange's wallet.
 
 .. _withdraw_coins_from_ex:
 
-Use Case: Withdraw Coins from Exchange
+Use case: Withdraw coins from exchange
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prerequisite: the recipient must have an Insolar's wallet created as described in :ref:`wallet creation <create_wallet>`.
 
 This case is analogous to :ref:`coin transfer <transfer_coins>`, where:
 
-* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn;
+* ``memberReference`` is the reference to a user from whose wallet the coins are withdrawn.
 
   .. note:: This can be either a wallet opened by the exchange for the user, or the exchange's wallet.
 
