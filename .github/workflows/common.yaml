@@ -63,7 +63,7 @@ jobs:
       - name: test_prepare
         run: |
            go mod download
-           make pre-build build 
+           make pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_slow
         run: make test_slow
@@ -140,9 +140,9 @@ jobs:
       - name: generate codecov
         run: |
            make test-with-coverage
-           content=`cat coverage.txt | ./scripts/dev/cover-filter.sh` 
+           content=`cat coverage.txt | ./scripts/dev/cover-filter.sh`
            echo "$content" | tee $GITHUB_WORKSPACE/coverage.txt
-           cat ./coverage.txt | wc 
+           cat ./coverage.txt | wc
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - uses: codecov/codecov-action@v1
         with:
