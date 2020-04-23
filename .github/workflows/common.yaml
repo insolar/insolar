@@ -1,8 +1,5 @@
 name: common
 on:
-  push:
-    branches:
-      - master
   pull_request:
   schedule:
     - cron: '0 2,4,6 * * *'
