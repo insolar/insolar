@@ -130,6 +130,8 @@ github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NH
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f h1:06p+6HGiIraHhZ2Bmya40d8+TPiwEe/ftgb46XC9B0Q=
 github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f/go.mod h1:pyNB4e1NrTdT7BJJGMedR5OYIa6+zHLpak2Jwk9Aj88=
+github.com/insolar/gls v0.0.0-20200427111849-9a08a622625d h1:Xa41NqDIO3WSJZKyWcJ9+Vd7OwpKsVfTzf10gDj9emw=
+github.com/insolar/gls v0.0.0-20200427111849-9a08a622625d/go.mod h1:zVEHF2wEThHw6tqtTWJPvy/rp4Dt0AfUX3PUVhxYMHM=
 github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9 h1:476W50z1EA/U8uqXdVPS6avGmaL2hiBLrT6zKdETgB0=
 github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9/go.mod h1:vh6gyvTJhKxCMROgV7ADLE1jS19NAd6gIaHCjHgVWKQ=
 github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866 h1:821agB4jwkceJbV2lniBH3/mGLqSaHPhmurMfeGZAVg=
