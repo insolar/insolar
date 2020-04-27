@@ -105,9 +105,6 @@ type ContractConstructors map[string]ContractConstructor
 
 // ContractWrapper stores all needed about contract wrapper (it's methods/constructors)
 type ContractWrapper struct {
-	GetCode      ContractMethod
-	GetPrototype ContractMethod
-
 	Methods      ContractMethods
 	Constructors ContractConstructors
 }

@@ -4,14 +4,14 @@
 .. raw:: html
    :file: landing-page.html
 
-Insolar Documentation
+Insolar documentation
 =====================
 
 Welcome to Insolar documentation.
 
 .. _quick_start:
 
-Developers: Start With a Guide
+Developers: Start with a guide
 ------------------------------
 
 If you are a developer, explore Insolar technologies and run Insolar locally for testing purposes.
@@ -45,7 +45,7 @@ Go through step-by-step instructions.
 
 .. rst-class:: reg-text
 
-Exchange and Wallet Developers: Integrate With Insolar
+Exchange and wallet developers: Integrate with Insolar
 -------------------------------------------------------
 
 If you are an exchange or you wish to implement your own wallet for Insolar MainNet, explore the API references and build an API requester.
@@ -120,7 +120,7 @@ In the MainNet.
 
 .. toctree::
    :hidden:
-   :caption: Exchange and Wallet Developers
+   :caption: Exchange and wallet developers
 
    exchanges
    requester

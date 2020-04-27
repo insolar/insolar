@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
 	}
 
-	migrationPath := "../../migration"
+	migrationPath := "../../insolar-scripts/migration"
 	cwd, err := os.Getwd()
 	if err != nil {
 		stopPostgreSQL()

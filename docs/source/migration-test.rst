@@ -1,6 +1,6 @@
 .. _migration_test:
 
-Test Token Swap
+Test token swap
 ===============
 
 This test scenario walks you through the process of acquiring test INS tokens and swapping them to test XNS coins in the Insolar **TestNet**.
@@ -9,7 +9,7 @@ This test scenario walks you through the process of acquiring test INS tokens an
 
 .. _needs_for_migration_test:
 
-What You Will Need
+What you will need
 ------------------
 
 You need to create two wallets:
@@ -25,7 +25,7 @@ Additionally, you need to understand the following:
 
 .. _test_overview:
 
-Test Scenario Overview
+Test scenario overview
 ----------------------
 
 To grasp what you will be doing, take a look at the steps of the test scenario:
@@ -40,7 +40,7 @@ All the above steps are described in detail in subsequent sections.
 
 .. _creating_metamask:
 
-Creating and Setting Up Ethereum Wallet
+Creating and setting up Ethereum wallet
 ---------------------------------------
 
 To create and set up a MetaMask Ethereum wallet:
@@ -102,7 +102,7 @@ To create and set up a MetaMask Ethereum wallet:
 
 .. _acquire_test_tokens_and_swap:
 
-Acquiring Test ETH Coins and Swapping Them to Test INS Tokens
+Acquiring test ETH coins and swapping them to test INS tokens
 -------------------------------------------------------------
 
 To acquire, first, test ETH, then swap them to test INS tokens:
@@ -163,7 +163,7 @@ To acquire, first, test ETH, then swap them to test INS tokens:
 
    |
 
-#. On the **Send ETH** screen, you do not need to send actual ETH to the token contract but a small amount of ETH will be automatically subtracted to pay for transaction processing.
+#. On the **Send ETH** screen, you don't need to send actual ETH to the token contract but a small amount of ETH will be automatically subtracted to pay for transaction processing.
    
    However, setting the correct gas value is required. To set it, click :guilabel:`Advanced Options`:
 
@@ -204,7 +204,7 @@ Next, migrate test INS token to the Insolar network. The migration will automati
 
 .. _migrate_test_tokens:
 
-Migrating Test INS Tokens and Swapping Them to Test XNS Coins
+Migrating test INS tokens and swapping them to test XNS coins
 -------------------------------------------------------------
 
 To migrate the test INS tokens and swap them to XNS coins:

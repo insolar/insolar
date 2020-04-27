@@ -10,6 +10,7 @@ package functest
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -105,4 +106,20 @@ func newUserWithKeys() (*AppUser, error) {
 		PrivKey: string(privKeyStr),
 		PubKey:  string(pubKeyStr),
 	}, nil
+}
+
+func callConstructor(t *testing.T, contract string, method string) string {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, fmt.Sprintf("%s.%s", contract, method), map[string]interface{}{})
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+	return ref
+}
+
+func callConstructorWithParameters(t *testing.T, contract string, method string, callParams map[string]interface{}) string {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, fmt.Sprintf("%s.%s", contract, method), callParams)
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+	return ref
 }
