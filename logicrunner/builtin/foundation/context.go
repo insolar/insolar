@@ -6,7 +6,7 @@
 package foundation
 
 import (
-	"github.com/tylerb/gls"
+	"github.com/insolar/gls"
 
 	"github.com/insolar/insolar/insolar"
 )
