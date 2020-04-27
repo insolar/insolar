@@ -13,11 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
-	"github.com/spf13/viper"
-
 	component "github.com/insolar/component-manager"
+	"github.com/insolar/insconfig"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -33,14 +30,20 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/version"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
 	configPath string
 }
 
+func (i inputParams) GetConfigPath() string {
+	return i.configPath
+}
+
 func parseInputParams() inputParams {
-	var rootCmd = &cobra.Command{Use: "insolard"}
+	var rootCmd = &cobra.Command{Use: "pulsard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.AddCommand(version.GetCommand("pulsard"))
@@ -54,31 +57,28 @@ func parseInputParams() inputParams {
 
 // Need to fix problem with start pulsar
 func main() {
+	_cfg := configuration.PulsarConfiguration{}
+	cfg := &_cfg
 	params := parseInputParams()
+
+	cfgParams := insconfig.Params{
+		EnvPrefix:        "pulsard",
+		ConfigPathGetter: params,
+	}
+	insConfigurator := insconfig.New(cfgParams)
+	if err := insConfigurator.Load(cfg); err != nil {
+		panic(err)
+	}
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
 	var err error
 
-	vp := viper.New()
-	pCfg := configuration.NewPulsarConfiguration()
-	if len(params.configPath) != 0 {
-		vp.SetConfigFile(params.configPath)
-	}
-	err = vp.ReadInConfig()
-	if err != nil {
-		log.Warn("failed to load configuration from file: ", err.Error())
-	}
-	err = vp.Unmarshal(&pCfg)
-	if err != nil {
-		log.Warn("failed to load configuration from file: ", err.Error())
-	}
-
 	ctx := context.Background()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, "", "pulsar")
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, "", "pulsar")
 
 	jaegerflush := func() {}
-	if pCfg.Tracer.Jaeger.AgentEndpoint != "" {
-		jconf := pCfg.Tracer.Jaeger
+	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
+		jconf := cfg.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		jaegerflush = instracer.ShouldRegisterJaeger(
 			ctx,
@@ -90,7 +90,7 @@ func main() {
 	}
 	defer jaegerflush()
 
-	m := metrics.NewMetrics(pCfg.Metrics, metrics.GetInsolarRegistry("pulsar"), "pulsar")
+	m := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("pulsar"), "pulsar")
 	err = m.Init(ctx)
 	if err != nil {
 		log.Fatal("Couldn't init metrics:", err)
@@ -102,8 +102,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	cm, server := initPulsar(ctx, pCfg)
-	pulseTicker := runPulsar(ctx, server, pCfg.Pulsar)
+	cm, server := initPulsar(ctx, cfg)
+	pulseTicker := runPulsar(ctx, server, cfg.Pulsar)
 
 	defer func() {
 		pulseTicker.Stop()
@@ -120,7 +120,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) (*component.Manager, *pulsar.Pulsar) {
+func initPulsar(ctx context.Context, cfg *configuration.PulsarConfiguration) (*component.Manager, *pulsar.Pulsar) {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
