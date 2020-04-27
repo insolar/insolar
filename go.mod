@@ -22,6 +22,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
+	github.com/insolar/gls v0.0.0-20200427111849-9a08a622625d
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 	github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866
 	github.com/insolar/rpc v1.2.2-0.20200331123021-db57b8833f82
@@ -50,8 +51,6 @@ require (
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0
-	github.com/tylerb/gls v0.0.0-20150407001822-e606233f194d
-	github.com/tylerb/is v2.1.4+incompatible // indirect
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.19.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
