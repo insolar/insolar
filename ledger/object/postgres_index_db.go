@@ -158,7 +158,7 @@ func (i *PostgresIndexDB) UpdateLastKnownPulse(ctx context.Context, pn insolar.P
 		for _, id := range rawIDs {
 			_, err := tx.Exec(ctx, `INSERT INTO last_known_pulse_for_indexes
 										 VALUES($1, $2)
-										 ON CONFLICT (object_id, pulse_number)
+										 ON CONFLICT (object_id)
 										 DO UPDATE
 											SET pulse_number = EXCLUDED.pulse_number`, id, pn)
 			if err != nil {
