@@ -249,6 +249,8 @@ func TestPostgresTruncateHead(t *testing.T) {
 }
 
 func TestPostgresPulse_Components(t *testing.T) {
+	defer cleanupDatabase()
+
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMem()
