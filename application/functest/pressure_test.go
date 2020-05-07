@@ -77,7 +77,7 @@ func TestPressureOnSystem(t *testing.T) {
 		wg := sync.WaitGroup{}
 		wg.Add(100)
 		for g := 0; g < 10; g++ {
-			objectRef := callConstructor(syncT.T, "first", "New")
+			objectRef := callConstructor(syncT, "first", "New")
 			for c := 0; c < 10; c++ {
 				go func() {
 					defer wg.Done()
@@ -92,10 +92,10 @@ func TestPressureOnSystem(t *testing.T) {
 	})
 }
 
-func callMethod(t *testutils.SyncT, objectRef string, method string) interface{} {
-	res, err := testrequest.SignedRequest(t.T, launchnet.TestRPCUrlPublic, &Root, method,
+func callMethod(t testing.TB, objectRef string, method string) interface{} {
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, method,
 		map[string]interface{}{"reference": objectRef})
-	require.Empty(t.T, err)
+	require.Empty(t, err)
 	return res
 }
 
