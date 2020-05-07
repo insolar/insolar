@@ -157,9 +157,9 @@ jobs:
       GOPATH: /home/runner/work/insolar/insolar/go
     steps:
       - name: set nightly run params
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'schedule'
         run: |
-          echo "::set-env name=TEST_COUNT::25"
+          echo "::set-env name=TEST_COUNT::50"
           echo "::set-env name=TEST_PARALLEL::10"
           echo "::set-env name=TEST_ARGS::-race -timeout 240m"
       - name: checkout code
@@ -197,9 +197,9 @@ jobs:
       GOPATH: /home/runner/work/insolar/insolar/go
     steps:
       - name: set nightly run params
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'schedule'
         run: |
-          echo "::set-env name=TEST_COUNT::25"
+          echo "::set-env name=TEST_COUNT::50"
           echo "::set-env name=TEST_PARALLEL::10"
           echo "::set-env name=TEST_ARGS::-race -timeout 240m"
       - name: checkout code
