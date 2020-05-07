@@ -117,7 +117,7 @@ func TestCoinPassing(t *testing.T) {
 				map[string]interface{}{"reference": from, "toRef": to, "amount": amount})
 			require.NoError(t, err)
 			wg.Done()
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 	go f(member1, member2)
