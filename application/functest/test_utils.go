@@ -108,7 +108,7 @@ func newUserWithKeys() (*AppUser, error) {
 	}, nil
 }
 
-func callConstructor(t *testing.T, contract string, method string) string {
+func callConstructor(t testing.TB, contract string, method string) string {
 	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, fmt.Sprintf("%s.%s", contract, method), map[string]interface{}{})
 	require.NoError(t, err)
 	ref, ok := result.(string)

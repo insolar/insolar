@@ -109,7 +109,7 @@ func MakeSignedRequest(URL string, user launchnet.User, method string, params in
 
 }
 
-func SignedRequest(t *testing.T, URL string, user launchnet.User, method string, params interface{}) (interface{}, error) {
+func SignedRequest(t testing.TB, URL string, user launchnet.User, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := MakeSignedRequest(URL, user, method, params)
 
 	if err != nil {
