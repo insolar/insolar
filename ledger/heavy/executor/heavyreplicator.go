@@ -18,7 +18,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/logicrunner/metrics"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/ledger/object"
@@ -148,7 +147,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 			logger.Panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
 		logger.Debug("heavy count record in drop", len(msg.Records), msg.JetID.DebugString())
-		ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, msg.JetID.DebugString())
+		ctx = insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
 		stats.Record(ctx, statRecordInDrop.M(int64(len(msg.Records))))
 
 		logger.Debug("heavy replicator finalize pulse")
