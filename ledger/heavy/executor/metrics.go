@@ -8,9 +8,13 @@ package executor
 import (
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 )
+
+var TagJetID = insmetrics.MustTagKey("jet_id_heavy")
 
 var (
 	statJets = stats.Int64(
@@ -85,6 +89,12 @@ var (
 	TruncateHeadRetries = stats.Int64(
 		"jetkeeper_truncate_head_retries",
 		"retries while jetkeeper TruncateHead",
+		stats.UnitDimensionless,
+	)
+
+	statRecordInDrop = stats.Int64(
+		"record_in_drop_count",
+		"How many record in drop were received from a light-node",
 		stats.UnitDimensionless,
 	)
 )
@@ -168,6 +178,13 @@ func init() {
 			Description: TruncateHeadRetries.Description(),
 			Measure:     TruncateHeadRetries,
 			Aggregation: view.Distribution(0, 1, 2, 3, 4, 5, 10),
+		},
+		&view.View{
+			Name:        statRecordInDrop.Name(),
+			Description: statRecordInDrop.Description(),
+			Measure:     statRecordInDrop,
+			TagKeys:     []tag.Key{TagJetID},
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {
