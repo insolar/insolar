@@ -9,15 +9,13 @@ import (
 	"context"
 	"time"
 
-	"go.opencensus.io/stats"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
+	"go.opencensus.io/stats"
 )
 
 type PulseServer struct {
@@ -40,7 +38,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 	exportStart := time.Now()
 	defer func(ctx context.Context) {
 		stats.Record(
-			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "pulse-export"),
+			addTagsForExporterMethodTiming(ctx, "pulse-export"),
 			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
 		)
 	}(ctx)
@@ -104,7 +102,7 @@ func (p *PulseServer) TopSyncPulse(ctx context.Context, _ *GetTopSyncPulse) (*To
 	exportStart := time.Now()
 	defer func(ctx context.Context) {
 		stats.Record(
-			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "pulse-top-sync-pulse"),
+			addTagsForExporterMethodTiming(ctx, "pulse-top-sync-pulse"),
 			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
 		)
 	}(ctx)
