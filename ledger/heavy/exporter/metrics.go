@@ -48,8 +48,8 @@ func init() {
 func addTagsForExporterMethodTiming(ctx context.Context, methodName string) context.Context {
 	typeObserver := "internal"
 	md, ok := metadata.FromIncomingContext(ctx)
-	if _, isContain := md["idObserver"]; isContain && ok {
-		typeObserver = md.Get("idObserver")[0]
+	if _, isContain := md["idobserver"]; isContain && ok {
+		typeObserver = md.Get("idobserver")[0]
 	}
 	ctx = insmetrics.InsertTag(ctx, TagHeavyIdObserver, typeObserver)
 	ctx = insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, methodName)
