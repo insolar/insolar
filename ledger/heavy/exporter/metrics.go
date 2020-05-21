@@ -6,15 +6,20 @@
 package exporter
 
 import (
+	"context"
+
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
 
 var (
 	TagHeavyExporterMethodName = insmetrics.MustTagKey("heavy_exporter_method_name")
+	// public - data from observer on public side(crypto exchange). internal - from internal network
+	TagHeavyIdObserver = insmetrics.MustTagKey("heavy_exporter_type_observer")
 )
 
 var (
@@ -31,11 +36,22 @@ func init() {
 			Name:        HeavyExporterMethodTiming.Name(),
 			Description: HeavyExporterMethodTiming.Description(),
 			Measure:     HeavyExporterMethodTiming,
-			TagKeys:     []tag.Key{TagHeavyExporterMethodName},
+			TagKeys:     []tag.Key{TagHeavyExporterMethodName, TagHeavyIdObserver},
 			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000, 10000, 20000),
 		},
 	)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func addTagsForExporterMethodTiming(ctx context.Context, methodName string) context.Context {
+	typeObserver := "internal"
+	md, ok := metadata.FromIncomingContext(ctx)
+	if _, isContain := md["idobserver"]; isContain && ok {
+		typeObserver = md.Get("idobserver")[0]
+	}
+	ctx = insmetrics.InsertTag(ctx, TagHeavyIdObserver, typeObserver)
+	ctx = insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, methodName)
+	return ctx
 }
