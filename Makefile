@@ -160,9 +160,11 @@ test: test_unit ## alias for test_unit
 .PHONY: functest
 functest: ## run functests
 	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(TEST_COUNT) -failfast
+		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest" ./application/functest -count=$(TEST_COUNT) -failfast
 	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(TEST_COUNT) -failfast
+    		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "bloattest" ./application/functest -count=$(TEST_COUNT) -failfast
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest" ./applicationbase/functest -count=$(TEST_COUNT) -failfast
 
 .PHONY: test_func
 test_func: functest ## alias for functest
