@@ -165,6 +165,8 @@ functest: ## run functests
     		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "bloattest" ./application/functest -count=$(TEST_COUNT) -failfast
 	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
 		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest" ./applicationbase/functest -count=$(TEST_COUNT) -failfast
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+        		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest_error" ./application/functest -count=$(TEST_COUNT) -failfast
 
 .PHONY: test_func
 test_func: functest ## alias for functest
