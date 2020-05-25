@@ -19,26 +19,6 @@ import (
 	"github.com/insolar/insolar/applicationbase/testutils/testrequest"
 )
 
-func TestPanicIsSystemError(t *testing.T) {
-	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
-		map[string]interface{}{})
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-
-	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, &Root, "first.Panic",
-		map[string]interface{}{"reference": ref})
-	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "CallMethod returns error")
-	require.Contains(t, data.Trace, "AAAAAAAA!")
-
-	_, err = testrequest.SignedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, &Root, "first.NewPanic",
-		map[string]interface{}{})
-	data = checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "CallMethod returns error")
-	require.Contains(t, data.Trace, "BBBBBBBB!")
-}
-
 func TestPanicIsLogicalError(t *testing.T) {
 	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "panicAsLogicalError.New",
 		map[string]interface{}{})
@@ -88,18 +68,61 @@ func TestPrototypeMismatch(t *testing.T) {
 	require.Contains(t, data.Trace, "try to call method of prototype as method of another prototype")
 }
 
-func TestContractWithEmbeddedConstructor(t *testing.T) {
-	_ = callConstructor(t, "first", "NewZero")
-	_, _, err := testrequest.MakeSignedRequest(
+func TestErrorInterface(t *testing.T) {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
+		map[string]interface{}{})
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+
+	_, _, err = testrequest.MakeSignedRequest(
 		launchnet.TestRPCUrlPublic,
 		&Root,
-		"second.NewWithOne",
-		map[string]interface{}{
-			"oneNumber": "10",
-		})
+		"first.AnError",
+		map[string]interface{}{"reference": ref})
 	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, data.Trace, "an error")
 
-	require.Contains(t, data.Trace, "object is not activated")
+	_, err = testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.NoError",
+		map[string]interface{}{"reference": ref})
+	require.NoError(t, err)
+}
+
+// If a contract constructor returns `nil, nil` it's considered a logical error,
+// which is returned to the calling contract and/or API.
+func TestConstructorReturnNil(t *testing.T) {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
+		map[string]interface{}{})
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+
+	_, _, err = testrequest.MakeSignedRequest(
+		launchnet.TestRPCUrlPublic,
+		&Root,
+		"first.ConstructorReturnNil",
+		map[string]interface{}{"reference": ref})
+	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, data.Trace, "constructor returned nil")
+
+}
+
+// If a contract constructor fails it's considered a logical error,
+// which is returned to the calling contract and/or API.
+func TestConstructorReturnError(t *testing.T) {
+	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
+		map[string]interface{}{})
+	require.NoError(t, err)
+	ref, ok := result.(string)
+	require.True(t, ok)
+
+	_, _, err = testrequest.MakeSignedRequest(
+		launchnet.TestRPCUrlPublic,
+		&Root,
+		"first.ConstructorReturnError",
+		map[string]interface{}{"reference": ref})
+	data := checkConvertRequesterError(t, err).Data
+	require.Contains(t, data.Trace, "Epic fail in NewWithErr()")
 }
 
 func TestSingleContract(t *testing.T) {
@@ -404,28 +427,6 @@ func TestContextPassing(t *testing.T) {
 	require.Equal(t, ref, prototype.(string))
 }
 
-// TestDeactivation
-
-func TestErrorInterface(t *testing.T) {
-	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
-		map[string]interface{}{})
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-
-	_, _, err = testrequest.MakeSignedRequest(
-		launchnet.TestRPCUrlPublic,
-		&Root,
-		"first.AnError",
-		map[string]interface{}{"reference": ref})
-	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "an error")
-
-	_, err = testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.NoError",
-		map[string]interface{}{"reference": ref})
-	require.NoError(t, err)
-}
-
 func TestNilResult(t *testing.T) {
 	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
 		map[string]interface{}{})
@@ -437,43 +438,6 @@ func TestNilResult(t *testing.T) {
 		map[string]interface{}{"reference": ref})
 	require.NoError(t, err)
 	require.Nil(t, res)
-}
-
-// If a contract constructor returns `nil, nil` it's considered a logical error,
-// which is returned to the calling contract and/or API.
-func TestConstructorReturnNil(t *testing.T) {
-	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
-		map[string]interface{}{})
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-
-	_, _, err = testrequest.MakeSignedRequest(
-		launchnet.TestRPCUrlPublic,
-		&Root,
-		"first.ConstructorReturnNil",
-		map[string]interface{}{"reference": ref})
-	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "constructor returned nil")
-
-}
-
-// If a contract constructor fails it's considered a logical error,
-// which is returned to the calling contract and/or API.
-func TestConstructorReturnError(t *testing.T) {
-	result, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, "first.New",
-		map[string]interface{}{})
-	require.NoError(t, err)
-	ref, ok := result.(string)
-	require.True(t, ok)
-
-	_, _, err = testrequest.MakeSignedRequest(
-		launchnet.TestRPCUrlPublic,
-		&Root,
-		"first.ConstructorReturnError",
-		map[string]interface{}{"reference": ref})
-	data := checkConvertRequesterError(t, err).Data
-	require.Contains(t, data.Trace, "Epic fail in NewWithErr()")
 }
 
 func TestGetRemoteData(t *testing.T) {

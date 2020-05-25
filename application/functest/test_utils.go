@@ -3,7 +3,7 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-// +build functest
+// +build functest bloattest functest_endless_abandon
 
 package functest
 
@@ -40,6 +40,13 @@ func checkConvertRequesterError(t *testing.T, err error) *requester.Error {
 	rv, ok := err.(*requester.Error)
 	require.Truef(t, ok, "got wrong error %T (expected *requester.Error) with text '%s'", err, err.Error())
 	return rv
+}
+
+func callMethod(t testing.TB, objectRef string, method string) interface{} {
+	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, method,
+		map[string]interface{}{"reference": objectRef})
+	require.Empty(t, err)
+	return res
 }
 
 func createMember(t *testing.T) *AppUser {

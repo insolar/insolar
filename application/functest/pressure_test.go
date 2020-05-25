@@ -3,7 +3,7 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-// +build functest
+// +build bloattest
 
 package functest
 
@@ -90,13 +90,6 @@ func TestPressureOnSystem(t *testing.T) {
 		}
 		wg.Wait()
 	})
-}
-
-func callMethod(t testing.TB, objectRef string, method string) interface{} {
-	res, err := testrequest.SignedRequest(t, launchnet.TestRPCUrlPublic, &Root, method,
-		map[string]interface{}{"reference": objectRef})
-	require.Empty(t, err)
-	return res
 }
 
 func TestCoinPassing(t *testing.T) {
