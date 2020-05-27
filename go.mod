@@ -40,10 +40,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
-	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+	github.com/skudasov/loadgen v0.0.2
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0
@@ -58,7 +58,7 @@ require (
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
-	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/tools v0.0.0-20191108193012-7d206e10da11
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
