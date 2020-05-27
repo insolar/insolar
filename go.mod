@@ -55,7 +55,6 @@ require (
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.19.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
-	github.com/ugorji/go v1.1.4
 	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
