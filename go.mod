@@ -43,7 +43,7 @@ require (
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
-	github.com/skudasov/loadgen v0.0.2
+	github.com/skudasov/loadgen v0.0.3
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0
