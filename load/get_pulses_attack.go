@@ -8,7 +8,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/loadgen"
+	"github.com/skudasov/loadgen"
 )
 
 type GetPulsesAttack struct {

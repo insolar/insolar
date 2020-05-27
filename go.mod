@@ -25,7 +25,6 @@ require (
 	github.com/insolar/gls v0.0.0-20200427111849-9a08a622625d
 	github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 	github.com/insolar/insconfig v0.0.0-20200227134411-011eca6dc866
-	github.com/insolar/loadgen v1.1.2
 	github.com/insolar/rpc v1.2.2-0.20200331123021-db57b8833f82
 	github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
 	github.com/jackc/pgx/v4 v4.2.1
@@ -44,6 +43,7 @@ require (
 	github.com/prometheus/procfs v0.0.4 // indirect
 	github.com/rs/zerolog v1.15.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+	github.com/skudasov/loadgen v0.0.2
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0

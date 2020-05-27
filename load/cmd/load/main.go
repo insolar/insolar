@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/insolar/insolar/load"
-	"github.com/insolar/loadgen"
+	"github.com/skudasov/loadgen"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package load
 
 import (
-	"github.com/insolar/loadgen"
+	"github.com/skudasov/loadgen"
 )
 
 func CheckFromName(name string) loadgen.RuntimeCheckFunc {

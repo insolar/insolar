@@ -2,11 +2,11 @@
 
 Install lib
 ```
-go get github.com/insolar/loadgen
+go get github.com/skudasov/loadgen
 ```
 Install cli
 ```
-go install ~/go/pkg/mod/github.com/insolar/loadgen\@v1.1.2/cmd/loadcli.go
+go install ~/go/pkg/mod/github.com/skudasov/loadgen\@v1.1.2/cmd/loadcli.go
 ```
 
 Bootstrap grafana + grafite

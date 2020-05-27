@@ -3,7 +3,7 @@ package load
 import (
 	"log"
 
-	"github.com/insolar/loadgen"
+	"github.com/skudasov/loadgen"
 )
 
 func AttackerFromName(name string) loadgen.Attack {
