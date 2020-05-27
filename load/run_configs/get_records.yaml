@@ -1,0 +1,17 @@
+dumptransport: true
+goroutines_dump: false
+http_timeout: 20
+steps:
+- name: load
+  execution_mode: sequence
+  handles:
+  - name: get_records
+    rps: 1
+    attack_time_sec: 30
+    ramp_up_sec: 1
+    ramp_up_strategy: linear
+    max_attackers: 1
+    verbose: true
+    do_timeout_sec: 40
+    store_data: false
+    recycle_data: true
