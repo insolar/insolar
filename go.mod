@@ -51,10 +51,12 @@ require (
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0
+	github.com/tylerb/is v2.1.4+incompatible // indirect
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.19.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/ugorji/go v1.1.4
+	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
