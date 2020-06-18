@@ -68,3 +68,7 @@ func (v Epoch) IsCompatible(vv Epoch) bool {
 		return false
 	}
 }
+
+func (v Epoch) Equal(other Epoch) bool {
+	return v == other
+}
