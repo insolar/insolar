@@ -7,10 +7,10 @@ package exporter
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/jet"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"

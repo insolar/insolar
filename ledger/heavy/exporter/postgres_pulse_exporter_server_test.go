@@ -7,15 +7,14 @@ package exporter
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/jet"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/insolar/insolar/insolar/node"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
