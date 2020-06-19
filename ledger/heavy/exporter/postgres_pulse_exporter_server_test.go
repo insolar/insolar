@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/insolar/insolar/insolar/node"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
@@ -90,6 +90,21 @@ func TestPulseServer_Export(t *testing.T) {
 		require.Equal(t, pulse.MinTimePulse, int(pulses[0]))
 		require.Equal(t, pulse.MinTimePulse+1, int(pulses[1]))
 		require.Equal(t, pulse.MinTimePulse+2, int(pulses[2]))
+
+		pulseCalculator.ForwardsMock.Return(insolar.Pulse{PulseNumber: 100}, nil)
+		jetStorage := jet.NewStorageMock(t)
+		jetKeeper.StorageMock.Return(jetStorage)
+		jetStorage.AllMock.Return(nil)
+		res2, err := server.NextFinalizedPulse(context.Background(), &GetNextFinalizedPulse{0})
+		require.NoError(t, err)
+		require.NotNil(t, res2)
+		require.Equal(t, pulse.Number(100), res2.PulseNumber)
+
+		res3, err := server.NextFinalizedPulse(context.Background(), &GetNextFinalizedPulse{pulse.MinTimePulse})
+		require.NoError(t, err)
+		require.NotNil(t, res3)
+		require.Equal(t, pulse.Number(pulse.MinTimePulse+1), res3.PulseNumber)
+
 	})
 
 	t.Run("exporter works well. passed pulse is 0. read until top-sync", func(t *testing.T) {

@@ -10,6 +10,8 @@ service PulseExporter {
     }
     rpc TopSyncPulse (GetTopSyncPulse) returns (TopSyncPulseResponse) {
     }
+    rpc NextFinalizedPulse(GetNextFinalizedPulse) returns (FullPulse) {
+    }
 }
 
 message GetTopSyncPulse {
@@ -40,3 +42,17 @@ message Pulse {
 }
 
 
+message GetNextFinalizedPulse {
+    int64 PulseNo = 26;
+}
+
+message FullPulse {
+	bytes PulseNumber   = 1  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+	bytes PrevPulseNumber = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes NextPulseNumber = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Entropy = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+	int64 PulseTimestamp = 5;
+	uint32 EpochPulseNumber = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/pulse.Epoch", (gogoproto.nullable) = false];
+
+    repeated bytes Jets = 7  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+}

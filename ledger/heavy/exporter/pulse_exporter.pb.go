@@ -10,6 +10,7 @@ import (
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	insolar "github.com/insolar/insolar/insolar"
+	github_com_insolar_insolar_pulse "github.com/insolar/insolar/pulse"
 	grpc "google.golang.org/grpc"
 	io "io"
 	math "math"
@@ -227,11 +228,105 @@ func (m *Pulse) GetNodes() []insolar.Node {
 	return nil
 }
 
+type GetNextFinalizedPulse struct {
+	PulseNo int64 `protobuf:"varint,26,opt,name=PulseNo,proto3" json:"PulseNo,omitempty"`
+}
+
+func (m *GetNextFinalizedPulse) Reset()      { *m = GetNextFinalizedPulse{} }
+func (*GetNextFinalizedPulse) ProtoMessage() {}
+func (*GetNextFinalizedPulse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c59ef702cec231ca, []int{4}
+}
+func (m *GetNextFinalizedPulse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetNextFinalizedPulse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetNextFinalizedPulse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetNextFinalizedPulse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetNextFinalizedPulse.Merge(m, src)
+}
+func (m *GetNextFinalizedPulse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetNextFinalizedPulse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetNextFinalizedPulse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetNextFinalizedPulse proto.InternalMessageInfo
+
+func (m *GetNextFinalizedPulse) GetPulseNo() int64 {
+	if m != nil {
+		return m.PulseNo
+	}
+	return 0
+}
+
+type FullPulse struct {
+	PulseNumber      github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,1,opt,name=PulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"PulseNumber"`
+	PrevPulseNumber  github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,2,opt,name=PrevPulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"PrevPulseNumber"`
+	NextPulseNumber  github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,3,opt,name=NextPulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"NextPulseNumber"`
+	Entropy          github_com_insolar_insolar_insolar.Entropy     `protobuf:"bytes,4,opt,name=Entropy,proto3,customtype=github.com/insolar/insolar/insolar.Entropy" json:"Entropy"`
+	PulseTimestamp   int64                                          `protobuf:"varint,5,opt,name=PulseTimestamp,proto3" json:"PulseTimestamp,omitempty"`
+	EpochPulseNumber github_com_insolar_insolar_pulse.Epoch         `protobuf:"varint,6,opt,name=EpochPulseNumber,proto3,customtype=github.com/insolar/insolar/pulse.Epoch" json:"EpochPulseNumber"`
+	Jets             []github_com_insolar_insolar_insolar.JetID     `protobuf:"bytes,7,rep,name=Jets,proto3,customtype=github.com/insolar/insolar/insolar.JetID" json:"Jets"`
+}
+
+func (m *FullPulse) Reset()      { *m = FullPulse{} }
+func (*FullPulse) ProtoMessage() {}
+func (*FullPulse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c59ef702cec231ca, []int{5}
+}
+func (m *FullPulse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *FullPulse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_FullPulse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *FullPulse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_FullPulse.Merge(m, src)
+}
+func (m *FullPulse) XXX_Size() int {
+	return m.Size()
+}
+func (m *FullPulse) XXX_DiscardUnknown() {
+	xxx_messageInfo_FullPulse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_FullPulse proto.InternalMessageInfo
+
+func (m *FullPulse) GetPulseTimestamp() int64 {
+	if m != nil {
+		return m.PulseTimestamp
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*GetTopSyncPulse)(nil), "exporter.GetTopSyncPulse")
 	proto.RegisterType((*TopSyncPulseResponse)(nil), "exporter.TopSyncPulseResponse")
 	proto.RegisterType((*GetPulses)(nil), "exporter.GetPulses")
 	proto.RegisterType((*Pulse)(nil), "exporter.Pulse")
+	proto.RegisterType((*GetNextFinalizedPulse)(nil), "exporter.GetNextFinalizedPulse")
+	proto.RegisterType((*FullPulse)(nil), "exporter.FullPulse")
 }
 
 func init() {
@@ -239,35 +334,44 @@ func init() {
 }
 
 var fileDescriptor_c59ef702cec231ca = []byte{
-	// 433 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x52, 0x41, 0xaf, 0xd2, 0x40,
-	0x18, 0xdc, 0xf5, 0xc9, 0xd3, 0xb7, 0xef, 0x21, 0xba, 0xa2, 0x56, 0x62, 0x16, 0xd2, 0x83, 0x41,
-	0x12, 0x5b, 0x53, 0x8d, 0x3f, 0x00, 0x43, 0x38, 0x68, 0x08, 0xa9, 0xc4, 0x78, 0x33, 0x14, 0xd6,
-	0x42, 0xd2, 0x76, 0x37, 0xdb, 0xad, 0xb1, 0x37, 0x7f, 0x02, 0x57, 0x6f, 0x1e, 0xfd, 0x29, 0x1c,
-	0x39, 0x12, 0x0f, 0x44, 0xca, 0xc5, 0x23, 0x3f, 0xc1, 0xb0, 0xa5, 0x50, 0xc4, 0x04, 0x6f, 0x9e,
-	0xba, 0x33, 0xdf, 0xcc, 0xf4, 0xdb, 0xec, 0xa0, 0x86, 0x47, 0x87, 0x2e, 0x15, 0xe6, 0x88, 0xf6,
-	0x3f, 0xc5, 0x26, 0xfd, 0xcc, 0x99, 0x90, 0x54, 0x98, 0x3c, 0xf2, 0x42, 0xfa, 0x21, 0x83, 0x06,
-	0x17, 0x4c, 0x32, 0x7c, 0x33, 0xc3, 0x95, 0xa7, 0xee, 0x58, 0x8e, 0x22, 0xc7, 0x18, 0x30, 0xdf,
-	0x74, 0x99, 0xcb, 0x4c, 0x25, 0x70, 0xa2, 0x8f, 0x0a, 0x29, 0xa0, 0x4e, 0xa9, 0xf1, 0x40, 0x3e,
-	0x0e, 0x42, 0xe6, 0xf5, 0xc5, 0xd1, 0x37, 0x60, 0x43, 0x9a, 0xca, 0xf5, 0x3b, 0xa8, 0xd4, 0xa6,
-	0xb2, 0xc7, 0xf8, 0xdb, 0x38, 0x18, 0x74, 0x37, 0x9b, 0xe8, 0xef, 0x50, 0x39, 0x8f, 0x6d, 0x1a,
-	0x72, 0x16, 0x84, 0x14, 0x3f, 0x42, 0x17, 0x5d, 0xe6, 0xc5, 0x3e, 0x13, 0x7c, 0xa4, 0xdd, 0xae,
-	0xc1, 0x7a, 0xd1, 0xde, 0x13, 0xb8, 0x86, 0x2e, 0x95, 0xbc, 0x13, 0xf9, 0x0e, 0x15, 0x5a, 0x59,
-	0xcd, 0xf3, 0x94, 0xfe, 0x15, 0xa2, 0x8b, 0x36, 0x95, 0x8a, 0x0a, 0x4f, 0xa4, 0xbd, 0x3f, 0x4e,
-	0xbb, 0x6a, 0xbe, 0x9c, 0x2e, 0xaa, 0xe0, 0xc7, 0xa2, 0x6a, 0x9c, 0xbe, 0xa2, 0x91, 0x73, 0x1f,
-	0x6c, 0x81, 0xcb, 0xa8, 0xf0, 0x8a, 0x45, 0x81, 0xd4, 0xee, 0xab, 0x7f, 0xa6, 0x40, 0xff, 0x76,
-	0x0d, 0x15, 0x94, 0xea, 0xbf, 0xed, 0xf5, 0x06, 0xdd, 0x68, 0x05, 0x52, 0x30, 0x1e, 0x6b, 0xf7,
-	0x54, 0xaa, 0xb5, 0x4d, 0x6d, 0xfc, 0x43, 0xea, 0xd6, 0x69, 0x67, 0x11, 0xf8, 0x31, 0xba, 0xa5,
-	0xc2, 0x7b, 0x63, 0x9f, 0x86, 0xb2, 0xef, 0x73, 0x75, 0xdd, 0x33, 0xfb, 0x0f, 0x16, 0x3f, 0x41,
-	0x85, 0x0e, 0x1b, 0xd2, 0x50, 0x7b, 0x50, 0x3b, 0xab, 0x5f, 0x5a, 0x45, 0x23, 0x4b, 0xdc, 0xb0,
-	0xcd, 0xeb, 0x9b, 0x15, 0xec, 0x54, 0x61, 0x4d, 0x20, 0x2a, 0x2a, 0x77, 0x6b, 0xdb, 0x4c, 0x6c,
-	0xa1, 0xf3, 0xf4, 0x8c, 0xef, 0x1a, 0xbb, 0xfa, 0xee, 0x5e, 0xb8, 0x52, 0xda, 0x93, 0x69, 0xb1,
-	0xc0, 0x33, 0x88, 0x5f, 0xa3, 0xab, 0x7c, 0xb9, 0xf0, 0xc3, 0x03, 0x67, 0x7e, 0x54, 0x21, 0xfb,
-	0xd1, 0xdf, 0xfa, 0xa8, 0x83, 0xe6, 0x8b, 0xd9, 0x92, 0x80, 0xf9, 0x92, 0x80, 0xf5, 0x92, 0xc0,
-	0x2f, 0x09, 0x81, 0xdf, 0x13, 0x02, 0xa7, 0x09, 0x81, 0xb3, 0x84, 0xc0, 0x9f, 0x09, 0x81, 0xbf,
-	0x12, 0x02, 0xd6, 0x09, 0x81, 0x93, 0x15, 0x01, 0xb3, 0x15, 0x01, 0xf3, 0x15, 0x01, 0xce, 0xb9,
-	0x6a, 0xfe, 0xf3, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xaf, 0x04, 0x2f, 0x33, 0x8f, 0x03, 0x00,
-	0x00,
+	// 592 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x94, 0xcd, 0x6e, 0xd3, 0x40,
+	0x10, 0xc7, 0xbd, 0xcd, 0x17, 0x99, 0x26, 0xa4, 0x2c, 0x29, 0x98, 0x08, 0x6d, 0x22, 0x1f, 0xaa,
+	0x50, 0x09, 0xa7, 0x04, 0xc4, 0x03, 0x84, 0xa6, 0x11, 0xa5, 0x8a, 0x22, 0x53, 0x21, 0xc4, 0x05,
+	0xf2, 0xb1, 0x24, 0x91, 0x1c, 0xaf, 0x65, 0xaf, 0xab, 0x86, 0x13, 0x8f, 0xc0, 0x95, 0x1b, 0x47,
+	0x5e, 0x83, 0x5b, 0x8f, 0x39, 0x56, 0x1c, 0x22, 0xe2, 0x5c, 0x38, 0xf6, 0x11, 0x90, 0xd7, 0xf9,
+	0x70, 0x3e, 0x44, 0x2b, 0x15, 0xd4, 0x93, 0x77, 0x66, 0x67, 0x7e, 0x33, 0xb3, 0xeb, 0xfd, 0xc3,
+	0xae, 0x4e, 0x5b, 0x6d, 0x6a, 0x15, 0x3a, 0xb4, 0x7e, 0xd2, 0x2f, 0xd0, 0x53, 0x93, 0x59, 0x9c,
+	0x5a, 0x05, 0xd3, 0xd1, 0x6d, 0xfa, 0x7e, 0x6a, 0xaa, 0xa6, 0xc5, 0x38, 0xc3, 0xb7, 0xa6, 0x76,
+	0xe6, 0x71, 0xbb, 0xcb, 0x3b, 0x4e, 0x43, 0x6d, 0xb2, 0x5e, 0xa1, 0xcd, 0xda, 0xac, 0x20, 0x02,
+	0x1a, 0xce, 0x47, 0x61, 0x09, 0x43, 0xac, 0xfc, 0xc4, 0x85, 0xf0, 0xae, 0x61, 0x33, 0xbd, 0x6e,
+	0xad, 0x7c, 0x0d, 0xd6, 0xa2, 0x7e, 0xb8, 0x72, 0x07, 0x52, 0x15, 0xca, 0x8f, 0x99, 0xf9, 0xba,
+	0x6f, 0x34, 0x6b, 0x5e, 0x27, 0xca, 0x1b, 0x48, 0x07, 0x6d, 0x8d, 0xda, 0x26, 0x33, 0x6c, 0x8a,
+	0x1f, 0x42, 0xbc, 0xc6, 0xf4, 0x7e, 0x8f, 0x59, 0x66, 0x47, 0xde, 0xca, 0xa1, 0x7c, 0x52, 0x9b,
+	0x3b, 0x70, 0x0e, 0x36, 0x45, 0x78, 0xd5, 0xe9, 0x35, 0xa8, 0x25, 0xa7, 0xc5, 0x7e, 0xd0, 0xa5,
+	0x7c, 0x45, 0x10, 0xaf, 0x50, 0x2e, 0x5c, 0xf6, 0x25, 0xb4, 0xb7, 0xab, 0xb4, 0x44, 0xe9, 0xf9,
+	0xd9, 0x30, 0x2b, 0xfd, 0x1c, 0x66, 0xd5, 0xcb, 0x47, 0x54, 0x03, 0xd9, 0x0b, 0x5d, 0xe0, 0x34,
+	0x44, 0x5e, 0x30, 0xc7, 0xe0, 0xf2, 0x3d, 0x51, 0xd3, 0x37, 0x94, 0x6f, 0x1b, 0x10, 0x11, 0x51,
+	0x37, 0xd6, 0xd7, 0x11, 0xc4, 0xca, 0x06, 0xb7, 0x98, 0xd9, 0x97, 0xb7, 0x05, 0xb5, 0x38, 0xa1,
+	0xee, 0x5e, 0x81, 0x3a, 0xc9, 0xd4, 0xa6, 0x08, 0xbc, 0x03, 0xb7, 0x05, 0xfc, 0xb8, 0xdb, 0xa3,
+	0x36, 0xaf, 0xf7, 0x4c, 0x31, 0x6e, 0x48, 0x5b, 0xf2, 0xe2, 0x47, 0x10, 0xa9, 0xb2, 0x16, 0xb5,
+	0xe5, 0xfb, 0xb9, 0x50, 0x7e, 0xb3, 0x98, 0x54, 0xa7, 0x44, 0xcf, 0x5b, 0x0a, 0x7b, 0x2d, 0x68,
+	0x7e, 0x84, 0xf2, 0x04, 0xb6, 0x2b, 0x94, 0x57, 0xe9, 0x29, 0x3f, 0xe8, 0x1a, 0x75, 0xbd, 0xfb,
+	0x89, 0xb6, 0xfc, 0x13, 0x93, 0x21, 0xe6, 0x0f, 0xc2, 0xe4, 0x8c, 0x28, 0x32, 0x35, 0x95, 0x1f,
+	0x61, 0x88, 0x1f, 0x38, 0xba, 0xee, 0xc7, 0x2d, 0x9d, 0x1d, 0xfa, 0x77, 0x67, 0xf7, 0x01, 0x52,
+	0x35, 0x8b, 0x9e, 0x04, 0xe9, 0x1b, 0xd7, 0xa2, 0x2f, 0xe3, 0xbc, 0x0a, 0xde, 0xe4, 0xc1, 0x0a,
+	0xa1, 0xeb, 0x55, 0x58, 0xc2, 0x05, 0xef, 0x3f, 0xfc, 0x3f, 0xee, 0x3f, 0xb2, 0xf6, 0xfe, 0xdf,
+	0xc1, 0x56, 0xd9, 0x64, 0xcd, 0x4e, 0x70, 0xb0, 0xa8, 0xf7, 0xd3, 0x97, 0xd4, 0x49, 0xf9, 0x9d,
+	0xbf, 0x94, 0x17, 0xca, 0xa5, 0x0a, 0x80, 0xb6, 0xc2, 0xc1, 0xfb, 0x10, 0x3e, 0xa4, 0xdc, 0x96,
+	0x63, 0xb9, 0x50, 0x3e, 0x51, 0xda, 0x9b, 0xf0, 0xf2, 0x57, 0x18, 0xe7, 0x90, 0xf2, 0x97, 0xfb,
+	0x9a, 0xc8, 0x2e, 0x0e, 0x11, 0x24, 0x05, 0xb5, 0x3c, 0x11, 0x44, 0x5c, 0x84, 0xa8, 0xbf, 0xc6,
+	0x77, 0xd5, 0x99, 0x6a, 0xce, 0x84, 0x25, 0x93, 0x9a, 0x3b, 0x7d, 0x3d, 0x93, 0xf6, 0x10, 0x7e,
+	0x05, 0x89, 0xa0, 0xa6, 0xe1, 0x07, 0x0b, 0x99, 0xc1, 0xad, 0x0c, 0x99, 0x6f, 0xad, 0x93, 0x41,
+	0x45, 0xc2, 0x47, 0x80, 0xd7, 0x3c, 0x83, 0xec, 0x02, 0x72, 0x35, 0x20, 0x13, 0xe8, 0x76, 0xf6,
+	0x28, 0x14, 0xa9, 0xf4, 0x6c, 0x30, 0x22, 0xd2, 0xf9, 0x88, 0x48, 0x17, 0x23, 0x82, 0x3e, 0xbb,
+	0x04, 0x7d, 0x77, 0x09, 0x3a, 0x73, 0x09, 0x1a, 0xb8, 0x04, 0xfd, 0x72, 0x09, 0xfa, 0xed, 0x12,
+	0xe9, 0xc2, 0x25, 0xe8, 0xcb, 0x98, 0x48, 0x83, 0x31, 0x91, 0xce, 0xc7, 0x44, 0x6a, 0x44, 0x85,
+	0x7c, 0x3f, 0xfd, 0x13, 0x00, 0x00, 0xff, 0xff, 0x17, 0x82, 0x5c, 0x3f, 0x54, 0x06, 0x00, 0x00,
 }
 
 func (this *GetTopSyncPulse) Equal(that interface{}) bool {
@@ -389,6 +493,77 @@ func (this *Pulse) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *GetNextFinalizedPulse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*GetNextFinalizedPulse)
+	if !ok {
+		that2, ok := that.(GetNextFinalizedPulse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.PulseNo != that1.PulseNo {
+		return false
+	}
+	return true
+}
+func (this *FullPulse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*FullPulse)
+	if !ok {
+		that2, ok := that.(FullPulse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if !this.PulseNumber.Equal(that1.PulseNumber) {
+		return false
+	}
+	if !this.PrevPulseNumber.Equal(that1.PrevPulseNumber) {
+		return false
+	}
+	if !this.NextPulseNumber.Equal(that1.NextPulseNumber) {
+		return false
+	}
+	if !this.Entropy.Equal(that1.Entropy) {
+		return false
+	}
+	if this.PulseTimestamp != that1.PulseTimestamp {
+		return false
+	}
+	if !this.EpochPulseNumber.Equal(that1.EpochPulseNumber) {
+		return false
+	}
+	if len(this.Jets) != len(that1.Jets) {
+		return false
+	}
+	for i := range this.Jets {
+		if !this.Jets[i].Equal(that1.Jets[i]) {
+			return false
+		}
+	}
+	return true
+}
 func (this *GetTopSyncPulse) GoString() string {
 	if this == nil {
 		return "nil"
@@ -441,6 +616,32 @@ func (this *Pulse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *GetNextFinalizedPulse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 5)
+	s = append(s, "&exporter.GetNextFinalizedPulse{")
+	s = append(s, "PulseNo: "+fmt.Sprintf("%#v", this.PulseNo)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *FullPulse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 11)
+	s = append(s, "&exporter.FullPulse{")
+	s = append(s, "PulseNumber: "+fmt.Sprintf("%#v", this.PulseNumber)+",\n")
+	s = append(s, "PrevPulseNumber: "+fmt.Sprintf("%#v", this.PrevPulseNumber)+",\n")
+	s = append(s, "NextPulseNumber: "+fmt.Sprintf("%#v", this.NextPulseNumber)+",\n")
+	s = append(s, "Entropy: "+fmt.Sprintf("%#v", this.Entropy)+",\n")
+	s = append(s, "PulseTimestamp: "+fmt.Sprintf("%#v", this.PulseTimestamp)+",\n")
+	s = append(s, "EpochPulseNumber: "+fmt.Sprintf("%#v", this.EpochPulseNumber)+",\n")
+	s = append(s, "Jets: "+fmt.Sprintf("%#v", this.Jets)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func valueToGoStringPulseExporter(v interface{}, typ string) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -464,6 +665,7 @@ const _ = grpc.SupportPackageIsVersion4
 type PulseExporterClient interface {
 	Export(ctx context.Context, in *GetPulses, opts ...grpc.CallOption) (PulseExporter_ExportClient, error)
 	TopSyncPulse(ctx context.Context, in *GetTopSyncPulse, opts ...grpc.CallOption) (*TopSyncPulseResponse, error)
+	NextFinalizedPulse(ctx context.Context, in *GetNextFinalizedPulse, opts ...grpc.CallOption) (*FullPulse, error)
 }
 
 type pulseExporterClient struct {
@@ -515,10 +717,20 @@ func (c *pulseExporterClient) TopSyncPulse(ctx context.Context, in *GetTopSyncPu
 	return out, nil
 }
 
+func (c *pulseExporterClient) NextFinalizedPulse(ctx context.Context, in *GetNextFinalizedPulse, opts ...grpc.CallOption) (*FullPulse, error) {
+	out := new(FullPulse)
+	err := c.cc.Invoke(ctx, "/exporter.PulseExporter/NextFinalizedPulse", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PulseExporterServer is the server API for PulseExporter service.
 type PulseExporterServer interface {
 	Export(*GetPulses, PulseExporter_ExportServer) error
 	TopSyncPulse(context.Context, *GetTopSyncPulse) (*TopSyncPulseResponse, error)
+	NextFinalizedPulse(context.Context, *GetNextFinalizedPulse) (*FullPulse, error)
 }
 
 func RegisterPulseExporterServer(s *grpc.Server, srv PulseExporterServer) {
@@ -564,6 +776,24 @@ func _PulseExporter_TopSyncPulse_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PulseExporter_NextFinalizedPulse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNextFinalizedPulse)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PulseExporterServer).NextFinalizedPulse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/exporter.PulseExporter/NextFinalizedPulse",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PulseExporterServer).NextFinalizedPulse(ctx, req.(*GetNextFinalizedPulse))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _PulseExporter_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "exporter.PulseExporter",
 	HandlerType: (*PulseExporterServer)(nil),
@@ -571,6 +801,10 @@ var _PulseExporter_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TopSyncPulse",
 			Handler:    _PulseExporter_TopSyncPulse_Handler,
+		},
+		{
+			MethodName: "NextFinalizedPulse",
+			Handler:    _PulseExporter_NextFinalizedPulse_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -741,6 +975,103 @@ func (m *Pulse) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *GetNextFinalizedPulse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetNextFinalizedPulse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.PulseNo != 0 {
+		dAtA[i] = 0xd0
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPulseExporter(dAtA, i, uint64(m.PulseNo))
+	}
+	return i, nil
+}
+
+func (m *FullPulse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FullPulse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintPulseExporter(dAtA, i, uint64(m.PulseNumber.Size()))
+	n4, err := m.PulseNumber.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintPulseExporter(dAtA, i, uint64(m.PrevPulseNumber.Size()))
+	n5, err := m.PrevPulseNumber.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n5
+	dAtA[i] = 0x1a
+	i++
+	i = encodeVarintPulseExporter(dAtA, i, uint64(m.NextPulseNumber.Size()))
+	n6, err := m.NextPulseNumber.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	dAtA[i] = 0x22
+	i++
+	i = encodeVarintPulseExporter(dAtA, i, uint64(m.Entropy.Size()))
+	n7, err := m.Entropy.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n7
+	if m.PulseTimestamp != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintPulseExporter(dAtA, i, uint64(m.PulseTimestamp))
+	}
+	if m.EpochPulseNumber != 0 {
+		dAtA[i] = 0x30
+		i++
+		i = encodeVarintPulseExporter(dAtA, i, uint64(m.EpochPulseNumber))
+	}
+	if len(m.Jets) > 0 {
+		for _, msg := range m.Jets {
+			dAtA[i] = 0x3a
+			i++
+			i = encodeVarintPulseExporter(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	return i, nil
+}
+
 func encodeVarintPulseExporter(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -816,6 +1147,47 @@ func (m *Pulse) Size() (n int) {
 	return n
 }
 
+func (m *GetNextFinalizedPulse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.PulseNo != 0 {
+		n += 2 + sovPulseExporter(uint64(m.PulseNo))
+	}
+	return n
+}
+
+func (m *FullPulse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.PulseNumber.Size()
+	n += 1 + l + sovPulseExporter(uint64(l))
+	l = m.PrevPulseNumber.Size()
+	n += 1 + l + sovPulseExporter(uint64(l))
+	l = m.NextPulseNumber.Size()
+	n += 1 + l + sovPulseExporter(uint64(l))
+	l = m.Entropy.Size()
+	n += 1 + l + sovPulseExporter(uint64(l))
+	if m.PulseTimestamp != 0 {
+		n += 1 + sovPulseExporter(uint64(m.PulseTimestamp))
+	}
+	if m.EpochPulseNumber != 0 {
+		n += 1 + sovPulseExporter(uint64(m.EpochPulseNumber))
+	}
+	if len(m.Jets) > 0 {
+		for _, e := range m.Jets {
+			l = e.Size()
+			n += 1 + l + sovPulseExporter(uint64(l))
+		}
+	}
+	return n
+}
+
 func sovPulseExporter(x uint64) (n int) {
 	for {
 		n++
@@ -871,6 +1243,32 @@ func (this *Pulse) String() string {
 		`Entropy:` + fmt.Sprintf("%v", this.Entropy) + `,`,
 		`PulseTimestamp:` + fmt.Sprintf("%v", this.PulseTimestamp) + `,`,
 		`Nodes:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Nodes), "Node", "insolar.Node", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *GetNextFinalizedPulse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&GetNextFinalizedPulse{`,
+		`PulseNo:` + fmt.Sprintf("%v", this.PulseNo) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *FullPulse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&FullPulse{`,
+		`PulseNumber:` + fmt.Sprintf("%v", this.PulseNumber) + `,`,
+		`PrevPulseNumber:` + fmt.Sprintf("%v", this.PrevPulseNumber) + `,`,
+		`NextPulseNumber:` + fmt.Sprintf("%v", this.NextPulseNumber) + `,`,
+		`Entropy:` + fmt.Sprintf("%v", this.Entropy) + `,`,
+		`PulseTimestamp:` + fmt.Sprintf("%v", this.PulseTimestamp) + `,`,
+		`EpochPulseNumber:` + fmt.Sprintf("%v", this.EpochPulseNumber) + `,`,
+		`Jets:` + fmt.Sprintf("%v", this.Jets) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1315,6 +1713,336 @@ func (m *Pulse) Unmarshal(dAtA []byte) error {
 			}
 			m.Nodes = append(m.Nodes, insolar.Node{})
 			if err := m.Nodes[len(m.Nodes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPulseExporter(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetNextFinalizedPulse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPulseExporter
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetNextFinalizedPulse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetNextFinalizedPulse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 26:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PulseNo", wireType)
+			}
+			m.PulseNo = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PulseNo |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPulseExporter(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FullPulse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPulseExporter
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FullPulse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FullPulse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PulseNumber", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.PulseNumber.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PrevPulseNumber", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.PrevPulseNumber.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPulseNumber", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.NextPulseNumber.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Entropy", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Entropy.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PulseTimestamp", wireType)
+			}
+			m.PulseTimestamp = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PulseTimestamp |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EpochPulseNumber", wireType)
+			}
+			m.EpochPulseNumber = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.EpochPulseNumber |= github_com_insolar_insolar_pulse.Epoch(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Jets", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var v github_com_insolar_insolar_insolar.JetID
+			m.Jets = append(m.Jets, v)
+			if err := m.Jets[len(m.Jets)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
