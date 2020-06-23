@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -18,12 +19,17 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
+	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
-	component "github.com/insolar/component-manager"
+	"github.com/gbrlsnchs/jwt/v3"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
@@ -414,7 +420,10 @@ func initWithPostgres(
 		recordExporter = exporter.NewRecordServer(PulsesPostgres, RecordsPostgres, RecordsPostgres, PostgresJetKeeper)
 		pulseExporter = exporter.NewPulseServer(PulsesPostgres, PostgresJetKeeper, NodesPostgres)
 
-		grpcServer := grpc.NewServer()
+		grpcServer, err := newGRPCServer(cfg.Exporter)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to initiate a GRPC server")
+		}
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
 
@@ -755,7 +764,10 @@ func initWithBadger(
 		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper, Nodes)
 
-		grpcServer := grpc.NewServer()
+		grpcServer, err := newGRPCServer(cfg.Exporter)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to initiate a GRPC server")
+		}
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
 
@@ -809,6 +821,24 @@ func initWithBadger(
 	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.FlowDispatcher.Process)
 
 	return c, nil
+}
+
+var (
+	jwtIss string
+	jwtKey *jwt.HMACSHA
+)
+
+func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
+	if cfg.Auth.Required {
+		jwtIss = cfg.Auth.Issuer
+		key := []byte(cfg.Auth.Secret)
+		if len(key) != 64 {
+			return nil, errors.New("exporter.auth.secret must be 512-bit")
+		}
+		jwtKey = jwt.NewHS512(key)
+		return grpc.NewServer(grpc.UnaryInterceptor(authInterceptor)), nil
+	}
+	return grpc.NewServer(), nil
 }
 
 func newComponents(
@@ -909,4 +939,46 @@ func startRouter(ctx context.Context, router *watermillMsg.Router) {
 		}
 	}()
 	<-router.Running()
+}
+
+func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "failed to retrieve metadata")
+	}
+
+	elem, ok := md["Authorization"]
+	if !ok || len(elem) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "auth data not supplied")
+	}
+	sub, err := authorize(strings.TrimPrefix(elem[0], "Bearer "))
+	if err != nil {
+		return nil, err
+	}
+
+	md.Set(exporter.IDobs, sub)
+	newCtx := metadata.NewIncomingContext(ctx, md)
+	return handler(newCtx, req)
+}
+
+func authorize(token string) (string, error) {
+	if jwtIss == "" || jwtKey == nil {
+		return "", status.Error(codes.Internal, "required auth parameters are not configured")
+	}
+
+	payload := jwt.Payload{}
+	_, err := jwt.Verify([]byte(token), jwtKey, &payload)
+	if err != nil {
+		return "", status.Error(codes.Unauthenticated, err.Error())
+	}
+
+	if payload.Issuer != jwtIss {
+		return "", status.Errorf(codes.Unauthenticated, "unknown JWT issuer: %s", payload.Issuer)
+	}
+
+	if payload.ExpirationTime.Before(time.Now()) {
+		return "", status.Error(codes.Unauthenticated, "JWT is expired")
+	}
+
+	return payload.Subject, nil
 }
