@@ -51,6 +51,9 @@ github.com/dustin/go-humanize
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
+# github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.2
+github.com/gbrlsnchs/jwt/v3
+github.com/gbrlsnchs/jwt/v3/internal
 # github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
 github.com/getkin/kin-openapi/openapi3
 github.com/getkin/kin-openapi/openapi3filter
@@ -142,6 +145,8 @@ github.com/hexdigest/gowrap/printer
 github.com/inconshreveable/mousetrap
 # github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
 github.com/insolar/component-manager
+# github.com/insolar/gls v0.0.0-20200427111849-9a08a622625d
+github.com/insolar/gls
 # github.com/insolar/go-actors v0.0.0-20190805151516-2fcc7bfc8ff9
 github.com/insolar/go-actors/actor
 github.com/insolar/go-actors/actor/errors
@@ -196,6 +201,9 @@ github.com/kardianos/osext
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/lithammer/shortuuid/v3 v3.0.4
 github.com/lithammer/shortuuid/v3
+# github.com/magefile/mage v1.9.0
+github.com/magefile/mage/sh
+github.com/magefile/mage/mg
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.1.4
@@ -342,11 +350,13 @@ go.opencensus.io/trace/propagation
 # go.uber.org/goleak v1.0.0
 go.uber.org/goleak
 go.uber.org/goleak/internal/stack
-# golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
+# golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
 golang.org/x/crypto/sha3
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/ed25519
 golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/ed25519/internal/edwards25519
 # golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 golang.org/x/lint/golint
 golang.org/x/lint
@@ -391,7 +401,7 @@ golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/internal/module
-# golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
+# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c
