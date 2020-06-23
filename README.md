@@ -8,15 +8,21 @@ Insolar platform is the most secure, scalable, and comprehensive business-ready 
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
 [![codecov](https://codecov.io/gh/insolar/insolar/branch/master/graph/badge.svg)](https://codecov.io/gh/insolar/insolar)
 
-# Quick start
+# Insolar Platform 1.0
+
+Insolar Platform 1.0 resides in this repository. Insolar MainNet application (and its benchmark) resides in the [insolar/mainnet repository](https://github.com/insolar/mainnet) and runs on top of Platform 1.0.
+
+Assured Ledger, Insolar's Platform-as-a-Service solution, is being actively developed in the [insolar/assured-ledger repository](https://github.com/insolar/assured-ledger).
+
+## Quick start
 
 To learn what distinguishes Insolar from other blockchain projects, go through the [list of our features](https://insolar.io/platform?utm_source=Github). 
 
 To get a grip on how Insolar works, take a look at the [big picture](https://docs.insolar.io/en/latest/basics.html) and explore the [architecture](https://docs.insolar.io/en/latest/architecture.html).
 
-To test Insolar locally, install it and deploy as described below.
+To run the Insolar Platform 1.0 locally, install it and deploy as described below.
 
-## Install
+### Install
 
 1. Install the latest 1.12 version of the [Golang programming tools](https://golang.org/doc/install#install). Make sure the `$GOPATH` environment variable is set.
 
@@ -38,28 +44,20 @@ To test Insolar locally, install it and deploy as described below.
    make
    ```
 
-## Deploy locally
+### Deploy locally
 
-1. Run the launcher:
+To deploy the Insolar network locally, run the launcher:
 
-   ```
-   insolar-scripts/insolard/launchnet.sh -g
-   ```
+```
+insolar-scripts/insolard/launchnet.sh -g
+```
 
-   It generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.
-   The default number of nodes is 5, you can uncomment more in `scripts/insolard/bootstrap_template.yaml`.
+The launcher generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.
+The default number of nodes is 5, you can uncomment more in `scripts/insolard/bootstrap_template.yaml`.
 
-2. When the pulse watcher says `INSOLAR STATE: READY`, you can run a benchmark:
-     ```
-     bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
-     ```
+When the pulse watcher says `INSOLAR STATE: READY`, the network is up and running.
 
-     Options:
-     * `-k`: Path to the root user's key pair.
-     * `-c`: Number of concurrent threads in which requests are sent.
-     * `-r`: Number of transfer requests to be sent in each thread.
-
-# Contribute!
+## Contribute!
 
 Feel free to submit issues, fork the repository and send pull requests! 
 
@@ -73,11 +71,11 @@ When submitting an issue, **include a complete test function** that demonstrates
 
 Thank you for your intention to contribute to the Insolar project. As a company developing open-source code, we highly appreciate external contributions to our project.
 
-# FAQ
+## FAQ
 
 For more information, check out our [FAQ](https://github.com/insolar/insolar/wiki/FAQ).
 
-# Contacts
+## Contacts
 
 If you have any additional questions, join our [developers chat](https://t.me/InsolarTech).
 
@@ -92,6 +90,6 @@ Our social media:
 [<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-instagram.png" width="36" height="36">](https://instagram.com/insolario)
 [<img src="https://github.com/insolar/doc-pics/raw/master/st/ico-social-telegram.png" width="36" height="36">](https://t.me/InsolarAnnouncements)
 
-# License
+## License
 
 This project is licensed under the terms of the [Insolar License 1.0](LICENSE.md).
