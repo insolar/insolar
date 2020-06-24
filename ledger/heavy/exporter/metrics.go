@@ -16,6 +16,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
 
+const IDobs = "idobserver"
+
 var (
 	TagHeavyExporterMethodName = insmetrics.MustTagKey("heavy_exporter_method_name")
 	// public - data from observer on public side(crypto exchange). internal - from internal network
@@ -48,8 +50,8 @@ func init() {
 func addTagsForExporterMethodTiming(ctx context.Context, methodName string) context.Context {
 	typeObserver := "internal"
 	md, ok := metadata.FromIncomingContext(ctx)
-	if _, isContain := md["idobserver"]; isContain && ok {
-		typeObserver = md.Get("idobserver")[0]
+	if _, isContain := md[IDobs]; isContain && ok {
+		typeObserver = md.Get(IDobs)[0]
 	}
 	ctx = insmetrics.InsertTag(ctx, TagHeavyIdObserver, typeObserver)
 	ctx = insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, methodName)
