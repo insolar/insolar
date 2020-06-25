@@ -947,7 +947,7 @@ func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServe
 		return nil, status.Error(codes.InvalidArgument, "failed to retrieve metadata")
 	}
 
-	elem, ok := md["Authorization"]
+	elem, ok := md["authorization"]
 	if !ok || len(elem) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "auth data not supplied")
 	}
