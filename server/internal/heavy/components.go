@@ -19,6 +19,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
@@ -836,7 +837,7 @@ func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
 			return nil, errors.New("exporter.auth.secret must be 512-bit")
 		}
 		jwtKey = jwt.NewHS512(key)
-		return grpc.NewServer(grpc.UnaryInterceptor(authInterceptor)), nil
+		return grpc.NewServer(grpc.UnaryInterceptor(authUnaryIntcp), grpc.StreamInterceptor(authStreamIntcp)), nil
 	}
 	return grpc.NewServer(), nil
 }
@@ -941,7 +942,25 @@ func startRouter(ctx context.Context, router *watermillMsg.Router) {
 	<-router.Running()
 }
 
-func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+func authUnaryIntcp(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	newCtx, err := authorize(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return handler(newCtx, req)
+}
+
+func authStreamIntcp(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	newCtx, err := authorize(stream.Context())
+	if err != nil {
+		return err
+	}
+	wrapped := grpc_middleware.WrapServerStream(stream)
+	wrapped.WrappedContext = newCtx
+	return handler(srv, wrapped)
+}
+
+func authorize(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "failed to retrieve metadata")
@@ -951,17 +970,16 @@ func authInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServe
 	if !ok || len(elem) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "auth data not supplied")
 	}
-	sub, err := authorize(strings.TrimPrefix(elem[0], "Bearer "))
+	sub, err := validateJWT(strings.TrimPrefix(elem[0], "Bearer "))
 	if err != nil {
 		return nil, err
 	}
 
 	md.Set(exporter.IDobs, sub)
-	newCtx := metadata.NewIncomingContext(ctx, md)
-	return handler(newCtx, req)
+	return metadata.NewIncomingContext(ctx, md), nil
 }
 
-func authorize(token string) (string, error) {
+func validateJWT(token string) (string, error) {
 	if jwtIss == "" || jwtKey == nil {
 		return "", status.Error(codes.Internal, "required auth parameters are not configured")
 	}
