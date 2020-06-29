@@ -484,3 +484,34 @@ func TestPostgresIndexDB_Records(t *testing.T) {
 	})
 
 }
+
+func TestPostgresIndexDB_UpdateLastKnownPulse(t *testing.T) {
+	defer truncateIndexAndRecordTables()
+
+	ctx := inslogger.TestContext(t)
+	objectID := gen.ID()
+
+	t.Run("insert once and then only updates", func(t *testing.T) {
+		defer truncateIndexAndRecordTables()
+		storage := NewPostgresIndexDB(getPool(), nil)
+
+		pn := gen.PulseNumber()
+		for i := 0; i < indexCount; i++ {
+			err := storage.SetIndex(ctx, pn, record.Index{
+				ObjID:            objectID,
+				LifelineLastUsed: pn,
+			})
+			require.NoError(t, err)
+
+			err = storage.UpdateLastKnownPulse(ctx, pn)
+			require.NoError(t, err)
+
+			index, err := storage.LastKnownForID(ctx, objectID)
+			require.NoError(t, err)
+
+			require.Equal(t, pn, index.LifelineLastUsed)
+
+			pn = pn + 10
+		}
+	})
+}

@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 		log.Panicf("[TestMain] pgxpool.Connect() failed: %v", err)
 	}
 
-	migrationPath := "../../migration"
+	migrationPath := "../../insolar-scripts/migration"
 	cwd, err := os.Getwd()
 	if err != nil {
 		stopPostgreSQL()
@@ -249,6 +249,8 @@ func TestPostgresTruncateHead(t *testing.T) {
 }
 
 func TestPostgresPulse_Components(t *testing.T) {
+	defer cleanupDatabase()
+
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMem()

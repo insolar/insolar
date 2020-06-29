@@ -1,7 +1,7 @@
 .. _integration:
 
 ======================
-Set Up Insolar Network
+Set up Insolar network
 ======================
 
 To set up an Insolar network:
@@ -11,7 +11,7 @@ To set up an Insolar network:
 
 .. _sys_requirements:
 
-Hardware Requirements
+Hardware requirements
 ---------------------
 
 The recommended setup for a proof-of-concept private Insolar network is to consist of **at least 5 nodes** that may be deployed both on virtual or physical servers in a data center.
@@ -30,7 +30,7 @@ Insolar runs on Linux, e.g., **CentOS**.
 
 .. _ports_used:
 
-Ports Used
+Ports used
 ~~~~~~~~~~
 
 Insolar uses the following ports:
@@ -54,8 +54,8 @@ Insolar uses the following ports:
 
 .. _deploying_devnet:
 
-Deploying Network Locally
--------------------------
+Deploy network locally
+----------------------
 
 To set up the network locally, do the following:
 
@@ -93,7 +93,7 @@ When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has 
 
 .. _logs_and_monitor:
 
-Logging and Monitoring
+Logging and monitoring
 ----------------------
 
 To manually bring up :ref:`logging and monitoring <logs_and_monitor>`, run ``insolar-scripts/monitor.sh``.

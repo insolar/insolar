@@ -6,7 +6,7 @@
 package common
 
 import (
-	"github.com/tylerb/gls"
+	"github.com/insolar/gls"
 )
 
 const glsSystemErrorKey = "systemError"

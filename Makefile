@@ -22,14 +22,12 @@ GOBUILD ?= go build
 GOTEST ?= go test
 
 TEST_COUNT ?= 1
-FUNCTEST_COUNT ?= 1
+TEST_PARALLEL ?= 1
+TEST_ARGS ?= -timeout 1200s
+GOMAXPROCS ?= 0
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
-TEST_ARGS ?= -timeout 1200s
 BUILD_TAGS ?=
-
-CI_GOMAXPROCS ?= 8
-CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 # skip git parsing commands if no git
@@ -62,10 +60,7 @@ submodule: ## init git submodule
 	git submodule update
 
 .PHONY: lint
-lint: ci-lint ## alias for ci-lint
-
-.PHONY: ci-lint
-ci-lint: ## CI lint
+lint: ## lint
 	golangci-lint run
 
 .PHONY: metalint
@@ -156,28 +151,36 @@ $(HEAVY_BADGER_TOOL):
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
-	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) $(ALL_PACKAGES)
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) -count=$(TEST_COUNT) -p=$(TEST_PARALLEL) $(TEST_ARGS) $(ALL_PACKAGES)
+
+.PHONY: test
+test: test_unit ## alias for test_unit
 
 .PHONY: functest
-functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./application/functest -count=$(FUNCTEST_COUNT)
-	CGO_ENABLED=1 $(GOTEST) -test.v $(TEST_ARGS) -tags "functest bloattest" ./applicationbase/functest -count=$(FUNCTEST_COUNT)
+functest: ## run functests
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest" ./application/functest -count=$(TEST_COUNT) -failfast
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+    		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "bloattest" ./application/functest -count=1 -failfast
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest" ./applicationbase/functest -count=$(TEST_COUNT) -failfast
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+        		$(GOTEST) -test.v -p=$(TEST_PARALLEL) $(TEST_ARGS) -tags "functest_endless_abandon" ./application/functest -count=1 -failfast
+
+.PHONY: test_func
+test_func: functest ## alias for functest
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
 	make clean
 	GOBUILD='go build -race' make build
-	FUNCTEST_COUNT=10 make functest
-
-.PHONY: test_func
-test_func: functest ## alias for functest
+	TEST_COUNT=10 make functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 $(GOTEST) -count=1 $(TEST_ARGS) -tags slowtest ./...
-
-.PHONY: test
-test: test_unit ## alias for test_unit
+	CGO_ENABLED=1 GOMAXPROCS=$(GOMAXPROCS) \
+		$(GOTEST) $(TEST_ARGS) -p=$(TEST_PARALLEL) -tags slowtest $(ALL_PACKAGES) -count=$(TEST_COUNT)
 
 .PHONY: test_all
 test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
@@ -189,87 +192,20 @@ test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of covera
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
+	CGO_ENABLED=1 $(GOTEST) $(TEST_ARGS) -tags coverage -count=$(TEST_COUNT) --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
 
-.PHONY: ci-test-with-coverage
-ci-test-with-coverage: ## run unit tests with coverage, outputs json to stdout (CI)
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
+.PHONY: test-with-coverage
+test-with-coverage: ## run unit tests with coverage, outputs json to stdout (CI)
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) $(TEST_ARGS) -json -v -count=$(TEST_COUNT) -p=$(TEST_PARALLEL) --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage' $(ALL_PACKAGES)
 
-.PHONY: ci-test-unit
-ci-test-unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v $(ALL_PACKAGES) -race -count 10
-
-.PHONY: ci-test-slow
-ci-test-slow: ## run slow tests just once, redirects json output to file (CI)
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./... -count=$(TEST_COUNT)
-
-.PHONY: ci-test-slow-long
-ci-test-slow-long: ## run slow tests with race and count
-	CI_TEST_ARGS=" -race " \
-	TEST_ARGS=" -timeout 180m  " \
-	TEST_COUNT=50 \
-		$(MAKE) ci-test-slow
-
-.PHONY: ci-test-slow-nightly
-ci-test-slow-nightly: ## run slow tests with race and count (nightly run)
-	CI_TEST_ARGS=" -race " \
-	TEST_ARGS=" -timeout 480m  " \
-	TEST_COUNT=80 \
-		$(MAKE) ci-test-slow
-
-.PHONY: ci-test-func-base
-ci-test-func-base: ## run functest, redirects json output to file (CI)
-	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
-	# so try to be more honest with processors allocation.
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./application/functest -count=$(FUNCTEST_COUNT) -failfast
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./applicationbase/functest -count=$(FUNCTEST_COUNT) -failfast
-
-.PHONY: ci-test-func
-ci-test-func:  ## run functest 3 times
-	FUNCTEST_COUNT=3 \
-		$(MAKE) ci-test-func-base
-
-.PHONY: ci-test-func-long
-ci-test-func-long: ## run functest with race and a little count
-	CI_TEST_ARGS=" -p 10 -race " \
-	TEST_ARGS=" -timeout 300m " \
-	FUNCTEST_COUNT=10 \
-		$(MAKE) ci-test-func-base
-
-.PHONY: ci-test-func-nightly
-ci-test-func-nightly: ## run functest with large count and race
-	CI_TEST_ARGS=" -p 10 -race " \
-	TEST_ARGS=" -timeout 1200m " \
-	FUNCTEST_COUNT=200 \
-		$(MAKE) ci-test-func-base
-
-.PHONY: ci-test-integrtest
-ci-test-integrtest: ## run networktest 1 time, redirects json output to file (CI)
-	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		$(GOTEST) $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags networktest -v ./network/tests -count=$(TEST_COUNT)
-
-.PHONY: ci-test-integrtest-long
-ci-test-integrtest-long: ## run networktest with race and a little count
-	CI_TEST_ARGS=" -p 10 -race " \
-	TEST_ARGS=" -timeout 600m " \
-    TEST_COUNT=20 \
-    	$(MAKE) ci-test-integrtest
-
-.PHONY: ci-test-integrtest-nightly
-ci-test-integrtest-nightly: ## run networktest with race and a little count
-	CI_TEST_ARGS=" -p 10 -race " \
-	TEST_ARGS=" -timeout 600m " \
-    TEST_COUNT=20 \
-    	$(MAKE) ci-test-integrtest
-
+.PHONY: test-integrtest
+test-integrtest: ## run networktest 1 time
+	GOMAXPROCS=$(GOMAXPROCS) CGO_ENABLED=1 \
+		$(GOTEST) $(TEST_ARGS) -tags networktest -v ./network/tests -count=$(TEST_COUNT)
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard applicationbase/contract/*)
@@ -304,6 +240,8 @@ generate-protobuf: ## generate protobuf structs
 .PHONY: regen-builtin
 regen-builtin: $(BININSGOCC) ## regenerate builtin contracts code
 	$(BININSGOCC) regen-builtin -c application/builtin/contract -i github.com/insolar/insolar/application/builtin/contract
+# 	rebuild wrapper for panicAsLogicalError to make panic logical error
+	$(BININSGOCC) wrapper -p -o application/builtin/contract/panicAsLogicalError/panicAsLogicalError.wrapper.go application/builtin/contract/panicAsLogicalError/panicAsLogicalError.go -m builtin
 	$(BININSGOCC) regen-builtin -c applicationbase/builtin/contract -i github.com/insolar/insolar/applicationbase/builtin/contract
 
 .PHONY: build-track
@@ -329,15 +267,15 @@ prepare-inrospector-proto: ## install tools required for grpc development
 
 .PHONY: docker_base_build
 docker_base_build: ## build base image with source dependencies and compiled binaries
-	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
+	docker build -t insolar/insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
 		--build-arg BUILD_DATE="$(BUILD_DATE)" \
 		--build-arg BUILD_TIME="$(BUILD_TIME)" \
 		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
 		--build-arg BUILD_HASH="$(BUILD_HASH)" \
 		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
-		-f docker/Dockerfile .
-	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
-	docker images "insolar-base"
+		-f ./scripts/kube/bootstrap/Dockerfile .
+	docker tag insolar/insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar/insolar-base:latest
+	docker images "insolar/insolar-base"
 
 .PHONY: docker_build
 docker_build: ## build image with binaries and files required for kubernetes deployment.

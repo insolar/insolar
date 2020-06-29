@@ -1,14 +1,74 @@
 # unfortunately we need config with proper cert, data dir and swagger file for heavy node
 # even in 'genesis only' mode
+host:
+  transport:
+    protocol: TCP
+    address: 127.0.0.1:13831
+    fixedpublicaddress: ""
+  mintimeout: 10
+  maxtimeout: 2000
+  timeoutmult: 2
+  signmessages: false
+  handshakesessionttl: 5000
+service:
+  cachedirectory: network_cache
+log:
+  level: Debug
+  adapter: zerolog
+  formatter: json
+  outputtype: stderr
+  outputparallellimit: ""
+  outputparams: ""
+  buffersize: 0
+  llbuffersize: 0
+metrics:
+  listenaddress: 127.0.0.1:8001
+  namespace: insolar
+  zpagesenabled: true
+  reportingperiod: 0s
+apirunner:
+  address: 127.0.0.1:19101
+  rpc: /api/rpc
+  isadmin: false
+  swaggerpath: /app/api-exported.yaml
+adminapirunner:
+  address: 127.0.0.1:19001
+  rpc: /admin-api/rpc
+  isadmin: true
+  swaggerpath: /app/api-exported.yaml
+availabilitychecker:
+  enabled: true
+  keeperurl: http://127.0.0.1:12012/check
+  requesttimeout: 15
+  checkperiod: 5
+keyspath: /var/data/bootstrap/discovery-keys/node-0.json
+certificatepath: /var/data/bootstrap/certs/discovery-cert-0.json
+tracer:
+  jaeger:
+    collectorendpoint: ""
+    agentendpoint: ""
+    probabilityrate: 1
+  samplingrules: {}
+introspection:
+  addr: 127.0.0.1:55501
+bus:
+  replytimeout: 15s
+lightchainlimit: 15
+databasetype: badger
 ledger:
   storage:
     datadirectory: /var/data/
-log:
-  level: Debug
-  outputtype: stderr
-apirunner:
-  swaggerpath: /app/api-exported.yaml
-adminapirunner:
-  swaggerpath: /app/api-exported.yaml
-keyspath: /var/data/bootstrap/discovery-keys/node-0.json
-certificatepath: /var/data/bootstrap/certs/discovery-cert-0.json
+    badgervalueloggcdiscardratio: 0.4
+    gcrunfrequency: 1
+  backup:
+    enabled: false
+    tmpdirectory: ""
+    targetdirectory: ""
+    metainfofile: meta.json
+    confirmfile: BACKUPED
+    backupfile: incr.bkp
+    dirnametemplate: pulse-%d
+    backupwaitperiod: 60
+    postprocessbackupcmd: []
+exporter:
+  addr: :5678

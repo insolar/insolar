@@ -16,6 +16,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
 	"go.opencensus.io/stats"
 
@@ -145,6 +146,9 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		if err != nil {
 			logger.Panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
+		logger.Debug("heavy count record in drop", len(msg.Records), msg.JetID.DebugString())
+		ctx = insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
+		stats.Record(ctx, statRecordInDrop.M(int64(len(msg.Records))))
 
 		logger.Debug("heavy replicator finalize pulse")
 		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse, h.gcRunner)
