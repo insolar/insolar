@@ -14,6 +14,7 @@ import (
 )
 
 func NewMetricsHelper(recorder insolar.LogMetricsRecorder) *MetricsHelper {
+	initMetrics()
 	return &MetricsHelper{recorder}
 }
 
