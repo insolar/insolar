@@ -151,7 +151,7 @@ func (b *BuiltIn) CallMethod(
 
 	methodFunc, ok := contract.Methods[method]
 	if !ok {
-		return nil, nil, errors.New("failed to find contracts method")
+		return nil, nil, &insolar.ContractMethodNotFound{}
 	}
 
 	return methodFunc(data, args)

@@ -24,6 +24,12 @@ func (m MachineType) Equal(other MachineType) bool {
 	return m == other
 }
 
+type ContractMethodNotFound struct{}
+
+func (c *ContractMethodNotFound) Error() string {
+	return "failed to find contracts method"
+}
+
 //go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go -g
 
 // MachineLogicExecutor is an interface for implementers of one particular machine type
