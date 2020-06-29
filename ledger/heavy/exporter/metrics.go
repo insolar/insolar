@@ -20,7 +20,7 @@ const ObsID = "observer_id"
 
 var (
 	TagHeavyExporterMethodName = insmetrics.MustTagKey("heavy_exporter_method_name")
-	TagHeavyIdObserver         = insmetrics.MustTagKey("heavy_exporter_type_observer")
+	TagHeavyIdObserver         = insmetrics.MustTagKey("heavy_exporter_observer_id")
 )
 
 var (
