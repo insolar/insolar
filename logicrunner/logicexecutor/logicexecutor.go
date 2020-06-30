@@ -96,6 +96,14 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 	)
 
 	if err != nil {
+		_, ok := err.(*insolar.ContractMethodNotFound)
+		if !request.APINode.IsEmpty() && ok {
+			errResBuf, err := foundation.MarshalMethodErrorResult(err)
+			if err != nil {
+				return nil, errors.Wrap(err, "error in request")
+			}
+			return requestresult.New(errResBuf, *objDesc.HeadRef()), nil
+		}
 		return nil, errors.Wrap(err, "executor error")
 	}
 	if len(result) == 0 {
