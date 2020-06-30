@@ -975,7 +975,7 @@ func authorize(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	md.Set(exporter.IDobs, sub)
+	md.Set(exporter.ObsID, sub)
 	return metadata.NewIncomingContext(ctx, md), nil
 }
 
