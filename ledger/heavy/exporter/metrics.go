@@ -11,7 +11,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
@@ -46,11 +45,10 @@ func init() {
 }
 
 func addTagsForExporterMethodTiming(ctx context.Context, methodName string) context.Context {
+	// TODO
+	//  observer id is hardcoded for testing purpose
+	// 	you have to change this code in release 1.9
 	typeObserver := "internal"
-	md, ok := metadata.FromIncomingContext(ctx)
-	if _, isContain := md["idobserver"]; isContain && ok {
-		typeObserver = md.Get("idobserver")[0]
-	}
 	ctx = insmetrics.InsertTag(ctx, TagHeavyIdObserver, typeObserver)
 	ctx = insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, methodName)
 	return ctx
