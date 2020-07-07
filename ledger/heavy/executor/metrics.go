@@ -18,8 +18,8 @@ var TagJetID = insmetrics.MustTagKey("jet_id_heavy")
 
 var (
 	statJets = stats.Int64(
-		"heavy_jets",
-		"jets counter",
+		"heavy_jets_counter",
+		"how many jets on start of pulse",
 		stats.UnitDimensionless,
 	)
 
@@ -39,6 +39,12 @@ var (
 		"backup_time",
 		"duration backup process",
 		"ns",
+	)
+
+	statJetDropStoreTime = stats.Float64(
+		"jet_drop_store_time",
+		"duration backup process",
+		stats.UnitMilliseconds,
 	)
 
 	statBadgerValueGCTime = stats.Int64(
@@ -108,8 +114,8 @@ func init() {
 			Aggregation: view.LastValue(),
 		},
 		&view.View{
-			Name:        "heavy_jets_counter",
-			Description: "how many jets on start of pulse",
+			Name:        statJets.Name(),
+			Description: statJets.Description(),
 			Measure:     statJets,
 			Aggregation: view.LastValue(),
 		},
@@ -123,6 +129,12 @@ func init() {
 			Name:        statBackupTime.Name(),
 			Description: statBackupTime.Description(),
 			Measure:     statBackupTime,
+			Aggregation: view.Distribution(0.0, float64(time.Minute)),
+		},
+		&view.View{
+			Name:        statJetDropStoreTime.Name(),
+			Description: statJetDropStoreTime.Description(),
+			Measure:     statJetDropStoreTime,
 			Aggregation: view.Distribution(0.0, float64(time.Minute)),
 		},
 		&view.View{

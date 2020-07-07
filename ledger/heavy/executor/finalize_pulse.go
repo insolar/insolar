@@ -83,8 +83,7 @@ func (b *BadgerGCRunInfo) RunGCIfNeeded(ctx context.Context) (doneWaiter <-chan 
 	return done
 }
 
-func shouldStartFinalization(ctx context.Context, jetKeeper JetKeeper, pulses pulse.Calculator, pulseToFinalize insolar.PulseNumber) bool {
-	logger := inslogger.FromContext(ctx)
+func shouldStartFinalization(ctx context.Context, logger insolar.Logger, jetKeeper JetKeeper, pulses pulse.Calculator, pulseToFinalize insolar.PulseNumber) bool {
 	if !jetKeeper.HasAllJetConfirms(ctx, pulseToFinalize) {
 		logger.Debug("not all jets confirmed. Do nothing. Pulse: ", pulseToFinalize)
 		return false
@@ -124,7 +123,7 @@ func finalizePulseStep(ctx context.Context, pulses pulse.Calculator, backuper Ba
 
 	logger.Info("finalizePulseStep: begin")
 
-	if !shouldStartFinalization(ctx, jetKeeper, pulses, pulseToFinalize) {
+	if !shouldStartFinalization(ctx, logger, jetKeeper, pulses, pulseToFinalize) {
 		logger.Info("finalizePulseStep: skip finalization")
 		return nil
 	}
