@@ -11,6 +11,7 @@ import (
 
 	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -26,6 +27,7 @@ type RecordServer struct {
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
+	authCfg         configuration.Auth
 }
 
 func NewRecordServer(
@@ -33,12 +35,14 @@ func NewRecordServer(
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
+	authCfg configuration.Auth,
 ) *RecordServer {
 	return &RecordServer{
 		pulseCalculator: pulseCalculator,
 		recordIndex:     recordIndex,
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
+		authCfg:         authCfg,
 	}
 }
 
@@ -48,7 +52,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 	exportStart := time.Now()
 	defer func(ctx context.Context) {
 		stats.Record(
-			addTagsForExporterMethodTiming(ctx, "record-export"),
+			addTagsForExporterMethodTiming(r.authCfg.Required, ctx, "record-export"),
 			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
 		)
 	}(ctx)

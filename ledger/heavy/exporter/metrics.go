@@ -59,8 +59,13 @@ func init() {
 	}
 }
 
-func addTagsForExporterMethodTiming(ctx context.Context, methodName string) context.Context {
+func addTagsForExporterMethodTiming(authRequired bool, ctx context.Context, methodName string) context.Context {
 	observer := "unknown"
+	if !authRequired {
+		ctx = insmetrics.InsertTag(ctx, TagHeavyIdObserver, observer)
+		ctx = insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, methodName)
+		return ctx
+	}
 	md, ok := metadata.FromIncomingContext(ctx)
 	if _, isContain := md[ObsID]; isContain && ok {
 		observer = md.Get(ObsID)[0]

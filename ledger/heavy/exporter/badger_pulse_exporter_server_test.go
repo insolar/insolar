@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/node"
 
 	"github.com/insolar/insolar/insolar"
@@ -23,7 +24,7 @@ import (
 
 func TestPulseServer_Export_Badger(t *testing.T) {
 	t.Run("fails if count is 0", func(t *testing.T) {
-		server := NewPulseServer(nil, nil, nil)
+		server := NewPulseServer(nil, nil, nil, configuration.Auth{})
 
 		err := server.Export(&GetPulses{Count: 0}, &pulseStreamMock{})
 
@@ -50,7 +51,7 @@ func TestPulseServer_Export_Badger(t *testing.T) {
 		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
 		nodeAccessor.AllMock.When(pulse.MinTimePulse+2).Then(nodeList, nil)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor, configuration.Auth{})
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -79,7 +80,7 @@ func TestPulseServer_Export_Badger(t *testing.T) {
 		nodeAccessor := node.NewAccessorMock(t)
 		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor, configuration.Auth{})
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -107,7 +108,7 @@ func TestPulseServer_Export_Badger(t *testing.T) {
 		nodeAccessor := node.NewAccessorMock(t)
 		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor, configuration.Auth{})
 
 		err := server.Export(&GetPulses{PulseNumber: pulse.MinTimePulse, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -129,7 +130,7 @@ func TestPulseServer_Export_Badger(t *testing.T) {
 
 		nodeAccessor := node.NewAccessorMock(t)
 
-		server := NewPulseServer(nil, jetKeeper, nodeAccessor)
+		server := NewPulseServer(nil, jetKeeper, nodeAccessor, configuration.Auth{})
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 1}, &stream)
 		require.NoError(t, err)
@@ -144,7 +145,7 @@ func TestPulseServer_TopSyncPulse_Badger(t *testing.T) {
 	jetKeeper := executor.NewJetKeeperMock(t)
 	jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(pn))
 	nodeAccessor := node.NewAccessorMock(t)
-	server := NewPulseServer(nil, jetKeeper, nodeAccessor)
+	server := NewPulseServer(nil, jetKeeper, nodeAccessor, configuration.Auth{})
 
 	res, err := server.TopSyncPulse(context.Background(), nil)
 
