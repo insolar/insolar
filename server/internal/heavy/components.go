@@ -975,8 +975,9 @@ func authorize(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	md.Set(exporter.ObsID, sub)
-	return metadata.NewIncomingContext(ctx, md), nil
+	newMD := md.Copy()
+	newMD.Set(exporter.ObsID, sub)
+	return metadata.NewIncomingContext(ctx, newMD), nil
 }
 
 func validateJWT(token string) (string, error) {
