@@ -122,18 +122,18 @@ func TestAuthorize(t *testing.T) {
 	issuer := "test-issuer"
 	secret := "/B?E(H+MbQeThWmZq4t7w!z$C&F)J@NcRfUjXn2r5u8x/A?D*G-KaPdSgVkYp3s6"
 
-	// prepare configuration
-	server, err := newGRPCServer(configuration.Exporter{
-		Auth: configuration.Auth{
-			Required: true,
-			Issuer:   issuer,
-			Secret:   secret,
-		},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, server)
-
 	t.Run("empty token", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
 		data := map[string]string{
 			"authorization": "",
 		}
@@ -147,6 +147,17 @@ func TestAuthorize(t *testing.T) {
 	})
 
 	t.Run("signature verification failed", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
 		// prepare JWT
 		now := time.Now()
 		pl := jwt.Payload{
@@ -175,6 +186,17 @@ func TestAuthorize(t *testing.T) {
 	})
 
 	t.Run("unknown issuer", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
 		// prepare JWT
 		now := time.Now()
 		pl := jwt.Payload{
@@ -203,6 +225,17 @@ func TestAuthorize(t *testing.T) {
 	})
 
 	t.Run("expired JWT", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
 		// prepare JWT
 		now := time.Now()
 		pl := jwt.Payload{
@@ -231,6 +264,17 @@ func TestAuthorize(t *testing.T) {
 	})
 
 	t.Run("success auth", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
 		// prepare JWT
 		now := time.Now()
 		pl := jwt.Payload{
