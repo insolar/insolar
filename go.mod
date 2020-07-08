@@ -13,12 +13,14 @@ require (
 	github.com/dgraph-io/badger v1.6.0-rc1.0.20191024172150-efb9d9d15d7f
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.2
 	github.com/getkin/kin-openapi v0.2.1-0.20191211203508-0d9caf80ada6
 	github.com/gogo/protobuf v1.2.1
 	github.com/gojuno/minimock/v3 v3.0.5
 	github.com/golang/protobuf v1.3.2
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
@@ -57,7 +59,7 @@ require (
 	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
-	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
+	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
 	golang.org/x/net v0.0.0-20191003171128-d98b1b443823
 	golang.org/x/tools v0.0.0-20191108193012-7d206e10da11
 	gonum.org/v1/gonum v0.0.0-20191018104224-74cb7b153f2c

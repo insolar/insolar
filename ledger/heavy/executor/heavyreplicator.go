@@ -9,6 +9,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -18,10 +21,10 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
-	"go.opencensus.io/stats"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -104,6 +107,7 @@ func (h *HeavyReplicatorDefault) Stop() {
 
 func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 	work := func(msg *payload.Replication) {
+		startedAt := time.Now()
 		logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 			"jet_id":    msg.JetID.DebugString(),
 			"msg_pulse": msg.Pulse,
@@ -146,13 +150,15 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		if err != nil {
 			logger.Panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
-		logger.Debug("heavy count record in drop", len(msg.Records), msg.JetID.DebugString())
+		recsLen := len(msg.Records)
+		logger.Debug("heavy replicator count record in drop", recsLen, msg.JetID.DebugString())
 		ctx = insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
-		stats.Record(ctx, statRecordInDrop.M(int64(len(msg.Records))))
+		stats.Record(ctx, statRecordInDrop.M(int64(recsLen)))
 
 		logger.Debug("heavy replicator finalize pulse")
 		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse, h.gcRunner)
 
+		stats.Record(ctx, statJetDropStoreTime.M(float64(time.Since(startedAt).Nanoseconds())/1e6))
 		logger.Info("heavy replicator stops replication")
 	}
 

@@ -7,6 +7,7 @@ package logmetrics
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -72,40 +73,43 @@ var (
 		"ns",
 	)
 )
+var once sync.Once
 
-func init() {
-	tags := []tag.Key{tagLevel}
-	err := view.Register(
-		&view.View{
-			Name:        statLogCalls.Name(),
-			Description: statLogCalls.Description(),
-			Measure:     statLogCalls,
-			Aggregation: view.Count(),
-			TagKeys:     tags,
-		},
-		&view.View{
-			Name:        statLogWrites.Name(),
-			Description: statLogWrites.Description(),
-			Measure:     statLogWrites,
-			Aggregation: view.Count(),
-			TagKeys:     tags,
-		},
-		&view.View{
-			Name:        statLogSkips.Name(),
-			Description: statLogSkips.Description(),
-			Measure:     statLogSkips,
-			Aggregation: view.Count(),
-			TagKeys:     tags,
-		},
-		&view.View{
-			Name:        statLogWriteDelays.Name(),
-			Description: statLogWriteDelays.Description(),
-			Measure:     statLogWriteDelays,
-			Aggregation: view.Distribution(0.0, float64(time.Second)),
-			TagKeys:     tags,
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
+func initMetrics() {
+	once.Do(func() {
+		tags := []tag.Key{tagLevel}
+		err := view.Register(
+			&view.View{
+				Name:        statLogCalls.Name(),
+				Description: statLogCalls.Description(),
+				Measure:     statLogCalls,
+				Aggregation: view.Count(),
+				TagKeys:     tags,
+			},
+			&view.View{
+				Name:        statLogWrites.Name(),
+				Description: statLogWrites.Description(),
+				Measure:     statLogWrites,
+				Aggregation: view.Count(),
+				TagKeys:     tags,
+			},
+			&view.View{
+				Name:        statLogSkips.Name(),
+				Description: statLogSkips.Description(),
+				Measure:     statLogSkips,
+				Aggregation: view.Count(),
+				TagKeys:     tags,
+			},
+			&view.View{
+				Name:        statLogWriteDelays.Name(),
+				Description: statLogWriteDelays.Description(),
+				Measure:     statLogWriteDelays,
+				Aggregation: view.Distribution(0.0, float64(time.Second)),
+				TagKeys:     tags,
+			},
+		)
+		if err != nil {
+			panic(err)
+		}
+	})
 }
