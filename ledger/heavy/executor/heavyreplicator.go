@@ -13,6 +13,8 @@ import (
 
 	"go.opencensus.io/stats"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -21,8 +23,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -106,9 +106,10 @@ func (h *HeavyReplicatorDefault) Stop() {
 }
 
 func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	work := func(msg *payload.Replication) {
 		startedAt := time.Now()
-		logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"jet_id":    msg.JetID.DebugString(),
 			"msg_pulse": msg.Pulse,
 		})
@@ -152,8 +153,8 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 		recsLen := len(msg.Records)
 		logger.Debug("heavy replicator count record in drop", recsLen, msg.JetID.DebugString())
-		ctx = insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
-		stats.Record(ctx, statRecordInDrop.M(int64(recsLen)))
+		statCtx := insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
+		stats.Record(statCtx, statRecordInDrop.M(int64(recsLen)))
 
 		logger.Debug("heavy replicator finalize pulse")
 		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse, h.gcRunner)
