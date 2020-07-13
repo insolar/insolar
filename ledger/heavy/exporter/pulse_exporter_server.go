@@ -131,7 +131,7 @@ func (p *PulseServer) NextFinalizedPulse(ctx context.Context, gnfp *GetNextFinal
 	pn := gnfp.GetPulseNo()
 	logger := inslogger.FromContext(ctx)
 
-	if pn == 0 {
+	if pn == -1 {
 		pu, err := p.pulses.Forwards(ctx, p.jetKeeper.TopSyncPulse(), 0)
 		if err != nil {
 			logger.Error(err)
