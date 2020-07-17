@@ -106,10 +106,9 @@ func (h *HeavyReplicatorDefault) Stop() {
 }
 
 func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
 	work := func(msg *payload.Replication) {
 		startedAt := time.Now()
-		logger.WithFields(map[string]interface{}{
+		logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 			"jet_id":    msg.JetID.DebugString(),
 			"msg_pulse": msg.Pulse,
 		})
