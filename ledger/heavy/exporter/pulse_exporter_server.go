@@ -152,6 +152,7 @@ func (p *PulseServer) NextFinalizedPulse(ctx context.Context, gnfp *GetNextFinal
 		logger.Error(err)
 		return nil, err
 	}
+	pu.PrevPulseNumber = insolar.PulseNumber(pn)
 
 	return makeFullPulse(ctx, pu, p.jetKeeper.Storage()), nil
 }
