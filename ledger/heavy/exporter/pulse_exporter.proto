@@ -54,5 +54,5 @@ message FullPulse {
 	int64 PulseTimestamp = 5;
 	uint32 EpochPulseNumber = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/pulse.Epoch", (gogoproto.nullable) = false];
 
-    repeated bytes Jets = 7  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated bytes Jets = 7  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetDropContinue", (gogoproto.nullable) = false];
 }

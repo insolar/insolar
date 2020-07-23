@@ -32,6 +32,13 @@ const (
 // JetID should be used, when id is a jetID
 type JetID ID
 
+type JetDropContinue struct {
+	JetID          JetID
+	Pulse          PulseNumber
+	PrevDropHashes [][]byte
+	Hash           []byte
+}
+
 // Size is a protobuf required method. It returns size of JetID
 func (id *JetID) Size() int { return reference.LocalBinarySize }
 
