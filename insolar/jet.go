@@ -34,7 +34,6 @@ type JetID ID
 
 type JetDropContinue struct {
 	JetID          JetID
-	Pulse          PulseNumber
 	PrevDropHashes [][]byte
 	Hash           []byte
 }

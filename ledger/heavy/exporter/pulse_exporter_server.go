@@ -167,7 +167,7 @@ type JetData struct {
 
 func (p *PulseServer) makeFullPulse(ctx context.Context, pu insolar.Pulse, js jet.Storage) *FullPulse {
 	jets := js.All(ctx, pu.PulseNumber)
-	res := []insolar.JetDropContinue{}
+	res := []JetDropContinue{}
 	for _, j := range jets {
 		rawData, err := binary.Marshal(JetData{PulseNumber: pu.PulseNumber, JetID: j})
 		if err != nil {
@@ -185,9 +185,8 @@ func (p *PulseServer) makeFullPulse(ctx context.Context, pu insolar.Pulse, js je
 			prevDropHashes = append(prevDropHashes, prevDropHash[:])
 		}
 
-		res = append(res, insolar.JetDropContinue{
+		res = append(res, JetDropContinue{
 			JetID:          j,
-			Pulse:          pu.PulseNumber,
 			Hash:           hash[:],
 			PrevDropHashes: prevDropHashes,
 		})
