@@ -199,8 +199,6 @@ github.com/jackc/puddle
 github.com/jbenet/go-base58
 # github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 github.com/kardianos/osext
-# github.com/kelindar/binary v1.0.9
-github.com/kelindar/binary
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/lithammer/shortuuid/v3 v3.0.4

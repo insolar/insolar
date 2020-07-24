@@ -32,7 +32,7 @@ require (
 	github.com/jackc/pgx/v4 v4.2.1
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/kelindar/binary v1.0.9
+	github.com/kelindar/binary v1.0.9 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
