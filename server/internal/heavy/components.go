@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
+	"github.com/gbrlsnchs/jwt/v3"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -28,8 +30,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"github.com/gbrlsnchs/jwt/v3"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
@@ -62,6 +62,8 @@ import (
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
 )
+
+const AllowedOnHeavyVersion = 2
 
 type badgerLogger struct {
 	insolar.Logger
@@ -974,7 +976,10 @@ func authorize(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	err = validateObserverVersion(md)
+	if err != nil {
+		return nil, err
+	}
 	newMD := md.Copy()
 	newMD.Set(exporter.ObsID, sub)
 	return metadata.NewIncomingContext(ctx, newMD), nil
@@ -1000,4 +1005,41 @@ func validateJWT(token string) (string, error) {
 	}
 
 	return payload.Subject, nil
+}
+
+func validateObserverVersion(metaDataFromRequest metadata.MD) error {
+	typeClient, ok := metaDataFromRequest[exporter.KeyClientType]
+	if !ok || len(typeClient) == 0 || typeClient[0] == exporter.Unknown.String() {
+		return status.Error(codes.InvalidArgument, "unknown type client")
+	}
+
+	switch typeClient[0] {
+	case exporter.ValidateHeavyVersion.String():
+	case exporter.ValidateContractVersion.String():
+		// TODO set real version contract https://insolar.atlassian.net/browse/MN-631
+		return compareAllowedVersion(exporter.KeyClientVersionContract, 2, metaDataFromRequest)
+	default:
+		return status.Error(codes.InvalidArgument, "unknown type client")
+	}
+	// validate protocol version from client
+	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, AllowedOnHeavyVersion, metaDataFromRequest)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func compareAllowedVersion(nameVersion string, allowedVersion int64, metaDataFromRequest metadata.MD) error {
+	versionClientMD, ok := metaDataFromRequest[nameVersion]
+	if !ok || len(versionClientMD) == 0 {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("unknown %s ", nameVersion))
+	}
+	versionClient, err := strconv.ParseInt(versionClientMD[0], 10, 64)
+	if err != nil {
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("incorrect format of the %s", nameVersion))
+	}
+	if versionClient == 0 || versionClient < allowedVersion {
+		return exporter.ErrDeprecatedClientVersion
+	}
+	return nil
 }
