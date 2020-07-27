@@ -450,7 +450,7 @@ func TestAuthorize(t *testing.T) {
 		// test
 		_, err = authorize(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "version of the observer is outdated. please upgrade this client")
+		require.Contains(t, err.Error(), "version of the observer is outdated. Please upgrade this client")
 	})
 
 	t.Run("success new version observer", func(t *testing.T) {
