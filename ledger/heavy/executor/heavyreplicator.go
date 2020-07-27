@@ -151,7 +151,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 			logger.Panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
 		recsLen := len(msg.Records)
-		logger.Debug("heavy replicator count record in drop", recsLen, msg.JetID.DebugString())
+		logger.Debug("heavy replicator count record in drop ", recsLen, msg.JetID.DebugString())
 		ctx = insmetrics.InsertTag(ctx, TagJetID, msg.JetID.DebugString())
 		stats.Record(ctx, statRecordInDrop.M(int64(recsLen)))
 
