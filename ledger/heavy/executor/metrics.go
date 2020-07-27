@@ -196,7 +196,7 @@ func init() {
 			Description: statRecordInDrop.Description(),
 			Measure:     statRecordInDrop,
 			TagKeys:     []tag.Key{TagJetID},
-			Aggregation: view.Count(),
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {
