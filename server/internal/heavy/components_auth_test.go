@@ -498,4 +498,47 @@ func TestAuthorize(t *testing.T) {
 		require.Len(t, id, 1, "there is no '%s' in the MD", exporter.ObsID)
 		require.Equal(t, sub, id[0])
 	})
+
+	t.Run("failed incorrect format heavy version less zero", func(t *testing.T) {
+		// prepare configuration
+		server, err := newGRPCServer(configuration.Exporter{
+			Auth: configuration.Auth{
+				Required: true,
+				Issuer:   issuer,
+				Secret:   secret,
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, server)
+
+		// prepare JWT
+		now := time.Now()
+		pl := jwt.Payload{
+			Issuer:         issuer,
+			Subject:        sub,
+			ExpirationTime: jwt.NumericDate(now.Add(time.Hour)),
+			NotBefore:      jwt.NumericDate(now),
+			IssuedAt:       jwt.NumericDate(now),
+		}
+		hs := jwt.NewHS512([]byte(secret))
+		token, err := jwt.Sign(pl, hs)
+		require.NoError(t, err)
+		require.NotNil(t, token)
+
+		// prepare initial MD
+		data := map[string]string{
+			"authorization":                "Bearer " + string(token),
+			exporter.KeyClientType:         exporter.ValidateHeavyVersion.String(),
+			exporter.KeyClientVersionHeavy: "-1",
+		}
+
+		initialMD := metadata.New(data)
+		ctx := metadata.NewIncomingContext(context.Background(), initialMD)
+
+		// test
+		_, err = authorize(ctx)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "incorrect format of the heavy_version")
+	})
+
 }

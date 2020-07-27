@@ -1017,7 +1017,10 @@ func validateObserverVersion(metaDataFromRequest metadata.MD) error {
 	case exporter.ValidateHeavyVersion.String():
 	case exporter.ValidateContractVersion.String():
 		// TODO set real version contract https://insolar.atlassian.net/browse/MN-631
-		return compareAllowedVersion(exporter.KeyClientVersionContract, 2, metaDataFromRequest)
+		err := compareAllowedVersion(exporter.KeyClientVersionContract, 2, metaDataFromRequest)
+		if err != nil {
+			return err
+		}
 	default:
 		return status.Error(codes.InvalidArgument, "unknown type client")
 	}
@@ -1035,7 +1038,7 @@ func compareAllowedVersion(nameVersion string, allowedVersion int64, metaDataFro
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("unknown %s ", nameVersion))
 	}
 	versionClient, err := strconv.ParseInt(versionClientMD[0], 10, 64)
-	if err != nil {
+	if err != nil || versionClient < 0 {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("incorrect format of the %s", nameVersion))
 	}
 	if versionClient == 0 || versionClient < allowedVersion {
