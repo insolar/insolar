@@ -48,17 +48,18 @@ func NewRecordServer(
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
 	ctx := stream.Context()
-
+	read := 0
 	exportStart := time.Now()
+	logger := inslogger.FromContext(ctx)
+	logger.Info("Incoming request: ", getRecords.String())
+
 	defer func(ctx context.Context) {
 		stats.Record(
 			addTagsForExporterMethodTiming(r.authCfg.Required, ctx, "record-export"),
 			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
 		)
+		logger.Infof("exported %d record", read)
 	}(ctx)
-
-	logger := inslogger.FromContext(ctx)
-	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
 		return ErrNilCount
@@ -82,9 +83,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.jetKeeper,
 		r.pulseCalculator,
 	)
-	read := 0
 
-	var numSent int
 	for iter.HasNext(stream.Context()) {
 		record, err := iter.Next(stream.Context())
 		if err != nil {
@@ -112,9 +111,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			logger.Error(err)
 			return err
 		}
-		numSent++
 	}
-	logger.Infof("exported %d record", numSent)
 
 	return nil
 }
