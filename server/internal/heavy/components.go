@@ -63,8 +63,6 @@ import (
 	"github.com/insolar/insolar/server/internal"
 )
 
-const AllowedOnHeavyVersion = 2
-
 type badgerLogger struct {
 	insolar.Logger
 }
@@ -1025,7 +1023,7 @@ func validateObserverVersion(metaDataFromRequest metadata.MD) error {
 		return status.Error(codes.InvalidArgument, "unknown type client")
 	}
 	// validate protocol version from client
-	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, AllowedOnHeavyVersion, metaDataFromRequest)
+	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, exporter.AllowedOnHeavyVersion, metaDataFromRequest)
 	if err != nil {
 		return err
 	}
