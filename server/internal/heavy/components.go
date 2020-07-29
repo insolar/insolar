@@ -20,6 +20,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	component "github.com/insolar/component-manager"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/pkg/errors"
@@ -300,9 +301,10 @@ func initWithPostgres(
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
+	metricsRegistry := metrics.GetInsolarRegistry(c.NodeRole)
 	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
-		metrics.GetInsolarRegistry(c.NodeRole),
+		metricsRegistry,
 		c.NodeRole,
 	)
 
@@ -427,6 +429,11 @@ func initWithPostgres(
 		}
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
+
+		grpcMetrics := grpc_prometheus.NewServerMetrics()
+		grpcMetrics.EnableHandlingTimeHistogram()
+		metricsRegistry.MustRegister(grpcMetrics)
+		grpcMetrics.InitializeMetrics(grpcServer)
 
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
@@ -666,9 +673,10 @@ func initWithBadger(
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
+	metricsRegistry := metrics.GetInsolarRegistry(c.NodeRole)
 	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
-		metrics.GetInsolarRegistry(c.NodeRole),
+		metricsRegistry,
 		c.NodeRole,
 	)
 
@@ -772,6 +780,11 @@ func initWithBadger(
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
 
+		grpcMetrics := grpc_prometheus.NewServerMetrics()
+		grpcMetrics.EnableHandlingTimeHistogram()
+		metricsRegistry.MustRegister(grpcMetrics)
+		grpcMetrics.InitializeMetrics(grpcServer)
+
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open port for Exporter")
@@ -837,7 +850,12 @@ func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
 			return nil, errors.New("exporter.auth.secret must be 512-bit")
 		}
 		jwtKey = jwt.NewHS512(key)
-		return grpc.NewServer(grpc.UnaryInterceptor(authUnaryIntcp), grpc.StreamInterceptor(authStreamIntcp)), nil
+
+		server := grpc.NewServer(
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(grpc_prometheus.UnaryServerInterceptor, authUnaryIntcp)),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpc_prometheus.StreamServerInterceptor, authStreamIntcp)),
+		)
+		return server, nil
 	}
 	return grpc.NewServer(), nil
 }

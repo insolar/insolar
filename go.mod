@@ -21,6 +21,7 @@ require (
 	github.com/google/gofuzz v1.0.0
 	github.com/google/gops v0.3.6
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway v1.9.6
 	github.com/hashicorp/golang-lru v0.5.3
 	github.com/insolar/component-manager v0.2.1-0.20191028200619-751a91771d2f
