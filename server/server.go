@@ -31,8 +31,9 @@ func NewHeavyServer(
 	genesisOptions genesis.Options,
 	genesisOnly bool,
 	apiOptions api.Options,
+	allowedContractVersion int64,
 ) Server {
-	return heavy.New(cfgHolder, genesisCfgPath, genesisOptions, genesisOnly, apiOptions)
+	return heavy.New(cfgHolder, genesisCfgPath, genesisOptions, genesisOnly, apiOptions, allowedContractVersion)
 }
 
 // NewVirtualServer creates instance of Server for node with Virtual role

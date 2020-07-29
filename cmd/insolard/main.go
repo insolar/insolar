@@ -15,6 +15,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/insolar/insolar/application"
+	"github.com/insolar/insolar/application/appfoundation"
 	appbuiltin "github.com/insolar/insolar/application/builtin"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
@@ -123,6 +124,7 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 		},
 		genesisOnly,
 		apiOptions,
+		appfoundation.AllowedVersionSmartContract,
 	)
 	s.Serve()
 }
