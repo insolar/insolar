@@ -857,7 +857,11 @@ func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
 		)
 		return server, nil
 	}
-	return grpc.NewServer(), nil
+
+	return grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+	), nil
 }
 
 func newComponents(
