@@ -42,9 +42,6 @@ func New(
 	apiOptions api.Options,
 	contractVersion int64,
 ) *Server {
-	if contractVersion <= 0 {
-		log.Fatalf("incorrect allowed contract version application: %v", contractVersion)
-	}
 	return &Server{
 		cfgHolder:       cfgHolder,
 		genesisCfgPath:  genesisCfgPath,
