@@ -424,18 +424,18 @@ func initWithPostgres(
 		recordExporter = exporter.NewRecordServer(PulsesPostgres, RecordsPostgres, RecordsPostgres, PostgresJetKeeper, cfg.Exporter.Auth)
 		pulseExporter = exporter.NewPulseServer(PulsesPostgres, PostgresJetKeeper, NodesPostgres, cfg.Exporter.Auth)
 
-		grpcServer, err := newGRPCServer(cfg.Exporter)
+		grpcMetrics := grpc_prometheus.NewServerMetrics()
+		grpcMetrics.EnableHandlingTimeHistogram()
+		metricsRegistry.MustRegister(grpcMetrics)
+
+		grpcServer, err := newGRPCServer(cfg.Exporter, grpcMetrics)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to initiate a GRPC server")
 		}
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
 
-		grpcMetrics := grpc_prometheus.NewServerMetrics()
-		grpcMetrics.EnableHandlingTimeHistogram()
-		metricsRegistry.MustRegister(grpcMetrics)
 		grpcMetrics.InitializeMetrics(grpcServer)
-
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open port for Exporter")
@@ -774,16 +774,17 @@ func initWithBadger(
 		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper, cfg.Exporter.Auth)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper, Nodes, cfg.Exporter.Auth)
 
-		grpcServer, err := newGRPCServer(cfg.Exporter)
+		grpcMetrics := grpc_prometheus.NewServerMetrics()
+		grpcMetrics.EnableHandlingTimeHistogram()
+		metricsRegistry.MustRegister(grpcMetrics)
+
+		grpcServer, err := newGRPCServer(cfg.Exporter, grpcMetrics)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to initiate a GRPC server")
 		}
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
 		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
 
-		grpcMetrics := grpc_prometheus.NewServerMetrics()
-		grpcMetrics.EnableHandlingTimeHistogram()
-		metricsRegistry.MustRegister(grpcMetrics)
 		grpcMetrics.InitializeMetrics(grpcServer)
 
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
@@ -844,7 +845,7 @@ var (
 )
 var allowedVersionContract int64
 
-func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
+func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.ServerMetrics) (*grpc.Server, error) {
 	if cfg.Auth.Required {
 		jwtIss = cfg.Auth.Issuer
 		key := []byte(cfg.Auth.Secret)
@@ -854,15 +855,15 @@ func newGRPCServer(cfg configuration.Exporter) (*grpc.Server, error) {
 		jwtKey = jwt.NewHS512(key)
 
 		server := grpc.NewServer(
-			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(grpc_prometheus.UnaryServerInterceptor, authUnaryIntcp)),
-			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpc_prometheus.StreamServerInterceptor, authStreamIntcp)),
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(grpcMetrics.UnaryServerInterceptor(), authUnaryIntcp)),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(grpcMetrics.StreamServerInterceptor(), authStreamIntcp)),
 		)
 		return server, nil
 	}
 
 	return grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
-		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpcMetrics.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(grpcMetrics.StreamServerInterceptor()),
 	), nil
 }
 
