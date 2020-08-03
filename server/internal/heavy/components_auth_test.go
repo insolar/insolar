@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
@@ -40,7 +41,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   "",
 				Secret:   "1111111111111111111111111111111111111111111111111111111111111111",
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -68,7 +69,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -92,7 +93,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -131,7 +132,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -170,7 +171,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -209,7 +210,7 @@ func TestAuthorize(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -246,5 +247,4 @@ func TestAuthorize(t *testing.T) {
 		require.Len(t, id, 1, "there is no '%s' in the MD", exporter.ObsID)
 		require.Equal(t, sub, id[0])
 	})
-
 }
