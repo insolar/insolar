@@ -8,7 +8,6 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -876,7 +875,7 @@ func newComponents(
 	contractVersion int64,
 ) (*components, error) {
 	if contractVersion <= 0 {
-		log.Fatalf("incorrect allowed contract version application: %v", contractVersion)
+		return nil, errors.Errorf("incorrect allowed contract version application: %v", contractVersion)
 	}
 	allowedVersionContract = contractVersion
 	heavyCfg := cfg.GetNodeConfig()
