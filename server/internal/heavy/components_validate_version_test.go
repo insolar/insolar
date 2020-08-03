@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gbrlsnchs/jwt/v3"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
@@ -27,7 +28,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -73,7 +74,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -113,7 +114,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -154,7 +155,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -195,7 +196,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -237,7 +238,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -279,7 +280,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -325,7 +326,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -375,7 +376,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -422,7 +423,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -464,7 +465,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -507,7 +508,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -550,7 +551,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
@@ -597,7 +598,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 				Issuer:   issuer,
 				Secret:   secret,
 			},
-		})
+		}, grpc_prometheus.NewServerMetrics())
 		require.NoError(t, err)
 		require.NotNil(t, server)
 
