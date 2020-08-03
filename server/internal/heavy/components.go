@@ -842,6 +842,7 @@ var (
 	jwtIss string
 	jwtKey *jwt.HMACSHA
 )
+var allowedVersionContract int64
 
 func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.ServerMetrics) (*grpc.Server, error) {
 	if cfg.Auth.Required {
@@ -872,7 +873,12 @@ func newComponents(
 	genesisOptions genesis.Options,
 	genesisOnly bool,
 	apiOptions api.Options,
+	contractVersion int64,
 ) (*components, error) {
+	if contractVersion <= 0 {
+		return nil, errors.Errorf("incorrect allowed contract version application: %v", contractVersion)
+	}
+	allowedVersionContract = contractVersion
 	heavyCfg := cfg.GetNodeConfig()
 	switch realCfg := heavyCfg.(type) {
 	case *configuration.ConfigHeavyPg:
@@ -1037,8 +1043,7 @@ func validateObserverVersion(metaDataFromRequest metadata.MD) error {
 	switch typeClient[0] {
 	case exporter.ValidateHeavyVersion.String():
 	case exporter.ValidateContractVersion.String():
-		// TODO set real version contract https://insolar.atlassian.net/browse/MN-631
-		err := compareAllowedVersion(exporter.KeyClientVersionContract, 2, metaDataFromRequest)
+		err := compareAllowedVersion(exporter.KeyClientVersionContract, allowedVersionContract, metaDataFromRequest)
 		if err != nil {
 			return err
 		}

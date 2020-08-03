@@ -23,6 +23,7 @@ import (
 )
 
 func TestComponents(t *testing.T) {
+	allowedVersionContract = 2
 	tests := []struct {
 		name         string
 		exporterAuth bool
@@ -75,8 +76,7 @@ func TestComponents(t *testing.T) {
 			holder := &configuration.HeavyBadgerHolder{
 				Configuration: &cfg,
 			}
-
-			_, err = newComponents(ctx, holder, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, api.Options{})
+			_, err = newComponents(ctx, holder, genesis.HeavyConfig{Skip: true}, genesis.Options{}, false, api.Options{}, allowedVersionContract)
 			test.errorCheck(t, err)
 		})
 	}

@@ -26,11 +26,12 @@ import (
 )
 
 type Server struct {
-	cfgHolder      configuration.ConfigHolder
-	genesisCfgPath string
-	genesisOptions genesis.Options
-	genesisOnly    bool
-	apiOptions     api.Options
+	cfgHolder       configuration.ConfigHolder
+	genesisCfgPath  string
+	genesisOptions  genesis.Options
+	genesisOnly     bool
+	apiOptions      api.Options
+	contractVersion int64
 }
 
 func New(
@@ -39,13 +40,15 @@ func New(
 	genesisOptions genesis.Options,
 	genesisOnly bool,
 	apiOptions api.Options,
+	contractVersion int64,
 ) *Server {
 	return &Server{
-		cfgHolder:      cfgHolder,
-		genesisCfgPath: genesisCfgPath,
-		genesisOptions: genesisOptions,
-		genesisOnly:    genesisOnly,
-		apiOptions:     apiOptions,
+		cfgHolder:       cfgHolder,
+		genesisCfgPath:  genesisCfgPath,
+		genesisOptions:  genesisOptions,
+		genesisOnly:     genesisOnly,
+		apiOptions:      apiOptions,
+		contractVersion: contractVersion,
 	}
 }
 
@@ -87,7 +90,7 @@ func (s *Server) Serve() {
 		log.InitTicker()
 	}
 
-	cmp, err := newComponents(ctx, s.cfgHolder, genesisCfg, s.genesisOptions, s.genesisOnly, s.apiOptions)
+	cmp, err := newComponents(ctx, s.cfgHolder, genesisCfg, s.genesisOptions, s.genesisOnly, s.apiOptions, s.contractVersion)
 	fatal(ctx, err, "failed to create components")
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {

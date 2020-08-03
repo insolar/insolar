@@ -12,6 +12,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+const AllowedVersionSmartContract = 2
+
 // Get reference RootMember contract.
 func GetRootMember() insolar.Reference {
 	return genesisrefs.ContractRootMember
