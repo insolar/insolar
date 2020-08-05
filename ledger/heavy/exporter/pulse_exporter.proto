@@ -46,6 +46,12 @@ message GetNextFinalizedPulse {
     int64 PulseNo = 26;
 }
 
+message JetDropContinue {
+    bytes JetID = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Hash = 2;
+    repeated bytes PrevDropHashes = 3;
+}
+
 message FullPulse {
 	bytes PulseNumber   = 1  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 	bytes PrevPulseNumber = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
@@ -54,5 +60,5 @@ message FullPulse {
 	int64 PulseTimestamp = 5;
 	uint32 EpochPulseNumber = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/pulse.Epoch", (gogoproto.nullable) = false];
 
-    repeated bytes Jets = 7  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated JetDropContinue Jets = 7 [(gogoproto.nullable) = false];
 }
