@@ -7,9 +7,13 @@ package exporter
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.opencensus.io/stats"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -137,14 +141,14 @@ func (p *PulseServer) NextFinalizedPulse(ctx context.Context, gnfp *GetNextFinal
 			logger.Error(err)
 			return nil, err
 		}
-		return makeFullPulse(ctx, pu, p.jetKeeper.Storage()), nil
+		return p.makeFullPulse(ctx, pu, p.jetKeeper.Storage())
 	} else if pn < pulse.MinTimePulse {
 		pu, err := p.pulses.Forwards(ctx, pulse.MinTimePulse, 0)
 		if err != nil {
 			logger.Error(err)
 			return nil, err
 		}
-		return makeFullPulse(ctx, pu, p.jetKeeper.Storage()), nil
+		return p.makeFullPulse(ctx, pu, p.jetKeeper.Storage())
 	}
 
 	pu, err := p.pulses.Forwards(ctx, insolar.PulseNumber(pn), 1)
@@ -154,10 +158,65 @@ func (p *PulseServer) NextFinalizedPulse(ctx context.Context, gnfp *GetNextFinal
 	}
 	pu.PrevPulseNumber = insolar.PulseNumber(pn)
 
-	return makeFullPulse(ctx, pu, p.jetKeeper.Storage()), nil
+	return p.makeFullPulse(ctx, pu, p.jetKeeper.Storage())
 }
 
-func makeFullPulse(ctx context.Context, pu insolar.Pulse, js jet.Storage) *FullPulse {
+type JetData struct {
+	PulseNumber insolar.PulseNumber
+	JetID       string
+}
+
+// JetIDToString returns the string representation of JetID
+func JetIDToString(id insolar.JetID) string {
+	depth, prefix := id.Depth(), id.Prefix()
+	if depth == 0 {
+		return ""
+	}
+	res := strings.Builder{}
+	for i := uint8(0); i < depth; i++ {
+		bytePos, bitPos := i/8, 7-i%8
+
+		byteValue := prefix[bytePos]
+		bitValue := byteValue >> uint(bitPos) & 0x01
+		bitString := strconv.Itoa(int(bitValue))
+		res.WriteString(bitString)
+	}
+	return res.String()
+}
+
+func (p *PulseServer) makeFullPulse(ctx context.Context, pu insolar.Pulse, js jet.Storage) (*FullPulse, error) {
+	logger := inslogger.FromContext(ctx)
+	jets := js.All(ctx, pu.PulseNumber)
+	var res []JetDropContinue
+	prevJetDrops := js.All(ctx, pu.PrevPulseNumber)
+	for _, j := range jets {
+		rawData, err := json.Marshal(JetData{PulseNumber: pu.PulseNumber, JetID: JetIDToString(j)})
+		if err != nil {
+			logger.Error(err)
+			return nil, err
+		}
+		hash := sha3.Sum224(rawData)
+
+		var prevDropHashes [][]byte
+		jetIDLeft, jetIDRight := jet.Siblings(j)
+		for _, prevJetDrop := range prevJetDrops {
+			if prevJetDrop == j || prevJetDrop == jet.Parent(j) || prevJetDrop == jetIDLeft || prevJetDrop == jetIDRight {
+				rawData, err := json.Marshal(JetData{PulseNumber: pu.PrevPulseNumber, JetID: JetIDToString(prevJetDrop)})
+				if err != nil {
+					logger.Error(err)
+					return nil, err
+				}
+				prevDropHash := sha3.Sum224(rawData)
+				prevDropHashes = append(prevDropHashes, prevDropHash[:])
+			}
+		}
+
+		res = append(res, JetDropContinue{
+			JetID:          j,
+			Hash:           hash[:],
+			PrevDropHashes: prevDropHashes,
+		})
+	}
 	return &FullPulse{
 		PulseNumber:      pu.PulseNumber,
 		PrevPulseNumber:  pu.PrevPulseNumber,
@@ -165,6 +224,6 @@ func makeFullPulse(ctx context.Context, pu insolar.Pulse, js jet.Storage) *FullP
 		Entropy:          pu.Entropy,
 		PulseTimestamp:   pu.PulseTimestamp,
 		EpochPulseNumber: pu.EpochPulseNumber,
-		Jets:             js.All(ctx, pu.PulseNumber),
-	}
+		Jets:             res,
+	}, nil
 }
