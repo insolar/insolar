@@ -6,9 +6,19 @@
 package heavy
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
+
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 )
+
+const (
+	keyTagClientID   = "external_client_id"
+	keyTagClientType = "external_client_type"
+)
+const actualVersion = "actual_version"
+const internalTypeClient = "internal"
 
 var (
 	statBadgerStartTime = stats.Float64(
@@ -16,6 +26,15 @@ var (
 		"Time of last badger starting",
 		stats.UnitMilliseconds,
 	)
+	statContractVersionClient = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "contract_version_external_client",
+		Help: "What version of contracts is used by the external client",
+	}, []string{keyTagClientID, keyTagClientType})
+
+	statProtocolVersionClient = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "protocol_version_external_client",
+		Help: "What version of heavy protocol is used by the external client",
+	}, []string{keyTagClientID, keyTagClientType})
 )
 
 func init() {
@@ -30,4 +49,9 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func setPlatformVersionMetrics(actualVersionContract int64) {
+	statContractVersionClient.WithLabelValues(actualVersion, internalTypeClient).Set(float64(actualVersionContract))
+	statProtocolVersionClient.WithLabelValues(actualVersion, internalTypeClient).Set(float64(exporter.AllowedOnHeavyVersion))
 }

@@ -10,8 +10,9 @@ package configuration
 // Exporter is grpc-base service
 type Exporter struct {
 	// Addr specifies address where exporter server starts
-	Addr string
-	Auth Auth
+	Addr         string
+	Auth         Auth
+	CheckVersion bool
 }
 
 // Auth specifies parameters for a token-based authorization of an observer

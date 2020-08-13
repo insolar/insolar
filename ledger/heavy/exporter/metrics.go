@@ -16,7 +16,10 @@ import (
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
 
-const ObsID = "observer_id"
+const (
+	ObsID      = "observer_id"
+	ObsUnknown = "unknown"
+)
 
 var (
 	TagHeavyExporterMethodName = insmetrics.MustTagKey("heavy_exporter_method_name")
