@@ -1055,7 +1055,6 @@ func validateJWT(token string) (string, error) {
 }
 
 func validateClientVersion(ctx context.Context) error {
-	// setPlatformVersionMetrics(allowedVersionContract)
 	observerID := exporter.ObsUnknown
 	metaData, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
