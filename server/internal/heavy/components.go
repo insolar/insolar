@@ -1073,7 +1073,6 @@ func validateClientVersion(ctx context.Context) error {
 		// validate contract version from client
 		err := compareAllowedVersion(exporter.KeyClientVersionContract, allowedVersionContract, metaData, statContractVersionClient.WithLabelValues(observerID))
 		if err != nil {
-			statContractVersionClient.WithLabelValues(observerID).Set(0)
 			return err
 		}
 	default:
@@ -1082,7 +1081,6 @@ func validateClientVersion(ctx context.Context) error {
 	// validate heavy version from client
 	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, exporter.AllowedOnHeavyVersion, metaData, statHeavyVersionClient.WithLabelValues(observerID))
 	if err != nil {
-		statContractVersionClient.WithLabelValues(observerID).Set(0)
 		return err
 	}
 	return nil
@@ -1091,10 +1089,12 @@ func validateClientVersion(ctx context.Context) error {
 func compareAllowedVersion(nameVersion string, allowedVersion int64, metaDataFromRequest metadata.MD, vec prometheus.Gauge) error {
 	versionClientMD, ok := metaDataFromRequest[nameVersion]
 	if !ok || len(versionClientMD) == 0 {
+		vec.Set(float64(0))
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("unknown %s ", nameVersion))
 	}
 	versionClient, err := strconv.ParseInt(versionClientMD[0], 10, 64)
 	if err != nil || versionClient < 0 {
+		vec.Set(float64(0))
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("incorrect format of the %s", nameVersion))
 	}
 	vec.Set(float64(versionClient))
