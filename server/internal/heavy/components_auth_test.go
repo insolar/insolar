@@ -247,4 +247,5 @@ func TestAuthorize(t *testing.T) {
 		require.Len(t, id, 1, "there is no '%s' in the MD", exporter.ObsID)
 		require.Equal(t, sub, id[0])
 	})
+
 }
