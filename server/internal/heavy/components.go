@@ -1008,9 +1008,7 @@ func validateVersionStreamIntcp(srv interface{}, stream grpc.ServerStream, info 
 	if err != nil {
 		return err
 	}
-	wrapped := grpc_middleware.WrapServerStream(stream)
-	wrapped.WrappedContext = stream.Context()
-	return handler(srv, wrapped)
+	return handler(srv, stream)
 }
 
 func authorize(ctx context.Context) (context.Context, error) {
@@ -1098,7 +1096,6 @@ func compareAllowedVersion(nameVersion string, allowedVersion int64, metaDataFro
 	if err != nil || versionClient < 0 {
 		return status.Error(codes.InvalidArgument, fmt.Sprintf("incorrect format of the %s", nameVersion))
 	}
-	vec.Set(float64(versionClient))
 	if versionClient == 0 || versionClient < allowedVersion {
 		return status.Error(codes.PermissionDenied, exporter.ErrDeprecatedClientVersion.Error())
 	}
