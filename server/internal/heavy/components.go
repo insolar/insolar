@@ -426,7 +426,7 @@ func initWithPostgres(
 
 		grpcMetrics := grpc_prometheus.NewServerMetrics()
 		grpcMetrics.EnableHandlingTimeHistogram()
-		metricsRegistry.MustRegister(grpcMetrics, statContractVersionClient, statProtocolVersionClient)
+		metricsRegistry.MustRegister(grpcMetrics, statContractVersionClient, statHeavyVersionClient)
 
 		grpcServer, err := newGRPCServer(cfg.Exporter, grpcMetrics)
 		if err != nil {
@@ -776,7 +776,7 @@ func initWithBadger(
 
 		grpcMetrics := grpc_prometheus.NewServerMetrics()
 		grpcMetrics.EnableHandlingTimeHistogram()
-		metricsRegistry.MustRegister(grpcMetrics, statContractVersionClient, statProtocolVersionClient)
+		metricsRegistry.MustRegister(grpcMetrics, statContractVersionClient, statHeavyVersionClient)
 
 		grpcServer, err := newGRPCServer(cfg.Exporter, grpcMetrics)
 		if err != nil {
@@ -1072,16 +1072,18 @@ func validateClientVersion(ctx context.Context) error {
 	case exporter.ValidateHeavyVersion.String():
 	case exporter.ValidateContractVersion.String():
 		// validate contract version from client
-		err := compareAllowedVersion(exporter.KeyClientVersionContract, allowedVersionContract, metaData, statContractVersionClient.WithLabelValues(observerID, typeClient[0]))
+		err := compareAllowedVersion(exporter.KeyClientVersionContract, allowedVersionContract, metaData, statContractVersionClient.WithLabelValues(observerID))
 		if err != nil {
+			statContractVersionClient.WithLabelValues(observerID).Set(0)
 			return err
 		}
 	default:
 		return status.Error(codes.InvalidArgument, "unknown type client")
 	}
 	// validate heavy version from client
-	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, exporter.AllowedOnHeavyVersion, metaData, statProtocolVersionClient.WithLabelValues(observerID, typeClient[0]))
+	err := compareAllowedVersion(exporter.KeyClientVersionHeavy, exporter.AllowedOnHeavyVersion, metaData, statHeavyVersionClient.WithLabelValues(observerID))
 	if err != nil {
+		statContractVersionClient.WithLabelValues(observerID).Set(0)
 		return err
 	}
 	return nil
@@ -1100,5 +1102,6 @@ func compareAllowedVersion(nameVersion string, allowedVersion int64, metaDataFro
 	if versionClient == 0 || versionClient < allowedVersion {
 		return status.Error(codes.PermissionDenied, exporter.ErrDeprecatedClientVersion.Error())
 	}
+	vec.Set(float64(versionClient))
 	return nil
 }

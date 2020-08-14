@@ -13,12 +13,7 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 )
 
-const (
-	keyTagClientID   = "external_client_id"
-	keyTagClientType = "external_client_type"
-)
-const actualVersion = "actual_version"
-const internalTypeClient = "internal"
+const keyTagClientID = "exporter_client_id"
 
 var (
 	statBadgerStartTime = stats.Float64(
@@ -27,14 +22,14 @@ var (
 		stats.UnitMilliseconds,
 	)
 	statContractVersionClient = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "contract_version_external_client",
-		Help: "What version of contracts is used by the external client",
-	}, []string{keyTagClientID, keyTagClientType})
+		Name: "contract_version_exporter_client",
+		Help: "What version of contracts is used by the exporter client",
+	}, []string{keyTagClientID})
 
-	statProtocolVersionClient = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "protocol_version_external_client",
-		Help: "What version of heavy protocol is used by the external client",
-	}, []string{keyTagClientID, keyTagClientType})
+	statHeavyVersionClient = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "heavy_version_exporter_client",
+		Help: "What version of heavy protocol is used by the exporter client",
+	}, []string{keyTagClientID})
 )
 
 func init() {
@@ -52,6 +47,6 @@ func init() {
 }
 
 func setPlatformVersionMetrics(actualVersionContract int64) {
-	statContractVersionClient.WithLabelValues(actualVersion, internalTypeClient).Set(float64(actualVersionContract))
-	statProtocolVersionClient.WithLabelValues(actualVersion, internalTypeClient).Set(float64(exporter.AllowedOnHeavyVersion))
+	statContractVersionClient.WithLabelValues("heavy_exporter").Set(float64(actualVersionContract))
+	statHeavyVersionClient.WithLabelValues("heavy_exporter").Set(float64(exporter.AllowedOnHeavyVersion))
 }
