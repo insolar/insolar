@@ -13,6 +13,8 @@ type Exporter struct {
 	Addr         string
 	Auth         Auth
 	CheckVersion bool
+	// MaxConcurrentStreams specifies the limit of concurrent streams to each ServerTransport, where 0 = unlimited
+	MaxConcurrentStreams uint32
 }
 
 // Auth specifies parameters for a token-based authorization of an observer

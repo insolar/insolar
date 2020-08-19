@@ -869,6 +869,7 @@ func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.Serv
 	return grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
+		grpc.MaxConcurrentStreams(cfg.MaxConcurrentStreams),
 	), nil
 }
 
