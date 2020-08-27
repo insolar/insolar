@@ -13,6 +13,8 @@ type Exporter struct {
 	Addr         string
 	Auth         Auth
 	CheckVersion bool
+	// RateLimit specifies in/out limits for the Exporter API
+	RateLimit RateLimit
 }
 
 // Auth specifies parameters for a token-based authorization of an observer
@@ -24,6 +26,42 @@ type Auth struct {
 	Issuer string
 	// 512-bit secret for JWT validation
 	Secret string
+}
+
+type RateLimit struct {
+	// In specifies the number of requests per second
+	In Limits
+	// Out specifies the number of responses per second for server_stream RPCs
+	Out Limits
+}
+
+type Limits struct {
+	// Global specifies a limit for all inbound requests or all outbound responses per second
+	Global int
+	// PerClient specifies a key - full name of gRPC method and value - number of requests or responses per second
+	PerClient Handlers
+}
+
+type Handlers struct {
+	RecordExport            int
+	PulseExport             int
+	PulseTopSyncPulse       int
+	PulseNextFinalizedPulse int
+}
+
+func (h Handlers) Limit(method string) int {
+	switch method {
+	case "/exporter.RecordExporter/Export":
+		return h.RecordExport
+	case "/exporter.PulseExporter/Export":
+		return h.PulseExport
+	case "/exporter.PulseExporter/TopSyncPulse":
+		return h.PulseTopSyncPulse
+	case "/exporter.PulseExporter/NextFinalizedPulse":
+		return h.PulseNextFinalizedPulse
+	default:
+		return 0
+	}
 }
 
 // NewExporter creates new default configuration for export.
