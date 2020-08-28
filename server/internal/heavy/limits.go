@@ -28,13 +28,13 @@ func NewNoLimit(_ int) *noLimit {
 	return &noLimit{}
 }
 
-type ServerLimiter struct {
+type ServerLimiters struct {
 	inbound  *Limiters
 	outbound *Limiters
 }
 
-func NewServerLimiter(config configuration.RateLimit) *ServerLimiter {
-	return &ServerLimiter{
+func NewServerLimiters(config configuration.RateLimit) *ServerLimiters {
+	return &ServerLimiters{
 		inbound:  NewLimiters(config.In),
 		outbound: NewLimiters(config.Out),
 	}
@@ -58,29 +58,29 @@ func NewLimiters(config configuration.Limits) *Limiters {
 	}
 }
 
-func (l *ServerLimiter) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
+func (l *ServerLimiters) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		method := info.FullMethod
 		limiters := l.inbound
-		if limiters.GlobalLimit() || limiters.PerClientLimit(ctx, method) {
+		if limiters.isGlobalLimitExceeded() || limiters.isClientLimitExceeded(ctx, method) {
 			return nil, status.Errorf(codes.ResourceExhausted, "method: %s, %s", method, exporter.RateLimitExceededMsg)
 		}
 		return handler(ctx, req)
 	}
 }
 
-func (l *ServerLimiter) StreamServerInterceptor() grpc.StreamServerInterceptor {
+func (l *ServerLimiters) StreamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		method := info.FullMethod
 		limiters := l.inbound
-		if limiters.GlobalLimit() || limiters.PerClientLimit(stream.Context(), method) {
+		if limiters.isGlobalLimitExceeded() || limiters.isClientLimitExceeded(stream.Context(), method) {
 			return status.Errorf(codes.ResourceExhausted, "method: %s, %s", method, exporter.RateLimitExceededMsg)
 		}
 		return handler(srv, l.LimitStream(stream, method))
 	}
 }
 
-func (l *ServerLimiter) LimitStream(stream grpc.ServerStream, method string) grpc.ServerStream {
+func (l *ServerLimiters) LimitStream(stream grpc.ServerStream, method string) grpc.ServerStream {
 	return &limitedServerStream{
 		ServerStream: stream,
 		outbound:     l.outbound,
@@ -88,14 +88,14 @@ func (l *ServerLimiter) LimitStream(stream grpc.ServerStream, method string) grp
 	}
 }
 
-func (l *Limiters) GlobalLimit() bool {
+func (l *Limiters) isGlobalLimitExceeded() bool {
 	if l.globalLimiter == nil {
 		return false
 	}
 	return !l.globalLimiter.Allow()
 }
 
-func (l *Limiters) PerClientLimit(ctx context.Context, method string) bool {
+func (l *Limiters) isClientLimitExceeded(ctx context.Context, method string) bool {
 	md, _ := metadata.FromIncomingContext(ctx)
 	client := "unknown"
 	if _, isContain := md[exporter.ObsID]; isContain {
@@ -123,7 +123,7 @@ type limitedServerStream struct {
 
 func (s *limitedServerStream) SendMsg(m interface{}) error {
 	limiters := s.outbound
-	if limiters.GlobalLimit() || limiters.PerClientLimit(s.Context(), s.method) {
+	if limiters.isGlobalLimitExceeded() || limiters.isClientLimitExceeded(s.Context(), s.method) {
 		return status.Errorf(codes.ResourceExhausted, "method: %s, %s", s.method, exporter.RateLimitExceededMsg)
 	}
 	return s.ServerStream.SendMsg(m)

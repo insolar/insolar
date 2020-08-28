@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewServerLimiter(t *testing.T) {
-	sl := NewServerLimiter(configuration.RateLimit{})
+	sl := NewServerLimiters(configuration.RateLimit{})
 	require.NotNil(t, sl)
 	require.NotNil(t, sl.inbound)
 	require.NotNil(t, sl.outbound)
@@ -28,12 +28,12 @@ func TestNewLimiters(t *testing.T) {
 func TestLimiters_GlobalLimit(t *testing.T) {
 	t.Run("nil limiter", func(t *testing.T) {
 		limiters := &Limiters{}
-		require.False(t, limiters.GlobalLimit())
+		require.False(t, limiters.isGlobalLimitExceeded())
 	})
 
 	t.Run("not limited implementation", func(t *testing.T) {
 		limiters := NewLimiters(configuration.Limits{})
-		require.False(t, limiters.GlobalLimit())
+		require.False(t, limiters.isGlobalLimitExceeded())
 	})
 }
 
@@ -49,7 +49,7 @@ func TestLimiters_PerClientLimit(t *testing.T) {
 		}
 
 		for _, m := range methods {
-			require.False(t, limiters.PerClientLimit(context.Background(), m))
+			require.False(t, limiters.isClientLimitExceeded(context.Background(), m))
 		}
 	})
 
@@ -58,6 +58,6 @@ func TestLimiters_PerClientLimit(t *testing.T) {
 		limiters := NewLimiters(configuration.Limits{})
 		limiters.perClientLimiters[method] = map[string]Limiter{"unknown": NewNoLimit(0)}
 
-		require.False(t, limiters.PerClientLimit(context.Background(), method))
+		require.False(t, limiters.isClientLimitExceeded(context.Background(), method))
 	})
 }
