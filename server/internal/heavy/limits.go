@@ -13,52 +13,52 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 )
 
-type Limiter interface {
-	Allow() bool
+type limiter interface {
+	allow() bool
 }
 
 type noLimit struct {
 }
 
-func (l *noLimit) Allow() bool {
+func (l *noLimit) allow() bool {
 	return true
 }
 
-func NewNoLimit(_ int) *noLimit {
+func newNoLimit(_ int) *noLimit {
 	return &noLimit{}
 }
 
-type ServerLimiters struct {
-	inbound  *Limiters
-	outbound *Limiters
+type serverLimiters struct {
+	inbound  *limiters
+	outbound *limiters
 }
 
-func NewServerLimiters(config configuration.RateLimit) *ServerLimiters {
-	return &ServerLimiters{
-		inbound:  NewLimiters(config.In),
-		outbound: NewLimiters(config.Out),
+func newServerLimiters(config configuration.RateLimit) *serverLimiters {
+	return &serverLimiters{
+		inbound:  newLimiters(config.In),
+		outbound: newLimiters(config.Out),
 	}
 }
 
-type Limiters struct {
+type limiters struct {
 	config            configuration.Limits
-	globalLimiter     Limiter
-	perClientLimiters map[string]map[string]Limiter
+	globalLimiter     limiter
+	perClientLimiters map[string]map[string]limiter
 	mutex             *sync.RWMutex
 }
 
-func NewLimiters(config configuration.Limits) *Limiters {
+func newLimiters(config configuration.Limits) *limiters {
 	// here we will use a suitable implementation of limiter with the RPS value from the config.Global
-	limiter := NewNoLimit(config.Global)
-	return &Limiters{
+	gl := newNoLimit(config.Global)
+	return &limiters{
 		config:            config,
-		globalLimiter:     limiter,
-		perClientLimiters: make(map[string]map[string]Limiter),
+		globalLimiter:     gl,
+		perClientLimiters: make(map[string]map[string]limiter),
 		mutex:             &sync.RWMutex{},
 	}
 }
 
-func (l *ServerLimiters) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
+func (l *serverLimiters) unaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		method := info.FullMethod
 		limiters := l.inbound
@@ -69,18 +69,18 @@ func (l *ServerLimiters) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-func (l *ServerLimiters) StreamServerInterceptor() grpc.StreamServerInterceptor {
+func (l *serverLimiters) streamServerInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		method := info.FullMethod
 		limiters := l.inbound
 		if limiters.isGlobalLimitExceeded() || limiters.isClientLimitExceeded(stream.Context(), method) {
 			return status.Errorf(codes.ResourceExhausted, "method: %s, %s", method, exporter.RateLimitExceededMsg)
 		}
-		return handler(srv, l.LimitStream(stream, method))
+		return handler(srv, l.limitStream(stream, method))
 	}
 }
 
-func (l *ServerLimiters) LimitStream(stream grpc.ServerStream, method string) grpc.ServerStream {
+func (l *serverLimiters) limitStream(stream grpc.ServerStream, method string) grpc.ServerStream {
 	return &limitedServerStream{
 		ServerStream: stream,
 		outbound:     l.outbound,
@@ -88,36 +88,56 @@ func (l *ServerLimiters) LimitStream(stream grpc.ServerStream, method string) gr
 	}
 }
 
-func (l *Limiters) isGlobalLimitExceeded() bool {
+func (l *limiters) isGlobalLimitExceeded() bool {
 	if l.globalLimiter == nil {
 		return false
 	}
-	return !l.globalLimiter.Allow()
+	var allow bool
+	func() {
+		l.mutex.Lock()
+		defer l.mutex.Unlock()
+		allow = l.globalLimiter.allow()
+	}()
+	return !allow
 }
 
-func (l *Limiters) isClientLimitExceeded(ctx context.Context, method string) bool {
+func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) bool {
 	md, _ := metadata.FromIncomingContext(ctx)
 	client := "unknown"
 	if _, isContain := md[exporter.ObsID]; isContain {
 		client = md.Get(exporter.ObsID)[0]
 	}
-	l.mutex.RLock()
-	limiter := l.perClientLimiters[method][client]
-	l.mutex.RUnlock()
-	if limiter == nil {
+
+	var cl limiter
+	func() {
+		l.mutex.RLock()
+		defer l.mutex.RUnlock()
+		cl = l.perClientLimiters[method][client]
+	}()
+
+	if cl == nil {
 		// here we will use a suitable implementation of limiter with value l.config.PerClient.Limit(method)
 		rps := l.config.PerClient.Limit(method)
-		limiter = NewNoLimit(rps)
-		l.mutex.Lock()
-		l.perClientLimiters[method] = map[string]Limiter{client: limiter}
-		l.mutex.Unlock()
+		cl = newNoLimit(rps)
+		func() {
+			l.mutex.Lock()
+			defer l.mutex.Unlock()
+			l.perClientLimiters[method] = map[string]limiter{client: cl}
+		}()
 	}
-	return !limiter.Allow()
+
+	var allow bool
+	func() {
+		l.mutex.Lock()
+		defer l.mutex.Unlock()
+		allow = cl.allow()
+	}()
+	return !allow
 }
 
 type limitedServerStream struct {
 	grpc.ServerStream
-	outbound *Limiters
+	outbound *limiters
 	method   string
 }
 

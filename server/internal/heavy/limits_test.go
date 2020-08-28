@@ -10,14 +10,14 @@ import (
 )
 
 func TestNewServerLimiter(t *testing.T) {
-	sl := NewServerLimiters(configuration.RateLimit{})
+	sl := newServerLimiters(configuration.RateLimit{})
 	require.NotNil(t, sl)
 	require.NotNil(t, sl.inbound)
 	require.NotNil(t, sl.outbound)
 }
 
 func TestNewLimiters(t *testing.T) {
-	limiters := NewLimiters(configuration.Limits{})
+	limiters := newLimiters(configuration.Limits{})
 	require.NotNil(t, limiters)
 	require.NotNil(t, limiters.config)
 	require.NotNil(t, limiters.globalLimiter)
@@ -27,19 +27,19 @@ func TestNewLimiters(t *testing.T) {
 
 func TestLimiters_GlobalLimit(t *testing.T) {
 	t.Run("nil limiter", func(t *testing.T) {
-		limiters := &Limiters{}
+		limiters := &limiters{}
 		require.False(t, limiters.isGlobalLimitExceeded())
 	})
 
 	t.Run("not limited implementation", func(t *testing.T) {
-		limiters := NewLimiters(configuration.Limits{})
+		limiters := newLimiters(configuration.Limits{})
 		require.False(t, limiters.isGlobalLimitExceeded())
 	})
 }
 
 func TestLimiters_PerClientLimit(t *testing.T) {
 	t.Run("zero limits, empty limiters", func(t *testing.T) {
-		limiters := NewLimiters(configuration.Limits{})
+		limiters := newLimiters(configuration.Limits{})
 		methods := []string{
 			"",
 			"/exporter.RecordExporter/Export",
@@ -55,8 +55,8 @@ func TestLimiters_PerClientLimit(t *testing.T) {
 
 	t.Run("zero limits, not empty limiter", func(t *testing.T) {
 		method := "method"
-		limiters := NewLimiters(configuration.Limits{})
-		limiters.perClientLimiters[method] = map[string]Limiter{"unknown": NewNoLimit(0)}
+		limiters := newLimiters(configuration.Limits{})
+		limiters.perClientLimiters[method] = map[string]limiter{"unknown": newNoLimit(0)}
 
 		require.False(t, limiters.isClientLimitExceeded(context.Background(), method))
 	})
