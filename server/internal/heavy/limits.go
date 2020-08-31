@@ -29,25 +29,21 @@ func newNoLimit(_ int) *noLimit {
 }
 
 type syncLimiter struct {
+	sync.Mutex
 	l limiter
-	m *sync.Mutex
 }
 
 func newSyncLimiter(l limiter) *syncLimiter {
 	return &syncLimiter{
 		l: l,
-		m: &sync.Mutex{},
 	}
 }
 
 func (s *syncLimiter) allow() bool {
-	var allow bool
-	func() {
-		s.m.Lock()
-		defer s.m.Unlock()
-		allow = s.l.allow()
-	}()
-	return allow
+	s.Lock()
+	defer s.Unlock()
+
+	return s.l.allow()
 }
 
 type serverLimiters struct {
