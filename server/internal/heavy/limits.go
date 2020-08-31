@@ -28,6 +28,28 @@ func newNoLimit(_ int) *noLimit {
 	return &noLimit{}
 }
 
+type syncLimiter struct {
+	l limiter
+	m *sync.Mutex
+}
+
+func newSyncLimiter(l limiter) *syncLimiter {
+	return &syncLimiter{
+		l: l,
+		m: &sync.Mutex{},
+	}
+}
+
+func (s *syncLimiter) allow() bool {
+	var allow bool
+	func() {
+		s.m.Lock()
+		defer s.m.Unlock()
+		allow = s.l.allow()
+	}()
+	return allow
+}
+
 type serverLimiters struct {
 	inbound  *limiters
 	outbound *limiters
@@ -49,7 +71,7 @@ type limiters struct {
 
 func newLimiters(config configuration.Limits) *limiters {
 	// here we will use a suitable implementation of limiter with the RPS value from the config.Global
-	gl := newNoLimit(config.Global)
+	gl := newSyncLimiter(newNoLimit(config.Global))
 	return &limiters{
 		config:            config,
 		globalLimiter:     gl,
@@ -92,13 +114,7 @@ func (l *limiters) isGlobalLimitExceeded() bool {
 	if l.globalLimiter == nil {
 		return false
 	}
-	var allow bool
-	func() {
-		l.mutex.Lock()
-		defer l.mutex.Unlock()
-		allow = l.globalLimiter.allow()
-	}()
-	return !allow
+	return !l.globalLimiter.allow()
 }
 
 func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) bool {
@@ -118,7 +134,7 @@ func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) boo
 	if cl == nil {
 		// here we will use a suitable implementation of limiter with value l.config.PerClient.Limit(method)
 		rps := l.config.PerClient.Limit(method)
-		cl = newNoLimit(rps)
+		cl = newSyncLimiter(newNoLimit(rps))
 		func() {
 			l.mutex.Lock()
 			defer l.mutex.Unlock()
@@ -126,13 +142,7 @@ func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) boo
 		}()
 	}
 
-	var allow bool
-	func() {
-		l.mutex.Lock()
-		defer l.mutex.Unlock()
-		allow = cl.allow()
-	}()
-	return !allow
+	return !cl.allow()
 }
 
 type limitedServerStream struct {

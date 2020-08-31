@@ -143,7 +143,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "version of the observer is outdated, please upgrade this client")
+		require.Contains(t, err.Error(), exporter.ErrDeprecatedClientVersion.Error())
 	})
 
 	t.Run("success new version observer", func(t *testing.T) {
@@ -289,7 +289,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "version of the observer is outdated, please upgrade this client")
+		require.Contains(t, err.Error(), exporter.ErrDeprecatedClientVersion.Error())
 	})
 
 	t.Run("success new version observer", func(t *testing.T) {

@@ -25,7 +25,7 @@ func TestNewLimiters(t *testing.T) {
 	require.NotNil(t, limiters.mutex)
 }
 
-func TestLimiters_GlobalLimit(t *testing.T) {
+func TestLimiters_isGlobalLimitExceeded(t *testing.T) {
 	t.Run("nil limiter", func(t *testing.T) {
 		limiters := &limiters{}
 		require.False(t, limiters.isGlobalLimitExceeded())
@@ -37,7 +37,7 @@ func TestLimiters_GlobalLimit(t *testing.T) {
 	})
 }
 
-func TestLimiters_PerClientLimit(t *testing.T) {
+func TestLimiters_isClientLimitExceeded(t *testing.T) {
 	t.Run("zero limits, empty limiters", func(t *testing.T) {
 		limiters := newLimiters(configuration.Limits{})
 		methods := []string{
@@ -56,7 +56,7 @@ func TestLimiters_PerClientLimit(t *testing.T) {
 	t.Run("zero limits, not empty limiter", func(t *testing.T) {
 		method := "method"
 		limiters := newLimiters(configuration.Limits{})
-		limiters.perClientLimiters[method] = map[string]limiter{"unknown": newNoLimit(0)}
+		limiters.perClientLimiters[method] = map[string]limiter{"unknown": newSyncLimiter(newNoLimit(0))}
 
 		require.False(t, limiters.isClientLimitExceeded(context.Background(), method))
 	})
