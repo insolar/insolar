@@ -97,7 +97,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unknown heavy_version")
+		require.Contains(t, err.Error(), "unknown heavy-version")
 	})
 
 	t.Run("failed incorrect format heavy version", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the heavy_version")
+		require.Contains(t, err.Error(), "incorrect format of the heavy-version")
 	})
 
 	t.Run("failed deprecated heavy version", func(t *testing.T) {
@@ -190,7 +190,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the heavy_version")
+		require.Contains(t, err.Error(), "incorrect format of the heavy-version")
 	})
 
 }
@@ -241,7 +241,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unknown contract_version")
+		require.Contains(t, err.Error(), "unknown contract-version")
 	})
 
 	t.Run("failed incorrect format heavy version", func(t *testing.T) {
@@ -265,7 +265,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the contract_version")
+		require.Contains(t, err.Error(), "incorrect format of the contract-version")
 	})
 
 	t.Run("failed deprecated contract version", func(t *testing.T) {
@@ -336,7 +336,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the contract_version")
+		require.Contains(t, err.Error(), "incorrect format of the contract-version")
 	})
 
 }
