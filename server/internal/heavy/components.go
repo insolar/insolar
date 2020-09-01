@@ -846,8 +846,9 @@ var (
 var allowedVersionContract int64
 
 func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.ServerMetrics) (*grpc.Server, error) {
-	streamInterceptors := []grpc.StreamServerInterceptor{grpcMetrics.StreamServerInterceptor()}
-	unaryInterceptors := []grpc.UnaryServerInterceptor{grpcMetrics.UnaryServerInterceptor()}
+	serverLimiters := newServerLimiters(cfg.RateLimit)
+	streamInterceptors := []grpc.StreamServerInterceptor{grpcMetrics.StreamServerInterceptor(), serverLimiters.streamServerInterceptor()}
+	unaryInterceptors := []grpc.UnaryServerInterceptor{grpcMetrics.UnaryServerInterceptor(), serverLimiters.unaryServerInterceptor()}
 
 	// add authorization interceptor
 	if cfg.Auth.Required {
