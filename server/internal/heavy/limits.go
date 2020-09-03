@@ -3,47 +3,21 @@ package heavy
 import (
 	"context"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	sw "github.com/insolar/ratelimiter/slidingwindow"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 )
 
 type limiter interface {
-	allow() bool
-}
-
-type noLimit struct {
-}
-
-func (l *noLimit) allow() bool {
-	return true
-}
-
-func newNoLimit(_ int) *noLimit {
-	return &noLimit{}
-}
-
-type syncLimiter struct {
-	sync.Mutex
-	l limiter
-}
-
-func newSyncLimiter(l limiter) *syncLimiter {
-	return &syncLimiter{
-		l: l,
-	}
-}
-
-func (s *syncLimiter) allow() bool {
-	s.Lock()
-	defer s.Unlock()
-
-	return s.l.allow()
+	Allow() bool
 }
 
 type serverLimiters struct {
@@ -66,8 +40,9 @@ type limiters struct {
 }
 
 func newLimiters(config configuration.Limits) *limiters {
-	// here we will use a suitable implementation of limiter with the RPS value from the config.Global
-	gl := newSyncLimiter(newNoLimit(config.Global))
+	gl, _ := sw.NewLimiter(time.Second, int64(config.Global), func() (sw.Window, sw.StopFunc) {
+		return sw.NewLocalWindow()
+	})
 	return &limiters{
 		config:            config,
 		globalLimiter:     gl,
@@ -110,7 +85,7 @@ func (l *limiters) isGlobalLimitExceeded() bool {
 	if l.globalLimiter == nil {
 		return false
 	}
-	return !l.globalLimiter.allow()
+	return !l.globalLimiter.Allow()
 }
 
 func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) bool {
@@ -128,9 +103,10 @@ func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) boo
 	}()
 
 	if cl == nil {
-		// here we will use a suitable implementation of limiter with value l.config.PerClient.Limit(method)
 		rps := l.config.PerClient.Limit(method)
-		cl = newSyncLimiter(newNoLimit(rps))
+		cl, _ = sw.NewLimiter(time.Second, int64(rps), func() (sw.Window, sw.StopFunc) {
+			return sw.NewLocalWindow()
+		})
 		func() {
 			l.mutex.Lock()
 			defer l.mutex.Unlock()
@@ -138,7 +114,7 @@ func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) boo
 		}()
 	}
 
-	return !cl.allow()
+	return !cl.Allow()
 }
 
 type limitedServerStream struct {

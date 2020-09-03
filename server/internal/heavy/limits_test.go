@@ -31,33 +31,50 @@ func TestLimiters_isGlobalLimitExceeded(t *testing.T) {
 		require.False(t, limiters.isGlobalLimitExceeded())
 	})
 
-	t.Run("not limited implementation", func(t *testing.T) {
+	t.Run("0 rps limiter", func(t *testing.T) {
 		limiters := newLimiters(configuration.Limits{})
+		require.True(t, limiters.isGlobalLimitExceeded())
+	})
+
+	t.Run("1 rps limiter", func(t *testing.T) {
+		limiters := newLimiters(configuration.Limits{Global: 1})
 		require.False(t, limiters.isGlobalLimitExceeded())
+		require.True(t, limiters.isGlobalLimitExceeded())
 	})
 }
 
 func TestLimiters_isClientLimitExceeded(t *testing.T) {
-	t.Run("zero limits, empty limiters", func(t *testing.T) {
-		limiters := newLimiters(configuration.Limits{})
-		methods := []string{
-			"",
-			"/exporter.RecordExporter/Export",
-			"/exporter.PulseExporter/Export",
-			"/exporter.PulseExporter/TopSyncPulse",
-			"/exporter.PulseExporter/NextFinalizedPulse",
-		}
+	var tests = []struct {
+		name   string
+		method string
+	}{
+		{name: "record-export", method: "/exporter.RecordExporter/Export"},
+		{name: "pulse-export", method: "/exporter.PulseExporter/Export"},
+		{name: "top-sync-pulse", method: "/exporter.PulseExporter/TopSyncPulse"},
+		{name: "next-pulse", method: "/exporter.PulseExporter/NextFinalizedPulse"},
+	}
 
-		for _, m := range methods {
-			require.False(t, limiters.isClientLimitExceeded(context.Background(), m))
+	t.Run("0 rps", func(t *testing.T) {
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				lim := newLimiters(configuration.Limits{})
+				require.True(t, lim.isClientLimitExceeded(context.Background(), tc.method))
+			})
 		}
 	})
 
-	t.Run("zero limits, not empty limiter", func(t *testing.T) {
-		method := "method"
-		limiters := newLimiters(configuration.Limits{})
-		limiters.perClientLimiters[method] = map[string]limiter{"unknown": newSyncLimiter(newNoLimit(0))}
-
-		require.False(t, limiters.isClientLimitExceeded(context.Background(), method))
+	t.Run("1 rps", func(t *testing.T) {
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				lim := newLimiters(configuration.Limits{PerClient: configuration.Handlers{
+					RecordExport:            1,
+					PulseExport:             1,
+					PulseTopSyncPulse:       1,
+					PulseNextFinalizedPulse: 1,
+				}})
+				require.False(t, lim.isClientLimitExceeded(context.Background(), tc.method))
+				require.True(t, lim.isClientLimitExceeded(context.Background(), tc.method))
+			})
+		}
 	})
 }
