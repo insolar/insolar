@@ -110,7 +110,12 @@ func (l *limiters) isClientLimitExceeded(ctx context.Context, method string) boo
 		func() {
 			l.mutex.Lock()
 			defer l.mutex.Unlock()
-			l.perClientLimiters[method] = map[string]limiter{client: cl}
+			lm, isContain := l.perClientLimiters[method]
+			if !isContain {
+				lm = make(map[string]limiter)
+				l.perClientLimiters[method] = lm
+			}
+			lm[client] = cl
 		}()
 	}
 
