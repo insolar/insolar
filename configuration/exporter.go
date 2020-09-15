@@ -29,6 +29,8 @@ type Auth struct {
 }
 
 type RateLimit struct {
+	// Required allows turn off the rate-limiting
+	Required bool
 	// In specifies the number of requests per second
 	In Limits
 	// Out specifies the number of responses per second for server_stream RPCs
