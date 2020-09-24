@@ -4,7 +4,7 @@ on:
     tags:
       - '*'
 env:
-  GO_VERSION: 1.12.15
+  GO_VERSION: 1.15.2
 jobs:
   build-pack-release:
     name: build-pack-release
