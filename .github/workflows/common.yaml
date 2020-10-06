@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 2 * * *'
 env:
-  GO_VERSION: 1.12.15
+  GO_VERSION: 1.15.2
   CI_GOMAXPROCS: 0
   INSOLAR_LOG_LEVEL: warn
 jobs:
@@ -33,7 +33,7 @@ jobs:
       - name: test_prepare
         run: |
            go mod download
-           make pre-build build
+           make vendor pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_unit
         run: make test_unit
@@ -63,7 +63,7 @@ jobs:
       - name: test_prepare
         run: |
            go mod download
-           make submodule pre-build build
+           make vendor submodule pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_slow
         run: make test_slow
@@ -93,7 +93,7 @@ jobs:
       - name: test_prepare
         run: |
            go mod download
-           make pre-build build
+           make vendor pre-build build
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
       - name: test_net-integration
         run: make test-integrtest
@@ -117,6 +117,7 @@ jobs:
       - name: codegen
         run: |
            go clean -modcache
+           make vendor
            make install-deps
            make pre-build
            git diff --exit-code
@@ -139,7 +140,7 @@ jobs:
         run: echo "::add-path::${{env.GOPATH}}/bin"
       - name: generate codecov
         run: |
-           make test-with-coverage
+           make vendor test-with-coverage
            content=`cat coverage.txt | ./scripts/dev/cover-filter.sh`
            echo "$content" | tee $GITHUB_WORKSPACE/coverage.txt
            cat ./coverage.txt | wc
@@ -175,6 +176,7 @@ jobs:
       - name: test_func
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
         run: |
+          make vendor
           make submodule
           make build
           make functest
@@ -217,6 +219,7 @@ jobs:
         env:
           POSTGRES_ENABLE: 1
         run: |
+          make vendor
           make submodule
           make build
           make functest

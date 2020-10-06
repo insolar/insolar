@@ -24,7 +24,7 @@ To run the Insolar Platform 1.0 locally, install it and deploy as described belo
 
 ### Install
 
-1. Install the latest 1.12 version of the [Golang programming tools](https://golang.org/doc/install#install). Make sure the `$GOPATH` environment variable is set.
+1. Install the latest 1.15 version of the [Golang programming tools](https://golang.org/doc/install#install). Make sure the `$GOPATH` environment variable is set.
 
 2. Download the Insolar package:
 
