@@ -10,13 +10,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/insolar/insolar/application/appfoundation"
 	"github.com/insolar/insolar/application/builtin/proxy/first"
 	"github.com/insolar/insolar/application/builtin/proxy/member"
 	"github.com/insolar/insolar/application/builtin/proxy/panicAsLogicalError"
 	"github.com/insolar/insolar/application/builtin/proxy/second"
 	"github.com/insolar/insolar/application/builtin/proxy/third"
-	"github.com/insolar/insolar/application/genesisrefs"
+	"github.com/insolar/insolar/application/genesis"
 	"github.com/insolar/insolar/applicationbase/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -422,7 +421,7 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 // Platform methods.
 func (m *Member) registerNode(public string, role string) (interface{}, error) {
-	root := genesisrefs.ContractRootMember
+	root := genesis.GetRootMember()
 	if m.GetReference() != root {
 		return "", fmt.Errorf("only root member can register node")
 	}
@@ -476,7 +475,7 @@ func (m *Member) createMember(key string, migrationAddress string) (*member.Memb
 	}
 
 	memberHolder := member.New(key)
-	created, err := memberHolder.AsChild(appfoundation.GetRootDomain())
+	created, err := memberHolder.AsChild(genesis.GetRootDomain())
 	if err != nil {
 		return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 	}

@@ -109,7 +109,7 @@ $(BIN_DIR):
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):
-	$(GOBUILD) -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolard/*.go
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):

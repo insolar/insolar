@@ -3,7 +3,7 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-package main
+package insolard
 
 import (
 	"encoding/json"
@@ -14,9 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/insolar/insolar/application"
-	"github.com/insolar/insolar/application/appfoundation"
-	appbuiltin "github.com/insolar/insolar/application/builtin"
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/applicationbase/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
@@ -26,7 +24,7 @@ import (
 	"github.com/insolar/insolar/server"
 )
 
-func main() {
+func RunInsolarNode(parentDomain string, scVersion int64, apiOptions api.Options, initStates InitStates, builtinContracts builtin.BuiltinContracts) {
 	var (
 		configPath        string
 		genesisConfigPath string
@@ -38,7 +36,7 @@ func main() {
 		Use:   "heavy --config=path --heavy-genesis=path",
 		Short: "starts heavy node",
 		Run: func(cmd *cobra.Command, args []string) {
-			runHeavyNode(configPath, genesisConfigPath, heavyDB, genesisOnly)
+			runHeavyNode(configPath, genesisConfigPath, heavyDB, parentDomain, genesisOnly, scVersion, apiOptions, initStates)
 		},
 	}
 	cmdHeavy.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
@@ -55,7 +53,7 @@ func main() {
 		Use:   "light --config=path",
 		Short: "starts light node",
 		Run: func(cmd *cobra.Command, args []string) {
-			runLightNode(configPath)
+			runLightNode(configPath, apiOptions)
 		},
 	}
 
@@ -63,7 +61,7 @@ func main() {
 		Use:   "virtual --config=path",
 		Short: "starts virtual node",
 		Run: func(cmd *cobra.Command, args []string) {
-			runVirtualNode(configPath)
+			runVirtualNode(configPath, builtinContracts, apiOptions)
 		},
 	}
 
@@ -81,7 +79,9 @@ func main() {
 	}
 }
 
-func runHeavyNode(configPath string, genesisConfigPath string, db string, genesisOnly bool) {
+type InitStates func(string) ([]genesis.ContractState, error)
+
+func runHeavyNode(configPath, genesisConfigPath, db, parentDomain string, genesisOnly bool, scVersion int64, apiOptions api.Options, initStates InitStates) {
 	var holder configuration.ConfigHolder
 	var err error
 
@@ -109,27 +109,22 @@ func runHeavyNode(configPath string, genesisConfigPath string, db string, genesi
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	apiOptions, err := initAPIOptions()
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "failed to get API info response"))
-	}
-
 	states, _ := initStates(genesisConfigPath)
 	s := server.NewHeavyServer(
 		holder,
 		genesisConfigPath,
 		genesis.Options{
 			States:       states,
-			ParentDomain: application.GenesisNameRootDomain,
+			ParentDomain: parentDomain,
 		},
 		genesisOnly,
 		apiOptions,
-		appfoundation.AllowedVersionSmartContract,
+		scVersion,
 	)
 	s.Serve()
 }
 
-func runVirtualNode(configPath string) {
+func runVirtualNode(configPath string, builtinContracts builtin.BuiltinContracts, apiOptions api.Options) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	holder, err := readVirtualConfig(configPath)
@@ -149,22 +144,11 @@ func runVirtualNode(configPath string) {
 		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
-	apiOptions, err := initAPIOptions()
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "failed to get API info response"))
-	}
-
-	builtinContracts := builtin.BuiltinContracts{
-		CodeRegistry:         appbuiltin.InitializeContractMethods(),
-		CodeRefRegistry:      appbuiltin.InitializeCodeRefs(),
-		CodeDescriptors:      appbuiltin.InitializeCodeDescriptors(),
-		PrototypeDescriptors: appbuiltin.InitializePrototypeDescriptors(),
-	}
 	s := server.NewVirtualServer(holder, builtinContracts, apiOptions)
 	s.Serve()
 }
 
-func runLightNode(configPath string) {
+func runLightNode(configPath string, apiOptions api.Options) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	holder, err := readLightConfig(configPath)
@@ -178,11 +162,6 @@ func runLightNode(configPath string) {
 	}
 	if role != insolar.StaticRoleLightMaterial {
 		log.Fatal(errors.New("role in cert is not light material"))
-	}
-
-	apiOptions, err := initAPIOptions()
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "failed to get API info response"))
 	}
 
 	if err := psAgentLauncher(); err != nil {

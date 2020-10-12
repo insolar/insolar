@@ -3,23 +3,23 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-package main
+package genesis
 
 import (
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/application/genesisrefs"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/api"
 )
 
 // initAPIInfoResponse creates application-specific data,
 // that will be included in response from /admin-api/rpc#network.getInfo
 func initAPIInfoResponse() (map[string]interface{}, error) {
-	rootDomain := genesisrefs.ContractRootDomain
+	rootDomain := GetRootDomain()
 	if rootDomain.IsEmpty() {
 		return nil, errors.New("rootDomain ref is nil")
 	}
 
-	rootMember := genesisrefs.ContractRootMember
+	rootMember := GetRootMember()
 	if rootMember.IsEmpty() {
 		return nil, errors.New("rootMember ref is nil")
 	}
@@ -31,7 +31,7 @@ func initAPIInfoResponse() (map[string]interface{}, error) {
 }
 
 // initAPIOptions creates options object, that contains application-specific settings for api component.
-func initAPIOptions() (api.Options, error) {
+func InitAPIOptions() (api.Options, error) {
 	apiInfoResponse, err := initAPIInfoResponse()
 	if err != nil {
 		return api.Options{}, err
@@ -91,7 +91,7 @@ func initAPIOptions() (api.Options, error) {
 		AdminContractMethods: adminContractMethods,
 		ContractMethods:      contractMethods,
 		InfoResponse:         apiInfoResponse,
-		RootReference:        genesisrefs.ContractRootMember,
+		RootReference:        GetRootMember(),
 		ProxyToRootMethods:   proxyToRootMethods,
 	}, nil
 }

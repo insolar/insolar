@@ -5,7 +5,7 @@
 
 // +build debug
 
-package main
+package insolard
 
 import (
 	"github.com/google/gops/agent"

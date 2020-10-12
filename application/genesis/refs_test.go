@@ -3,14 +3,13 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-package genesisrefs
+package genesis
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/application"
 	"github.com/insolar/insolar/applicationbase/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 )
@@ -20,11 +19,11 @@ func TestReferences(t *testing.T) {
 		got    insolar.Reference
 		expect string
 	}{
-		application.GenesisNameRootDomain: {
+		GenesisNameRootDomain: {
 			got:    ContractRootDomain,
 			expect: "insolar:1AAEAAciWtcmPVgAcaIvICkgnSsJmp4Clp650xOHjYks",
 		},
-		application.GenesisNameRootMember: {
+		GenesisNameRootMember: {
 			got:    ContractRootMember,
 			expect: "insolar:1AAEAAWeNhA_NwKaH6E36IJ-2PLvXnJRxiTTNWq1giOg",
 		},
@@ -39,6 +38,6 @@ func TestReferences(t *testing.T) {
 
 func TestRootDomain(t *testing.T) {
 	ref1 := ContractRootDomain
-	ref2 := genesisrefs.GenesisRef(application.GenesisNameRootDomain)
+	ref2 := genesisrefs.GenesisRef(GenesisNameRootDomain)
 	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
 }

@@ -3,7 +3,7 @@
 // This material is licensed under the Insolar License version 1.0,
 // available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
 
-package application
+package genesis
 
 const (
 	// GenesisNameRootDomain is the name of root domain contract for genesis record.
