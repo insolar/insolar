@@ -38,6 +38,14 @@ jobs:
       - name: test_unit
         run: make test_unit
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - name: Send failure notification to Slack
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.ACTIONS_NOTIFICATIONS_SLACK_HOOK_URL }}
   slow-tests:
     name: slow-tests
     runs-on: ubuntu-latest
@@ -68,6 +76,14 @@ jobs:
       - name: test_slow
         run: make test_slow
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - name: Send failure notification to Slack
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.ACTIONS_NOTIFICATIONS_SLACK_HOOK_URL }}
   net-integration-tests:
     name: net-integration-tests
     runs-on: ubuntu-latest
@@ -98,6 +114,14 @@ jobs:
       - name: test_net-integration
         run: make test-integrtest
         working-directory: ${{env.GOPATH}}/src/github.com/insolar/insolar
+      - name: Send failure notification to Slack
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.ACTIONS_NOTIFICATIONS_SLACK_HOOK_URL }}
   codegen:
     name: codegen
     runs-on: ubuntu-latest
@@ -178,9 +202,14 @@ jobs:
           make submodule
           make build
           make functest
-      - name: slack
-        if: failure()
-        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-badger failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'\nHave a look! @'$GITHUB_ACTOR'"}'
+      - name: Send failure notification to Slack
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.ACTIONS_NOTIFICATIONS_SLACK_HOOK_URL }}
       - name: archive_logs
         if: failure()
         run: |
@@ -220,9 +249,14 @@ jobs:
           make submodule
           make build
           make functest
-      - name: slack
-        if: failure()
-        run: curl -s ${{secrets.SLACK_URL}} -d '{"text":"Func-tests-postgresql failed for https://github.com/'$GITHUB_REPOSITORY'/pull/'$(echo $GITHUB_REF | cut -d '/' -f3)'\nHave a look! @'$GITHUB_ACTOR'"}'
+      - name: Send failure notification to Slack
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.ACTIONS_NOTIFICATIONS_SLACK_HOOK_URL }}
       - name: archive_logs
         if: failure()
         run: |
