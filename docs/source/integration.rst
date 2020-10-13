@@ -59,7 +59,7 @@ Deploy network locally
 
 To set up the network locally, do the following:
 
-#. Since Insolar is written in Go, install the latest 1.12 version of the `Golang programming tools <https://golang.org/doc/install#install>`_.
+#. Since Insolar is written in Go, install the latest 1.15 version of the `Golang programming tools <https://golang.org/doc/install#install>`_.
 
    .. note:: Make sure the ``$GOPATH`` environment variable is set. 
 

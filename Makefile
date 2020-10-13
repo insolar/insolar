@@ -52,7 +52,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
 
 .PHONY: all
-all: submodule clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: vendor submodule clean pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
 .PHONY: submodule
 submodule: ## init git submodule
@@ -109,7 +109,7 @@ $(BIN_DIR):
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):
-	$(GOBUILD) -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
+	$(GOBUILD) -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" application/cmd/insolard/*.go
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):

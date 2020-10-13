@@ -1,3 +1,8 @@
+// Copyright 2020 Insolar Network Ltd.
+// All rights reserved.
+// This material is licensed under the Insolar License version 1.0,
+// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
+
 package heavy
 
 import (
@@ -97,7 +102,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unknown heavy_version")
+		require.Contains(t, err.Error(), "unknown heavy-version")
 	})
 
 	t.Run("failed incorrect format heavy version", func(t *testing.T) {
@@ -120,7 +125,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the heavy_version")
+		require.Contains(t, err.Error(), "incorrect format of the heavy-version")
 	})
 
 	t.Run("failed deprecated heavy version", func(t *testing.T) {
@@ -143,7 +148,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "version of the observer is outdated. Please upgrade this client")
+		require.Contains(t, err.Error(), exporter.ErrDeprecatedClientVersion.Error())
 	})
 
 	t.Run("success new version observer", func(t *testing.T) {
@@ -190,7 +195,7 @@ func TestValidateVersionHeavyVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the heavy_version")
+		require.Contains(t, err.Error(), "incorrect format of the heavy-version")
 	})
 
 }
@@ -241,7 +246,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "unknown contract_version")
+		require.Contains(t, err.Error(), "unknown contract-version")
 	})
 
 	t.Run("failed incorrect format heavy version", func(t *testing.T) {
@@ -265,7 +270,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the contract_version")
+		require.Contains(t, err.Error(), "incorrect format of the contract-version")
 	})
 
 	t.Run("failed deprecated contract version", func(t *testing.T) {
@@ -289,7 +294,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "version of the observer is outdated. Please upgrade this client")
+		require.Contains(t, err.Error(), exporter.ErrDeprecatedClientVersion.Error())
 	})
 
 	t.Run("success new version observer", func(t *testing.T) {
@@ -336,7 +341,7 @@ func TestValidateVersionContractVersion(t *testing.T) {
 		// test
 		err = validateClientVersion(ctx)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "incorrect format of the contract_version")
+		require.Contains(t, err.Error(), "incorrect format of the contract-version")
 	})
 
 }

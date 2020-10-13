@@ -846,10 +846,13 @@ var (
 var allowedVersionContract int64
 
 func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.ServerMetrics) (*grpc.Server, error) {
+	// be careful, the order of interceptors is important
+	// current order: grpcMetrics, auth, rate-limiting, version validation
+
+	// add interceptors for gRPC metrics
 	streamInterceptors := []grpc.StreamServerInterceptor{grpcMetrics.StreamServerInterceptor()}
 	unaryInterceptors := []grpc.UnaryServerInterceptor{grpcMetrics.UnaryServerInterceptor()}
-
-	// add authorization interceptor
+	// add authorization interceptors
 	if cfg.Auth.Required {
 		jwtIss = cfg.Auth.Issuer
 		key := []byte(cfg.Auth.Secret)
@@ -860,7 +863,13 @@ func newGRPCServer(cfg configuration.Exporter, grpcMetrics *grpc_prometheus.Serv
 		unaryInterceptors = append(unaryInterceptors, authUnaryIntcp)
 		streamInterceptors = append(streamInterceptors, authStreamIntcp)
 	}
-	// add  interceptor for validate version
+	// add limiter interceptors after auth ones
+	if cfg.RateLimit.Required {
+		serverLimiters := newServerLimiters(cfg.RateLimit)
+		streamInterceptors = append(streamInterceptors, serverLimiters.streamServerInterceptor())
+		unaryInterceptors = append(unaryInterceptors, serverLimiters.unaryServerInterceptor())
+	}
+	// add interceptors for validate version
 	if cfg.CheckVersion {
 		unaryInterceptors = append(unaryInterceptors, validateVersionUnaryIntcp)
 		streamInterceptors = append(streamInterceptors, validateVersionStreamIntcp)
