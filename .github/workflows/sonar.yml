@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: checkout sources
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: run sonar-scanner
       run: |
         projectKey=$(echo "${{ github.repository }}" | sed 's,/,:,g')
