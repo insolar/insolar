@@ -1,5 +1,5 @@
 # 1) build step (approx local build time ~4m w/o cache)
-ARG GOLANG_VERSION=1.15
+ARG GOLANG_VERSION=1.12
 FROM golang:${GOLANG_VERSION} AS build
 
 ADD . /go/src/github.com/insolar/insolar
