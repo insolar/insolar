@@ -1,6 +1,6 @@
 module github.com/insolar/insolar
 
-go 1.15
+go 1.12
 
 require (
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
@@ -55,8 +55,7 @@ require (
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.19.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
-	github.com/ugorji/go v1.1.4 // indirect
-	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8
+	github.com/ugorji/go v1.1.4
 	go.opencensus.io v0.22.0
 	go.uber.org/goleak v1.0.0
 	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
@@ -69,5 +68,3 @@ require (
 )
 
 replace github.com/insolar/insolar => ./
-
-replace github.com/ugorji/go v1.1.4 => github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43
