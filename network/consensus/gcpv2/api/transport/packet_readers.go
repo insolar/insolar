@@ -8,6 +8,7 @@ package transport
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -149,6 +150,9 @@ type CloudIntroductionReader interface {
 type BriefIntroductionReader interface {
 	profiles.BriefCandidateProfile
 }
+
+// Need to import something from enpoints package to fix mock generation below.
+var _ endpoints.Outbound
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.FullIntroductionReader -o . -s _mock.go -g
 type FullIntroductionReader interface {
