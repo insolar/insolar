@@ -1,8 +1,3 @@
-// Copyright 2020 Insolar Network Ltd.
-// All rights reserved.
-// This material is licensed under the Insolar License version 1.0,
-// available at https://github.com/insolar/insolar/blob/master/LICENSE.md.
-
 // swagger helper generator:
 // encodes <name>.swagger.json files to literals with name <name>Swagger in swagger_const_gen.go file.
 
